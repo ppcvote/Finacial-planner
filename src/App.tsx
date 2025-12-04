@@ -1,22 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   PiggyBank, 
-  TrendingUp, 
-  ShieldCheck, 
   Wallet, 
   Building2, 
   Calculator,
-  ArrowRightLeft,
   Coins,
-  Home,
   CheckCircle2,
-  Minus,
-  Equal,
   Scale,
   Save,
-  Download,
   FileText,
-  User,
   Menu,
   X,
   Trash2,
@@ -229,6 +221,7 @@ const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d:
   const phase2_Income = monthlyInvestIncomeSingle * 2; 
   const phase2_NetOut = phase2_LoanPmt - phase2_Income;
   const phase2_TotalCost = phase2_NetOut * 12 * loanTerm;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const projectTotalCost = phase1_TotalCost + phase2_TotalCost;
   const standardTotalCost = targetAmount * 10000; 
   const standardMonthlySaving = standardTotalCost / (loanTerm * 2 * 12);
