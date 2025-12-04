@@ -215,11 +215,8 @@ const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d:
   const monthlyInvestIncomeSingle = calculateMonthlyIncome(loanAmount, investReturnRate);
   
   const phase1_NetOut = monthlyLoanPayment - monthlyInvestIncomeSingle;
-  const phase1_TotalCost = phase1_NetOut * 12 * loanTerm;
-  const phase2_LoanPmt = monthlyLoanPayment; 
-  const phase2_Income = monthlyInvestIncomeSingle * 2; 
-  const phase2_NetOut = phase2_LoanPmt - phase2_Income;
-  const phase2_TotalCost = phase2_NetOut * 12 * loanTerm;
+  // 修正：移除了 phase1_TotalCost 等所有未使用變數
+  const phase2_NetOut = monthlyLoanPayment - (monthlyInvestIncomeSingle * 2);
   
   const standardTotalCost = targetAmount * 10000; 
   const standardMonthlySaving = standardTotalCost / (loanTerm * 2 * 12);
