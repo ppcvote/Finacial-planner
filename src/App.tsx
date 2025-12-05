@@ -26,7 +26,8 @@ import {
   Lock,
   TrendingUp,
   Clock,
-  PauseCircle
+  PauseCircle,
+  Rocket
 } from 'lucide-react';
 import { 
   Bar, 
@@ -691,6 +692,155 @@ const StudentLoanTool = ({ data, setData }) => {
   );
 };
 
+// ------------------------------------------------------------------
+// 核心模組 4: 超積極存錢法
+// ------------------------------------------------------------------
+
+const SuperActiveSavingTool = ({ data, setData }) => {
+  const safeData = {
+    monthlySaving: Number(data?.monthlySaving) || 10000,
+    investReturnRate: Number(data?.investReturnRate) || 6,
+    activeYears: Number(data?.activeYears) || 15,
+    totalYears: 40 // 固定比較基準
+  };
+  const { monthlySaving, investReturnRate, activeYears, totalYears } = safeData;
+
+  const generateChartData = () => {
+    const dataArr = [];
+    let passiveAccumulation = 0; // 消極存錢 (銀行)
+    let activeInvestment = 0; // 積極存錢 (複利)
+
+    for (let year = 1; year <= totalYears; year++) {
+      // 1. 消極存錢：每年存 12 萬，存 40 年
+      passiveAccumulation += monthlySaving * 12;
+
+      // 2. 積極存錢：前 15 年存，之後不存只滾複利
+      if (year <= activeYears) {
+        // 年金複利公式：每年投入 + 獲利
+        activeInvestment = (activeInvestment + monthlySaving * 12) * (1 + investReturnRate / 100);
+      } else {
+        // 複利滾存：不再投入，純滾動
+        activeInvestment = activeInvestment * (1 + investReturnRate / 100);
+      }
+
+      dataArr.push({
+        year: `第${year}年`,
+        消極存錢: Math.round(passiveAccumulation / 10000),
+        積極存錢: Math.round(activeInvestment / 10000),
+      });
+    }
+    return dataArr;
+  };
+
+  const chartData = generateChartData();
+  const finalPassive = chartData[chartData.length - 1].消極存錢;
+  const finalActive = chartData[chartData.length - 1].積極存錢;
+  
+  // 計算積極存錢法何時超越消極存錢法的最終目標 (40年消極存錢的總額)
+  const targetAmount = monthlySaving * 12 * totalYears; // 480萬
+  const crossOverYearItem = chartData.find(d => d.積極存錢 >= targetAmount / 10000);
+  const crossOverYear = crossOverYearItem ? crossOverYearItem.year : "未達標";
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 text-white shadow-lg print-break-inside">
+        <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Rocket className="text-purple-200" /> 超積極存錢法</h3>
+        <p className="text-purple-100 opacity-90">辛苦 15 年，換來提早 10 年的財富自由。用複利對抗勞力。</p>
+      </div>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4 space-y-4 print-break-inside">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
+            <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><Calculator size={18} /> 參數設定</h4>
+            <div className="space-y-6">
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">每月存錢金額</label>
+                   <span className="font-mono font-bold text-purple-600">${monthlySaving.toLocaleString()}</span>
+                 </div>
+                 <input type="range" min={3000} max={50000} step={1000} value={monthlySaving} onChange={(e) => setData({ ...safeData, monthlySaving: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-600" />
+               </div>
+
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">只需辛苦 (年)</label>
+                   <span className="font-mono font-bold text-pink-600">{activeYears} 年</span>
+                 </div>
+                 <input type="range" min={5} max={25} step={1} value={activeYears} onChange={(e) => setData({ ...safeData, activeYears: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-pink-500" />
+               </div>
+
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">投資報酬率 (%)</label>
+                   <span className="font-mono font-bold text-green-600">{investReturnRate}</span>
+                 </div>
+                 <input type="range" min={3} max={12} step={0.5} value={investReturnRate} onChange={(e) => setData({ ...safeData, investReturnRate: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
+               </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow border border-slate-200 p-6">
+             <div className="text-center mb-4">
+               <p className="text-slate-500 text-sm">消極存錢 (存40年)</p>
+               <p className="text-xl font-bold text-slate-600">${finalPassive}萬</p>
+               <p className="text-xs text-slate-400 mt-1">本金投入 ${Math.round(monthlySaving*12*totalYears/10000)}萬</p>
+             </div>
+             <div className="border-t border-slate-100 my-4"></div>
+             <div className="text-center">
+               <p className="text-slate-500 text-sm">積極存錢 (存{activeYears}年)</p>
+               <p className="text-3xl font-black text-purple-600 font-mono">${finalActive}萬</p>
+               <p className="text-xs text-slate-400 mt-1">本金投入 ${Math.round(monthlySaving*12*activeYears/10000)}萬 (省下 ${(monthlySaving*12*(totalYears-activeYears)/10000)}萬)</p>
+             </div>
+             
+             <div className="mt-4 bg-purple-50 p-3 rounded-lg border border-purple-100 text-xs text-purple-800 space-y-2">
+                <span className="font-bold">💡 關鍵效益：</span>
+                <p>相比於苦存 40 年，您只需專注存錢 {activeYears} 年，靠著複利效果，資產在 {crossOverYear} 就能追上消極存錢 40 年的總額。</p>
+             </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-8 space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[450px]">
+             <h4 className="font-bold text-slate-700 mb-4 pl-2">資產累積速度對比</h4>
+             <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                <defs>
+                  <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#9333ea" stopOpacity={0.3}/><stop offset="95%" stopColor="#9333ea" stopOpacity={0}/></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="year" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                <YAxis unit="萬" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Legend />
+                <Area type="monotone" name="積極存錢 (複利)" dataKey="積極存錢" stroke="#9333ea" fill="url(#colorActive)" strokeWidth={3} />
+                <Line type="monotone" name="消極存錢 (勞力)" dataKey="消極存錢" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4">
+             <div className="bg-slate-50 p-4 rounded-lg text-center">
+                <div className="text-xs text-slate-500">節省本金</div>
+                <div className="font-bold text-green-600">${Math.round((monthlySaving*12*(totalYears-activeYears))/10000)}萬</div>
+                <div className="text-[10px] text-slate-400 mt-1">少奮鬥 {totalYears - activeYears} 年</div>
+             </div>
+             <div className="bg-slate-50 p-4 rounded-lg text-center">
+                <div className="text-xs text-slate-500">第 30 年資產</div>
+                <div className="font-bold text-purple-600">${chartData[29]?.積極存錢}萬</div>
+                <div className="text-[10px] text-slate-400 mt-1">對比消極法 ${chartData[29]?.消極存錢}萬</div>
+             </div>
+             <div className="bg-slate-100 p-4 rounded-lg text-center border-l-4 border-purple-500">
+                <div className="text-xs text-slate-500">最終獲利倍數</div>
+                <div className="font-bold text-purple-700">{(finalActive/Math.round(monthlySaving*12*activeYears/10000)).toFixed(1)} 倍</div>
+                <div className="text-[10px] text-slate-400 mt-1">本金翻倍率</div>
+             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 // ------------------------------------------------------------------
 // Main App Shell
@@ -705,6 +855,7 @@ export default function App() {
   const [giftData, setGiftData] = useState({ loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 });
   const [estateData, setEstateData] = useState({ loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6 });
   const [studentData, setStudentData] = useState({ loanAmount: 40, investReturnRate: 6, years: 8, gracePeriod: 1, interestOnlyPeriod: 0 });
+  const [superActiveData, setSuperActiveData] = useState({ monthlySaving: 10000, investReturnRate: 6, activeYears: 15 });
   
   const [userProfile, setUserProfile] = useState({ displayName: '', title: '' });
   
@@ -745,6 +896,7 @@ export default function App() {
     if (activeTab === 'gift') currentData = giftData;
     else if (activeTab === 'estate') currentData = estateData;
     else if (activeTab === 'student') currentData = studentData;
+    else if (activeTab === 'super_active') currentData = superActiveData;
 
     const newPlan = {
       name,
@@ -775,6 +927,7 @@ export default function App() {
     if (file.type === 'gift') setGiftData(file.data);
     else if (file.type === 'estate') setEstateData(file.data);
     else if (file.type === 'student') setStudentData(file.data);
+    else if (file.type === 'super_active') setSuperActiveData(file.data);
     
     setActiveTab(file.type);
     showToast(`已載入：${file.name}`, "success");
@@ -843,6 +996,7 @@ export default function App() {
           <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => setActiveTab('gift')} />
           <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => setActiveTab('estate')} />
           <NavItem icon={GraduationCap} label="學貸套利專案" active={activeTab === 'student'} onClick={() => setActiveTab('student')} />
+          <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => setActiveTab('super_active')} />
           
           <div className="mt-4 text-xs font-bold text-slate-600 px-4 py-2 uppercase tracking-wider">開發中模組</div>
           <NavItem icon={Umbrella} label="退休升級專案" disabled />
@@ -880,7 +1034,12 @@ export default function App() {
            <div className="flex justify-between items-end">
               <div>
                  <h1 className="text-2xl font-bold">資產規劃建議書</h1>
-                 <p className="text-sm text-gray-500">規劃專案：{activeTab === 'gift' ? '百萬禮物專案' : activeTab === 'estate' ? '金融房產專案' : '學貸套利專案'}</p>
+                 <p className="text-sm text-gray-500">規劃專案：{
+                   activeTab === 'gift' ? '百萬禮物專案' : 
+                   activeTab === 'estate' ? '金融房產專案' : 
+                   activeTab === 'student' ? '學貸套利專案' :
+                   '超積極存錢法'
+                 }</p>
               </div>
               <div className="text-right">
                  <p className="font-bold">{userProfile.displayName}</p>
@@ -906,6 +1065,7 @@ export default function App() {
              {activeTab === 'gift' && <MillionDollarGiftTool data={giftData} setData={setGiftData} />}
              {activeTab === 'estate' && <FinancialRealEstateTool data={estateData} setData={setEstateData} />}
              {activeTab === 'student' && <StudentLoanTool data={studentData} setData={setStudentData} />}
+             {activeTab === 'super_active' && <SuperActiveSavingTool data={superActiveData} setData={setSuperActiveData} />}
 
              {activeTab === 'files' && (
                 <div className="animate-fade-in">
@@ -926,10 +1086,12 @@ export default function App() {
                                <div className={`p-2 rounded-lg ${
                                  file.type === 'gift' ? 'bg-blue-100 text-blue-600' : 
                                  file.type === 'estate' ? 'bg-emerald-100 text-emerald-600' :
+                                 file.type === 'super_active' ? 'bg-purple-100 text-purple-600' :
                                  'bg-sky-100 text-sky-600'
                                }`}>
                                   {file.type === 'gift' ? <Wallet size={20} /> : 
                                    file.type === 'estate' ? <Building2 size={20} /> :
+                                   file.type === 'super_active' ? <Rocket size={20} /> :
                                    <GraduationCap size={20} />}
                                </div>
                                <button onClick={(e) => handleDeleteFile(file.id, e)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16}/></button>
@@ -938,6 +1100,7 @@ export default function App() {
                             <p className="text-xs text-slate-400">{file.date} • {
                                 file.type === 'gift' ? '百萬禮物' : 
                                 file.type === 'estate' ? '金融房產' : 
+                                file.type === 'super_active' ? '超積極存錢' :
                                 '學貸套利'
                             }</p>
                          </div>
