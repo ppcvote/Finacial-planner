@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  PiggyBank, 
   Wallet, 
   Building2, 
   Calculator, 
@@ -12,18 +11,14 @@ import {
   Menu, 
   X, 
   Trash2, 
-  Printer, 
   LogOut, 
   User as UserIcon, 
   Settings, 
-  Camera, 
-  Smartphone, 
   Loader2, 
-  Focus,   
   ArrowUpFromLine,
   Check,
   ShieldAlert,
-  ChevronRight
+  Edit3
 } from 'lucide-react';
 import { 
   Bar, 
@@ -61,15 +56,9 @@ import {
   initializeFirestore, 
   memoryLocalCache 
 } from 'firebase/firestore';
-import { 
-  getStorage, 
-  ref, 
-  uploadBytes, 
-  getDownloadURL 
-} from 'firebase/storage';
 
 // ------------------------------------------------------------------
-// Firebase 設定區域 (已修復 API Key)
+// Firebase 設定區域
 // ------------------------------------------------------------------
 const apiKey = "AIzaSyAqS6fhHQVyBNr1LCkCaQPyJ13Rkq7bfHA"; 
 const authDomain = "grbt-f87fa.firebaseapp.com";
@@ -99,8 +88,6 @@ const db = initializeFirestore(app, {
   localCache: memoryLocalCache(), 
 });
 
-const storage = getStorage(app);
-
 // ------------------------------------------------------------------
 // 輔助函數與工具
 // ------------------------------------------------------------------
@@ -114,54 +101,7 @@ const withTimeout = (promise, ms, errorMessage) => {
   ]);
 };
 
-// 圖片壓縮
-const compressImage = (file) => {
-  return new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(() => reject(new Error("Compression timeout")), 5000);
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result;
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 300; 
-          const scaleSize = MAX_WIDTH / img.width;
-          const finalWidth = img.width > MAX_WIDTH ? MAX_WIDTH : img.width;
-          const finalHeight = img.width > MAX_WIDTH ? img.height * scaleSize : img.height;
-          canvas.width = finalWidth;
-          canvas.height = finalHeight;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-              ctx.drawImage(img, 0, 0, finalWidth, finalHeight);
-              canvas.toBlob((blob) => {
-                  clearTimeout(timeoutId);
-                  if (blob) resolve(blob);
-                  else reject(new Error("Compression failed"));
-              }, 'image/jpeg', 0.7);
-          } else {
-              clearTimeout(timeoutId);
-              reject(new Error("Canvas context not found"));
-          }
-        } catch (e) {
-          clearTimeout(timeoutId);
-          reject(e);
-        }
-      };
-      img.onerror = (error) => {
-        clearTimeout(timeoutId);
-        reject(error);
-      }
-    };
-    reader.onerror = (error) => {
-      clearTimeout(timeoutId);
-      reject(error);
-    }
-  });
-};
-
-// 計算函數
+// 計算函數 (完全保留您的邏輯)
 const calculateMonthlyPayment = (principal, rate, years) => {
   const p = Number(principal) || 0;
   const rVal = Number(rate) || 0;
@@ -192,6 +132,23 @@ const calculateRemainingBalance = (principal, rate, totalYears, yearsElapsed) =>
   return Math.max(0, isNaN(balance) ? 0 : balance);
 };
 
+// --- 樣式注入 (確保列印功能正常) ---
+const PrintStyles = () => (
+  <style>{`
+    @media print {
+      aside, .no-print, .toast-container { display: none !important; }
+      body, main { background: white !important; height: auto !important; overflow: visible !important; }
+      .print-break-inside { break-inside: avoid; }
+      .shadow-lg, .shadow-sm { box-shadow: none !important; border: 1px solid #ddd !important; }
+      .text-white { color: black !important; }
+      .bg-gradient-to-r, .bg-gradient-to-br { background: none !important; background-color: #f0f9ff !important; color: black !important; }
+      header { display: none !important; } /* 隱藏 App Header */
+      .print-header { display: block !important; margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+    }
+    .print-header { display: none; }
+  `}</style>
+);
+
 // ------------------------------------------------------------------
 // UI Components
 // ------------------------------------------------------------------
@@ -212,7 +169,7 @@ const Toast = ({ message, type = 'success', onClose }) => {
   };
 
   return (
-    <div className={`fixed bottom-6 right-6 ${bgColors[type]} text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-bounce-in z-[100]`}>
+    <div className={`fixed bottom-6 right-6 ${bgColors[type]} text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-bounce-in z-[100] toast-container`}>
       {type === 'success' && <Check size={20} />}
       {type === 'error' && <ShieldAlert size={20} />}
       <span className="font-bold">{message}</span>
@@ -235,8 +192,41 @@ const NavItem = ({ icon: Icon, label, active, onClick }) => (
   </button>
 );
 
+// Profile Edit Modal (Simplified)
+const ProfileModal = ({ isOpen, onClose, profile, onSave, loading }) => {
+  const [formData, setFormData] = useState(profile);
+  
+  useEffect(() => { if(isOpen) setFormData(profile); }, [isOpen, profile]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 space-y-4">
+        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+           <Edit3 size={20} /> 修改顯示資料
+        </h3>
+        <div>
+           <label className="block text-sm font-bold text-slate-700 mb-1">顯示名稱</label>
+           <input type="text" value={formData.displayName} onChange={e => setFormData({...formData, displayName: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="您的姓名" />
+        </div>
+        <div>
+           <label className="block text-sm font-bold text-slate-700 mb-1">專業職稱</label>
+           <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例如：資深理財顧問" />
+        </div>
+        <div className="flex gap-2 mt-4">
+           <button onClick={onClose} className="flex-1 py-2 border border-slate-300 rounded-lg text-slate-600 font-bold hover:bg-slate-50">取消</button>
+           <button onClick={() => onSave(formData)} disabled={loading} className="flex-1 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800 disabled:opacity-50">
+             {loading ? '儲存中...' : '確認修改'}
+           </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ------------------------------------------------------------------
-// Main Features (Calculators)
+// Main Features (Calculators) - Using YOUR Original Logic
 // ------------------------------------------------------------------
 
 const MillionDollarGiftTool = ({ data, setData }) => {
@@ -284,22 +274,22 @@ const MillionDollarGiftTool = ({ data, setData }) => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white shadow-lg">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white shadow-lg print-break-inside">
         <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
           <Wallet className="text-blue-200" />
           百萬禮物專案
         </h3>
         <p className="text-blue-100 opacity-90">
-          透過 7 年一輪的小額槓桿循環，用時間換取資產，輕鬆累積第一桶金。
+          透過 7 年一輪的小額槓桿循環，用時間換取資產。
         </p>
       </div>
 
       <div className="grid lg:grid-cols-12 gap-6">
         {/* Input Control */}
-        <div className="lg:col-span-4 space-y-4">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="lg:col-span-4 space-y-4 print-break-inside">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
             <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2">
-              <Settings size={18} /> 參數設定
+              <Calculator size={18} /> 參數設定
             </h4>
             <div className="space-y-6">
                {[
@@ -324,46 +314,40 @@ const MillionDollarGiftTool = ({ data, setData }) => {
                  </div>
                ))}
             </div>
-            
-            <div className="mt-6 pt-4 border-t border-slate-100">
-               <div className="text-center">
-                  <p className="text-xs text-slate-400 mb-1">一般存錢需月存</p>
-                  <p className="text-lg font-bold text-slate-400 line-through">${Math.round(standardMonthlySaving).toLocaleString()}</p>
-               </div>
-               <div className="mt-2 text-center bg-green-50 rounded-lg p-3 border border-green-100">
-                  <p className="text-xs text-green-700 font-bold mb-1">專案效益</p>
-                  <p className="text-sm text-green-800">
-                    每月省下 <span className="font-bold text-lg">${Math.round(standardMonthlySaving - phase1_NetOut).toLocaleString()}</span>
-                  </p>
-               </div>
-            </div>
+          </div>
+          
+          {/* Print Only Parameters */}
+          <div className="hidden print-only border p-4 mb-4 rounded border-slate-300">
+             <h3 className="font-bold mb-2">規劃參數</h3>
+             <div className="grid grid-cols-2 gap-2 text-sm"><div>信貸額度：{loanAmount} 萬</div><div>信貸利率：{loanRate} %</div><div>配息率：{investReturnRate} %</div><div>總目標：{targetAmount} 萬</div></div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow border border-slate-200 p-5 print-break-inside">
+              <div className="text-sm text-slate-500 mb-4 text-center">一般存錢月存金額 <span className="line-through decoration-slate-400 font-bold ml-2">${Math.round(standardMonthlySaving).toLocaleString()}</span></div>
+              <div className="space-y-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">1. 信貸每月還款</span><span className="text-red-500 font-bold font-mono">-${Math.round(monthlyLoanPayment).toLocaleString()}</span></div>
+                <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">2. 扣除每月配息</span><span className="text-green-600 font-bold font-mono">+${Math.round(monthlyInvestIncomeSingle).toLocaleString()}</span></div>
+                <div className="border-t border-slate-200 my-2"></div>
+                <div className="flex justify-between items-end"><span className="text-blue-700 font-bold">3. 實質每月應負</span><span className="text-3xl font-black text-blue-600 font-mono">${Math.round(phase1_NetOut).toLocaleString()}</span></div>
+              </div>
+              <div className="mt-4 text-center"><div className="text-xs bg-green-100 text-green-700 py-1.5 px-3 rounded-full inline-block font-bold">比一般存錢每月省下 ${Math.round(standardMonthlySaving - phase1_NetOut).toLocaleString()}</div></div>
           </div>
         </div>
 
         {/* Visualization */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 print-break-inside">
              <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
-               <div className="text-xs text-slate-500 font-bold uppercase mb-2">第一階段 (1-7年)</div>
-               <div className="flex items-baseline gap-1">
-                 <span className="text-3xl font-bold text-slate-800">${Math.round(phase1_NetOut).toLocaleString()}</span>
-                 <span className="text-sm text-slate-400">/月</span>
-               </div>
-               <div className="text-xs text-slate-500 mt-2">擁有 {loanAmount} 萬資產</div>
+               <div className="text-xs text-slate-500 font-bold mb-1">第一階段 (1-7年)</div>
+               <div className="flex justify-between items-end"><span className="text-2xl font-bold text-slate-800">${Math.round(phase1_NetOut).toLocaleString()}</span><span className="text-xs text-slate-400">/月</span></div><div className="text-xs text-slate-500 mt-2">擁有 {loanAmount} 萬資產</div>
              </div>
              <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-indigo-500">
-               <div className="text-xs text-slate-500 font-bold uppercase mb-2">第二階段 (8-14年)</div>
-               <div className="flex items-baseline gap-1">
-                 <span className={`text-3xl font-bold ${phase2_NetOut < 0 ? 'text-green-600' : 'text-slate-800'}`}>
-                   {phase2_NetOut < 0 ? '+' : ''}{Math.abs(Math.round(phase2_NetOut)).toLocaleString()}
-                 </span>
-                 <span className="text-sm text-slate-400">/月</span>
-               </div>
-               <div className="text-xs text-slate-500 mt-2">擁有 {loanAmount * 2} 萬資產</div>
+               <div className="text-xs text-slate-500 font-bold mb-1">第二階段 (8-14年)</div>
+               <div className="flex justify-between items-end"><span className={`text-2xl font-bold ${phase2_NetOut < 0 ? 'text-green-600' : 'text-slate-800'}`}>{phase2_NetOut < 0 ? `+${Math.abs(Math.round(phase2_NetOut)).toLocaleString()}` : `$${Math.round(phase2_NetOut).toLocaleString()}`}</span><span className="text-xs text-slate-400">/月</span></div><div className="text-xs text-slate-500 mt-2">擁有 {loanAmount * 2} 萬資產</div>
              </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[350px]">
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[350px] print-break-inside">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={generateChartData()} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                 <defs>
@@ -403,6 +387,9 @@ const FinancialRealEstateTool = ({ data, setData }) => {
   const monthlyLoanPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
   const monthlyInvestIncome = calculateMonthlyIncome(loanAmount, investReturnRate);
   const monthlyCashFlow = monthlyInvestIncome - monthlyLoanPayment;
+  const isNegativeCashFlow = monthlyCashFlow < 0; // 重要：判斷是否為負現金流
+  const totalOutOfPocket = Math.abs(monthlyCashFlow) * 12 * loanTerm; // 計算總自付額
+
   const generateHouseChartData = () => {
     const dataArr = [];
     let cumulativeNetIncome = 0; 
@@ -418,11 +405,14 @@ const FinancialRealEstateTool = ({ data, setData }) => {
     }
     return dataArr;
   };
+
+  const chartData = generateHouseChartData();
+  const finalData = chartData[chartData.length - 1];
   const updateField = (field, value) => { setData({ ...safeData, [field]: value }); };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-lg">
+      <div className="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-lg print-break-inside">
         <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
           <Building2 className="text-emerald-200" />
           金融房產專案
@@ -434,10 +424,10 @@ const FinancialRealEstateTool = ({ data, setData }) => {
 
       <div className="grid lg:grid-cols-12 gap-6">
         {/* Input */}
-        <div className="lg:col-span-4 space-y-4">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="lg:col-span-4 space-y-4 print-break-inside">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
             <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2">
-              <Settings size={18} /> 資產參數
+              <Calculator size={18} /> 資產參數
             </h4>
             <div className="space-y-6">
                {[
@@ -464,30 +454,62 @@ const FinancialRealEstateTool = ({ data, setData }) => {
                ))}
             </div>
           </div>
+          
+          {/* Print Only Parameters */}
+          <div className="hidden print-only border p-4 mb-4 rounded border-slate-300">
+             <h3 className="font-bold mb-2">房產參數</h3>
+             <div className="grid grid-cols-2 gap-2 text-sm"><div>貸款總額：{loanAmount} 萬</div><div>年期：{loanTerm} 年</div><div>貸款利率：{loanRate} %</div><div>配息率：{investReturnRate} %</div></div>
+          </div>
+
+          {/* 重要：恢復您原始的詳細分析區塊 */}
+          <div className="bg-white rounded-xl shadow border border-slate-200 p-6 print-break-inside">
+              <h3 className="text-center font-bold text-slate-700 mb-4">每月現金流試算</h3>
+              <div className="space-y-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">1. 每月配息收入</span><span className="font-mono text-emerald-600 font-bold">+${Math.round(monthlyInvestIncome).toLocaleString()}</span></div>
+                <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">2. 扣除貸款支出</span><span className="font-mono text-red-500 font-bold">-${Math.round(monthlyLoanPayment).toLocaleString()}</span></div>
+                <div className="border-t border-slate-200 my-2"></div>
+                
+                {isNegativeCashFlow ? (
+                   <div className="text-center">
+                     <div className="text-xs text-slate-400 mb-1">每月需負擔</div>
+                     <div className="text-3xl font-black text-red-500 font-mono">-${Math.abs(Math.round(monthlyCashFlow)).toLocaleString()}</div>
+                     {/* 恢復槓桿效益分析區塊 */}
+                     <div className="mt-4 bg-orange-50 rounded-lg p-3 border border-orange-100">
+                        <div className="flex items-center justify-center gap-2 text-orange-800 font-bold text-sm mb-1"><Scale className="w-4 h-4" /> 槓桿效益分析</div>
+                        <div className="text-xs text-orange-700 mb-2">{loanTerm}年總共只付出 <span className="font-bold underline">${Math.round(totalOutOfPocket/10000)}萬</span></div>
+                        <div className="text-xs bg-white rounded py-1 px-2 text-orange-800 border border-orange-200">換取 <span className="font-bold text-lg">${loanAmount}萬</span> 原始資產</div>
+                     </div>
+                   </div>
+                ) : (
+                   <div className="text-center">
+                     <div className="text-xs text-slate-400 mb-1">每月淨現金流</div>
+                     <div className="text-3xl font-black text-emerald-600 font-mono">+${Math.round(monthlyCashFlow).toLocaleString()}</div>
+                     <div className="text-xs mt-2 text-slate-500">完全由資產養貸，還有找！</div>
+                   </div>
+                )}
+              </div>
+          </div>
         </div>
 
         {/* Visualization */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-around gap-6">
-             <div className="text-center">
-                <p className="text-xs text-slate-500 mb-1">每月配息收入</p>
-                <p className="text-2xl font-bold text-emerald-600 font-mono">+${Math.round(monthlyInvestIncome).toLocaleString()}</p>
-             </div>
-             <div className="text-slate-300 hidden md:block"><ArrowUpFromLine className="rotate-90"/></div>
-             <div className="text-center">
-                <p className="text-xs text-slate-500 mb-1">每月貸款支出</p>
-                <p className="text-2xl font-bold text-red-500 font-mono">-${Math.round(monthlyLoanPayment).toLocaleString()}</p>
-             </div>
-             <div className="w-px h-12 bg-slate-200 hidden md:block"></div>
-             <div className="text-center bg-slate-50 px-6 py-3 rounded-xl border border-slate-100">
-                <p className="text-xs text-slate-500 mb-1">每月淨現金流</p>
-                <p className={`text-3xl font-black font-mono ${monthlyCashFlow >= 0 ? 'text-blue-600' : 'text-orange-500'}`}>
-                   {monthlyCashFlow >= 0 ? '+' : '-'}${Math.abs(Math.round(monthlyCashFlow)).toLocaleString()}
-                </p>
+          <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden print-break-inside">
+             <div className="absolute top-0 right-0 p-8 opacity-10"><Coins size={120} /></div>
+             <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><CheckCircle2 className="text-emerald-300" />{loanTerm} 年期滿總結算</h3>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-emerald-400/30">
+                 <div className="text-emerald-200 text-xs mb-1">1. 房貸結清</div><div className="text-2xl font-bold">0</div><div className="text-xs text-emerald-200 mt-1 opacity-75">無債一身輕</div>
+               </div>
+               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-emerald-400/30">
+                 <div className="text-emerald-200 text-xs mb-1">2. 本金歸你</div><div className="text-2xl font-bold">{loanAmount} <span className="text-sm font-normal">萬</span></div><div className="text-xs text-emerald-200 mt-1 opacity-75">資產保留</div>
+               </div>
+               <div className="bg-white/20 backdrop-blur-md rounded-xl p-4 border border-yellow-300/50 shadow-lg">
+                 <div className="text-yellow-200 text-xs mb-1 font-bold">3. 總效益</div><div className="text-3xl font-black text-yellow-300">{finalData ? finalData.總資產價值 : 0} <span className="text-sm font-normal text-white">萬</span></div>
+               </div>
              </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[320px]">
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[320px] print-break-inside">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={generateHouseChartData()} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                 <defs>
@@ -521,17 +543,19 @@ const FinancialRealEstateTool = ({ data, setData }) => {
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('gift'); // 'gift', 'estate', 'files', 'settings'
+  const [activeTab, setActiveTab] = useState('gift'); 
   const [toast, setToast] = useState(null);
 
   // Data State
   const [giftData, setGiftData] = useState({ loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 });
   const [estateData, setEstateData] = useState({ loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6 });
-  const [userProfile, setUserProfile] = useState({ displayName: '', title: '', lineId: '', photoUrl: '' });
+  const [userProfile, setUserProfile] = useState({ displayName: '', title: '' }); // Simplified Profile
   
-  // Files State
+  // UI State
   const [savedFiles, setSavedFiles] = useState([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
 
   // --- Auth & Initial Load ---
   useEffect(() => {
@@ -539,13 +563,13 @@ export default function App() {
       setUser(currentUser);
       setLoading(false);
       if (currentUser) {
-        // Load Profile
+        // Load Profile (Simple Name & Title)
         try {
           const userDoc = await getDoc(doc(db, "users", currentUser.uid));
           if (userDoc.exists() && userDoc.data().profile) {
             setUserProfile(userDoc.data().profile);
           } else {
-            setUserProfile({ displayName: currentUser.displayName || '', title: '理財規劃師', lineId: '', photoUrl: currentUser.photoURL || '' });
+            setUserProfile({ displayName: currentUser.displayName || '', title: '理財顧問' });
           }
         } catch (e) { console.error(e); }
       }
@@ -585,7 +609,7 @@ export default function App() {
     try {
       await withTimeout(addDoc(collection(db, "users", user.uid, "plans"), newPlan), 15000, "Timeout");
       showToast("規劃已儲存到雲端！", "success");
-      loadFiles(); // Refresh list
+      loadFiles(); 
     } catch (e) {
       showToast("儲存失敗，請檢查網路", "error");
     }
@@ -625,11 +649,18 @@ export default function App() {
   };
 
   const handleSaveProfile = async (newProfile) => {
+      setIsProfileSaving(true);
       try {
         await setDoc(doc(db, "users", user.uid), { profile: newProfile }, { merge: true });
         setUserProfile(newProfile);
-        showToast("名片設定已更新", "success");
+        setIsProfileModalOpen(false);
+        showToast("顯示名稱已更新", "success");
       } catch (e) { showToast("更新失敗", "error"); }
+      finally { setIsProfileSaving(false); }
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   // --- Render ---
@@ -650,20 +681,31 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
+      <PrintStyles />
       {/* Toast */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      
+      {/* Profile Modal */}
+      <ProfileModal 
+         isOpen={isProfileModalOpen} 
+         onClose={() => setIsProfileModalOpen(false)} 
+         profile={userProfile} 
+         onSave={handleSaveProfile} 
+         loading={isProfileSaving}
+      />
 
       {/* Sidebar */}
-      <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10">
+      <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10 print:hidden">
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center gap-3 mb-1">
-             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-400 to-orange-500 p-0.5">
-                <img src={userProfile.photoUrl || user.photoURL} alt="User" className="w-full h-full rounded-full object-cover bg-slate-800" />
+             <div className="w-12 h-12 rounded-full p-0.5 border-2 border-yellow-400 overflow-hidden shrink-0">
+                <img src={user.photoURL} alt="User" className="w-full h-full rounded-full object-cover bg-slate-800" />
              </div>
-             <div>
-                <div className="text-xs text-yellow-500 font-bold uppercase">{userProfile.title || '理財顧問'}</div>
-                <div className="font-bold text-sm">{userProfile.displayName || user.displayName}</div>
+             <div className="flex-1 min-w-0">
+                <div className="text-xs text-yellow-500 font-bold uppercase truncate">{userProfile.title || '理財顧問'}</div>
+                <div className="font-bold text-sm truncate text-white">{userProfile.displayName || user.displayName}</div>
              </div>
+             <button onClick={() => setIsProfileModalOpen(true)} className="text-slate-400 hover:text-white transition-colors"><Edit3 size={16} /></button>
           </div>
         </div>
         
@@ -674,10 +716,12 @@ export default function App() {
           
           <div className="mt-8 text-xs font-bold text-slate-500 px-4 py-2 uppercase tracking-wider">資料管理</div>
           <NavItem icon={FileText} label="已存規劃檔案" active={activeTab === 'files'} onClick={() => { setActiveTab('files'); loadFiles(); }} />
-          <NavItem icon={Settings} label="個人名片設定" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
         </nav>
 
-        <div className="p-4 border-t border-slate-800">
+        <div className="p-4 border-t border-slate-800 space-y-2">
+           <button onClick={handlePrint} className="flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors px-4 py-2 w-full">
+             <ArrowUpFromLine size={18} /> 匯出報表
+           </button>
            <button onClick={handleLogout} className="flex items-center gap-2 text-slate-400 hover:text-red-400 transition-colors px-4 py-2 w-full">
              <LogOut size={18} /> 登出系統
            </button>
@@ -687,12 +731,27 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         {/* Mobile Header */}
-        <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center shadow-md shrink-0">
+        <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center shadow-md shrink-0 print:hidden">
           <div className="font-bold flex items-center gap-2"><Coins className="text-yellow-400"/> 資產規劃</div>
           <div className="flex gap-2">
             <button onClick={() => setActiveTab(activeTab === 'gift' ? 'estate' : 'gift')} className="p-2 bg-slate-800 rounded-lg"><Calculator size={20}/></button>
             <button onClick={() => { setActiveTab('files'); loadFiles(); }} className="p-2 bg-slate-800 rounded-lg"><FileText size={20}/></button>
+            <button onClick={() => setIsProfileModalOpen(true)} className="p-2 bg-slate-800 rounded-lg"><Settings size={20}/></button>
           </div>
+        </div>
+        
+        {/* Print Header */}
+        <div className="print-header hidden">
+           <div className="flex justify-between items-end">
+              <div>
+                 <h1 className="text-2xl font-bold">資產規劃建議書</h1>
+                 <p className="text-sm text-gray-500">規劃專案：{activeTab === 'gift' ? '百萬禮物專案' : '金融房產專案'}</p>
+              </div>
+              <div className="text-right">
+                 <p className="font-bold">{userProfile.displayName}</p>
+                 <p className="text-sm text-gray-500">{userProfile.title}</p>
+              </div>
+           </div>
         </div>
 
         {/* Content Area */}
@@ -701,7 +760,7 @@ export default function App() {
            {(activeTab === 'gift' || activeTab === 'estate') && (
              <button 
                onClick={handleSavePlan}
-               className="fixed bottom-6 right-6 md:absolute md:top-8 md:right-8 md:bottom-auto bg-slate-900 text-white p-3 md:px-5 md:py-2 rounded-full md:rounded-lg shadow-lg hover:bg-slate-700 transition-all flex items-center gap-2 z-50 group"
+               className="fixed bottom-6 right-6 md:absolute md:top-8 md:right-8 md:bottom-auto bg-slate-900 text-white p-3 md:px-5 md:py-2 rounded-full md:rounded-lg shadow-lg hover:bg-slate-700 transition-all flex items-center gap-2 z-50 group print:hidden"
              >
                <Save size={20} />
                <span className="hidden md:inline font-bold">儲存目前規劃</span>
@@ -720,7 +779,7 @@ export default function App() {
                      <div className="text-center py-12 text-slate-400">載入中...</div>
                    ) : savedFiles.length === 0 ? (
                      <div className="bg-white rounded-2xl p-12 text-center border-2 border-dashed border-slate-200">
-                        <PiggyBank size={48} className="mx-auto text-slate-300 mb-4" />
+                        <Wallet size={48} className="mx-auto text-slate-300 mb-4" />
                         <p className="text-slate-500">目前沒有儲存的規劃</p>
                         <p className="text-sm text-slate-400 mt-1">在工具頁面點擊「儲存」即可建立檔案</p>
                      </div>
@@ -742,52 +801,9 @@ export default function App() {
                    )}
                 </div>
              )}
-
-             {activeTab === 'settings' && (
-               <div className="animate-fade-in max-w-2xl mx-auto">
-                  <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2"><Settings /> 個人數位名片設定</h2>
-                  <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
-                     {/* Photo Upload - Simplified Logic */}
-                     <div className="flex justify-center">
-                        <div className="relative group cursor-pointer w-32 h-32">
-                           <img src={userProfile.photoUrl || user.photoURL} className={`w-full h-full rounded-full object-cover border-4 border-slate-100 shadow-lg ${userProfile.photoPosition === 'top' ? 'object-top' : 'object-center'}`} />
-                           <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              <span className="text-white text-xs">更換頭像請洽管理員</span>
-                           </div>
-                        </div>
-                     </div>
-                     <div className="grid md:grid-cols-2 gap-6">
-                        <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-2">顯示名稱</label>
-                          <input type="text" value={userProfile.displayName} onChange={e => setUserProfile({...userProfile, displayName: e.target.value})} className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-2">專業職稱</label>
-                          <input type="text" value={userProfile.title} onChange={e => setUserProfile({...userProfile, title: e.target.value})} className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-bold text-slate-700 mb-2">LINE ID</label>
-                          <input type="text" value={userProfile.lineId} onChange={e => setUserProfile({...userProfile, lineId: e.target.value})} className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
-                     </div>
-                     <button onClick={() => handleSaveProfile(userProfile)} className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 shadow-lg mt-4">儲存設定</button>
-                  </div>
-               </div>
-             )}
            </div>
         </div>
       </main>
-      
-      {/* Print Styles */}
-      <style>{`
-        @media print {
-          aside, button, .no-print { display: none !important; }
-          body, main { background: white !important; height: auto !important; overflow: visible !important; }
-          .shadow-lg, .shadow-sm { box-shadow: none !important; border: 1px solid #ddd !important; }
-          .text-white { color: black !important; }
-          .bg-gradient-to-r { background: none !important; color: black !important; border-bottom: 2px solid #000; }
-        }
-      `}</style>
     </div>
   );
 }
