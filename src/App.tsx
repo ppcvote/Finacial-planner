@@ -1,42 +1,27 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  PiggyBank, 
-  Wallet, 
-  Building2, 
-  Calculator,
-  Coins,
-  CheckCircle2,
-  Scale,
-  Save,
-  FileText,
-  Menu,
-  X,
+  Users, 
+  LayoutDashboard, 
+  Calculator, 
+  Settings, 
+  LogOut, 
+  Plus, 
+  Search, 
+  Phone, 
+  MessageCircle, 
+  MoreVertical, 
+  Edit, 
   Trash2,
-  Printer,
-  LogOut,
+  Save,
+  X,
   User as UserIcon,
-  Settings,
-  Camera,
-  Smartphone,
-  Loader2, 
-  Focus,   
-  ArrowUpFromLine,
-  WifiOff
+  Briefcase,
+  ChevronRight,
+  TrendingUp,
+  AlertCircle
 } from 'lucide-react';
-import { 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer,
-  ComposedChart,
-  Area,
-  Line
-} from 'recharts';
 
-// --- Firebase 模組整合 ---
+// --- Firebase 模組 ---
 import { initializeApp } from "firebase/app";
 import { 
   getAuth, 
@@ -51,24 +36,19 @@ import {
   collection, 
   addDoc, 
   query, 
+  where,
   getDocs, 
   deleteDoc, 
   doc, 
-  orderBy, 
-  setDoc, 
-  getDoc,
+  updateDoc,
+  serverTimestamp,
+  orderBy,
   initializeFirestore,
-  memoryLocalCache 
+  memoryLocalCache
 } from 'firebase/firestore';
-import { 
-  getStorage, 
-  ref, 
-  uploadBytes, 
-  getDownloadURL 
-} from 'firebase/storage';
 
 // ------------------------------------------------------------------
-// Firebase 設定區域
+// Firebase 設定 (維持不變)
 // ------------------------------------------------------------------
 const apiKey = "AIzaSyAqS6fhHQVyBNr1LCkCaQPyJ13Rkq7bfHA"; 
 const authDomain = "grbt-f87fa.firebaseapp.com";
@@ -78,959 +58,588 @@ const messagingSenderId = "169700005946";
 const appId = "1:169700005946:web:9b0722f31aa9fe7ad13d03";
 
 const firebaseConfig = {
-  apiKey: apiKey,
-  authDomain: authDomain,
-  projectId: projectId,
-  storageBucket: storageBucket,
-  messagingSenderId: messagingSenderId,
-  appId: appId,
+  apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId,
   measurementId: "G-58N4KK9M5W"
 };
 
-// 初始化 Firebase
+// 初始化 - 使用最強健的連線設定
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
-
-// --- 最終極連線設定 ---
-// 使用記憶體快取 + 強制長輪詢，避開所有 IndexedDB 鎖定和 WebSocket 防火牆問題
+// 啟用強制長輪詢與記憶體快取，避開所有 IndexedDB 鎖死問題
 const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true, 
-  localCache: memoryLocalCache(), 
+  experimentalForceLongPolling: true,
+  localCache: memoryLocalCache(),
 });
 
-const storage = getStorage(app);
+// ------------------------------------------------------------------
+// 型別定義
+// ------------------------------------------------------------------
+type ClientStatus = 'hot' | 'warm' | 'cold' | 'closed';
+
+interface Client {
+  id: string;
+  agentId: string; // 歸屬的業務員 ID
+  name: string;
+  phone: string;
+  lineId?: string;
+  status: ClientStatus;
+  notes?: string;
+  createdAt: any;
+}
 
 // ------------------------------------------------------------------
-// 輔助函數：超時控制
+// UI 元件 - 登入頁面
 // ------------------------------------------------------------------
-const withTimeout = <T,>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> => {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => 
-      setTimeout(() => reject(new Error(errorMessage)), ms)
-    )
-  ]);
-};
-
-// ------------------------------------------------------------------
-// 輔助函數：圖片壓縮
-// ------------------------------------------------------------------
-const compressImage = (file: File): Promise<Blob> => {
-  return new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(() => reject(new Error("Compression timeout")), 5000);
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 300; 
-          const scaleSize = MAX_WIDTH / img.width;
-          const finalWidth = img.width > MAX_WIDTH ? MAX_WIDTH : img.width;
-          const finalHeight = img.width > MAX_WIDTH ? img.height * scaleSize : img.height;
-          canvas.width = finalWidth;
-          canvas.height = finalHeight;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-              ctx.drawImage(img, 0, 0, finalWidth, finalHeight);
-              canvas.toBlob((blob) => {
-                  clearTimeout(timeoutId);
-                  if (blob) resolve(blob);
-                  else reject(new Error("Compression failed"));
-              }, 'image/jpeg', 0.7);
-          } else {
-              clearTimeout(timeoutId);
-              reject(new Error("Canvas context not found"));
-          }
-        } catch (e) {
-          clearTimeout(timeoutId);
-          reject(e);
-        }
-      };
-      img.onerror = (error) => {
-        clearTimeout(timeoutId);
-        reject(error);
-      }
-    };
-    reader.onerror = (error) => {
-      clearTimeout(timeoutId);
-      reject(error);
-    }
-  });
-};
-
-// --- 樣式注入 ---
-const PrintStyles = () => (
-  <style>{`
-    @media print {
-      @page { margin: 1cm; size: A4 portrait; }
-      body { background-color: white !important; -webkit-print-color-adjust: exact; }
-      .no-print { display: none !important; }
-      .print-only { display: block !important; }
-      .print-break-inside { break-inside: avoid; }
-      .shadow-lg, .shadow-sm, .shadow-xl { box-shadow: none !important; border: 1px solid #ddd !important; }
-      .bg-gradient-to-r, .bg-gradient-to-br { background: none !important; background-color: #f0f9ff !important; color: black !important; }
-      .text-white { color: black !important; }
-      .recharts-wrapper { width: 100% !important; }
-    }
-  `}</style>
+const LoginPage = ({ onLogin, loading }: { onLogin: () => void, loading: boolean }) => (
+  <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
+      <div className="flex justify-center mb-6">
+        <div className="bg-blue-600 p-4 rounded-xl shadow-lg shadow-blue-500/20">
+          <Briefcase size={40} className="text-white" />
+        </div>
+      </div>
+      <h1 className="text-3xl font-black text-white mb-2 tracking-tight">超業戰情室 <span className="text-blue-500">2.0</span></h1>
+      <p className="text-slate-400 mb-8">專業客戶管理系統 CRM</p>
+      
+      <button 
+        onClick={onLogin}
+        disabled={loading}
+        className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-slate-900 font-bold py-4 px-6 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50"
+      >
+        <div className="w-6 h-6 flex items-center justify-center font-bold text-slate-900">G</div>
+        {loading ? '系統連線中...' : '使用 Google 帳號登入'}
+      </button>
+      <p className="text-xs text-slate-500 mt-6">系統連線模式：強制長輪詢 (Long Polling)</p>
+    </div>
+  </div>
 );
 
-// --- 計算函數 (保持不變) ---
-const calculateMonthlyPayment = (principal: number, rate: number, years: number) => {
-  const p = Number(principal) || 0;
-  const rVal = Number(rate) || 0;
-  const y = Number(years) || 0;
-  const r = rVal / 100 / 12;
-  const n = y * 12;
-  if (rVal === 0) return (p * 10000) / (n || 1);
-  const result = (p * 10000 * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
-  return isNaN(result) ? 0 : result;
-};
+// ------------------------------------------------------------------
+// UI 元件 - 客戶列表項目
+// ------------------------------------------------------------------
+const ClientItem = ({ client, onEdit, onDelete }: { client: Client, onEdit: (c: Client) => void, onDelete: (id: string) => void }) => {
+  const statusColors = {
+    hot: 'bg-red-500/10 text-red-500 border-red-500/20',
+    warm: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+    cold: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+    closed: 'bg-green-500/10 text-green-500 border-green-500/20'
+  };
+  
+  const statusLabels = {
+    hot: '🔥 熱度高',
+    warm: '☀️ 培養中',
+    cold: '❄️ 冷名單',
+    closed: '✅ 已成交'
+  };
 
-const calculateMonthlyIncome = (principal: number, rate: number) => {
-  const p = Number(principal) || 0;
-  const r = Number(rate) || 0;
-  return (p * 10000 * (r / 100)) / 12;
-};
-
-const calculateRemainingBalance = (principal: number, rate: number, totalYears: number, yearsElapsed: number) => {
-  const pVal = Number(principal) || 0;
-  const rVal = Number(rate) || 0;
-  const totalY = Number(totalYears) || 0;
-  const elapsed = Number(yearsElapsed) || 0;
-  const r = rVal / 100 / 12;
-  const n = totalY * 12;
-  const p = elapsed * 12;
-  if (rVal === 0) return pVal * 10000 * (1 - p/(n || 1));
-  const balance = (pVal * 10000 * (Math.pow(1 + r, n) - Math.pow(1 + r, p))) / (Math.pow(1 + r, n) - 1);
-  return Math.max(0, isNaN(balance) ? 0 : balance);
-};
-
-// --- 型別定義 ---
-type GiftState = {
-  loanAmount: number;
-  loanTerm: number;
-  loanRate: number;
-  investReturnRate: number;
-};
-
-type EstateState = {
-  loanAmount: number;
-  loanTerm: number;
-  loanRate: number;
-  investReturnRate: number;
-};
-
-type SavedProfile = {
-  id: string;
-  name: string;
-  date: string;
-  type: 'gift' | 'estate';
-  data: GiftState | EstateState;
-};
-
-type UserProfile = {
-  displayName: string;
-  title: string;
-  lineId: string;
-  photoUrl: string;
-  photoPosition?: 'center' | 'top'; 
-};
-
-// ----------------------------------------------------------------------
-// 登入頁面
-// ----------------------------------------------------------------------
-const LoginPage = ({ onLogin }: { onLogin: () => void }) => {
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center space-y-6">
-        <div className="flex justify-center mb-4">
-          <div className="bg-yellow-400 p-4 rounded-full shadow-lg">
-            <Coins size={48} className="text-slate-900" />
-          </div>
+    <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center gap-4">
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${statusColors[client.status].replace('text-', 'bg-').replace('/10', '')} text-white`}>
+          {client.name.charAt(0)}
         </div>
         <div>
-          <h1 className="text-3xl font-black text-slate-800">超業菁英戰情室</h1>
-          <p className="text-slate-500 mt-2">武裝您的專業，讓數字幫您說故事</p>
-        </div>
-        <div className="border-t border-slate-100 pt-6">
-          <button 
-            onClick={onLogin}
-            className="w-full flex items-center justify-center gap-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all shadow-sm"
-          >
-            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center font-bold text-blue-600">G</div>
-            使用 Google 帳號登入
-          </button>
-        </div>
-        <p className="text-xs text-slate-400">登入即代表您同意使用條款與隱私權政策</p>
-      </div>
-    </div>
-  );
-};
-
-// ----------------------------------------------------------------------
-// 個人設定頁面
-// ----------------------------------------------------------------------
-const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, profile: UserProfile, onSaveProfile: (p: UserProfile) => Promise<void>, onBack: () => void }) => {
-  const [formData, setFormData] = useState<UserProfile>({
-    ...profile,
-    photoPosition: profile.photoPosition || 'center' 
-  });
-  const [uploading, setUploading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false); 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setUploading(true);
-      const file = e.target.files[0];
-      try {
-        let processedBlob = file; 
-        try {
-           processedBlob = await compressImage(file) as any;
-        } catch (compErr) {
-           console.warn("Compression failed, using original:", compErr);
-        }
-        const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}.jpg`);
-        const snapshot = await withTimeout(
-          uploadBytes(storageRef, processedBlob), 
-          60000, 
-          "上傳超時"
-        );
-        const url = await getDownloadURL(snapshot.ref);
-        setFormData(prev => ({ ...prev, photoUrl: url }));
-      } catch (error: any) {
-        console.error("Upload failed", error);
-        alert(`圖片上傳失敗 (${error.message})，請檢查網路。`);
-      } finally {
-        setUploading(false);
-      }
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true); 
-    await onSaveProfile(formData);
-    setIsSaving(false); 
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
-        <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Settings size={24} /> 數位名片設定
-          </h2>
-          <button onClick={onBack} disabled={isSaving} className="p-2 hover:bg-slate-700 rounded-full transition-colors"><X size={20} /></button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative group cursor-pointer" onClick={() => !isSaving && fileInputRef.current?.click()}>
-              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-slate-100 shadow-md bg-slate-200 relative">
-                {formData.photoUrl ? (
-                  <img 
-                    src={formData.photoUrl} 
-                    alt="Avatar" 
-                    className={`w-full h-full object-cover transition-all duration-300 ${formData.photoPosition === 'top' ? 'object-top' : 'object-center'}`} 
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-400"><UserIcon size={48} /></div>
-                )}
-                {uploading && (
-                  <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
-                    <Loader2 className="animate-spin text-slate-900" size={24} />
-                  </div>
-                )}
-              </div>
-              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Camera size={32} className="text-white" />
-              </div>
-            </div>
-            
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" disabled={isSaving} />
-            
-            <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
-              <button
-                type="button"
-                onClick={() => setFormData({...formData, photoPosition: 'center'})}
-                className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-all ${formData.photoPosition === 'center' ? 'bg-white shadow text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                <Focus size={14} /> 居中 (預設)
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({...formData, photoPosition: 'top'})}
-                className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-all ${formData.photoPosition === 'top' ? 'bg-white shadow text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                <ArrowUpFromLine size={14} /> 靠上 (人臉)
-              </button>
-            </div>
-            <p className="text-xs text-slate-400">若全身照被切到頭部，請選擇「靠上」</p>
+          <div className="flex items-center gap-2">
+            <h3 className="font-bold text-slate-800 text-lg">{client.name}</h3>
+            <span className={`text-xs px-2 py-0.5 rounded border ${statusColors[client.status]}`}>
+              {statusLabels[client.status]}
+            </span>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">顯示名稱</label>
-              <input 
-                type="text" 
-                value={formData.displayName} 
-                onChange={(e) => setFormData({...formData, displayName: e.target.value})}
-                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none disabled:bg-slate-100 disabled:text-slate-400"
-                placeholder="例如：王大明"
-                disabled={isSaving}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">專業職稱</label>
-              <input 
-                type="text" 
-                value={formData.title} 
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none disabled:bg-slate-100 disabled:text-slate-400"
-                placeholder="例如：資深業務經理"
-                disabled={isSaving}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">LINE ID</label>
-              <input 
-                type="text" 
-                value={formData.lineId} 
-                onChange={(e) => setFormData({...formData, lineId: e.target.value})}
-                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none disabled:bg-slate-100 disabled:text-slate-400"
-                placeholder="例如：@superagent"
-                disabled={isSaving}
-              />
-            </div>
+          <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
+            <span className="flex items-center gap-1"><Phone size={12}/> {client.phone}</span>
+            {client.lineId && <span className="flex items-center gap-1"><MessageCircle size={12}/> {client.lineId}</span>}
           </div>
-
-          <div className="pt-4 border-t border-slate-100">
-            <h3 className="text-sm font-bold text-slate-400 uppercase mb-3">名片預覽</h3>
-            <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4 shadow-sm">
-               <div className="w-16 h-16 rounded-full bg-slate-200 overflow-hidden flex-shrink-0">
-                 {formData.photoUrl ? (
-                   <img 
-                    src={formData.photoUrl} 
-                    className={`w-full h-full object-cover ${formData.photoPosition === 'top' ? 'object-top' : 'object-center'}`} 
-                   />
-                 ) : (
-                   <UserIcon className="m-4 text-slate-400" />
-                 )}
-               </div>
-               <div>
-                 <div className="text-xs text-yellow-600 font-bold bg-yellow-50 px-2 py-0.5 rounded-full inline-block mb-1">{formData.title || '職稱'}</div>
-                 <div className="font-bold text-slate-800 text-lg">{formData.displayName || '您的姓名'}</div>
-                 <div className="text-xs text-slate-500 flex items-center gap-1"><Smartphone size={12}/> LINE: {formData.lineId || '未設定'}</div>
-               </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <button 
-              type="button" 
-              onClick={onBack} 
-              disabled={isSaving}
-              className="flex-1 py-3 rounded-xl border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 disabled:opacity-50"
-            >
-              取消
-            </button>
-            <button 
-              type="submit" 
-              disabled={isSaving || uploading}
-              className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 shadow-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="animate-spin" size={20} /> 儲存中...
-                </>
-              ) : (
-                '儲存設定'
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-// ----------------------------------------------------------------------
-// APP 功能列 (Toolbar)
-// ----------------------------------------------------------------------
-const AppToolbar = ({ user, profile, onSave, onLoad, onPrint, onLogout, onOpenSettings }: { user: User | null, profile: UserProfile, onSave: () => void, onLoad: () => void, onPrint: () => void, onLogout: () => void, onOpenSettings: () => void }) => {
-  const [showMenu, setShowMenu] = useState(false);
-
-  return (
-    <div className="bg-slate-900 text-white p-3 px-4 flex justify-between items-center shadow-md sticky top-0 z-50 no-print">
-      <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={onOpenSettings}>
-        {profile.photoUrl || user?.photoURL ? (
-          <img 
-            src={profile.photoUrl || user?.photoURL || ''} 
-            alt="User" 
-            className={`w-10 h-10 rounded-full border-2 border-yellow-400 object-cover ${profile.photoPosition === 'top' ? 'object-top' : 'object-center'}`} 
-          />
-        ) : (
-          <div className="bg-slate-700 p-2 rounded-full border-2 border-slate-600"><UserIcon size={20} /></div>
-        )}
-        <div className="flex flex-col">
-          <span className="text-xs text-yellow-400 font-bold">{profile.title || '超業菁英'}</span>
-          <span className="text-sm font-bold text-white leading-none">{profile.displayName || user?.displayName || '設定名片'}</span>
         </div>
       </div>
       
-      {/* Desktop Toolbar */}
-      <div className="hidden md:flex gap-2">
-        <button onClick={onLoad} className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-700 rounded text-sm transition-colors border border-slate-700">
-          <FileText size={16} /> 讀取客戶
+      <div className="flex items-center gap-2 self-end sm:self-auto">
+        <button onClick={() => onEdit(client)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+          <Edit size={18} />
         </button>
-        <button onClick={onSave} className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-700 rounded text-sm transition-colors border border-slate-700">
-          <Save size={16} /> 儲存規劃
-        </button>
-        <div className="w-px bg-slate-700 mx-1"></div>
-        <button onClick={onPrint} className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-sm transition-colors font-bold shadow-lg hover:shadow-blue-500/20">
-          <Printer size={16} /> 匯出報表
-        </button>
-        <button onClick={onOpenSettings} className="ml-2 text-slate-400 hover:text-white p-1.5" title="名片設定">
-          <Settings size={18} />
-        </button>
-        <button onClick={onLogout} className="text-slate-400 hover:text-red-400 p-1.5" title="登出">
-          <LogOut size={18} />
+        <button onClick={() => onDelete(client.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+          <Trash2 size={18} />
         </button>
       </div>
-
-      {/* Mobile Menu */}
-      <button className="md:hidden p-2 active:bg-slate-800 rounded" onClick={() => setShowMenu(!showMenu)}>
-        {showMenu ? <X size={24} /> : <Menu size={24} />}
-      </button>
-
-      {showMenu && (
-        <div className="absolute top-full left-0 right-0 bg-slate-800 border-t border-slate-700 p-2 flex flex-col gap-2 shadow-xl md:hidden animate-in slide-in-from-top-2">
-           <button onClick={() => { onLoad(); setShowMenu(false); }} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-700 rounded text-left active:bg-slate-600">
-            <FileText size={20} className="text-slate-400" /> 讀取客戶
-          </button>
-          <button onClick={() => { onSave(); setShowMenu(false); }} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-700 rounded text-left active:bg-slate-600">
-            <Save size={20} className="text-slate-400" /> 儲存規劃
-          </button>
-          <button onClick={() => { onPrint(); setShowMenu(false); }} className="flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-500 rounded text-left font-bold text-white">
-            <Printer size={20} /> 匯出報表
-          </button>
-          <div className="border-t border-slate-700 my-1"></div>
-          <button onClick={() => { onOpenSettings(); setShowMenu(false); }} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-700 rounded text-left active:bg-slate-600">
-            <Settings size={20} className="text-slate-400" /> 名片設定
-          </button>
-          <button onClick={onLogout} className="flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-slate-700 rounded text-left">
-            <LogOut size={20} /> 登出
-          </button>
-        </div>
-      )}
     </div>
   );
 };
 
-// ----------------------------------------------------------------------
-// 輔助元件 (Modal, Tabs)
-// ----------------------------------------------------------------------
-const SavedFilesModal = ({ 
+// ------------------------------------------------------------------
+// UI 元件 - 新增/編輯 Modal
+// ------------------------------------------------------------------
+const ClientModal = ({ 
   isOpen, 
   onClose, 
-  saves, 
-  onLoadProfile, 
-  onDeleteProfile,
-  loading
+  onSubmit, 
+  initialData 
 }: { 
   isOpen: boolean, 
   onClose: () => void, 
-  saves: SavedProfile[], 
-  onLoadProfile: (p: SavedProfile) => void,
-  onDeleteProfile: (id: string) => void,
-  loading: boolean
+  onSubmit: (data: Omit<Client, 'id' | 'createdAt' | 'agentId'>) => void, 
+  initialData?: Client 
 }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh]">
-        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2"><FileText size={18} className="text-blue-600"/>雲端客戶資料庫</h3>
-          <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded-full transition-colors"><X size={20} className="text-slate-500" /></button>
-        </div>
-        <div className="overflow-y-auto p-2 space-y-2 flex-1">
-          {loading ? (<div className="text-center py-12 text-slate-400">載入中...</div>) : saves.length === 0 ? (<div className="text-center py-12 text-slate-400"><PiggyBank size={48} className="mx-auto mb-3 opacity-20" /><p>尚無客戶資料</p><p className="text-xs mt-1">規劃完成後點擊「儲存」建立檔案</p></div>) : (
-            saves.map((profile) => (
-              <div key={profile.id} className="group flex items-center justify-between p-3 hover:bg-blue-50 rounded-xl border border-slate-100 transition-all cursor-pointer" onClick={() => onLoadProfile(profile)}>
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${profile.type === 'gift' ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>{profile.type === 'gift' ? <Wallet size={18} /> : <Building2 size={18} />}</div>
-                  <div><div className="font-bold text-slate-700">{profile.name}</div><div className="text-xs text-slate-400">{profile.date} • {profile.type === 'gift' ? '百萬禮物' : '金融房產'}</div></div>
-                </div>
-                <button onClick={(e) => { e.stopPropagation(); onDeleteProfile(profile.id); }} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d: GiftState) => void }) => {
-  const safeData = {
-    loanAmount: Number(data?.loanAmount) || 100,
-    loanTerm: Number(data?.loanTerm) || 7,
-    loanRate: Number(data?.loanRate) || 2.8,
-    investReturnRate: Number(data?.investReturnRate) || 6
-  };
-  const { loanAmount, loanTerm, loanRate, investReturnRate } = safeData;
-
-  const targetAmount = loanAmount * 3; 
-  const monthlyLoanPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
-  const monthlyInvestIncomeSingle = calculateMonthlyIncome(loanAmount, investReturnRate);
-  const phase1_NetOut = monthlyLoanPayment - monthlyInvestIncomeSingle;
-  const phase2_LoanPmt = monthlyLoanPayment; 
-  const phase2_Income = monthlyInvestIncomeSingle * 2; 
-  const phase2_NetOut = phase2_LoanPmt - phase2_Income;
-  const standardTotalCost = targetAmount * 10000; 
-  const standardMonthlySaving = standardTotalCost / (loanTerm * 2 * 12);
-  const generateChartData = () => {
-    const dataArr = [];
-    let cumulativeStandard = 0;
-    let cumulativeProjectCost = 0;
-    let projectAssetValue = 0;
-    for (let year = 1; year <= 14; year++) {
-      cumulativeStandard += standardMonthlySaving * 12;
-      if (year <= 7) {
-        cumulativeProjectCost += phase1_NetOut * 12;
-        projectAssetValue = loanAmount * 10000;
-      } else {
-        cumulativeProjectCost += phase2_NetOut * 12;
-        projectAssetValue = loanAmount * 2 * 10000;
-      }
-      dataArr.push({
-        year: `第${year}年`,
-        一般存錢成本: Math.round(cumulativeStandard / 10000),
-        專案實付成本: Math.round(cumulativeProjectCost / 10000),
-        專案持有資產: Math.round(projectAssetValue / 10000),
-      });
-    }
-    return dataArr;
-  };
-  const updateField = (field: keyof GiftState, value: number) => { setData({ ...safeData, [field]: value }); };
-  return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex gap-3 items-start print-break-inside">
-        <Wallet className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
-        <div><h3 className="font-bold text-blue-900">核心概念：小額槓桿，階梯式累積</h3><p className="text-sm text-blue-700">透過 7 年一輪的循環，用時間換取資產。</p></div>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-4 space-y-4 print-break-inside">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
-            <h2 className="font-bold text-slate-700 mb-4 flex items-center gap-2"><Calculator className="w-5 h-5" /> 參數設定</h2>
-            <div className="space-y-5">
-              {[{ label: "單次借貸額度 (萬)", field: "loanAmount", min: 50, max: 500, step: 10, val: loanAmount }, { label: "信貸利率 (%)", field: "loanRate", min: 1.5, max: 20.0, step: 0.1, val: loanRate }, { label: "配息率 (%)", field: "investReturnRate", min: 3, max: 10, step: 0.5, val: investReturnRate }].map((item) => (
-                <div key={item.field}><label className="text-xs font-bold text-slate-500 uppercase">{item.label}</label><div className="flex items-center gap-3"><input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => updateField(item.field as any, Number(e.target.value))} className="w-full accent-blue-600 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" /><span className="font-mono font-bold text-blue-700 w-14 text-right">{item.val}</span></div></div>
-              ))}
-            </div>
-            <div className="mt-4 p-3 bg-slate-50 rounded text-xs text-slate-500">規劃目標：累積 <strong className="text-blue-600">{targetAmount} 萬</strong> 資產</div>
-          </div>
-          <div className="hidden print-only border p-4 mb-4 rounded border-slate-300">
-            <h3 className="font-bold mb-2">規劃參數</h3>
-            <div className="grid grid-cols-2 gap-2 text-sm"><div>信貸額度：{loanAmount} 萬</div><div>信貸利率：{loanRate} %</div><div>配息率：{investReturnRate} %</div><div>總目標：{targetAmount} 萬</div></div>
-          </div>
-          <div className="bg-white rounded-xl shadow border border-slate-200 p-5 print-break-inside">
-              <div className="text-sm text-slate-500 mb-4 text-center">一般存錢月存金額 <span className="line-through decoration-slate-400 font-bold ml-2">${Math.round(standardMonthlySaving).toLocaleString()}</span></div>
-              <div className="space-y-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
-                <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">1. 信貸每月還款</span><span className="text-red-500 font-bold font-mono">-${Math.round(monthlyLoanPayment).toLocaleString()}</span></div>
-                <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">2. 扣除每月配息</span><span className="text-green-600 font-bold font-mono">+${Math.round(monthlyInvestIncomeSingle).toLocaleString()}</span></div>
-                <div className="border-t border-slate-200 my-2"></div>
-                <div className="flex justify-between items-end"><span className="text-blue-700 font-bold">3. 實質每月應負</span><span className="text-3xl font-black text-blue-600 font-mono">${Math.round(phase1_NetOut).toLocaleString()}</span></div>
-              </div>
-              <div className="mt-4 text-center"><div className="text-xs bg-green-100 text-green-700 py-1.5 px-3 rounded-full inline-block font-bold">比一般存錢每月省下 ${Math.round(standardMonthlySaving - phase1_NetOut).toLocaleString()}</div></div>
-          </div>
-        </div>
-        <div className="lg:col-span-8 space-y-6">
-          <div className="grid grid-cols-2 gap-4 print-break-inside">
-              <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
-                <div className="text-xs text-slate-500 font-bold mb-1">第一階段 (1-7年)</div>
-                <div className="flex justify-between items-end"><span className="text-2xl font-bold text-slate-800">${Math.round(phase1_NetOut).toLocaleString()}</span><span className="text-xs text-slate-400">/月</span></div><div className="text-xs text-slate-500 mt-2">擁有 {loanAmount} 萬資產</div>
-              </div>
-              <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-indigo-500">
-                <div className="text-xs text-slate-500 font-bold mb-1">第二階段 (8-14年)</div>
-                <div className="flex justify-between items-end"><span className={`text-2xl font-bold ${phase2_NetOut < 0 ? 'text-green-600' : 'text-slate-800'}`}>{phase2_NetOut < 0 ? `+${Math.abs(Math.round(phase2_NetOut)).toLocaleString()}` : `$${Math.round(phase2_NetOut).toLocaleString()}`}</span><span className="text-xs text-slate-400">/月</span></div><div className="text-xs text-slate-500 mt-2">擁有 {loanAmount * 2} 萬資產</div>
-              </div>
-          </div>
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[300px] print-break-inside">
-            <ResponsiveContainer width="100%" height="100%"><ComposedChart data={generateChartData()} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}><defs><linearGradient id="colorAssetGift" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="year" tick={{fontSize: 12}} axisLine={false} tickLine={false} /><YAxis unit="萬" tick={{fontSize: 12}} axisLine={false} tickLine={false} /><Tooltip contentStyle={{borderRadius: '8px', border: '1px solid #ddd', boxShadow: 'none'}} /><Legend /><Area type="monotone" dataKey="專案持有資產" stroke="#3b82f6" fill="url(#colorAssetGift)" strokeWidth={2} /><Bar dataKey="一般存錢成本" fill="#cbd5e1" barSize={15} radius={[4,4,0,0]} /><Line type="monotone" dataKey="專案實付成本" stroke="#f59e0b" strokeWidth={3} dot={false} /></ComposedChart></ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const FinancialRealEstateTab = ({ data, setData }: { data: EstateState, setData: (d: EstateState) => void }) => {
-  const safeData = {
-    loanAmount: Number(data?.loanAmount) || 1000,
-    loanTerm: Number(data?.loanTerm) || 30,
-    loanRate: Number(data?.loanRate) || 2.2,
-    investReturnRate: Number(data?.investReturnRate) || 6
-  };
-  const { loanAmount, loanTerm, loanRate, investReturnRate } = safeData;
-
-  const monthlyLoanPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
-  const monthlyInvestIncome = calculateMonthlyIncome(loanAmount, investReturnRate);
-  const monthlyCashFlow = monthlyInvestIncome - monthlyLoanPayment;
-  const isNegativeCashFlow = monthlyCashFlow < 0;
-  const totalOutOfPocket = Math.abs(monthlyCashFlow) * 12 * loanTerm;
-  const generateHouseChartData = () => {
-    const dataArr = [];
-    let cumulativeNetIncome = 0; 
-    for (let year = 1; year <= loanTerm; year++) {
-      cumulativeNetIncome += monthlyCashFlow * 12;
-      const remainingLoan = calculateRemainingBalance(loanAmount, loanRate, loanTerm, year);
-      const assetEquity = (loanAmount * 10000) - remainingLoan;
-      const financialTotalWealth = assetEquity + cumulativeNetIncome;
-      const step = loanTerm > 20 ? 3 : 1; 
-      if (year === 1 || year % step === 0 || year === loanTerm) {
-         dataArr.push({ year: `第${year}年`, 總資產價值: Math.round(financialTotalWealth / 10000), 剩餘貸款: Math.round(remainingLoan / 10000) });
-      }
-    }
-    return dataArr;
-  };
-  const chartData = generateHouseChartData();
-  const finalData = chartData[chartData.length - 1];
-  const updateField = (field: keyof EstateState, value: number) => { setData({ ...safeData, [field]: value }); };
-  return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex gap-3 items-start print-break-inside">
-        <Building2 className="w-6 h-6 text-emerald-600 mt-1 flex-shrink-0" />
-        <div><h3 className="font-bold text-emerald-900">核心概念：以息養貸，打造數位包租公</h3><p className="text-sm text-emerald-700">利用長年期貸款，讓配息自動幫你繳貸款，期滿後 <strong className="text-emerald-800 underline">資產歸你</strong>。</p></div>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-4 space-y-4 print-break-inside">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
-            <h2 className="font-bold text-slate-700 mb-4 flex items-center gap-2"><Calculator className="w-5 h-5" /> 資產設定</h2>
-            <div className="space-y-5">
-              {[{ label: "資產/貸款總額 (萬)", field: "loanAmount", min: 500, max: 3000, step: 100, val: loanAmount }, { label: "貸款年期 (年)", field: "loanTerm", min: 20, max: 40, step: 1, val: loanTerm }, { label: "貸款利率 (%)", field: "loanRate", min: 1.8, max: 4.0, step: 0.1, val: loanRate }, { label: "配息率 (%)", field: "investReturnRate", min: 3, max: 10, step: 0.5, val: investReturnRate }].map((item) => (
-                <div key={item.field}><label className="text-xs font-bold text-slate-500 uppercase">{item.label}</label><div className="flex items-center gap-3"><input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => updateField(item.field as any, Number(e.target.value))} className="w-full accent-emerald-600 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" /><span className="font-mono font-bold text-emerald-700 w-14 text-right">{item.val}</span></div></div>
-              ))}
-            </div>
-          </div>
-           <div className="hidden print-only border p-4 mb-4 rounded border-slate-300">
-            <h3 className="font-bold mb-2">房產參數</h3>
-            <div className="grid grid-cols-2 gap-2 text-sm"><div>貸款總額：{loanAmount} 萬</div><div>年期：{loanTerm} 年</div><div>貸款利率：{loanRate} %</div><div>配息率：{investReturnRate} %</div></div>
-          </div>
-          <div className="bg-white rounded-xl shadow border border-slate-200 p-6 print-break-inside">
-             <h3 className="text-center font-bold text-slate-700 mb-4">每月現金流試算</h3>
-             <div className="space-y-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
-               <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">1. 每月配息收入</span><span className="font-mono text-emerald-600 font-bold">+${Math.round(monthlyInvestIncome).toLocaleString()}</span></div>
-               <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">2. 扣除貸款支出</span><span className="font-mono text-red-500 font-bold">-${Math.round(monthlyLoanPayment).toLocaleString()}</span></div>
-               <div className="border-t border-slate-200 my-2"></div>
-               {isNegativeCashFlow ? (
-                 <div className="text-center">
-                    <div className="text-xs text-slate-400 mb-1">每月需負擔</div><div className="text-3xl font-black text-red-500 font-mono">-${Math.abs(Math.round(monthlyCashFlow)).toLocaleString()}</div>
-                    <div className="mt-4 bg-orange-50 rounded-lg p-3 border border-orange-100"><div className="flex items-center justify-center gap-2 text-orange-800 font-bold text-sm mb-1"><Scale className="w-4 h-4" /> 槓桿效益分析</div><div className="text-xs text-orange-700 mb-2">{loanTerm}年總共只付出 <span className="font-bold underline">${Math.round(totalOutOfPocket/10000)}萬</span></div><div className="text-xs bg-white rounded py-1 px-2 text-orange-800 border border-orange-200">換取 <span className="font-bold text-lg">${loanAmount}萬</span> 原始資產</div></div>
-                 </div>
-               ) : (
-                 <div className="text-center">
-                    <div className="text-xs text-slate-400 mb-1">每月淨現金流</div><div className="text-3xl font-black text-emerald-600 font-mono">+${Math.round(monthlyCashFlow).toLocaleString()}</div><div className="text-xs mt-2 text-slate-500">完全由資產養貸，還有找！</div>
-                 </div>
-               )}
-             </div>
-          </div>
-        </div>
-        <div className="lg:col-span-8 space-y-6">
-          <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden print-break-inside">
-            <div className="absolute top-0 right-0 p-8 opacity-10"><Coins size={120} /></div>
-            <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><CheckCircle2 className="text-emerald-300" />{loanTerm} 年期滿總結算</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-emerald-400/30">
-                <div className="text-emerald-200 text-xs mb-1">1. 房貸結清</div><div className="text-2xl font-bold">0</div><div className="text-xs text-emerald-200 mt-1 opacity-75">無債一身輕</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-emerald-400/30">
-                <div className="text-emerald-200 text-xs mb-1">2. 本金歸你</div><div className="text-2xl font-bold">{loanAmount} <span className="text-sm font-normal">萬</span></div><div className="text-xs text-emerald-200 mt-1 opacity-75">資產保留</div>
-              </div>
-              <div className="bg-white/20 backdrop-blur-md rounded-xl p-4 border border-yellow-300/50 shadow-lg">
-                <div className="text-yellow-200 text-xs mb-1 font-bold">3. 總效益</div><div className="text-3xl font-black text-yellow-300">{finalData ? finalData.總資產價值 : 0} <span className="text-sm font-normal text-white">萬</span></div>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[360px] print-break-inside">
-             <h4 className="text-sm font-bold text-slate-600 mb-2 pl-2">{loanTerm}年「總資產價值」走勢 (單位: 萬)</h4>
-            <ResponsiveContainer width="100%" height="100%"><ComposedChart data={generateHouseChartData()} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}><defs><linearGradient id="colorWealth" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="year" tick={{fontSize: 12}} axisLine={false} tickLine={false} /><YAxis unit="萬" tick={{fontSize: 12}} axisLine={false} tickLine={false} /><Tooltip contentStyle={{borderRadius: '8px', border: '1px solid #ddd', boxShadow: 'none'}} /><Legend /><Area type="monotone" name="總資產價值 (含配息)" dataKey="總資產價值" stroke="#10b981" fill="url(#colorWealth)" strokeWidth={3} /><Line type="monotone" name="剩餘房貸" dataKey="剩餘貸款" stroke="#ef4444" strokeWidth={1} dot={false} opacity={0.5} /></ComposedChart></ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ----------------------------------------------------------------------
-// 主程式 (Web App Entry)
-// ----------------------------------------------------------------------
-export default function App() {
-  const [activeTab, setActiveTab] = useState<'gift' | 'estate'>('gift');
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'main' | 'settings'>('main');
-  
-  const defaultGiftData: GiftState = { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 };
-  const defaultEstateData: EstateState = { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6 };
-
-  const [giftData, setGiftData] = useState<GiftState>(defaultGiftData);
-  const [estateData, setEstateData] = useState<EstateState>(defaultEstateData);
-  const [userProfile, setUserProfile] = useState<UserProfile>({ displayName: '', title: '', lineId: '', photoUrl: '' });
-  const [saves, setSaves] = useState<SavedProfile[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [loadingFiles, setLoadingFiles] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    lineId: '',
+    status: 'warm' as ClientStatus,
+    notes: ''
+  });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
+    if (initialData) {
+      setFormData({
+        name: initialData.name,
+        phone: initialData.phone,
+        lineId: initialData.lineId || '',
+        status: initialData.status,
+        notes: initialData.notes || ''
+      });
+    } else {
+      setFormData({ name: '', phone: '', lineId: '', status: 'warm', notes: '' });
+    }
+  }, [initialData, isOpen]);
 
-      if (currentUser) {
-        // --- 修正: 讀取路徑變更 (向下相容) ---
-        // 先嘗試讀取 root level (users/{uid}) 的 profile 欄位
-        // 如果沒有，再嘗試讀取舊路徑 (profile/info)
-        const userDocRef = doc(db, "users", currentUser.uid);
-        try {
-          const userDocSnap = await getDoc(userDocRef);
-          if (userDocSnap.exists() && userDocSnap.data().profile) {
-            setUserProfile(userDocSnap.data().profile as UserProfile);
-          } else {
-            // Fallback: 舊路徑
-            const oldDocRef = doc(db, "users", currentUser.uid, "profile", "info");
-            const oldDocSnap = await getDoc(oldDocRef);
-            if (oldDocSnap.exists()) {
-              setUserProfile(oldDocSnap.data() as UserProfile);
-            } else {
-              setUserProfile({ displayName: currentUser.displayName || '', title: '', lineId: '', photoUrl: currentUser.photoURL || '' });
-            }
-          }
-        } catch (e) {
-          console.error("Error loading profile", e);
-        }
-      }
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+          <h3 className="font-bold text-slate-800">{initialData ? '編輯客戶資料' : '新增潛在客戶'}</h3>
+          <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded-full text-slate-500"><X size={20}/></button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-1">客戶姓名 <span className="text-red-500">*</span></label>
+            <input 
+              type="text" 
+              value={formData.name}
+              onChange={e => setFormData({...formData, name: e.target.value})}
+              className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="請輸入姓名"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-1">聯絡電話</label>
+              <input 
+                type="tel" 
+                value={formData.phone}
+                onChange={e => setFormData({...formData, phone: e.target.value})}
+                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                placeholder="0912-345-678"
+              />
+            </div>
+            <div>
+               <label className="block text-sm font-bold text-slate-700 mb-1">LINE ID</label>
+               <input 
+                 type="text" 
+                 value={formData.lineId}
+                 onChange={e => setFormData({...formData, lineId: e.target.value})}
+                 className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                 placeholder="非必填"
+               />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-1">客戶狀態</label>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { v: 'hot', l: '🔥 熱度高', c: 'border-red-500 text-red-600 bg-red-50' },
+                { v: 'warm', l: '☀️ 培養中', c: 'border-orange-500 text-orange-600 bg-orange-50' },
+                { v: 'cold', l: '❄️ 冷名單', c: 'border-blue-500 text-blue-600 bg-blue-50' },
+                { v: 'closed', l: '✅ 已成交', c: 'border-green-500 text-green-600 bg-green-50' },
+              ].map(opt => (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => setFormData({...formData, status: opt.v as ClientStatus})}
+                  className={`text-xs py-2 px-1 rounded-lg border font-bold transition-all ${formData.status === opt.v ? opt.c : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                >
+                  {opt.l}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+             <label className="block text-sm font-bold text-slate-700 mb-1">備註筆記</label>
+             <textarea 
+               value={formData.notes}
+               onChange={e => setFormData({...formData, notes: e.target.value})}
+               className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none"
+               placeholder="例如：對房產投資有興趣，預算 2000 萬..."
+             />
+          </div>
+          <button 
+            onClick={() => {
+              if (!formData.name) return alert('請輸入姓名');
+              onSubmit(formData);
+            }}
+            className="w-full bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-colors shadow-lg mt-2"
+          >
+            {initialData ? '儲存變更' : '新增客戶'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ------------------------------------------------------------------
+// 主應用程式
+// ------------------------------------------------------------------
+export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'clients'>('dashboard');
+  
+  // Clients Data
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loadingClients, setLoadingClients] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | undefined>(undefined);
+
+  // Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
+  // Fetch Clients (當 user 改變時讀取)
+  useEffect(() => {
+    if (user) {
+      fetchClients();
+    }
+  }, [user]);
+
+  const fetchClients = async () => {
+    if (!user) return;
+    setLoadingClients(true);
+    try {
+      // 策略：查詢 'clients' collection，過濾 agentId == user.uid
+      const q = query(
+        collection(db, "clients"), 
+        where("agentId", "==", user.uid),
+        orderBy("createdAt", "desc")
+      );
+      
+      const snapshot = await getDocs(q);
+      const list = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Client[];
+      
+      setClients(list);
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+      // 如果還沒建 index，可能會報錯，這時先不處理 orderBy
+      // Fallback simple query
+      try {
+        const qSimple = query(collection(db, "clients"), where("agentId", "==", user.uid));
+        const snapSimple = await getDocs(qSimple);
+        const list = snapSimple.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Client[];
+        setClients(list);
+      } catch (e) {
+        console.error("Fallback error:", e);
+      }
+    } finally {
+      setLoadingClients(false);
+    }
+  };
+
   const handleLogin = async () => {
     try {
+      setLoading(true);
       await signInWithPopup(auth, googleProvider);
-    } catch (error: any) {
-      console.error("Login failed", error);
-      alert("登入失敗，請重試");
+    } catch (error) {
+      console.error("Login Error:", error);
+      alert("登入失敗，請檢查網路連線");
+      setLoading(false);
     }
   };
 
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      setSaves([]); 
-    } catch (error) {
-      console.error("Logout failed", error);
-    }
+    await signOut(auth);
+    setClients([]);
   };
 
-  const loadCloudFiles = async () => {
+  const handleAddClient = async (data: Omit<Client, 'id' | 'createdAt' | 'agentId'>) => {
     if (!user) return;
-    setLoadingFiles(true);
-    setIsModalOpen(true);
     try {
-      const q = query(collection(db, "users", user.uid, "plans"), orderBy("date", "desc"));
-      const querySnapshot = await getDocs(q);
-      const loadedFiles: SavedProfile[] = [];
-      querySnapshot.forEach((doc) => {
-        loadedFiles.push({ id: doc.id, ...doc.data() } as SavedProfile);
+      await addDoc(collection(db, "clients"), {
+        ...data,
+        agentId: user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       });
-      setSaves(loadedFiles);
+      setIsModalOpen(false);
+      fetchClients(); // Refresh list
     } catch (error) {
-      console.error("Error loading files:", error);
-      alert("讀取資料失敗");
-    } finally {
-      setLoadingFiles(false);
+      console.error("Add Error:", error);
+      alert("新增失敗");
     }
   };
 
-  const handleSave = async () => {
-    if (!user) return;
-    const name = prompt("請輸入客戶姓名或專案名稱：", "新專案");
-    if (!name) return;
-
-    const newProfile = {
-      name,
-      date: new Date().toLocaleDateString(),
-      type: activeTab,
-      data: activeTab === 'gift' ? { ...giftData } : { ...estateData }
-    };
-
+  const handleUpdateClient = async (data: Omit<Client, 'id' | 'createdAt' | 'agentId'>) => {
+    if (!editingClient) return;
     try {
-      await withTimeout(
-        addDoc(collection(db, "users", user.uid, "plans"), newProfile),
-        15000,
-        "儲存超時"
-      );
-      alert("儲存成功！");
-    } catch (error: any) {
-      console.error("Error saving document: ", error);
-      if (error.message === "儲存超時") {
-        alert("儲存時間過長，請檢查網路連線。");
-      } else {
-        alert("儲存失敗，請稍後再試。");
-      }
-    }
-  };
-  
-  const handleSaveProfile = async (newProfile: UserProfile) => {
-    if (!user) return;
-    
-    const safeProfile = {
-      displayName: newProfile.displayName || '',
-      title: newProfile.title || '',
-      lineId: newProfile.lineId || '',
-      photoUrl: newProfile.photoUrl || '',
-      photoPosition: newProfile.photoPosition || 'center'
-    };
-
-    try {
-      // --- 修正: 寫入路徑變更 ---
-      // 不再寫入 profile/info 子集合 (容易被 Rules 擋)
-      // 直接寫入 users/{uid} 文件的 profile 欄位
-      // 這樣可以避開子集合權限問題，且 users/{uid} 通常是允許寫入的
-      await withTimeout(
-        setDoc(doc(db, "users", user.uid), { profile: safeProfile }, { merge: true }),
-        60000, // 增加到 60 秒
-        "儲存超時"
-      );
-      setUserProfile(safeProfile);
-      alert("名片設定已更新！");
-      setView('main');
-    } catch (error: any) {
-      console.error("Error saving profile: ", error);
-      if (error.message === "儲存超時") {
-        alert("儲存時間過長，請檢查網路連線。");
-      } else {
-        alert(`儲存失敗：${error.message || error.code}。`);
-      }
-    }
-  };
-
-  const handleDeleteProfile = async (id: string) => {
-    if (!user || !confirm("確定要刪除此紀錄嗎？")) return;
-    try {
-      await deleteDoc(doc(db, "users", user.uid, "plans", id));
-      setSaves(prev => prev.filter(s => s.id !== id));
+      const docRef = doc(db, "clients", editingClient.id);
+      await updateDoc(docRef, {
+        ...data,
+        updatedAt: serverTimestamp()
+      });
+      setIsModalOpen(false);
+      setEditingClient(undefined);
+      fetchClients(); // Refresh
     } catch (error) {
-      console.error("Error deleting document: ", error);
+      console.error("Update Error:", error);
+      alert("更新失敗");
+    }
+  };
+
+  const handleDeleteClient = async (id: string) => {
+    if (!confirm("確定要刪除這位客戶嗎？此動作無法復原。")) return;
+    try {
+      await deleteDoc(doc(db, "clients", id));
+      setClients(prev => prev.filter(c => c.id !== id));
+    } catch (error) {
+      console.error("Delete Error:", error);
       alert("刪除失敗");
     }
   };
 
-  const handleLoadProfile = (profile: SavedProfile) => {
-    setActiveTab(profile.type);
-    
-    if (profile.type === 'gift') {
-      const mergedData = { ...defaultGiftData, ...profile.data };
-      setGiftData(mergedData as GiftState);
-    } else {
-      const mergedData = { ...defaultEstateData, ...profile.data };
-      setEstateData(mergedData as EstateState);
-    }
-    setIsModalOpen(false);
+  const filteredClients = clients.filter(c => 
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    c.phone.includes(searchTerm)
+  );
+
+  // ------------------------------------------------------------------
+  // UI 渲染
+  // ------------------------------------------------------------------
+  if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">啟動系統中...</div>;
+  if (!user) return <LoginPage onLogin={handleLogin} loading={loading} />;
+
+  // 統計數據
+  const stats = {
+    total: clients.length,
+    hot: clients.filter(c => c.status === 'hot').length,
+    monthNew: clients.length, // 暫時顯示總數，之後可改為本月新增
   };
-
-  const handlePrint = () => {
-    window.print();
-  };
-
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-500">系統啟動中...</div>;
-  if (!user) return <LoginPage onLogin={handleLogin} />;
-
-  if (view === 'settings') {
-    return (
-      <SettingsPage 
-        user={user} 
-        profile={userProfile} 
-        onSaveProfile={handleSaveProfile} 
-        onBack={() => setView('main')} 
-      />
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-12">
-      <PrintStyles />
-      <AppToolbar 
-        user={user}
-        profile={userProfile}
-        onSave={handleSave} 
-        onLoad={loadCloudFiles} 
-        onPrint={handlePrint}
-        onLogout={handleLogout}
-        onOpenSettings={() => setView('settings')}
-      />
-      <SavedFilesModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        saves={saves} 
-        onLoadProfile={handleLoadProfile}
-        onDeleteProfile={handleDeleteProfile}
-        loading={loadingFiles}
-      />
-      <header className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 shadow-lg mb-8 no-print">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col md:flex-row font-sans">
+      
+      {/* 側邊導航欄 (Sidebar) */}
+      <aside className="bg-slate-900 text-slate-400 w-full md:w-64 flex-shrink-0 flex flex-col h-auto md:h-screen sticky top-0 z-40">
+        <div className="p-6 flex items-center gap-3 text-white border-b border-slate-800">
+          <div className="bg-blue-600 p-2 rounded-lg"><Briefcase size={20} /></div>
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Coins className="w-8 h-8 text-yellow-400" />
-              全方位資產規劃系統
-            </h1>
-            <p className="text-slate-400 mt-1 text-sm">專業版 • 資產累積 • 現金流規劃</p>
-          </div>
-          <div className="bg-slate-700/50 p-1 rounded-lg flex">
-            <button 
-              onClick={() => setActiveTab('gift')}
-              className={`px-6 py-2 rounded-md font-bold transition-all flex items-center gap-2 ${activeTab === 'gift' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-300 hover:text-white'}`}
-            >
-              <Wallet size={18} /> 百萬禮物
-            </button>
-            <button 
-              onClick={() => setActiveTab('estate')}
-              className={`px-6 py-2 rounded-md font-bold transition-all flex items-center gap-2 ${activeTab === 'estate' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:text-white'}`}
-            >
-              <Building2 size={18} /> 金融房產
-            </button>
+            <h1 className="font-bold text-lg leading-none">超業戰情室</h1>
+            <span className="text-xs text-blue-400 font-mono">Ver 2.0</span>
           </div>
         </div>
-      </header>
-      <div className="hidden print-only text-center mb-8 border-b pb-4">
-         <div className="flex justify-between items-end mb-4">
-            <div className="text-left">
-              <h1 className="text-3xl font-bold text-slate-900">資產規劃建議書</h1>
-              <div className="text-sm text-slate-500 mt-1">規劃專案：{activeTab === 'gift' ? '百萬禮物專案' : '金融房產專案'}</div>
+        
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <button 
+            onClick={() => setCurrentTab('dashboard')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${currentTab === 'dashboard' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'hover:bg-slate-800 hover:text-white'}`}
+          >
+            <LayoutDashboard size={20} /> 戰情總覽
+          </button>
+          <button 
+            onClick={() => setCurrentTab('clients')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${currentTab === 'clients' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'hover:bg-slate-800 hover:text-white'}`}
+          >
+            <Users size={20} /> 客戶名單
+          </button>
+          
+          <div className="pt-4 mt-4 border-t border-slate-800">
+            <p className="px-4 text-xs font-bold text-slate-600 uppercase mb-2">Coming Soon</p>
+            <button disabled className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 cursor-not-allowed">
+              <Calculator size={20} /> 試算工具 (移植中)
+            </button>
+            <button disabled className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 cursor-not-allowed">
+              <FileText size={20} /> 提案報告
+            </button>
+          </div>
+        </nav>
+
+        <div className="p-4 border-t border-slate-800">
+          <div className="flex items-center gap-3 mb-4 px-2">
+            {user.photoURL ? (
+              <img src={user.photoURL} className="w-8 h-8 rounded-full border border-slate-600" alt="User" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white"><UserIcon size={16}/></div>
+            )}
+            <div className="overflow-hidden">
+              <div className="text-sm font-bold text-white truncate">{user.displayName}</div>
+              <div className="text-xs truncate text-slate-500">{user.email}</div>
             </div>
-            <div className="text-right">
-               <div className="font-bold text-lg">{userProfile.displayName || user.displayName}</div>
-               <div className="text-sm text-slate-500">{userProfile.title}</div>
-               {userProfile.lineId && <div className="text-xs text-slate-400 mt-1">LINE: {userProfile.lineId}</div>}
+          </div>
+          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors text-sm">
+            <LogOut size={16} /> 登出系統
+          </button>
+        </div>
+      </aside>
+
+      {/* 主內容區 (Main Content) */}
+      <main className="flex-1 overflow-y-auto h-screen p-4 md:p-8">
+        
+        {/* Dashboard View */}
+        {currentTab === 'dashboard' && (
+          <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <header className="mb-8">
+              <h2 className="text-2xl font-bold text-slate-800">早安，{user.displayName}。</h2>
+              <p className="text-slate-500">準備好開始今天的戰鬥了嗎？</p>
+            </header>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">總客戶數</p>
+                    <h3 className="text-4xl font-black text-slate-800 mt-2">{stats.total}</h3>
+                  </div>
+                  <div className="bg-slate-100 p-3 rounded-xl text-slate-600"><Users size={24}/></div>
+                </div>
+                <div className="mt-4 text-sm text-slate-500 flex items-center gap-1">
+                  <TrendingUp size={14} className="text-green-500" /> 持續累積資產
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-red-500 to-rose-600 p-6 rounded-2xl shadow-lg shadow-red-200 text-white flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-bold text-red-100 uppercase tracking-wider">重點熱度客戶</p>
+                    <h3 className="text-4xl font-black mt-2">{stats.hot}</h3>
+                  </div>
+                  <div className="bg-white/20 p-3 rounded-xl text-white"><AlertCircle size={24}/></div>
+                </div>
+                <div className="mt-4 text-sm text-red-100 flex items-center gap-1">
+                   建議優先聯繫跟進
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">待開發名單</p>
+                    <h3 className="text-4xl font-black text-slate-800 mt-2">{stats.total - stats.hot}</h3>
+                  </div>
+                  <div className="bg-slate-100 p-3 rounded-xl text-slate-600"><Search size={24}/></div>
+                </div>
+                <div className="mt-4 text-sm text-slate-500">
+                   潛在機會都在這裡
+                </div>
+              </div>
             </div>
-         </div>
-         <div className="text-xs text-slate-300 text-right border-t pt-1">列印日期：{new Date().toLocaleDateString()}</div>
-      </div>
-      <main className="max-w-6xl mx-auto px-4">
-        {activeTab === 'gift' ? (
-          <MillionDollarGiftTab data={giftData} setData={setGiftData} />
-        ) : (
-          <FinancialRealEstateTab data={estateData} setData={setEstateData} />
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 flex items-center justify-between cursor-pointer hover:bg-blue-100 transition-colors" onClick={() => { setIsModalOpen(true); setEditingClient(undefined); }}>
+                 <div className="flex items-center gap-4">
+                   <div className="bg-blue-600 text-white p-4 rounded-full shadow-lg shadow-blue-500/30"><Plus size={24} /></div>
+                   <div>
+                     <h4 className="font-bold text-blue-900 text-lg">新增客戶資料</h4>
+                     <p className="text-blue-600/80 text-sm">快速建立新的潛在名單</p>
+                   </div>
+                 </div>
+                 <ChevronRight className="text-blue-400" />
+              </div>
+
+              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 flex items-center justify-between cursor-pointer hover:bg-emerald-100 transition-colors" onClick={() => setCurrentTab('clients')}>
+                 <div className="flex items-center gap-4">
+                   <div className="bg-emerald-600 text-white p-4 rounded-full shadow-lg shadow-emerald-500/30"><Search size={24} /></div>
+                   <div>
+                     <h4 className="font-bold text-emerald-900 text-lg">搜尋客戶</h4>
+                     <p className="text-emerald-600/80 text-sm">查看所有名單詳情</p>
+                   </div>
+                 </div>
+                 <ChevronRight className="text-emerald-400" />
+              </div>
+            </div>
+          </div>
         )}
+
+        {/* Client List View */}
+        {currentTab === 'clients' && (
+          <div className="max-w-5xl mx-auto h-full flex flex-col animate-in fade-in slide-in-from-right-4 duration-500">
+             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+               <div>
+                 <h2 className="text-2xl font-bold text-slate-800">客戶名單</h2>
+                 <p className="text-slate-500 text-sm">管理您的所有人脈資產</p>
+               </div>
+               <button 
+                 onClick={() => { setEditingClient(undefined); setIsModalOpen(true); }}
+                 className="bg-slate-900 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-800 shadow-lg active:scale-95 transition-all"
+               >
+                 <Plus size={18} /> 新增客戶
+               </button>
+             </header>
+
+             {/* Search Bar */}
+             <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm mb-6 flex items-center gap-2 sticky top-0 z-10">
+               <Search className="text-slate-400 ml-2" size={20} />
+               <input 
+                 type="text" 
+                 placeholder="搜尋姓名或電話..." 
+                 value={searchTerm}
+                 onChange={e => setSearchTerm(e.target.value)}
+                 className="flex-1 p-2 outline-none text-slate-700 font-medium bg-transparent"
+               />
+               {searchTerm && (
+                 <button onClick={() => setSearchTerm('')} className="p-1 hover:bg-slate-100 rounded-full text-slate-400">
+                   <X size={16} />
+                 </button>
+               )}
+             </div>
+
+             {/* List Content */}
+             <div className="flex-1 overflow-y-auto space-y-3 pb-20">
+               {loadingClients ? (
+                 <div className="text-center py-20 text-slate-400 flex flex-col items-center">
+                   <Loader2 className="animate-spin mb-2" size={32} />
+                   讀取資料庫中...
+                 </div>
+               ) : filteredClients.length === 0 ? (
+                 <div className="text-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                   <Users className="mx-auto text-slate-300 mb-4" size={48} />
+                   <p className="text-slate-500 font-medium">找不到相關客戶</p>
+                   <p className="text-slate-400 text-sm mt-1">試試其他關鍵字，或是新增一筆資料</p>
+                 </div>
+               ) : (
+                 filteredClients.map(client => (
+                   <ClientItem 
+                     key={client.id} 
+                     client={client} 
+                     onEdit={(c) => { setEditingClient(c); setIsModalOpen(true); }}
+                     onDelete={handleDeleteClient}
+                   />
+                 ))
+               )}
+             </div>
+          </div>
+        )}
+
       </main>
-      <footer className="max-w-6xl mx-auto px-4 mt-12 text-center text-slate-400 text-xs py-8 no-print">
-          © 2025 金融理財規劃系統 Web App Edition. All rights reserved.
-      </footer>
+
+      {/* Edit/Add Modal */}
+      <ClientModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={editingClient ? handleUpdateClient : handleAddClient}
+        initialData={editingClient}
+      />
+
     </div>
   );
 }
