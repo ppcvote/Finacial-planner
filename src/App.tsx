@@ -58,7 +58,7 @@ import {
   setDoc, 
   getDoc,
   initializeFirestore,
-  memoryLocalCache // <--- 引入記憶體快取設定
+  memoryLocalCache 
 } from 'firebase/firestore';
 import { 
   getStorage, 
@@ -92,10 +92,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-// --- 關鍵修正 2.0：完全解決儲存卡死/超時問題 ---
-// 我們同時啟用 '強制長輪詢' 和 '記憶體快取'。
-// memoryLocalCache(): 禁用 IndexedDB。這非常重要，因為很多「儲存超時」是因為本地資料庫鎖死造成的，
-// 改用記憶體模式可以確保資料直接寫入雲端，不會卡在本地。
+// --- 最終極連線設定 ---
+// 使用記憶體快取 + 強制長輪詢，避開所有 IndexedDB 鎖定和 WebSocket 防火牆問題
 const db = initializeFirestore(app, {
   experimentalForceLongPolling: true, 
   localCache: memoryLocalCache(), 
@@ -116,16 +114,13 @@ const withTimeout = <T,>(promise: Promise<T>, ms: number, errorMessage: string):
 };
 
 // ------------------------------------------------------------------
-// 輔助函數：圖片壓縮 (新增超時保護)
+// 輔助函數：圖片壓縮
 // ------------------------------------------------------------------
 const compressImage = (file: File): Promise<Blob> => {
   return new Promise((resolve, reject) => {
-    // 設置 5 秒超時，防止圖片處理卡死
     const timeoutId = setTimeout(() => reject(new Error("Compression timeout")), 5000);
-
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    
     reader.onload = (event) => {
       const img = new Image();
       img.src = event.target?.result as string;
@@ -134,18 +129,15 @@ const compressImage = (file: File): Promise<Blob> => {
           const canvas = document.createElement('canvas');
           const MAX_WIDTH = 300; 
           const scaleSize = MAX_WIDTH / img.width;
-          
           const finalWidth = img.width > MAX_WIDTH ? MAX_WIDTH : img.width;
           const finalHeight = img.width > MAX_WIDTH ? img.height * scaleSize : img.height;
-
           canvas.width = finalWidth;
           canvas.height = finalHeight;
-          
           const ctx = canvas.getContext('2d');
           if (ctx) {
               ctx.drawImage(img, 0, 0, finalWidth, finalHeight);
               canvas.toBlob((blob) => {
-                  clearTimeout(timeoutId); // 成功後清除超時
+                  clearTimeout(timeoutId);
                   if (blob) resolve(blob);
                   else reject(new Error("Compression failed"));
               }, 'image/jpeg', 0.7);
@@ -187,13 +179,11 @@ const PrintStyles = () => (
   `}</style>
 );
 
-// --- 計算函數 ---
+// --- 計算函數 (保持不變) ---
 const calculateMonthlyPayment = (principal: number, rate: number, years: number) => {
-  // 強制轉型為數字，避免 NaN
   const p = Number(principal) || 0;
   const rVal = Number(rate) || 0;
   const y = Number(years) || 0;
-
   const r = rVal / 100 / 12;
   const n = y * 12;
   if (rVal === 0) return (p * 10000) / (n || 1);
@@ -212,7 +202,6 @@ const calculateRemainingBalance = (principal: number, rate: number, totalYears: 
   const rVal = Number(rate) || 0;
   const totalY = Number(totalYears) || 0;
   const elapsed = Number(yearsElapsed) || 0;
-
   const r = rVal / 100 / 12;
   const n = totalY * 12;
   const p = elapsed * 12;
@@ -253,7 +242,7 @@ type UserProfile = {
 };
 
 // ----------------------------------------------------------------------
-// 登入頁面 (Login View)
+// 登入頁面
 // ----------------------------------------------------------------------
 const LoginPage = ({ onLogin }: { onLogin: () => void }) => {
   return (
@@ -284,7 +273,7 @@ const LoginPage = ({ onLogin }: { onLogin: () => void }) => {
 };
 
 // ----------------------------------------------------------------------
-// 個人設定頁面 (Settings View) - 數位名片功能
+// 個人設定頁面
 // ----------------------------------------------------------------------
 const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, profile: UserProfile, onSaveProfile: (p: UserProfile) => Promise<void>, onBack: () => void }) => {
   const [formData, setFormData] = useState<UserProfile>({
@@ -299,20 +288,14 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
     if (e.target.files && e.target.files[0]) {
       setUploading(true);
       const file = e.target.files[0];
-      
       try {
-        // --- 修正: 圖片壓縮 ---
-        let processedBlob = file; // 預設使用原檔
+        let processedBlob = file; 
         try {
-           // 嘗試壓縮，如果失敗或超時則使用原檔，但通常壓縮會成功
            processedBlob = await compressImage(file) as any;
         } catch (compErr) {
-           console.warn("Compression failed, falling back to original:", compErr);
+           console.warn("Compression failed, using original:", compErr);
         }
-        
         const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}.jpg`);
-
-        // 上傳 60秒超時
         const snapshot = await withTimeout(
           uploadBytes(storageRef, processedBlob), 
           60000, 
@@ -322,9 +305,9 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
         setFormData(prev => ({ ...prev, photoUrl: url }));
       } catch (error: any) {
         console.error("Upload failed", error);
-        alert(`圖片上傳失敗 (${error.message})，請檢查網路或稍後再試。`);
+        alert(`圖片上傳失敗 (${error.message})，請檢查網路。`);
       } finally {
-        setUploading(false); // 確保轉圈圈一定會停下來
+        setUploading(false);
       }
     }
   };
@@ -347,10 +330,8 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* 頭像上傳與預覽區 */}
           <div className="flex flex-col items-center gap-4">
             <div className="relative group cursor-pointer" onClick={() => !isSaving && fileInputRef.current?.click()}>
-              {/* 頭像顯示容器 */}
               <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-slate-100 shadow-md bg-slate-200 relative">
                 {formData.photoUrl ? (
                   <img 
@@ -361,16 +342,12 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-400"><UserIcon size={48} /></div>
                 )}
-                
-                {/* 載入中遮罩 */}
                 {uploading && (
                   <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
                     <Loader2 className="animate-spin text-slate-900" size={24} />
                   </div>
                 )}
               </div>
-              
-              {/* 上傳提示 icon */}
               <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <Camera size={32} className="text-white" />
               </div>
@@ -378,7 +355,6 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
             
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" disabled={isSaving} />
             
-            {/* 照片對焦設定 */}
             <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
               <button
                 type="button"
@@ -558,7 +534,7 @@ const AppToolbar = ({ user, profile, onSave, onLoad, onPrint, onLogout, onOpenSe
 };
 
 // ----------------------------------------------------------------------
-// 輔助元件 (Modal, Tabs) - SavedFilesModal, Gift/Estate Tabs...
+// 輔助元件 (Modal, Tabs)
 // ----------------------------------------------------------------------
 const SavedFilesModal = ({ 
   isOpen, 
@@ -602,8 +578,6 @@ const SavedFilesModal = ({
 };
 
 const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d: GiftState) => void }) => {
-  // --- 修正: 強制轉型 ---
-  // 即使 data 中的值是字串 (例如舊資料)，也會被強制轉為 Number，防止計算錯誤
   const safeData = {
     loanAmount: Number(data?.loanAmount) || 100,
     loanTerm: Number(data?.loanTerm) || 7,
@@ -698,9 +672,6 @@ const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d:
 };
 
 const FinancialRealEstateTab = ({ data, setData }: { data: EstateState, setData: (d: EstateState) => void }) => {
-  // --- 修正: 強制轉型 (解決白屏問題) ---
-  // 這一段非常關鍵：強制將所有讀取到的資料轉為 Number。
-  // 因為舊資料可能存成了字串 (例如 "1000")，導致計算時出錯 (NaN) 進而讓 Recharts 崩潰。
   const safeData = {
     loanAmount: Number(data?.loanAmount) || 1000,
     loanTerm: Number(data?.loanTerm) || 30,
@@ -789,7 +760,6 @@ const FinancialRealEstateTab = ({ data, setData }: { data: EstateState, setData:
           </div>
           <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[360px] print-break-inside">
              <h4 className="text-sm font-bold text-slate-600 mb-2 pl-2">{loanTerm}年「總資產價值」走勢 (單位: 萬)</h4>
-             {/* 修正：正確呼叫 generateHouseChartData，而非 generateChartData */}
             <ResponsiveContainer width="100%" height="100%"><ComposedChart data={generateHouseChartData()} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}><defs><linearGradient id="colorWealth" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="year" tick={{fontSize: 12}} axisLine={false} tickLine={false} /><YAxis unit="萬" tick={{fontSize: 12}} axisLine={false} tickLine={false} /><Tooltip contentStyle={{borderRadius: '8px', border: '1px solid #ddd', boxShadow: 'none'}} /><Legend /><Area type="monotone" name="總資產價值 (含配息)" dataKey="總資產價值" stroke="#10b981" fill="url(#colorWealth)" strokeWidth={3} /><Line type="monotone" name="剩餘房貸" dataKey="剩餘貸款" stroke="#ef4444" strokeWidth={1} dot={false} opacity={0.5} /></ComposedChart></ResponsiveContainer>
           </div>
         </div>
@@ -807,45 +777,42 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'main' | 'settings'>('main');
   
-  // State
-  // 預設值提取出來，方便重複使用
   const defaultGiftData: GiftState = { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 };
   const defaultEstateData: EstateState = { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6 };
 
   const [giftData, setGiftData] = useState<GiftState>(defaultGiftData);
   const [estateData, setEstateData] = useState<EstateState>(defaultEstateData);
-
-  // User Profile State
   const [userProfile, setUserProfile] = useState<UserProfile>({ displayName: '', title: '', lineId: '', photoUrl: '' });
-
-  // Firebase Logic
   const [saves, setSaves] = useState<SavedProfile[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loadingFiles, setLoadingFiles] = useState(false);
 
-  // 監聽登入狀態
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      
-      // 關鍵優化：確認身份後「立刻」解除 Loading，不需要等待資料庫回應
-      // 這樣可以解決卡在啟動畫面 30 秒的問題
       setLoading(false);
 
       if (currentUser) {
-        // 載入使用者設定檔 (背景執行，不卡介面)
-        const docRef = doc(db, "users", currentUser.uid, "profile", "info");
+        // --- 修正: 讀取路徑變更 (向下相容) ---
+        // 先嘗試讀取 root level (users/{uid}) 的 profile 欄位
+        // 如果沒有，再嘗試讀取舊路徑 (profile/info)
+        const userDocRef = doc(db, "users", currentUser.uid);
         try {
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            setUserProfile(docSnap.data() as UserProfile);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists() && userDocSnap.data().profile) {
+            setUserProfile(userDocSnap.data().profile as UserProfile);
           } else {
-            // 預設值
-            setUserProfile({ displayName: currentUser.displayName || '', title: '', lineId: '', photoUrl: currentUser.photoURL || '' });
+            // Fallback: 舊路徑
+            const oldDocRef = doc(db, "users", currentUser.uid, "profile", "info");
+            const oldDocSnap = await getDoc(oldDocRef);
+            if (oldDocSnap.exists()) {
+              setUserProfile(oldDocSnap.data() as UserProfile);
+            } else {
+              setUserProfile({ displayName: currentUser.displayName || '', title: '', lineId: '', photoUrl: currentUser.photoURL || '' });
+            }
           }
         } catch (e) {
           console.error("Error loading profile", e);
-          // 即使報錯也不影響主程式運行
         }
       }
     });
@@ -857,11 +824,7 @@ export default function App() {
       await signInWithPopup(auth, googleProvider);
     } catch (error: any) {
       console.error("Login failed", error);
-      if (error.code === 'auth/api-key-not-valid' || error.code === 'auth/invalid-api-key') {
-         alert("API Key 驗證失敗：請檢查 Vercel 環境變數設定");
-      } else {
-         alert("登入失敗，請重試");
-      }
+      alert("登入失敗，請重試");
     }
   };
 
@@ -874,7 +837,6 @@ export default function App() {
     }
   };
 
-  // 載入雲端資料
   const loadCloudFiles = async () => {
     if (!user) return;
     setLoadingFiles(true);
@@ -908,7 +870,6 @@ export default function App() {
     };
 
     try {
-      // 加入 15 秒超時限制
       await withTimeout(
         addDoc(collection(db, "users", user.uid, "plans"), newProfile),
         15000,
@@ -928,7 +889,6 @@ export default function App() {
   const handleSaveProfile = async (newProfile: UserProfile) => {
     if (!user) return;
     
-    // 防呆機制：確保所有欄位都不是 undefined，Firestore 不接受 undefined
     const safeProfile = {
       displayName: newProfile.displayName || '',
       title: newProfile.title || '',
@@ -938,10 +898,13 @@ export default function App() {
     };
 
     try {
-      // 這裡放寬儲存超時限制到 30 秒，並使用 merge: true
+      // --- 修正: 寫入路徑變更 ---
+      // 不再寫入 profile/info 子集合 (容易被 Rules 擋)
+      // 直接寫入 users/{uid} 文件的 profile 欄位
+      // 這樣可以避開子集合權限問題，且 users/{uid} 通常是允許寫入的
       await withTimeout(
-        setDoc(doc(db, "users", user.uid, "profile", "info"), safeProfile, { merge: true }),
-        30000,
+        setDoc(doc(db, "users", user.uid), { profile: safeProfile }, { merge: true }),
+        60000, // 增加到 60 秒
         "儲存超時"
       );
       setUserProfile(safeProfile);
@@ -952,8 +915,7 @@ export default function App() {
       if (error.message === "儲存超時") {
         alert("儲存時間過長，請檢查網路連線。");
       } else {
-        // 顯示具體錯誤代碼，方便除錯
-        alert(`儲存失敗：${error.message || error.code}。請檢查 Firebase Firestore 規則是否允許寫入。`);
+        alert(`儲存失敗：${error.message || error.code}。`);
       }
     }
   };
@@ -972,9 +934,6 @@ export default function App() {
   const handleLoadProfile = (profile: SavedProfile) => {
     setActiveTab(profile.type);
     
-    // --- 修正: 防呆機制 ---
-    // 將讀取到的資料與預設值合併。
-    // 如果雲端資料缺少某些欄位 (例如舊版本存的檔)，會自動用預設值補上
     if (profile.type === 'gift') {
       const mergedData = { ...defaultGiftData, ...profile.data };
       setGiftData(mergedData as GiftState);
@@ -992,7 +951,6 @@ export default function App() {
   if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-500">系統啟動中...</div>;
   if (!user) return <LoginPage onLogin={handleLogin} />;
 
-  // 路由切換：設定頁 或 主畫面
   if (view === 'settings') {
     return (
       <SettingsPage 
@@ -1007,7 +965,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-12">
       <PrintStyles />
-      
       <AppToolbar 
         user={user}
         profile={userProfile}
@@ -1017,7 +974,6 @@ export default function App() {
         onLogout={handleLogout}
         onOpenSettings={() => setView('settings')}
       />
-
       <SavedFilesModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
@@ -1026,7 +982,6 @@ export default function App() {
         onDeleteProfile={handleDeleteProfile}
         loading={loadingFiles}
       />
-
       <header className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 shadow-lg mb-8 no-print">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
@@ -1034,38 +989,30 @@ export default function App() {
               <Coins className="w-8 h-8 text-yellow-400" />
               全方位資產規劃系統
             </h1>
-            <p className="text-slate-400 mt-1 text-sm">
-              專業版 • 資產累積 • 現金流規劃
-            </p>
+            <p className="text-slate-400 mt-1 text-sm">專業版 • 資產累積 • 現金流規劃</p>
           </div>
-          
           <div className="bg-slate-700/50 p-1 rounded-lg flex">
             <button 
               onClick={() => setActiveTab('gift')}
               className={`px-6 py-2 rounded-md font-bold transition-all flex items-center gap-2 ${activeTab === 'gift' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-300 hover:text-white'}`}
             >
-              <Wallet size={18} />
-              百萬禮物
+              <Wallet size={18} /> 百萬禮物
             </button>
             <button 
               onClick={() => setActiveTab('estate')}
               className={`px-6 py-2 rounded-md font-bold transition-all flex items-center gap-2 ${activeTab === 'estate' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:text-white'}`}
             >
-              <Building2 size={18} />
-              金融房產
+              <Building2 size={18} /> 金融房產
             </button>
           </div>
         </div>
       </header>
-
-      {/* 列印用的 Header (隱藏原本的黑底 Header，改用白底簡潔版) */}
       <div className="hidden print-only text-center mb-8 border-b pb-4">
          <div className="flex justify-between items-end mb-4">
             <div className="text-left">
               <h1 className="text-3xl font-bold text-slate-900">資產規劃建議書</h1>
               <div className="text-sm text-slate-500 mt-1">規劃專案：{activeTab === 'gift' ? '百萬禮物專案' : '金融房產專案'}</div>
             </div>
-            {/* 列印時顯示的名片區塊 */}
             <div className="text-right">
                <div className="font-bold text-lg">{userProfile.displayName || user.displayName}</div>
                <div className="text-sm text-slate-500">{userProfile.title}</div>
@@ -1074,7 +1021,6 @@ export default function App() {
          </div>
          <div className="text-xs text-slate-300 text-right border-t pt-1">列印日期：{new Date().toLocaleDateString()}</div>
       </div>
-
       <main className="max-w-6xl mx-auto px-4">
         {activeTab === 'gift' ? (
           <MillionDollarGiftTab data={giftData} setData={setGiftData} />
@@ -1082,7 +1028,6 @@ export default function App() {
           <FinancialRealEstateTab data={estateData} setData={setEstateData} />
         )}
       </main>
-
       <footer className="max-w-6xl mx-auto px-4 mt-12 text-center text-slate-400 text-xs py-8 no-print">
           © 2025 金融理財規劃系統 Web App Edition. All rights reserved.
       </footer>
