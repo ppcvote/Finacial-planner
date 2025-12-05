@@ -318,8 +318,9 @@ const AppToolbar = ({ user, profile, onSave, onLoad, onPrint, onLogout, onOpenSe
   return (
     <div className="bg-slate-900 text-white p-3 px-4 flex justify-between items-center shadow-md sticky top-0 z-50 no-print">
       <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={onOpenSettings}>
-        {profile.photoUrl ? (
-          <img src={profile.photoUrl} alt="User" className="w-10 h-10 rounded-full border-2 border-yellow-400 object-cover" />
+        {/* 優化：如果還沒讀取到名片照片，先顯示 Google 帳號原本的大頭貼 */}
+        {profile.photoUrl || user?.photoURL ? (
+          <img src={profile.photoUrl || user?.photoURL || ''} alt="User" className="w-10 h-10 rounded-full border-2 border-yellow-400 object-cover" />
         ) : (
           <div className="bg-slate-700 p-2 rounded-full border-2 border-slate-600"><UserIcon size={20} /></div>
         )}
@@ -624,8 +625,13 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      
+      // 關鍵優化：確認身份後「立刻」解除 Loading，不需要等待資料庫回應
+      // 這樣可以解決卡在啟動畫面 30 秒的問題
+      setLoading(false);
+
       if (currentUser) {
-        // 載入使用者設定檔
+        // 載入使用者設定檔 (背景執行，不卡介面)
         const docRef = doc(db, "users", currentUser.uid, "profile", "info");
         try {
           const docSnap = await getDoc(docRef);
@@ -637,9 +643,9 @@ export default function App() {
           }
         } catch (e) {
           console.error("Error loading profile", e);
+          // 即使報錯也不影響主程式運行
         }
       }
-      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
