@@ -21,7 +21,7 @@ import {
   Loader2, 
   Focus,   
   ArrowUpFromLine,
-  WifiOff // 新增斷網圖示
+  WifiOff
 } from 'lucide-react';
 import { 
   Bar, 
@@ -221,9 +221,9 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
       setUploading(true);
       const file = e.target.files[0];
       
-      // 限制檔案大小 (例如 2MB) 以避免上傳過久
-      if (file.size > 2 * 1024 * 1024) {
-        alert("圖片檔案過大 (超過 2MB)，請選擇較小的圖片以加快上傳速度。");
+      // 限制檔案大小 (例如 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("圖片檔案過大 (超過 5MB)，請選擇較小的圖片以加快上傳速度。");
         setUploading(false);
         return;
       }
@@ -231,20 +231,22 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
       const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_${file.name}`);
       
       try {
-        // 加入 20 秒超時限制
+        // 放寬超時限制到 60 秒 (60000ms)
         const snapshot = await withTimeout(
           uploadBytes(storageRef, file), 
-          20000, 
+          60000, 
           "上傳超時"
         );
         const url = await getDownloadURL(snapshot.ref);
         setFormData(prev => ({ ...prev, photoUrl: url }));
+        // 成功提示 (非 Alert，避免打斷體驗)
+        console.log("Upload success:", url);
       } catch (error: any) {
         console.error("Upload failed", error);
         if (error.message === "上傳超時") {
-          alert("上傳時間過長，請檢查網路連線或嘗試較小的圖片。");
+          alert("網路連線較慢，上傳超時。請嘗試使用 WiFi 或較小的圖片。");
         } else {
-          alert("圖片上傳失敗，請稍後再試。");
+          alert(`圖片上傳失敗 (${error.code || '未知錯誤'})，請稍後再試。`);
         }
       } finally {
         setUploading(false);
@@ -255,6 +257,7 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true); 
+    // 放寬儲存超時到 30 秒，避免資料寫入太慢被誤判失敗
     await onSaveProfile(formData);
     setIsSaving(false); 
   };
@@ -827,10 +830,10 @@ export default function App() {
   const handleSaveProfile = async (newProfile: UserProfile) => {
     if (!user) return;
     try {
-      // 加入 15 秒超時限制
+      // 這裡放寬儲存超時限制到 30 秒
       await withTimeout(
         setDoc(doc(db, "users", user.uid, "profile", "info"), newProfile),
-        15000,
+        30000,
         "儲存超時"
       );
       setUserProfile(newProfile);
