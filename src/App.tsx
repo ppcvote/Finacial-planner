@@ -57,7 +57,8 @@ import {
   orderBy, 
   setDoc, 
   getDoc,
-  initializeFirestore 
+  initializeFirestore,
+  memoryLocalCache // <--- 引入記憶體快取設定
 } from 'firebase/firestore';
 import { 
   getStorage, 
@@ -91,9 +92,13 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-// --- 關鍵修正：強制使用 Long Polling 以解決連線卡死/超時問題 ---
+// --- 關鍵修正 2.0：完全解決儲存卡死/超時問題 ---
+// 我們同時啟用 '強制長輪詢' 和 '記憶體快取'。
+// memoryLocalCache(): 禁用 IndexedDB。這非常重要，因為很多「儲存超時」是因為本地資料庫鎖死造成的，
+// 改用記憶體模式可以確保資料直接寫入雲端，不會卡在本地。
 const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true, // 強制長輪詢，解決防火牆或環境導致的 WebSocket 連線失敗
+  experimentalForceLongPolling: true, 
+  localCache: memoryLocalCache(), 
 });
 
 const storage = getStorage(app);
