@@ -30,7 +30,8 @@ import {
 } from 'recharts';
 
 // --- Firebase 模組 ---
-// 這裡會引用剛剛建立的 src/firebaseConfig.ts
+// ⚠️ 這裡會引用剛剛建立的 src/firebaseConfig.ts
+// 如果這裡報錯，請檢查 firebaseConfig.ts 是否真的存在於 src 資料夾中
 import { auth, googleProvider, db } from './firebaseConfig';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { collection, addDoc, query, getDocs, deleteDoc, doc, orderBy } from 'firebase/firestore';
@@ -416,7 +417,7 @@ const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d:
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="year" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
-                <YAxis unit="萬" tick={{fontSize: 12}} axisLine={false} tickLine={false} domain={[0, 'auto']} />
+                <YAxis unit="萬" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={{borderRadius: '8px', border: '1px solid #ddd', boxShadow: 'none'}} />
                 <Legend />
                 <Area type="monotone" dataKey="專案持有資產" stroke="#3b82f6" fill="url(#colorAssetGift)" strokeWidth={2} />

@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// 這是您專屬的 Firebase 連線設定
+// ⚠️ 這是根據您之前的截圖填入的真實設定
 const firebaseConfig = {
   apiKey: "AIzaSyAqs6fhHQVyBNr1LCkCaQPyJ13Rkq7bfHA", 
   authDomain: "grbt-f87fa.firebaseapp.com",
