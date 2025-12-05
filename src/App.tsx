@@ -27,7 +27,9 @@ import {
   TrendingUp,
   Clock,
   PauseCircle,
-  Rocket
+  Rocket,
+  Car,
+  Repeat
 } from 'lucide-react';
 import { 
   Bar, 
@@ -753,29 +755,19 @@ const SuperActiveSavingTool = ({ data, setData }) => {
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
             <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><Calculator size={18} /> 參數設定</h4>
             <div className="space-y-6">
-               <div>
-                 <div className="flex justify-between mb-2">
-                   <label className="text-sm font-medium text-slate-600">每月存錢金額</label>
-                   <span className="font-mono font-bold text-purple-600">${monthlySaving.toLocaleString()}</span>
+               {[
+                 { label: "每月存錢金額", field: "monthlySaving", min: 3000, max: 50000, step: 1000, val: monthlySaving, color: "purple" },
+                 { label: "只需辛苦 (年)", field: "activeYears", min: 5, max: 25, step: 1, val: activeYears, color: "pink" },
+                 { label: "投資報酬率 (%)", field: "investReturnRate", min: 3, max: 12, step: 0.5, val: investReturnRate, color: "green" }
+               ].map((item) => (
+                 <div key={item.field}>
+                   <div className="flex justify-between mb-2">
+                     <label className="text-sm font-medium text-slate-600">{item.label}</label>
+                     <span className={`font-mono font-bold text-${item.color}-600`}>{item.field === 'monthlySaving' ? '$' : ''}{item.val.toLocaleString()}</span>
+                   </div>
+                   <input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => setData({ ...safeData, [item.field]: Number(e.target.value) })} className={`w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-${item.color}-600`} />
                  </div>
-                 <input type="range" min={3000} max={50000} step={1000} value={monthlySaving} onChange={(e) => setData({ ...safeData, monthlySaving: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-600" />
-               </div>
-
-               <div>
-                 <div className="flex justify-between mb-2">
-                   <label className="text-sm font-medium text-slate-600">只需辛苦 (年)</label>
-                   <span className="font-mono font-bold text-pink-600">{activeYears} 年</span>
-                 </div>
-                 <input type="range" min={5} max={25} step={1} value={activeYears} onChange={(e) => setData({ ...safeData, activeYears: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-pink-500" />
-               </div>
-
-               <div>
-                 <div className="flex justify-between mb-2">
-                   <label className="text-sm font-medium text-slate-600">投資報酬率 (%)</label>
-                   <span className="font-mono font-bold text-green-600">{investReturnRate}</span>
-                 </div>
-                 <input type="range" min={3} max={12} step={0.5} value={investReturnRate} onChange={(e) => setData({ ...safeData, investReturnRate: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
-               </div>
+               ))}
             </div>
           </div>
           
@@ -841,6 +833,143 @@ const SuperActiveSavingTool = ({ data, setData }) => {
   );
 };
 
+// ------------------------------------------------------------------
+// 核心模組 5: 五年換車專案 (New)
+// ------------------------------------------------------------------
+
+const CarReplacementTool = ({ data, setData }) => {
+  const safeData = {
+    carPrice: Number(data?.carPrice) || 100, // 萬
+    investReturnRate: Number(data?.investReturnRate) || 6, // %
+    resaleRate: Number(data?.resaleRate) || 50 // %
+  };
+  const { carPrice, investReturnRate, resaleRate } = safeData;
+
+  const downPayment = 20; // 頭款固定 20 萬 (Based on PDF)
+  const loanAmount = carPrice - downPayment; 
+  // PDF 100萬車, 貸80萬, 月付14500 (約3.4%利率)
+  // 我們這裡簡化，直接用 PDF 的 "月付14500" 比例來推算
+  // 80萬貸 -> 14500月付.  每1萬貸款 -> 181.25月付
+  const loanMonthlyPayment = loanAmount * (14500/80); 
+
+  const generateCycles = () => {
+    const cycles = [];
+    
+    // Cycle 1
+    // 本金: 車價(100) + 20(多存的) = 120萬. 扣掉頭款20萬 = 100萬在保單
+    // 但PDF說: "存120萬", "頭款20萬", "保單100萬".
+    let policyPrincipal = carPrice * 1; // 假設存了跟車價一樣多的錢在保單 (PDF Example: 100萬車, 存120, 20頭款, 100保單)
+    
+    for(let i=1; i<=3; i++) {
+        const monthlyDividend = (policyPrincipal * 10000 * (investReturnRate/100)) / 12;
+        const netMonthlyPayment = loanMonthlyPayment - monthlyDividend;
+        
+        cycles.push({
+            cycle: `第 ${i} 台車`,
+            principal: Math.round(policyPrincipal),
+            dividend: Math.round(monthlyDividend),
+            originalPay: Math.round(loanMonthlyPayment),
+            netPay: Math.round(netMonthlyPayment)
+        });
+
+        // End of cycle calculation for next cycle
+        // Sell car at 50%
+        const resaleValue = carPrice * (resaleRate/100);
+        // New Down Payment (20萬)
+        // Surplus = Resale - DownPayment
+        // PDF: 50萬賣 - 20萬頭期 = 30萬 surplus
+        const surplus = resaleValue - downPayment;
+        
+        policyPrincipal += surplus;
+    }
+    return cycles;
+  };
+
+  const cyclesData = generateCycles();
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-6 text-white shadow-lg print-break-inside">
+        <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Car className="text-orange-100" /> 五年換車專案</h3>
+        <p className="text-orange-100 opacity-90">只存一次錢，運用時間複利與車輛殘值，實現每5年輕鬆換新車。</p>
+      </div>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4 space-y-4 print-break-inside">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
+            <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><Calculator size={18} /> 參數設定</h4>
+            <div className="space-y-6">
+               {[
+                 { label: "目標車價 (萬)", field: "carPrice", min: 60, max: 300, step: 10, val: carPrice, color: "orange" },
+                 { label: "投資報酬率 (%)", field: "investReturnRate", min: 3, max: 10, step: 0.5, val: investReturnRate, color: "green" },
+                 { label: "5年後中古殘值 (%)", field: "resaleRate", min: 30, max: 70, step: 5, val: resaleRate, color: "blue" }
+               ].map((item) => (
+                 <div key={item.field}>
+                   <div className="flex justify-between mb-2">
+                     <label className="text-sm font-medium text-slate-600">{item.label}</label>
+                     <span className={`font-mono font-bold text-${item.color}-600`}>{item.val}</span>
+                   </div>
+                   <input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => setData({ ...safeData, [item.field]: Number(e.target.value) })} className={`w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-${item.color}-600`} />
+                 </div>
+               ))}
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow border border-slate-200 p-6">
+             <div className="text-center mb-4">
+                <p className="text-slate-500 text-sm">傳統買車 (第3台)</p>
+                <p className="text-xl font-bold text-slate-600">月付 ${Math.round(cyclesData[0].originalPay).toLocaleString()}</p>
+                <p className="text-xs text-slate-400 mt-1">永遠在付全額車貸</p>
+             </div>
+             <div className="border-t border-slate-100 my-4"></div>
+             <div className="text-center">
+                <p className="text-slate-500 text-sm">專案換車 (第3台)</p>
+                <p className="text-3xl font-black text-orange-600 font-mono">月付 ${cyclesData[2].netPay.toLocaleString()}</p>
+                <p className="text-xs text-slate-400 mt-1">越換越輕鬆，負擔減少 {Math.round((1 - cyclesData[2].netPay/cyclesData[0].originalPay)*100)}%</p>
+             </div>
+             <div className="mt-4 bg-orange-50 p-3 rounded-lg border border-orange-100 text-xs text-orange-800 space-y-2">
+                <span className="font-bold">💡 關鍵思維：</span>
+                <p>不要讓錢花掉就沒了。透過「以息養貸」加上「舊車換新車」的資金回流，讓您的資產雪球越滾越大，車貸負擔卻越來越輕。</p>
+             </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-8 space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[450px]">
+             <h4 className="font-bold text-slate-700 mb-4 pl-2">換車負擔遞減圖 (月付金)</h4>
+             <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={cyclesData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                <defs>
+                  <linearGradient id="colorNetPay" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/><stop offset="95%" stopColor="#f97316" stopOpacity={0.4}/></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="cycle" tick={{fontSize: 14, fontWeight: 'bold'}} axisLine={false} tickLine={false} />
+                <YAxis unit="元" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Legend />
+                <Bar dataKey="netPay" name="實際月付金" fill="url(#colorNetPay)" barSize={40} radius={[8, 8, 0, 0]} label={{ position: 'top', fill: '#f97316', fontSize: 12, fontWeight: 'bold' }} />
+                <Line type="monotone" dataKey="originalPay" name="原車貸月付" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" />
+                <Line type="monotone" dataKey="dividend" name="保單配息折抵" stroke="#22c55e" strokeWidth={2} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4">
+             {cyclesData.map((cycle, idx) => (
+               <div key={idx} className={`p-4 rounded-lg text-center border ${idx === 2 ? 'bg-orange-50 border-orange-200' : 'bg-slate-50 border-slate-100'}`}>
+                  <div className="text-xs text-slate-500 font-bold mb-1">{cycle.cycle}</div>
+                  <div className="text-xs text-slate-400 mb-2">保單本金 {cycle.principal}萬</div>
+                  <div className="text-2xl font-black text-slate-700">${cycle.netPay.toLocaleString()}</div>
+                  <div className="text-[10px] text-green-600 mt-1">配息補助 ${cycle.dividend.toLocaleString()}</div>
+               </div>
+             ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 // ------------------------------------------------------------------
 // Main App Shell
@@ -856,6 +985,7 @@ export default function App() {
   const [estateData, setEstateData] = useState({ loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6 });
   const [studentData, setStudentData] = useState({ loanAmount: 40, investReturnRate: 6, years: 8, gracePeriod: 1, interestOnlyPeriod: 0 });
   const [superActiveData, setSuperActiveData] = useState({ monthlySaving: 10000, investReturnRate: 6, activeYears: 15 });
+  const [carData, setCarData] = useState({ carPrice: 100, investReturnRate: 6, resaleRate: 50 });
   
   const [userProfile, setUserProfile] = useState({ displayName: '', title: '' });
   
@@ -897,6 +1027,7 @@ export default function App() {
     else if (activeTab === 'estate') currentData = estateData;
     else if (activeTab === 'student') currentData = studentData;
     else if (activeTab === 'super_active') currentData = superActiveData;
+    else if (activeTab === 'car') currentData = carData;
 
     const newPlan = {
       name,
@@ -928,6 +1059,7 @@ export default function App() {
     else if (file.type === 'estate') setEstateData(file.data);
     else if (file.type === 'student') setStudentData(file.data);
     else if (file.type === 'super_active') setSuperActiveData(file.data);
+    else if (file.type === 'car') setCarData(file.data);
     
     setActiveTab(file.type);
     showToast(`已載入：${file.name}`, "success");
@@ -997,6 +1129,7 @@ export default function App() {
           <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => setActiveTab('estate')} />
           <NavItem icon={GraduationCap} label="學貸套利專案" active={activeTab === 'student'} onClick={() => setActiveTab('student')} />
           <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => setActiveTab('super_active')} />
+          <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => setActiveTab('car')} />
           
           <div className="mt-4 text-xs font-bold text-slate-600 px-4 py-2 uppercase tracking-wider">開發中模組</div>
           <NavItem icon={Umbrella} label="退休升級專案" disabled />
@@ -1038,7 +1171,8 @@ export default function App() {
                    activeTab === 'gift' ? '百萬禮物專案' : 
                    activeTab === 'estate' ? '金融房產專案' : 
                    activeTab === 'student' ? '學貸套利專案' :
-                   '超積極存錢法'
+                   activeTab === 'super_active' ? '超積極存錢法' :
+                   '五年換車專案'
                  }</p>
               </div>
               <div className="text-right">
@@ -1066,6 +1200,7 @@ export default function App() {
              {activeTab === 'estate' && <FinancialRealEstateTool data={estateData} setData={setEstateData} />}
              {activeTab === 'student' && <StudentLoanTool data={studentData} setData={setStudentData} />}
              {activeTab === 'super_active' && <SuperActiveSavingTool data={superActiveData} setData={setSuperActiveData} />}
+             {activeTab === 'car' && <CarReplacementTool data={carData} setData={setCarData} />}
 
              {activeTab === 'files' && (
                 <div className="animate-fade-in">
@@ -1087,11 +1222,13 @@ export default function App() {
                                  file.type === 'gift' ? 'bg-blue-100 text-blue-600' : 
                                  file.type === 'estate' ? 'bg-emerald-100 text-emerald-600' :
                                  file.type === 'super_active' ? 'bg-purple-100 text-purple-600' :
+                                 file.type === 'car' ? 'bg-orange-100 text-orange-600' :
                                  'bg-sky-100 text-sky-600'
                                }`}>
                                   {file.type === 'gift' ? <Wallet size={20} /> : 
                                    file.type === 'estate' ? <Building2 size={20} /> :
                                    file.type === 'super_active' ? <Rocket size={20} /> :
+                                   file.type === 'car' ? <Car size={20} /> :
                                    <GraduationCap size={20} />}
                                </div>
                                <button onClick={(e) => handleDeleteFile(file.id, e)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16}/></button>
@@ -1101,6 +1238,7 @@ export default function App() {
                                 file.type === 'gift' ? '百萬禮物' : 
                                 file.type === 'estate' ? '金融房產' : 
                                 file.type === 'super_active' ? '超積極存錢' :
+                                file.type === 'car' ? '五年換車' :
                                 '學貸套利'
                             }</p>
                          </div>
