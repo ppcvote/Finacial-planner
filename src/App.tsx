@@ -30,7 +30,7 @@ import {
 } from 'recharts';
 
 // --- Firebase 模組 ---
-// ⚠️ 請確保您已經在 src/firebaseConfig.ts 設定好連線資訊
+// 這裡會引用剛剛建立的 src/firebaseConfig.ts
 import { auth, googleProvider, db } from './firebaseConfig';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { collection, addDoc, query, getDocs, deleteDoc, doc, orderBy } from 'firebase/firestore';
@@ -598,7 +598,7 @@ const FinancialRealEstateTab = ({ data, setData }: { data: EstateState, setData:
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="colorWealth" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="colorAssetGift" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                   </linearGradient>
