@@ -18,7 +18,9 @@ import {
   Briefcase,
   ChevronRight,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  FileText, // 補上
+  Loader2   // 補上
 } from 'lucide-react';
 
 // --- Firebase 模組 ---
