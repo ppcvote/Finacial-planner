@@ -12,7 +12,9 @@ import {
   Menu,
   X,
   Trash2,
-  Printer
+  Printer,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react';
 import { 
   Bar, 
@@ -27,7 +29,13 @@ import {
   Line
 } from 'recharts';
 
-// --- 樣式注入 (用於列印與 PDF 輸出) ---
+// --- Firebase 模組 ---
+// ⚠️ 請確保您已經在 src/firebaseConfig.ts 設定好連線資訊
+import { auth, googleProvider, db } from './firebaseConfig';
+import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { collection, addDoc, query, getDocs, deleteDoc, doc, orderBy } from 'firebase/firestore';
+
+// --- 樣式注入 ---
 const PrintStyles = () => (
   <style>{`
     @media print {
@@ -39,13 +47,12 @@ const PrintStyles = () => (
       .shadow-lg, .shadow-sm, .shadow-xl { box-shadow: none !important; border: 1px solid #ddd !important; }
       .bg-gradient-to-r, .bg-gradient-to-br { background: none !important; background-color: #f0f9ff !important; color: black !important; }
       .text-white { color: black !important; }
-      /* 強制圖表容器大小以適應 A4 */
       .recharts-wrapper { width: 100% !important; }
     }
   `}</style>
 );
 
-// --- 共用計算函數 ---
+// --- 計算函數 ---
 const calculateMonthlyPayment = (principal: number, rate: number, years: number) => {
   const r = rate / 100 / 12;
   const n = years * 12;
@@ -90,48 +97,91 @@ type SavedProfile = {
 };
 
 // ----------------------------------------------------------------------
-// 元件：APP 功能列 (Toolbar)
+// 登入頁面 (Login View)
 // ----------------------------------------------------------------------
-const AppToolbar = ({ onSave, onLoad, onPrint }: { onSave: () => void, onLoad: () => void, onPrint: () => void }) => {
+const LoginPage = ({ onLogin }: { onLogin: () => void }) => {
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center space-y-6">
+        <div className="flex justify-center mb-4">
+          <div className="bg-yellow-400 p-4 rounded-full shadow-lg">
+            <Coins size={48} className="text-slate-900" />
+          </div>
+        </div>
+        <div>
+          <h1 className="text-3xl font-black text-slate-800">超業菁英戰情室</h1>
+          <p className="text-slate-500 mt-2">武裝您的專業，讓數字幫您說故事</p>
+        </div>
+        <div className="border-t border-slate-100 pt-6">
+          <button 
+            onClick={onLogin}
+            className="w-full flex items-center justify-center gap-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all shadow-sm"
+          >
+            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center font-bold text-blue-600">G</div>
+            使用 Google 帳號登入
+          </button>
+        </div>
+        <p className="text-xs text-slate-400">登入即代表您同意使用條款與隱私權政策</p>
+      </div>
+    </div>
+  );
+};
+
+// ----------------------------------------------------------------------
+// APP 功能列 (Toolbar)
+// ----------------------------------------------------------------------
+const AppToolbar = ({ user, onSave, onLoad, onPrint, onLogout }: { user: User | null, onSave: () => void, onLoad: () => void, onPrint: () => void, onLogout: () => void }) => {
   const [showMenu, setShowMenu] = useState(false);
 
   return (
     <div className="bg-slate-900 text-white p-3 px-4 flex justify-between items-center shadow-md sticky top-0 z-50 no-print">
       <div className="flex items-center gap-3">
-        <div className="bg-yellow-500 text-slate-900 font-bold px-2 py-0.5 rounded text-xs shadow-[0_0_10px_rgba(234,179,8,0.5)]">WEB APP</div>
-        <span className="text-sm font-medium text-slate-300 hidden md:inline">資產規劃系統 v2.0</span>
+        {user?.photoURL ? (
+          <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full border-2 border-yellow-400" />
+        ) : (
+          <div className="bg-slate-700 p-1.5 rounded-full"><UserIcon size={20} /></div>
+        )}
+        <div className="flex flex-col">
+          <span className="text-xs text-yellow-400 font-bold">超業菁英</span>
+          <span className="text-sm font-medium text-slate-300 leading-none">{user?.displayName || '業務夥伴'}</span>
+        </div>
       </div>
       
       {/* Desktop Toolbar */}
       <div className="hidden md:flex gap-2">
         <button onClick={onLoad} className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-700 rounded text-sm transition-colors border border-slate-700">
-          <FileText size={16} /> 讀取檔案
+          <FileText size={16} /> 讀取客戶
         </button>
         <button onClick={onSave} className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-700 rounded text-sm transition-colors border border-slate-700">
-          <Save size={16} /> 儲存專案
+          <Save size={16} /> 儲存規劃
         </button>
         <div className="w-px bg-slate-700 mx-1"></div>
         <button onClick={onPrint} className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-sm transition-colors font-bold shadow-lg hover:shadow-blue-500/20">
-          <Printer size={16} /> 匯出 PDF 報表
+          <Printer size={16} /> 匯出報表
+        </button>
+        <button onClick={onLogout} className="ml-2 text-slate-400 hover:text-white p-1.5">
+          <LogOut size={18} />
         </button>
       </div>
 
-      {/* Mobile Menu Button */}
+      {/* Mobile Menu */}
       <button className="md:hidden p-2 active:bg-slate-800 rounded" onClick={() => setShowMenu(!showMenu)}>
         {showMenu ? <X size={24} /> : <Menu size={24} />}
       </button>
 
-      {/* Mobile Dropdown */}
       {showMenu && (
         <div className="absolute top-full left-0 right-0 bg-slate-800 border-t border-slate-700 p-2 flex flex-col gap-2 shadow-xl md:hidden animate-in slide-in-from-top-2">
            <button onClick={() => { onLoad(); setShowMenu(false); }} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-700 rounded text-left active:bg-slate-600">
-            <FileText size={20} className="text-slate-400" /> 讀取檔案
+            <FileText size={20} className="text-slate-400" /> 讀取客戶
           </button>
           <button onClick={() => { onSave(); setShowMenu(false); }} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-700 rounded text-left active:bg-slate-600">
-            <Save size={20} className="text-slate-400" /> 儲存專案
+            <Save size={20} className="text-slate-400" /> 儲存規劃
           </button>
           <button onClick={() => { onPrint(); setShowMenu(false); }} className="flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-500 rounded text-left font-bold text-white">
-            <Printer size={20} /> 匯出 PDF
+            <Printer size={20} /> 匯出報表
+          </button>
+          <button onClick={onLogout} className="flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-slate-700 rounded text-left border-t border-slate-700 mt-2">
+            <LogOut size={20} /> 登出
           </button>
         </div>
       )}
@@ -140,20 +190,22 @@ const AppToolbar = ({ onSave, onLoad, onPrint }: { onSave: () => void, onLoad: (
 };
 
 // ----------------------------------------------------------------------
-// 元件：儲存檔案 Modal
+// 儲存檔案 Modal (Firebase 版)
 // ----------------------------------------------------------------------
 const SavedFilesModal = ({ 
   isOpen, 
   onClose, 
   saves, 
   onLoadProfile, 
-  onDeleteProfile 
+  onDeleteProfile,
+  loading
 }: { 
   isOpen: boolean, 
   onClose: () => void, 
   saves: SavedProfile[], 
   onLoadProfile: (p: SavedProfile) => void,
-  onDeleteProfile: (id: string) => void
+  onDeleteProfile: (id: string) => void,
+  loading: boolean
 }) => {
   if (!isOpen) return null;
 
@@ -163,7 +215,7 @@ const SavedFilesModal = ({
         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
           <h3 className="font-bold text-slate-800 flex items-center gap-2">
             <FileText size={18} className="text-blue-600"/> 
-            已儲存的規劃
+            雲端客戶資料庫
           </h3>
           <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded-full transition-colors">
             <X size={20} className="text-slate-500" />
@@ -171,11 +223,13 @@ const SavedFilesModal = ({
         </div>
         
         <div className="overflow-y-auto p-2 space-y-2 flex-1">
-          {saves.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12 text-slate-400">載入中...</div>
+          ) : saves.length === 0 ? (
             <div className="text-center py-12 text-slate-400">
               <PiggyBank size={48} className="mx-auto mb-3 opacity-20" />
-              <p>尚無儲存紀錄</p>
-              <p className="text-xs mt-1">請先建立一個規劃並點擊「儲存」</p>
+              <p>尚無客戶資料</p>
+              <p className="text-xs mt-1">規劃完成後點擊「儲存」建立檔案</p>
             </div>
           ) : (
             saves.map((profile) => (
@@ -215,8 +269,13 @@ const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d:
   const monthlyInvestIncomeSingle = calculateMonthlyIncome(loanAmount, investReturnRate);
   
   const phase1_NetOut = monthlyLoanPayment - monthlyInvestIncomeSingle;
-  // 修正：移除了 phase1_TotalCost 等所有未使用變數
-  const phase2_NetOut = monthlyLoanPayment - (monthlyInvestIncomeSingle * 2);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const phase2_LoanPmt = monthlyLoanPayment; 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const phase2_Income = monthlyInvestIncomeSingle * 2; 
+  const phase2_NetOut = phase2_LoanPmt - phase2_Income;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const phase2_TotalCost = phase2_NetOut * 12 * loanTerm;
   
   const standardTotalCost = targetAmount * 10000; 
   const standardMonthlySaving = standardTotalCost / (loanTerm * 2 * 12);
@@ -357,7 +416,7 @@ const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d:
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="year" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
-                <YAxis unit="萬" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                <YAxis unit="萬" tick={{fontSize: 12}} axisLine={false} tickLine={false} domain={[0, 'auto']} />
                 <Tooltip contentStyle={{borderRadius: '8px', border: '1px solid #ddd', boxShadow: 'none'}} />
                 <Legend />
                 <Area type="monotone" dataKey="專案持有資產" stroke="#3b82f6" fill="url(#colorAssetGift)" strokeWidth={2} />
@@ -565,8 +624,10 @@ const FinancialRealEstateTab = ({ data, setData }: { data: EstateState, setData:
 // ----------------------------------------------------------------------
 const FinancialApp = () => {
   const [activeTab, setActiveTab] = useState<'gift' | 'estate'>('gift');
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   
-  // State: 提升到頂層，以便存檔
+  // State
   const [giftData, setGiftData] = useState<GiftState>({ 
     loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 
   });
@@ -574,38 +635,91 @@ const FinancialApp = () => {
     loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6 
   });
 
-  // LocalStorage Logic
+  // Firebase Logic
   const [saves, setSaves] = useState<SavedProfile[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loadingFiles, setLoadingFiles] = useState(false);
 
-  // 初始化讀取 LS
+  // 監聽登入狀態
   useEffect(() => {
-    const loaded = localStorage.getItem('financial_planner_saves');
-    if (loaded) {
-      try {
-        setSaves(JSON.parse(loaded));
-      } catch (e) {
-        console.error("Failed to parse saves", e);
-      }
-    }
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
-  const handleSave = () => {
+  const handleLogin = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error) {
+      console.error("Login failed", error);
+      alert("登入失敗，請重試");
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setSaves([]); // 清空本地資料
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
+  };
+
+  // 載入雲端資料
+  const loadCloudFiles = async () => {
+    if (!user) return;
+    setLoadingFiles(true);
+    setIsModalOpen(true);
+    try {
+      const q = query(collection(db, "users", user.uid, "plans"), orderBy("date", "desc"));
+      const querySnapshot = await getDocs(q);
+      const loadedFiles: SavedProfile[] = [];
+      querySnapshot.forEach((doc) => {
+        loadedFiles.push({ id: doc.id, ...doc.data() } as SavedProfile);
+      });
+      setSaves(loadedFiles);
+    } catch (error) {
+      console.error("Error loading files:", error);
+      alert("讀取資料失敗");
+    } finally {
+      setLoadingFiles(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
     const name = prompt("請輸入客戶姓名或專案名稱：", "新專案");
     if (!name) return;
 
-    const newProfile: SavedProfile = {
-      id: Date.now().toString(),
+    const newProfile = {
       name,
       date: new Date().toLocaleDateString(),
       type: activeTab,
       data: activeTab === 'gift' ? { ...giftData } : { ...estateData }
     };
 
-    const newSaves = [newProfile, ...saves];
-    setSaves(newSaves);
-    localStorage.setItem('financial_planner_saves', JSON.stringify(newSaves));
-    alert("儲存成功！");
+    try {
+      // 存入 Firestore: users/{uid}/plans/{autoId}
+      await addDoc(collection(db, "users", user.uid, "plans"), newProfile);
+      alert("儲存成功！");
+    } catch (error) {
+      console.error("Error saving document: ", error);
+      alert("儲存失敗");
+    }
+  };
+
+  const handleDeleteProfile = async (id: string) => {
+    if (!user || !confirm("確定要刪除此紀錄嗎？")) return;
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "plans", id));
+      // 更新列表
+      setSaves(prev => prev.filter(s => s.id !== id));
+    } catch (error) {
+      console.error("Error deleting document: ", error);
+      alert("刪除失敗");
+    }
   };
 
   const handleLoadProfile = (profile: SavedProfile) => {
@@ -618,25 +732,27 @@ const FinancialApp = () => {
     setIsModalOpen(false);
   };
 
-  const handleDeleteProfile = (id: string) => {
-    if (!confirm("確定要刪除此紀錄嗎？")) return;
-    const newSaves = saves.filter(s => s.id !== id);
-    setSaves(newSaves);
-    localStorage.setItem('financial_planner_saves', JSON.stringify(newSaves));
-  };
-
   const handlePrint = () => {
     window.print();
   };
 
+  // 如果還在檢查登入狀態，顯示載入中
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-500">系統啟動中...</div>;
+
+  // 如果沒登入，顯示登入頁
+  if (!user) return <LoginPage onLogin={handleLogin} />;
+
+  // 已登入，顯示主程式
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-12">
       <PrintStyles />
       
       <AppToolbar 
+        user={user}
         onSave={handleSave} 
-        onLoad={() => setIsModalOpen(true)} 
-        onPrint={handlePrint} 
+        onLoad={loadCloudFiles} 
+        onPrint={handlePrint}
+        onLogout={handleLogout}
       />
 
       <SavedFilesModal 
@@ -645,6 +761,7 @@ const FinancialApp = () => {
         saves={saves} 
         onLoadProfile={handleLoadProfile}
         onDeleteProfile={handleDeleteProfile}
+        loading={loadingFiles}
       />
 
       <header className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 shadow-lg mb-8 no-print">
@@ -682,6 +799,7 @@ const FinancialApp = () => {
       <div className="hidden print-only text-center mb-8 border-b pb-4">
          <h1 className="text-3xl font-bold text-slate-900 mb-2">資產規劃建議書</h1>
          <div className="text-sm text-slate-500">規劃專案：{activeTab === 'gift' ? '百萬禮物專案' : '金融房產專案'}</div>
+         <div className="text-sm text-slate-500">規劃顧問：{user.displayName}</div>
          <div className="text-sm text-slate-500">列印日期：{new Date().toLocaleDateString()}</div>
       </div>
 
