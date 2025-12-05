@@ -17,7 +17,10 @@ import {
   User as UserIcon,
   Settings,
   Camera,
-  Smartphone
+  Smartphone,
+  Loader2, // 新增 Loading 圖示
+  Focus,   // 新增對焦圖示
+  ArrowUpFromLine // 新增靠上對焦圖示
 } from 'lucide-react';
 import { 
   Bar, 
@@ -32,7 +35,7 @@ import {
   Line
 } from 'recharts';
 
-// --- Firebase 模組整合 (修正：直接在此檔案初始化，避免 import 錯誤) ---
+// --- Firebase 模組整合 ---
 import { initializeApp } from "firebase/app";
 import { 
   getAuth, 
@@ -64,8 +67,6 @@ import {
 // ------------------------------------------------------------------
 // Firebase 設定區域
 // ------------------------------------------------------------------
-// 強制使用正確的 API Key (大寫 S)，並保留環境變數讀取作為備用
-// 這樣可以確保 Vercel 部署或本地開發都能運作
 const apiKey = "AIzaSyAqS6fhHQVyBNr1LCkCaQPyJ13Rkq7bfHA"; 
 const authDomain = "grbt-f87fa.firebaseapp.com";
 const projectId = "grbt-f87fa";
@@ -156,6 +157,7 @@ type UserProfile = {
   title: string;
   lineId: string;
   photoUrl: string;
+  photoPosition?: 'center' | 'top'; // 新增：控制照片對焦位置 (center=居中, top=靠上)
 };
 
 // ----------------------------------------------------------------------
@@ -192,16 +194,20 @@ const LoginPage = ({ onLogin }: { onLogin: () => void }) => {
 // ----------------------------------------------------------------------
 // 個人設定頁面 (Settings View) - 數位名片功能
 // ----------------------------------------------------------------------
-const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, profile: UserProfile, onSaveProfile: (p: UserProfile) => void, onBack: () => void }) => {
-  const [formData, setFormData] = useState<UserProfile>(profile);
+// 注意：onSaveProfile 改為 async 以支援 loading 狀態
+const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, profile: UserProfile, onSaveProfile: (p: UserProfile) => Promise<void>, onBack: () => void }) => {
+  const [formData, setFormData] = useState<UserProfile>({
+    ...profile,
+    photoPosition: profile.photoPosition || 'center' // 預設居中
+  });
   const [uploading, setUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); // 新增：儲存中的狀態
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setUploading(true);
       const file = e.target.files[0];
-      // 儲存路徑：avatars/{uid}/{timestamp}_{filename}
       const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_${file.name}`);
       
       try {
@@ -210,16 +216,18 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
         setFormData(prev => ({ ...prev, photoUrl: url }));
       } catch (error) {
         console.error("Upload failed", error);
-        alert("圖片上傳失敗，請確認 Firebase Storage 權限設定");
+        alert("圖片上傳失敗，請確認網路連線");
       } finally {
         setUploading(false);
       }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSaveProfile(formData);
+    setIsSaving(true); // 開始儲存，顯示 Loading
+    await onSaveProfile(formData);
+    setIsSaving(false); // 結束儲存
   };
 
   return (
@@ -229,27 +237,59 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
           <h2 className="text-xl font-bold flex items-center gap-2">
             <Settings size={24} /> 數位名片設定
           </h2>
-          <button onClick={onBack} className="p-2 hover:bg-slate-700 rounded-full transition-colors"><X size={20} /></button>
+          <button onClick={onBack} disabled={isSaving} className="p-2 hover:bg-slate-700 rounded-full transition-colors"><X size={20} /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* 頭像上傳 */}
+          {/* 頭像上傳與預覽區 */}
           <div className="flex flex-col items-center gap-4">
-            <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-slate-100 shadow-md bg-slate-200">
+            <div className="relative group cursor-pointer" onClick={() => !isSaving && fileInputRef.current?.click()}>
+              {/* 頭像顯示容器 */}
+              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-slate-100 shadow-md bg-slate-200 relative">
                 {formData.photoUrl ? (
-                  <img src={formData.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  <img 
+                    src={formData.photoUrl} 
+                    alt="Avatar" 
+                    className={`w-full h-full object-cover transition-all duration-300 ${formData.photoPosition === 'top' ? 'object-top' : 'object-center'}`} 
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-400"><UserIcon size={48} /></div>
                 )}
+                
+                {/* 載入中遮罩 */}
+                {uploading && (
+                  <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
+                    <Loader2 className="animate-spin text-slate-900" size={24} />
+                  </div>
+                )}
               </div>
+              
+              {/* 上傳提示 icon */}
               <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <Camera size={32} className="text-white" />
               </div>
-              {uploading && <div className="absolute inset-0 bg-white/80 rounded-full flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div></div>}
             </div>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-            <p className="text-sm text-slate-500">點擊上方更換大頭貼</p>
+            
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" disabled={isSaving} />
+            
+            {/* 照片對焦設定 (新增功能) */}
+            <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setFormData({...formData, photoPosition: 'center'})}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-all ${formData.photoPosition === 'center' ? 'bg-white shadow text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                <Focus size={14} /> 居中 (預設)
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({...formData, photoPosition: 'top'})}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-all ${formData.photoPosition === 'top' ? 'bg-white shadow text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                <ArrowUpFromLine size={14} /> 靠上 (人臉)
+              </button>
+            </div>
+            <p className="text-xs text-slate-400">若全身照被切到頭部，請選擇「靠上」</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -259,8 +299,9 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
                 type="text" 
                 value={formData.displayName} 
                 onChange={(e) => setFormData({...formData, displayName: e.target.value})}
-                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none"
+                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none disabled:bg-slate-100 disabled:text-slate-400"
                 placeholder="例如：王大明"
+                disabled={isSaving}
               />
             </div>
             <div>
@@ -269,8 +310,9 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
                 type="text" 
                 value={formData.title} 
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
-                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none"
+                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none disabled:bg-slate-100 disabled:text-slate-400"
                 placeholder="例如：資深業務經理"
+                disabled={isSaving}
               />
             </div>
             <div>
@@ -279,17 +321,25 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
                 type="text" 
                 value={formData.lineId} 
                 onChange={(e) => setFormData({...formData, lineId: e.target.value})}
-                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none"
+                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none disabled:bg-slate-100 disabled:text-slate-400"
                 placeholder="例如：@superagent"
+                disabled={isSaving}
               />
             </div>
           </div>
 
           <div className="pt-4 border-t border-slate-100">
-            <h3 className="text-sm font-bold text-slate-400 uppercase mb-3">預覽效果</h3>
+            <h3 className="text-sm font-bold text-slate-400 uppercase mb-3">名片預覽</h3>
             <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4 shadow-sm">
                <div className="w-16 h-16 rounded-full bg-slate-200 overflow-hidden flex-shrink-0">
-                 {formData.photoUrl ? <img src={formData.photoUrl} className="w-full h-full object-cover" /> : <UserIcon className="m-4 text-slate-400" />}
+                 {formData.photoUrl ? (
+                   <img 
+                    src={formData.photoUrl} 
+                    className={`w-full h-full object-cover ${formData.photoPosition === 'top' ? 'object-top' : 'object-center'}`} 
+                   />
+                 ) : (
+                   <UserIcon className="m-4 text-slate-400" />
+                 )}
                </div>
                <div>
                  <div className="text-xs text-yellow-600 font-bold bg-yellow-50 px-2 py-0.5 rounded-full inline-block mb-1">{formData.title || '職稱'}</div>
@@ -300,8 +350,27 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
           </div>
 
           <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onBack} className="flex-1 py-3 rounded-xl border border-slate-300 text-slate-600 font-bold hover:bg-slate-50">取消</button>
-            <button type="submit" className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 shadow-lg">儲存設定</button>
+            <button 
+              type="button" 
+              onClick={onBack} 
+              disabled={isSaving}
+              className="flex-1 py-3 rounded-xl border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 disabled:opacity-50"
+            >
+              取消
+            </button>
+            <button 
+              type="submit" 
+              disabled={isSaving || uploading}
+              className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 shadow-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="animate-spin" size={20} /> 儲存中...
+                </>
+              ) : (
+                '儲存設定'
+              )}
+            </button>
           </div>
         </form>
       </div>
@@ -318,9 +387,12 @@ const AppToolbar = ({ user, profile, onSave, onLoad, onPrint, onLogout, onOpenSe
   return (
     <div className="bg-slate-900 text-white p-3 px-4 flex justify-between items-center shadow-md sticky top-0 z-50 no-print">
       <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={onOpenSettings}>
-        {/* 優化：如果還沒讀取到名片照片，先顯示 Google 帳號原本的大頭貼 */}
         {profile.photoUrl || user?.photoURL ? (
-          <img src={profile.photoUrl || user?.photoURL || ''} alt="User" className="w-10 h-10 rounded-full border-2 border-yellow-400 object-cover" />
+          <img 
+            src={profile.photoUrl || user?.photoURL || ''} 
+            alt="User" 
+            className={`w-10 h-10 rounded-full border-2 border-yellow-400 object-cover ${profile.photoPosition === 'top' ? 'object-top' : 'object-center'}`} 
+          />
         ) : (
           <div className="bg-slate-700 p-2 rounded-full border-2 border-slate-600"><UserIcon size={20} /></div>
         )}
@@ -723,7 +795,7 @@ export default function App() {
       setView('main');
     } catch (error) {
       console.error("Error saving profile: ", error);
-      alert("儲存失敗");
+      alert("儲存失敗，請檢查網路");
     }
   };
 
