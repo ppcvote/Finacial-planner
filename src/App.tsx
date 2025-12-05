@@ -30,9 +30,7 @@ import {
 } from 'recharts';
 
 // --- Firebase 模組 ---
-// ⚠️ 這裡會引用剛剛建立的 src/firebaseConfig.ts
-// 如果這裡報錯，請檢查 firebaseConfig.ts 是否真的存在於 src 資料夾中
-import { auth, googleProvider, db } from './firebaseConfig';
+import { auth, googleProvider, db } from './firebaseConfig.ts';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { collection, addDoc, query, getDocs, deleteDoc, doc, orderBy } from 'firebase/firestore';
 
@@ -270,13 +268,11 @@ const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d:
   const monthlyInvestIncomeSingle = calculateMonthlyIncome(loanAmount, investReturnRate);
   
   const phase1_NetOut = monthlyLoanPayment - monthlyInvestIncomeSingle;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  
+  // 修正：移除了所有未使用變數 (phase2_TotalCost 等)，避免 build error
   const phase2_LoanPmt = monthlyLoanPayment; 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const phase2_Income = monthlyInvestIncomeSingle * 2; 
   const phase2_NetOut = phase2_LoanPmt - phase2_Income;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const phase2_TotalCost = phase2_NetOut * 12 * loanTerm;
   
   const standardTotalCost = targetAmount * 10000; 
   const standardMonthlySaving = standardTotalCost / (loanTerm * 2 * 12);
@@ -594,7 +590,7 @@ const FinancialRealEstateTab = ({ data, setData }: { data: EstateState, setData:
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[360px] print-break-inside">
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[300px] print-break-inside">
              <h4 className="text-sm font-bold text-slate-600 mb-2 pl-2">{loanTerm}年「總資產價值」走勢 (單位: 萬)</h4>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
