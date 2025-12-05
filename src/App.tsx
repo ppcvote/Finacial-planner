@@ -56,7 +56,8 @@ import {
   doc, 
   orderBy, 
   setDoc, 
-  getDoc 
+  getDoc,
+  initializeFirestore 
 } from 'firebase/firestore';
 import { 
   getStorage, 
@@ -89,7 +90,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
-const db = getFirestore(app);
+
+// --- 關鍵修正：強制使用 Long Polling 以解決連線卡死/超時問題 ---
+const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true, // 強制長輪詢，解決防火牆或環境導致的 WebSocket 連線失敗
+});
+
 const storage = getStorage(app);
 
 // ------------------------------------------------------------------
@@ -916,14 +922,24 @@ export default function App() {
   
   const handleSaveProfile = async (newProfile: UserProfile) => {
     if (!user) return;
+    
+    // 防呆機制：確保所有欄位都不是 undefined，Firestore 不接受 undefined
+    const safeProfile = {
+      displayName: newProfile.displayName || '',
+      title: newProfile.title || '',
+      lineId: newProfile.lineId || '',
+      photoUrl: newProfile.photoUrl || '',
+      photoPosition: newProfile.photoPosition || 'center'
+    };
+
     try {
-      // 這裡放寬儲存超時限制到 30 秒
+      // 這裡放寬儲存超時限制到 30 秒，並使用 merge: true
       await withTimeout(
-        setDoc(doc(db, "users", user.uid, "profile", "info"), newProfile),
+        setDoc(doc(db, "users", user.uid, "profile", "info"), safeProfile, { merge: true }),
         30000,
         "儲存超時"
       );
-      setUserProfile(newProfile);
+      setUserProfile(safeProfile);
       alert("名片設定已更新！");
       setView('main');
     } catch (error: any) {
@@ -931,7 +947,8 @@ export default function App() {
       if (error.message === "儲存超時") {
         alert("儲存時間過長，請檢查網路連線。");
       } else {
-        alert("儲存失敗，請檢查網路或權限。");
+        // 顯示具體錯誤代碼，方便除錯
+        alert(`儲存失敗：${error.message || error.code}。請檢查 Firebase Firestore 規則是否允許寫入。`);
       }
     }
   };
