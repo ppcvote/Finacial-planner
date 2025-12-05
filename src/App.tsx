@@ -18,9 +18,10 @@ import {
   Settings,
   Camera,
   Smartphone,
-  Loader2, // 新增 Loading 圖示
-  Focus,   // 新增對焦圖示
-  ArrowUpFromLine // 新增靠上對焦圖示
+  Loader2, 
+  Focus,   
+  ArrowUpFromLine,
+  WifiOff // 新增斷網圖示
 } from 'lucide-react';
 import { 
   Bar, 
@@ -91,6 +92,18 @@ const googleProvider = new GoogleAuthProvider();
 const db = getFirestore(app);
 const storage = getStorage(app);
 
+// ------------------------------------------------------------------
+// 輔助函數：超時控制 (防止轉圈圈轉太久)
+// ------------------------------------------------------------------
+const withTimeout = <T,>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error(errorMessage)), ms)
+    )
+  ]);
+};
+
 // --- 樣式注入 ---
 const PrintStyles = () => (
   <style>{`
@@ -157,7 +170,7 @@ type UserProfile = {
   title: string;
   lineId: string;
   photoUrl: string;
-  photoPosition?: 'center' | 'top'; // 新增：控制照片對焦位置 (center=居中, top=靠上)
+  photoPosition?: 'center' | 'top'; 
 };
 
 // ----------------------------------------------------------------------
@@ -194,29 +207,45 @@ const LoginPage = ({ onLogin }: { onLogin: () => void }) => {
 // ----------------------------------------------------------------------
 // 個人設定頁面 (Settings View) - 數位名片功能
 // ----------------------------------------------------------------------
-// 注意：onSaveProfile 改為 async 以支援 loading 狀態
 const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, profile: UserProfile, onSaveProfile: (p: UserProfile) => Promise<void>, onBack: () => void }) => {
   const [formData, setFormData] = useState<UserProfile>({
     ...profile,
-    photoPosition: profile.photoPosition || 'center' // 預設居中
+    photoPosition: profile.photoPosition || 'center' 
   });
   const [uploading, setUploading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false); // 新增：儲存中的狀態
+  const [isSaving, setIsSaving] = useState(false); 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setUploading(true);
       const file = e.target.files[0];
+      
+      // 限制檔案大小 (例如 2MB) 以避免上傳過久
+      if (file.size > 2 * 1024 * 1024) {
+        alert("圖片檔案過大 (超過 2MB)，請選擇較小的圖片以加快上傳速度。");
+        setUploading(false);
+        return;
+      }
+
       const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_${file.name}`);
       
       try {
-        const snapshot = await uploadBytes(storageRef, file);
+        // 加入 20 秒超時限制
+        const snapshot = await withTimeout(
+          uploadBytes(storageRef, file), 
+          20000, 
+          "上傳超時"
+        );
         const url = await getDownloadURL(snapshot.ref);
         setFormData(prev => ({ ...prev, photoUrl: url }));
-      } catch (error) {
+      } catch (error: any) {
         console.error("Upload failed", error);
-        alert("圖片上傳失敗，請確認網路連線");
+        if (error.message === "上傳超時") {
+          alert("上傳時間過長，請檢查網路連線或嘗試較小的圖片。");
+        } else {
+          alert("圖片上傳失敗，請稍後再試。");
+        }
       } finally {
         setUploading(false);
       }
@@ -225,9 +254,9 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaving(true); // 開始儲存，顯示 Loading
+    setIsSaving(true); 
     await onSaveProfile(formData);
-    setIsSaving(false); // 結束儲存
+    setIsSaving(false); 
   };
 
   return (
@@ -272,7 +301,7 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
             
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" disabled={isSaving} />
             
-            {/* 照片對焦設定 (新增功能) */}
+            {/* 照片對焦設定 */}
             <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
               <button
                 type="button"
@@ -452,7 +481,7 @@ const AppToolbar = ({ user, profile, onSave, onLoad, onPrint, onLogout, onOpenSe
 };
 
 // ----------------------------------------------------------------------
-// 輔助元件 (Modal, Tabs)
+// 輔助元件 (Modal, Tabs) - SavedFilesModal, Gift/Estate Tabs...
 // ----------------------------------------------------------------------
 const SavedFilesModal = ({ 
   isOpen, 
@@ -778,24 +807,42 @@ export default function App() {
     };
 
     try {
-      await addDoc(collection(db, "users", user.uid, "plans"), newProfile);
+      // 加入 15 秒超時限制
+      await withTimeout(
+        addDoc(collection(db, "users", user.uid, "plans"), newProfile),
+        15000,
+        "儲存超時"
+      );
       alert("儲存成功！");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving document: ", error);
-      alert("儲存失敗");
+      if (error.message === "儲存超時") {
+        alert("儲存時間過長，請檢查網路連線。");
+      } else {
+        alert("儲存失敗，請稍後再試。");
+      }
     }
   };
   
   const handleSaveProfile = async (newProfile: UserProfile) => {
     if (!user) return;
     try {
-      await setDoc(doc(db, "users", user.uid, "profile", "info"), newProfile);
+      // 加入 15 秒超時限制
+      await withTimeout(
+        setDoc(doc(db, "users", user.uid, "profile", "info"), newProfile),
+        15000,
+        "儲存超時"
+      );
       setUserProfile(newProfile);
       alert("名片設定已更新！");
       setView('main');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving profile: ", error);
-      alert("儲存失敗，請檢查網路");
+      if (error.message === "儲存超時") {
+        alert("儲存時間過長，請檢查網路連線。");
+      } else {
+        alert("儲存失敗，請檢查網路或權限。");
+      }
     }
   };
 
