@@ -30,7 +30,8 @@ import {
 } from 'recharts';
 
 // --- Firebase 模組 ---
-import { auth, googleProvider, db } from './firebaseConfig.ts';
+// 修改說明：移除了 .ts 後綴，這在大多數編輯器中是標準寫法
+import { auth, googleProvider, db } from './firebaseConfig';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { collection, addDoc, query, getDocs, deleteDoc, doc, orderBy } from 'firebase/firestore';
 
@@ -258,7 +259,7 @@ const SavedFilesModal = ({
 };
 
 // ----------------------------------------------------------------------
-// 分頁元件：百萬禮物 (Stateless)
+// 分頁元件：百萬禮物
 // ----------------------------------------------------------------------
 const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d: GiftState) => void }) => {
   const { loanAmount, loanTerm, loanRate, investReturnRate } = data;
@@ -269,7 +270,6 @@ const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d:
   
   const phase1_NetOut = monthlyLoanPayment - monthlyInvestIncomeSingle;
   
-  // 修正：移除了所有未使用變數 (phase2_TotalCost 等)，避免 build error
   const phase2_LoanPmt = monthlyLoanPayment; 
   const phase2_Income = monthlyInvestIncomeSingle * 2; 
   const phase2_NetOut = phase2_LoanPmt - phase2_Income;
@@ -344,7 +344,6 @@ const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d:
             </div>
           </div>
 
-          {/* 列印時只顯示靜態參數 */}
           <div className="hidden print-only border p-4 mb-4 rounded border-slate-300">
             <h3 className="font-bold mb-2">規劃參數</h3>
             <div className="grid grid-cols-2 gap-2 text-sm">
@@ -429,7 +428,7 @@ const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d:
 };
 
 // ----------------------------------------------------------------------
-// 分頁元件：金融房產 (Stateless)
+// 分頁元件：金融房產
 // ----------------------------------------------------------------------
 const FinancialRealEstateTab = ({ data, setData }: { data: EstateState, setData: (d: EstateState) => void }) => {
   const { loanAmount, loanTerm, loanRate, investReturnRate } = data;
@@ -646,12 +645,21 @@ const FinancialApp = () => {
     return () => unsubscribe();
   }, []);
 
+  // ------------------------------------------------------------------
+  // 修改：加入錯誤處理，當 API Key 設定有誤時跳出清楚的提示
+  // ------------------------------------------------------------------
   const handleLogin = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed", error);
-      alert("登入失敗，請重試");
+      
+      // 偵測特定的 Firebase Error Code
+      if (error.code === 'auth/api-key-not-valid' || error.code === 'auth/invalid-api-key') {
+        alert("⚠️ 登入失敗：Vercel 環境變數未生效。\n\n請到 Vercel 後台確認變數已設定，並執行「重新部署 (Redeploy)」。");
+      } else {
+        alert(`登入失敗 (${error.code || '未知錯誤'})，請重試。`);
+      }
     }
   };
 
