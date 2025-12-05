@@ -93,47 +93,6 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 
 // ------------------------------------------------------------------
-// 輔助函數：圖片壓縮 (新增)
-// ------------------------------------------------------------------
-const compressImage = (file: File): Promise<Blob> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        // 設定最大寬度，300px 對於頭像顯示已經非常足夠
-        const MAX_WIDTH = 300; 
-        const scaleSize = MAX_WIDTH / img.width;
-        
-        // 如果圖片本身就很小，就不縮放
-        const finalWidth = img.width > MAX_WIDTH ? MAX_WIDTH : img.width;
-        const finalHeight = img.width > MAX_WIDTH ? img.height * scaleSize : img.height;
-
-        canvas.width = finalWidth;
-        canvas.height = finalHeight;
-        
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-            ctx.drawImage(img, 0, 0, finalWidth, finalHeight);
-            // 輸出為 JPEG Blob，品質 0.7
-            canvas.toBlob((blob) => {
-                if (blob) resolve(blob);
-                else reject(new Error("Compression failed"));
-            }, 'image/jpeg', 0.7);
-        } else {
-            reject(new Error("Canvas context not found"));
-        }
-      };
-      img.onerror = (error) => reject(error);
-    };
-    reader.onerror = (error) => reject(error);
-  });
-};
-
-// ------------------------------------------------------------------
 // 輔助函數：超時控制
 // ------------------------------------------------------------------
 const withTimeout = <T,>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> => {
@@ -143,6 +102,61 @@ const withTimeout = <T,>(promise: Promise<T>, ms: number, errorMessage: string):
       setTimeout(() => reject(new Error(errorMessage)), ms)
     )
   ]);
+};
+
+// ------------------------------------------------------------------
+// 輔助函數：圖片壓縮 (新增超時保護)
+// ------------------------------------------------------------------
+const compressImage = (file: File): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    // 設置 5 秒超時，防止圖片處理卡死
+    const timeoutId = setTimeout(() => reject(new Error("Compression timeout")), 5000);
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 300; 
+          const scaleSize = MAX_WIDTH / img.width;
+          
+          const finalWidth = img.width > MAX_WIDTH ? MAX_WIDTH : img.width;
+          const finalHeight = img.width > MAX_WIDTH ? img.height * scaleSize : img.height;
+
+          canvas.width = finalWidth;
+          canvas.height = finalHeight;
+          
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+              ctx.drawImage(img, 0, 0, finalWidth, finalHeight);
+              canvas.toBlob((blob) => {
+                  clearTimeout(timeoutId); // 成功後清除超時
+                  if (blob) resolve(blob);
+                  else reject(new Error("Compression failed"));
+              }, 'image/jpeg', 0.7);
+          } else {
+              clearTimeout(timeoutId);
+              reject(new Error("Canvas context not found"));
+          }
+        } catch (e) {
+          clearTimeout(timeoutId);
+          reject(e);
+        }
+      };
+      img.onerror = (error) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      }
+    };
+    reader.onerror = (error) => {
+      clearTimeout(timeoutId);
+      reject(error);
+    }
+  });
 };
 
 // --- 樣式注入 ---
@@ -164,23 +178,36 @@ const PrintStyles = () => (
 
 // --- 計算函數 ---
 const calculateMonthlyPayment = (principal: number, rate: number, years: number) => {
-  const r = rate / 100 / 12;
-  const n = years * 12;
-  if (rate === 0) return (principal * 10000) / n;
-  return (principal * 10000 * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  // 強制轉型為數字，避免 NaN
+  const p = Number(principal) || 0;
+  const rVal = Number(rate) || 0;
+  const y = Number(years) || 0;
+
+  const r = rVal / 100 / 12;
+  const n = y * 12;
+  if (rVal === 0) return (p * 10000) / (n || 1);
+  const result = (p * 10000 * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  return isNaN(result) ? 0 : result;
 };
 
 const calculateMonthlyIncome = (principal: number, rate: number) => {
-  return (principal * 10000 * (rate / 100)) / 12;
+  const p = Number(principal) || 0;
+  const r = Number(rate) || 0;
+  return (p * 10000 * (r / 100)) / 12;
 };
 
 const calculateRemainingBalance = (principal: number, rate: number, totalYears: number, yearsElapsed: number) => {
-  const r = rate / 100 / 12;
-  const n = totalYears * 12;
-  const p = yearsElapsed * 12;
-  if (rate === 0) return principal * 10000 * (1 - p/n);
-  const balance = (principal * 10000 * (Math.pow(1 + r, n) - Math.pow(1 + r, p))) / (Math.pow(1 + r, n) - 1);
-  return Math.max(0, balance);
+  const pVal = Number(principal) || 0;
+  const rVal = Number(rate) || 0;
+  const totalY = Number(totalYears) || 0;
+  const elapsed = Number(yearsElapsed) || 0;
+
+  const r = rVal / 100 / 12;
+  const n = totalY * 12;
+  const p = elapsed * 12;
+  if (rVal === 0) return pVal * 10000 * (1 - p/(n || 1));
+  const balance = (pVal * 10000 * (Math.pow(1 + r, n) - Math.pow(1 + r, p))) / (Math.pow(1 + r, n) - 1);
+  return Math.max(0, isNaN(balance) ? 0 : balance);
 };
 
 // --- 型別定義 ---
@@ -263,30 +290,30 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
       const file = e.target.files[0];
       
       try {
-        // --- 修正 1: 實作圖片壓縮 ---
-        // 直接在這裡壓縮圖片，將大檔轉為小檔
-        const compressedBlob = await compressImage(file);
+        // --- 修正: 圖片壓縮 ---
+        let processedBlob = file; // 預設使用原檔
+        try {
+           // 嘗試壓縮，如果失敗或超時則使用原檔，但通常壓縮會成功
+           processedBlob = await compressImage(file) as any;
+        } catch (compErr) {
+           console.warn("Compression failed, falling back to original:", compErr);
+        }
         
-        const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_compressed.jpg`);
+        const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}.jpg`);
 
-        // 放寬超時限制到 60 秒
+        // 上傳 60秒超時
         const snapshot = await withTimeout(
-          uploadBytes(storageRef, compressedBlob), 
+          uploadBytes(storageRef, processedBlob), 
           60000, 
           "上傳超時"
         );
         const url = await getDownloadURL(snapshot.ref);
         setFormData(prev => ({ ...prev, photoUrl: url }));
-        console.log("Upload success:", url);
       } catch (error: any) {
         console.error("Upload failed", error);
-        if (error.message === "上傳超時") {
-          alert("網路連線較慢，上傳超時。請嘗試使用 WiFi。");
-        } else {
-          alert(`圖片處理或上傳失敗，請稍後再試。`);
-        }
+        alert(`圖片上傳失敗 (${error.message})，請檢查網路或稍後再試。`);
       } finally {
-        setUploading(false);
+        setUploading(false); // 確保轉圈圈一定會停下來
       }
     }
   };
@@ -564,9 +591,14 @@ const SavedFilesModal = ({
 };
 
 const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d: GiftState) => void }) => {
-  // --- 修正 2: 防呆機制 ---
-  // 確保解構時不會因為 data 為 undefined 而崩潰
-  const safeData = data || { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 };
+  // --- 修正: 強制轉型 ---
+  // 即使 data 中的值是字串 (例如舊資料)，也會被強制轉為 Number，防止計算錯誤
+  const safeData = {
+    loanAmount: Number(data?.loanAmount) || 100,
+    loanTerm: Number(data?.loanTerm) || 7,
+    loanRate: Number(data?.loanRate) || 2.8,
+    investReturnRate: Number(data?.investReturnRate) || 6
+  };
   const { loanAmount, loanTerm, loanRate, investReturnRate } = safeData;
 
   const targetAmount = loanAmount * 3; 
@@ -655,9 +687,15 @@ const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d:
 };
 
 const FinancialRealEstateTab = ({ data, setData }: { data: EstateState, setData: (d: EstateState) => void }) => {
-  // --- 修正 2: 防呆機制 ---
-  // 確保即使讀取到空資料也不會白屏
-  const safeData = data || { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6 };
+  // --- 修正: 強制轉型 (解決白屏問題) ---
+  // 這一段非常關鍵：強制將所有讀取到的資料轉為 Number。
+  // 因為舊資料可能存成了字串 (例如 "1000")，導致計算時出錯 (NaN) 進而讓 Recharts 崩潰。
+  const safeData = {
+    loanAmount: Number(data?.loanAmount) || 1000,
+    loanTerm: Number(data?.loanTerm) || 30,
+    loanRate: Number(data?.loanRate) || 2.2,
+    investReturnRate: Number(data?.investReturnRate) || 6
+  };
   const { loanAmount, loanTerm, loanRate, investReturnRate } = safeData;
 
   const monthlyLoanPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
@@ -911,10 +949,9 @@ export default function App() {
   const handleLoadProfile = (profile: SavedProfile) => {
     setActiveTab(profile.type);
     
-    // --- 修正 2: 防呆機制 ---
+    // --- 修正: 防呆機制 ---
     // 將讀取到的資料與預設值合併。
     // 如果雲端資料缺少某些欄位 (例如舊版本存的檔)，會自動用預設值補上
-    // 防止傳入 undefined 導致金融房產頁面崩潰
     if (profile.type === 'gift') {
       const mergedData = { ...defaultGiftData, ...profile.data };
       setGiftData(mergedData as GiftState);
