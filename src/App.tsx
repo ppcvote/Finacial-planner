@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   PiggyBank, 
   Wallet, 
@@ -93,7 +93,48 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 
 // ------------------------------------------------------------------
-// 輔助函數：超時控制 (防止轉圈圈轉太久)
+// 輔助函數：圖片壓縮 (新增)
+// ------------------------------------------------------------------
+const compressImage = (file: File): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        // 設定最大寬度，300px 對於頭像顯示已經非常足夠
+        const MAX_WIDTH = 300; 
+        const scaleSize = MAX_WIDTH / img.width;
+        
+        // 如果圖片本身就很小，就不縮放
+        const finalWidth = img.width > MAX_WIDTH ? MAX_WIDTH : img.width;
+        const finalHeight = img.width > MAX_WIDTH ? img.height * scaleSize : img.height;
+
+        canvas.width = finalWidth;
+        canvas.height = finalHeight;
+        
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.drawImage(img, 0, 0, finalWidth, finalHeight);
+            // 輸出為 JPEG Blob，品質 0.7
+            canvas.toBlob((blob) => {
+                if (blob) resolve(blob);
+                else reject(new Error("Compression failed"));
+            }, 'image/jpeg', 0.7);
+        } else {
+            reject(new Error("Canvas context not found"));
+        }
+      };
+      img.onerror = (error) => reject(error);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+// ------------------------------------------------------------------
+// 輔助函數：超時控制
 // ------------------------------------------------------------------
 const withTimeout = <T,>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> => {
   return Promise.race([
@@ -221,32 +262,28 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
       setUploading(true);
       const file = e.target.files[0];
       
-      // 限制檔案大小 (例如 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert("圖片檔案過大 (超過 5MB)，請選擇較小的圖片以加快上傳速度。");
-        setUploading(false);
-        return;
-      }
-
-      const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_${file.name}`);
-      
       try {
-        // 放寬超時限制到 60 秒 (60000ms)
+        // --- 修正 1: 實作圖片壓縮 ---
+        // 直接在這裡壓縮圖片，將大檔轉為小檔
+        const compressedBlob = await compressImage(file);
+        
+        const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_compressed.jpg`);
+
+        // 放寬超時限制到 60 秒
         const snapshot = await withTimeout(
-          uploadBytes(storageRef, file), 
+          uploadBytes(storageRef, compressedBlob), 
           60000, 
           "上傳超時"
         );
         const url = await getDownloadURL(snapshot.ref);
         setFormData(prev => ({ ...prev, photoUrl: url }));
-        // 成功提示 (非 Alert，避免打斷體驗)
         console.log("Upload success:", url);
       } catch (error: any) {
         console.error("Upload failed", error);
         if (error.message === "上傳超時") {
-          alert("網路連線較慢，上傳超時。請嘗試使用 WiFi 或較小的圖片。");
+          alert("網路連線較慢，上傳超時。請嘗試使用 WiFi。");
         } else {
-          alert(`圖片上傳失敗 (${error.code || '未知錯誤'})，請稍後再試。`);
+          alert(`圖片處理或上傳失敗，請稍後再試。`);
         }
       } finally {
         setUploading(false);
@@ -257,7 +294,6 @@ const SettingsPage = ({ user, profile, onSaveProfile, onBack }: { user: User, pr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true); 
-    // 放寬儲存超時到 30 秒，避免資料寫入太慢被誤判失敗
     await onSaveProfile(formData);
     setIsSaving(false); 
   };
@@ -528,7 +564,11 @@ const SavedFilesModal = ({
 };
 
 const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d: GiftState) => void }) => {
-  const { loanAmount, loanTerm, loanRate, investReturnRate } = data;
+  // --- 修正 2: 防呆機制 ---
+  // 確保解構時不會因為 data 為 undefined 而崩潰
+  const safeData = data || { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 };
+  const { loanAmount, loanTerm, loanRate, investReturnRate } = safeData;
+
   const targetAmount = loanAmount * 3; 
   const monthlyLoanPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
   const monthlyInvestIncomeSingle = calculateMonthlyIncome(loanAmount, investReturnRate);
@@ -561,7 +601,7 @@ const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d:
     }
     return dataArr;
   };
-  const updateField = (field: keyof GiftState, value: number) => { setData({ ...data, [field]: value }); };
+  const updateField = (field: keyof GiftState, value: number) => { setData({ ...safeData, [field]: value }); };
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex gap-3 items-start print-break-inside">
@@ -584,26 +624,26 @@ const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d:
             <div className="grid grid-cols-2 gap-2 text-sm"><div>信貸額度：{loanAmount} 萬</div><div>信貸利率：{loanRate} %</div><div>配息率：{investReturnRate} %</div><div>總目標：{targetAmount} 萬</div></div>
           </div>
           <div className="bg-white rounded-xl shadow border border-slate-200 p-5 print-break-inside">
-             <div className="text-sm text-slate-500 mb-4 text-center">一般存錢月存金額 <span className="line-through decoration-slate-400 font-bold ml-2">${Math.round(standardMonthlySaving).toLocaleString()}</span></div>
-             <div className="space-y-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
+              <div className="text-sm text-slate-500 mb-4 text-center">一般存錢月存金額 <span className="line-through decoration-slate-400 font-bold ml-2">${Math.round(standardMonthlySaving).toLocaleString()}</span></div>
+              <div className="space-y-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
                 <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">1. 信貸每月還款</span><span className="text-red-500 font-bold font-mono">-${Math.round(monthlyLoanPayment).toLocaleString()}</span></div>
                 <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">2. 扣除每月配息</span><span className="text-green-600 font-bold font-mono">+${Math.round(monthlyInvestIncomeSingle).toLocaleString()}</span></div>
                 <div className="border-t border-slate-200 my-2"></div>
                 <div className="flex justify-between items-end"><span className="text-blue-700 font-bold">3. 實質每月應負</span><span className="text-3xl font-black text-blue-600 font-mono">${Math.round(phase1_NetOut).toLocaleString()}</span></div>
-             </div>
-             <div className="mt-4 text-center"><div className="text-xs bg-green-100 text-green-700 py-1.5 px-3 rounded-full inline-block font-bold">比一般存錢每月省下 ${Math.round(standardMonthlySaving - phase1_NetOut).toLocaleString()}</div></div>
+              </div>
+              <div className="mt-4 text-center"><div className="text-xs bg-green-100 text-green-700 py-1.5 px-3 rounded-full inline-block font-bold">比一般存錢每月省下 ${Math.round(standardMonthlySaving - phase1_NetOut).toLocaleString()}</div></div>
           </div>
         </div>
         <div className="lg:col-span-8 space-y-6">
           <div className="grid grid-cols-2 gap-4 print-break-inside">
-             <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
-               <div className="text-xs text-slate-500 font-bold mb-1">第一階段 (1-7年)</div>
-               <div className="flex justify-between items-end"><span className="text-2xl font-bold text-slate-800">${Math.round(phase1_NetOut).toLocaleString()}</span><span className="text-xs text-slate-400">/月</span></div><div className="text-xs text-slate-500 mt-2">擁有 {loanAmount} 萬資產</div>
-             </div>
-             <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-indigo-500">
-               <div className="text-xs text-slate-500 font-bold mb-1">第二階段 (8-14年)</div>
-               <div className="flex justify-between items-end"><span className={`text-2xl font-bold ${phase2_NetOut < 0 ? 'text-green-600' : 'text-slate-800'}`}>{phase2_NetOut < 0 ? `+${Math.abs(Math.round(phase2_NetOut)).toLocaleString()}` : `$${Math.round(phase2_NetOut).toLocaleString()}`}</span><span className="text-xs text-slate-400">/月</span></div><div className="text-xs text-slate-500 mt-2">擁有 {loanAmount * 2} 萬資產</div>
-             </div>
+              <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
+                <div className="text-xs text-slate-500 font-bold mb-1">第一階段 (1-7年)</div>
+                <div className="flex justify-between items-end"><span className="text-2xl font-bold text-slate-800">${Math.round(phase1_NetOut).toLocaleString()}</span><span className="text-xs text-slate-400">/月</span></div><div className="text-xs text-slate-500 mt-2">擁有 {loanAmount} 萬資產</div>
+              </div>
+              <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-indigo-500">
+                <div className="text-xs text-slate-500 font-bold mb-1">第二階段 (8-14年)</div>
+                <div className="flex justify-between items-end"><span className={`text-2xl font-bold ${phase2_NetOut < 0 ? 'text-green-600' : 'text-slate-800'}`}>{phase2_NetOut < 0 ? `+${Math.abs(Math.round(phase2_NetOut)).toLocaleString()}` : `$${Math.round(phase2_NetOut).toLocaleString()}`}</span><span className="text-xs text-slate-400">/月</span></div><div className="text-xs text-slate-500 mt-2">擁有 {loanAmount * 2} 萬資產</div>
+              </div>
           </div>
           <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[300px] print-break-inside">
             <ResponsiveContainer width="100%" height="100%"><ComposedChart data={generateChartData()} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}><defs><linearGradient id="colorAssetGift" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="year" tick={{fontSize: 12}} axisLine={false} tickLine={false} /><YAxis unit="萬" tick={{fontSize: 12}} axisLine={false} tickLine={false} /><Tooltip contentStyle={{borderRadius: '8px', border: '1px solid #ddd', boxShadow: 'none'}} /><Legend /><Area type="monotone" dataKey="專案持有資產" stroke="#3b82f6" fill="url(#colorAssetGift)" strokeWidth={2} /><Bar dataKey="一般存錢成本" fill="#cbd5e1" barSize={15} radius={[4,4,0,0]} /><Line type="monotone" dataKey="專案實付成本" stroke="#f59e0b" strokeWidth={3} dot={false} /></ComposedChart></ResponsiveContainer>
@@ -615,7 +655,11 @@ const MillionDollarGiftTab = ({ data, setData }: { data: GiftState, setData: (d:
 };
 
 const FinancialRealEstateTab = ({ data, setData }: { data: EstateState, setData: (d: EstateState) => void }) => {
-  const { loanAmount, loanTerm, loanRate, investReturnRate } = data;
+  // --- 修正 2: 防呆機制 ---
+  // 確保即使讀取到空資料也不會白屏
+  const safeData = data || { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6 };
+  const { loanAmount, loanTerm, loanRate, investReturnRate } = safeData;
+
   const monthlyLoanPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
   const monthlyInvestIncome = calculateMonthlyIncome(loanAmount, investReturnRate);
   const monthlyCashFlow = monthlyInvestIncome - monthlyLoanPayment;
@@ -638,7 +682,7 @@ const FinancialRealEstateTab = ({ data, setData }: { data: EstateState, setData:
   };
   const chartData = generateHouseChartData();
   const finalData = chartData[chartData.length - 1];
-  const updateField = (field: keyof EstateState, value: number) => { setData({ ...data, [field]: value }); };
+  const updateField = (field: keyof EstateState, value: number) => { setData({ ...safeData, [field]: value }); };
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex gap-3 items-start print-break-inside">
@@ -714,8 +758,12 @@ export default function App() {
   const [view, setView] = useState<'main' | 'settings'>('main');
   
   // State
-  const [giftData, setGiftData] = useState<GiftState>({ loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 });
-  const [estateData, setEstateData] = useState<EstateState>({ loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6 });
+  // 預設值提取出來，方便重複使用
+  const defaultGiftData: GiftState = { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 };
+  const defaultEstateData: EstateState = { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6 };
+
+  const [giftData, setGiftData] = useState<GiftState>(defaultGiftData);
+  const [estateData, setEstateData] = useState<EstateState>(defaultEstateData);
 
   // User Profile State
   const [userProfile, setUserProfile] = useState<UserProfile>({ displayName: '', title: '', lineId: '', photoUrl: '' });
@@ -862,10 +910,17 @@ export default function App() {
 
   const handleLoadProfile = (profile: SavedProfile) => {
     setActiveTab(profile.type);
+    
+    // --- 修正 2: 防呆機制 ---
+    // 將讀取到的資料與預設值合併。
+    // 如果雲端資料缺少某些欄位 (例如舊版本存的檔)，會自動用預設值補上
+    // 防止傳入 undefined 導致金融房產頁面崩潰
     if (profile.type === 'gift') {
-      setGiftData(profile.data as GiftState);
+      const mergedData = { ...defaultGiftData, ...profile.data };
+      setGiftData(mergedData as GiftState);
     } else {
-      setEstateData(profile.data as EstateState);
+      const mergedData = { ...defaultEstateData, ...profile.data };
+      setEstateData(mergedData as EstateState);
     }
     setIsModalOpen(false);
   };
