@@ -7,11 +7,13 @@ import {
   Wallet, 
   TrendingUp, 
   ShieldCheck, 
+  Target, 
+  PiggyBank, 
   CheckCircle2,
   RefreshCw,
   Landmark
 } from 'lucide-react';
-import { ResponsiveContainer, ComposedChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceArea } from 'recharts';
+import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceArea } from 'recharts';
 
 // --- 內建計算函式 (避免外部引用錯誤) ---
 const calculateMonthlyPayment = (principal: number, rate: number, years: number) => {
@@ -23,6 +25,12 @@ const calculateMonthlyPayment = (principal: number, rate: number, years: number)
   if (rVal === 0) return (p * 10000) / (n || 1);
   const result = (p * 10000 * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
   return isNaN(result) ? 0 : result;
+};
+
+const calculateMonthlyIncome = (principal: number, rate: number) => {
+  const p = Number(principal) || 0;
+  const r = Number(rate) || 0;
+  return (p * 10000 * (r / 100)) / 12;
 };
 
 const calculateRemainingBalance = (principal: number, rate: number, totalYears: number, yearsElapsed: number) => {
@@ -38,6 +46,14 @@ const calculateRemainingBalance = (principal: number, rate: number, totalYears: 
   return Math.max(0, isNaN(balance) ? 0 : balance);
 };
 
+// --- 輔助函式 (修正: 移至組件外部，解決 ReferenceError) ---
+const formatXAxisTick = (value) => {
+    // 這裡我們直接使用 dataArr 中的 yearLabel
+    // 由於 dataArr 存在於組件內部，我們必須在這裡簡化邏輯，只格式化數字
+    return `第${value}年`;
+};
+
+
 export const StudentLoanTool = ({ data, setData }: any) => {
   // --- 1. 資料處理與計算邏輯 ---
   const safeData = {
@@ -51,7 +67,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
   };
   const { loanAmount, loanRate, investReturnRate, semesters, years, gracePeriod, interestOnlyPeriod } = safeData;
 
-  // 期間切分
+  // 修正編譯錯誤：將分界變數定義在函數外 (或使用 useMemo，但簡單計算放外邊即可)
   const studyYears = Math.ceil(semesters / 2); // 在學年數 (學貸發放期間)
   const graceEndYear = studyYears + gracePeriod;
   const interestOnlyEndYear = graceEndYear + interestOnlyPeriod;
@@ -63,7 +79,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
   const totalPrincipalPaid = loanAmount * 10000; // 學生總共投入的本金 (元)
 
   const generateChartData = () => {
-    const dataArr: any[] = [];
+    const dataArr = [];
     let investmentValue = 0; 
     let remainingLoan = loanAmount * 10000;
     
@@ -77,13 +93,13 @@ export const StudentLoanTool = ({ data, setData }: any) => {
     for (let month = 1; month <= totalDuration * 12; month++) { 
       const year = Math.ceil(month / 12);
 
-      // 1. 每學期初投入一次「學費」
+      // 1. 計算學費現金流投入 (假設每學期初投入)
       if ((month - 1) % 6 === 0 && cumulativeInvestmentPrincipal < totalPrincipalPaid) {
-        if (year <= studyYears) { 
-          const semesterInput = monthlySavingPerSemester * 6;
-          investmentValue += semesterInput; 
-          cumulativeInvestmentPrincipal += semesterInput;
-        }
+         if (year <= studyYears) { 
+             const semesterInput = monthlySavingPerSemester * 6;
+             investmentValue += semesterInput; 
+             cumulativeInvestmentPrincipal += semesterInput;
+         }
       }
       
       // 2. 投資複利成長 (每月)
@@ -95,25 +111,25 @@ export const StudentLoanTool = ({ data, setData }: any) => {
       let repaymentYearIndex;
 
       if (year <= studyYears) {
-        repaymentPhase = '在學期';
-        remainingLoan = loanAmount * 10000;
+         repaymentPhase = '在學期';
+         remainingLoan = loanAmount * 10000;
       } else if (year <= graceEndYear) {
-        repaymentPhase = '寬限期';
-        remainingLoan = loanAmount * 10000;
+         repaymentPhase = '寬限期';
+         remainingLoan = loanAmount * 10000;
       } else if (year <= interestOnlyEndYear) {
-        repaymentPhase = '只繳息期';
-        remainingLoan = loanAmount * 10000;
-        monthlyRepayment = monthlyInterestOnly;
-        accumulatedInterest += monthlyRepayment;
+         repaymentPhase = '只繳息期';
+         remainingLoan = loanAmount * 10000;
+         monthlyRepayment = monthlyInterestOnly;
+         accumulatedInterest += monthlyRepayment;
       } else if (year <= repaymentEndYear) {
-        repaymentPhase = '本息攤還期';
-        repaymentYearIndex = year - interestOnlyEndYear; // 攤還期從 interestOnlyEndYear+1 開始計數
-        remainingLoan = calculateRemainingBalance(loanAmount, loanRate, years, repaymentYearIndex);
-        monthlyRepayment = monthlyPaymentP_I;
-        accumulatedInterest += monthlyRepayment; 
+         repaymentPhase = '本息攤還期';
+         repaymentYearIndex = year - interestOnlyEndYear; // 攤還期從 interestOnlyEndYear+1 開始計數
+         remainingLoan = calculateRemainingBalance(loanAmount, loanRate, years, repaymentYearIndex);
+         monthlyRepayment = monthlyPaymentP_I;
+         accumulatedInterest += monthlyRepayment; 
       } else {
-        remainingLoan = 0;
-        repaymentPhase = '期滿';
+         remainingLoan = 0;
+         repaymentPhase = '期滿';
       }
       
       // 4. 淨資產計算: 投資價值 - 剩餘貸款
@@ -122,10 +138,11 @@ export const StudentLoanTool = ({ data, setData }: any) => {
       // 5. 圖表數據點 (每年紀錄一次)
       if (month % 12 === 0 || month === totalDuration * 12) { 
         dataArr.push({
-          year: `第${year}年`,
+          year: year, // 修正: 使用數字作為 X 軸數據
+          yearLabel: `第${year}年`, // 額外標籤用於 Tooltip 和格式化
           投資複利價值: Math.round(investmentValue / 10000),
           淨資產: Math.round(netWorth / 10000),
-          若直接繳掉: 0, // 若直接繳掉，資產淨值為 0
+          若直接繳掉: 0, 
           phase: repaymentPhase, 
           repaymentYear: year, 
         });
@@ -146,71 +163,63 @@ export const StudentLoanTool = ({ data, setData }: any) => {
   
   const { dataArr, finalInvestValueWan, cumulativeInvestmentPrincipalWan, totalLoanRepaymentWan, pureProfitWan } = generateChartData();
 
-  // ✅ 用「年份數字」找到對應的 X 軸 label（"第N年"）
-  const getYearLabel = (yearNum: number) => {
-    const found = dataArr.find((d) => d.repaymentYear === yearNum);
-    return found?.year as string | undefined;
+  // 為了讓 ReferenceArea 覆蓋整個 Y 軸範圍，我們需要找到 Y 軸的實際最大/最小值
+  const getMinMaxY = () => {
+    if (dataArr.length === 0) return { min: -10, max: 10 };
+    const allValues = dataArr.flatMap(d => [d.淨資產, d.投資複利價值, d.若直接繳掉]);
+    // 稍微擴展範圍以避免邊緣裁切
+    const min = Math.min(...allValues, 0) - 10; 
+    const max = Math.max(...allValues, 10) + 10;
+    return { min, max };
   };
-
-  // 各階段起訖年（用 repaymentYear 當索引）
-  const studyStartLabel = getYearLabel(1);
-  const studyEndLabel = getYearLabel(studyYears);
-
-  const graceStartLabel = getYearLabel(studyYears + 1);
-  const graceEndLabel = getYearLabel(graceEndYear);
-
-  const interestStartLabel = getYearLabel(graceEndYear + 1);
-  const interestEndLabel = getYearLabel(interestOnlyEndYear);
-
-  const repayStartLabel = getYearLabel(interestOnlyEndYear + 1);
-  const repayEndLabel = getYearLabel(repaymentEndYear);
-
-  // --- 2. UI 渲染 ---
-  const updateField = (field: string, value: number) => { 
-    let newValue = Number(value);
-
-    if (field === 'loanAmount') {
-      const clampedValue = Math.max(10, Math.min(100, newValue));
-      setData({ ...safeData, [field]: Math.round(clampedValue) });
-      setTempLoanAmount(Math.round(clampedValue));
-    } else if (field === 'semesters') {
-      const clampedValue = Math.max(1, Math.min(20, newValue));
-      setData({ ...safeData, [field]: Math.round(clampedValue) });
-    } else if (field === 'investReturnRate') {
-      setData({ ...safeData, [field]: Number(newValue.toFixed(1)) });
-    } else {
-      setData({ ...safeData, [field]: newValue }); 
-    }
+  const { min: yMin, max: yMax } = getMinMaxY();
+  
+  // 找出各階段結束點的索引 (Index)
+  const getPhaseIndex = (year) => {
+    // 由於 XAxis 是數值軸，使用 year 數值本身作為 x1/x2 參數
+    return year; 
   };
+  
+  // 修正：使用 year 數值作為 ReferenceArea 的 x1/x2 數值
+  const studyEndIndex = getPhaseIndex(studyYears);
+  const graceEndIndex = getPhaseIndex(graceEndYear);
+  const interestOnlyEndIndex = getPhaseIndex(interestOnlyEndYear);
+  const repaymentEndIndex = getPhaseIndex(repaymentEndYear);
+
 
   // 數字輸入框連動滑桿的處理
   const [tempLoanAmount, setTempLoanAmount] = useState(loanAmount);
   
   const handleLoanAmountInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // 允許輸入任何數字，不立即限制
     const value = e.target.value === '' ? '' : Number(e.target.value);
-    setTempLoanAmount(value as number);
+    setTempLoanAmount(value as number); // 更新輸入框的暫存值
   };
 
   const finalizeLoanAmount = () => {
-    let finalValue = isNaN(tempLoanAmount as number) || tempLoanAmount === 0 ? 40 : (tempLoanAmount as number);
+    // 檢查並限制輸入值
+    let finalValue = isNaN(tempLoanAmount as number) || tempLoanAmount === 0 ? 40 : tempLoanAmount as number;
     finalValue = Math.max(10, Math.min(100, finalValue));
     finalValue = Math.round(finalValue);
+    // 更新正式的 data state (觸發計算)
     setData({ ...safeData, loanAmount: finalValue });
     setTempLoanAmount(finalValue); 
   };
 
   // 圖表分區的顏色定義
-  const phaseColors: Record<string, string> = {
-    '在學期': '#3b82f633', // 藍色
-    '寬限期': '#84cc1633', // 綠色
-    '只繳息期': '#f59e0b33', // 橘色
-    '本息攤還期': '#06b6d433', // 青色
+  const phaseColors = {
+      '在學期': '#3b82f633', // 藍色 (Blue-500, 20%)
+      '寬限期': '#84cc1633', // 綠色 (Lime-500, 20%)
+      '只繳息期': '#f59e0b33', // 橘色 (Amber-500, 20%)
+      '本息攤還期': '#06b6d433', // 青色 (Cyan-500, 20%)
   };
+  
+
 
   return (
     <div className="space-y-8 animate-fade-in font-sans text-slate-800">
       
-      {/* Header Section */}
+      {/* Header Section: 專案標題與核心價值 */}
       <div className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden print-break-inside">
         <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
           <GraduationCap size={180} />
@@ -233,9 +242,9 @@ export const StudentLoanTool = ({ data, setData }: any) => {
         </div>
       </div>
 
-      {/* Calculator Section */}
+      {/* Calculator Section: 互動試算區 */}
       <div className="grid lg:grid-cols-12 gap-8">
-        {/* 左側：參數設定 */}
+        {/* 左側：參數設定與關鍵指標 */}
         <div className="lg:col-span-4 space-y-6 print-break-inside">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 no-print">
             <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2">
@@ -244,94 +253,57 @@ export const StudentLoanTool = ({ data, setData }: any) => {
             </h4>
             <div className="space-y-6">
                
-               {/* 1. 學貸總額 */}
+               {/* 1. 學貸總額 (數字輸入與滑桿連動) */}
                <div>
-                 <div className="flex justify-between items-center mb-2">
-                   <label className="text-sm font-medium text-slate-600">學貸總額 (萬)</label>
-                   <div className="flex items-center">
-                     <input 
-                       type="number" 
-                       min={10} 
-                       max={100} 
-                       step={1}
-                       value={tempLoanAmount}
-                       onChange={handleLoanAmountInput}
-                       onBlur={finalizeLoanAmount}
-                       onKeyDown={(e) => { if (e.key === 'Enter') finalizeLoanAmount(); }}
-                       className="w-16 text-right bg-transparent border-none p-0 font-mono font-bold text-blue-600 text-lg focus:ring-0 focus:border-blue-500 focus:bg-blue-50/50 rounded"
-                       style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
-                     />
-                     <span className="font-mono font-bold text-blue-600 text-lg ml-1">萬</span>
+                   <div className="flex justify-between items-center mb-2">
+                       <label className="text-sm font-medium text-slate-600">學貸總額 (萬)</label>
+                       <div className="flex items-center">
+                           <input 
+                               type="number" 
+                               min={10} 
+                               max={100} 
+                               step={1}
+                               value={tempLoanAmount} // 使用暫存值
+                               onChange={handleLoanAmountInput}
+                               onBlur={finalizeLoanAmount}
+                               onKeyDown={(e) => { if (e.key === 'Enter') finalizeLoanAmount(); }}
+                               className="w-16 text-right bg-transparent border-none p-0 font-mono font-bold text-blue-600 text-lg focus:ring-0 focus:border-blue-500 focus:bg-blue-50/50 rounded"
+                               style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+                           />
+                           <span className="font-mono font-bold text-blue-600 text-lg ml-1">萬</span>
+                       </div>
                    </div>
-                 </div>
-                 <input
-                   type="range"
-                   min={10}
-                   max={100}
-                   step={1}
-                   value={loanAmount}
-                   onChange={(e) => updateField('loanAmount', Number(e.target.value))}
-                   className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600 hover:accent-blue-700 transition-all"
-                 />
+                   {/* 修正 1: 調整學貸總額滑桿級距為 1 */}
+                   <input type="range" min={10} max={100} step={1} value={loanAmount} onChange={(e) => updateField('loanAmount', Number(e.target.value))} className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600 hover:accent-blue-700 transition-all`} />
                </div>
 
-               {/* 2. 貸款學期數 */}
+               {/* 2. 貸款學期數 (修正級距和範圍) */}
                <div>
                  <div className="flex justify-between mb-2">
-                   <label className="text-sm font-medium text-slate-600 flex itemscenter gap-1">
-                     <Clock size={14}/> 貸款學期數
-                   </label>
+                   <label className="text-sm font-medium text-slate-600 flex items-center gap-1"><Clock size={14}/> 貸款學期數</label>
                    <span className="font-mono font-bold text-teal-600 text-lg">{semesters} 學期</span>
                  </div>
-                 <input
-                   type="range"
-                   min={1}
-                   max={20}
-                   step={1}
-                   value={semesters}
-                   onChange={(e) => updateField('semesters', Number(e.target.value))}
-                   className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-teal-500 hover:accent-teal-600 transition-all"
-                 />
+                 <input type="range" min={1} max={20} step={1} value={semesters} onChange={(e) => updateField('semesters', Number(e.target.value))} className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-teal-500 hover:accent-teal-600 transition-all" />
                  <p className="text-xs text-slate-400 mt-1">例如：四年制大學為 8 學期</p>
                </div>
 
-               {/* 3. 寬限期 */}
+               {/* 3. 畢業後寬限期 */}
                <div>
                  <div className="flex justify-between mb-2">
-                   <label className="text-sm font-medium text-slate-600 flex items-center gap-1">
-                     <Clock size={14}/> 畢業後寬限期 (年)
-                   </label>
+                   <label className="text-sm font-medium text-slate-600 flex items-center gap-1"><Clock size={14}/> 畢業後寬限期 (年)</label>
                    <span className="font-mono font-bold text-cyan-600 text-lg">{gracePeriod} 年</span>
                  </div>
-                 <input
-                   type="range"
-                   min={0}
-                   max={3}
-                   step={1}
-                   value={gracePeriod}
-                   onChange={(e) => updateField('gracePeriod', Number(e.target.value))}
-                   className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-cyan-500 hover:accent-cyan-600 transition-all"
-                 />
+                 <input type="range" min={0} max={3} step={1} value={gracePeriod} onChange={(e) => updateField('gracePeriod', Number(e.target.value))} className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-cyan-500 hover:accent-cyan-600 transition-all`} />
                  <p className="text-xs text-slate-400 mt-1">期間免還本息，通常為 1 年</p>
                </div>
 
-               {/* 4. 只繳息期 */}
+               {/* 4. 申請只繳息期 */}
                <div>
                  <div className="flex justify-between mb-2">
-                   <label className="text-sm font-medium text-slate-600 flex items-center gap-1">
-                     <PauseCircle size={14}/> 申請只繳息期 (年)
-                   </label>
+                   <label className="text-sm font-medium text-slate-600 flex items-center gap-1"><PauseCircle size={14}/> 申請只繳息期 (年)</label>
                    <span className="font-mono font-bold text-orange-500 text-lg">{interestOnlyPeriod} 年</span>
                  </div>
-                 <input
-                   type="range"
-                   min={0}
-                   max={4}
-                   step={1}
-                   value={interestOnlyPeriod}
-                   onChange={(e) => updateField('interestOnlyPeriod', Number(e.target.value))}
-                   className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-orange-500 hover:accent-orange-600 transition-all"
-                 />
+                 <input type="range" min={0} max={4} step={1} value={interestOnlyPeriod} onChange={(e) => updateField('interestOnlyPeriod', Number(e.target.value))} className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-orange-500 hover:accent-orange-600 transition-all`} />
                  <p className="text-xs text-slate-400 mt-1">一般戶最多申請 4 年</p>
                </div>
 
@@ -339,55 +311,45 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                <div>
                  <div className="flex justify-between mb-2">
                    <label className="text-sm font-medium text-slate-600">預期年化報酬率 (%)</label>
-                   <span className="font-mono font-bold text-emerald-600 text-lg">
-                     {investReturnRate.toFixed(1)}
-                   </span>
+                   <span className="font-mono font-bold text-emerald-600 text-lg">{investReturnRate.toFixed(1)}</span>
                  </div>
-                 <input
-                   type="range"
-                   min={3}
-                   max={10}
-                   step={0.5}
-                   value={investReturnRate}
-                   onChange={(e) => updateField('investReturnRate', Number(e.target.value))}
-                   className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-600 hover:accent-emerald-700 transition-all"
-                 />
+                 <input type="range" min={3} max={10} step={0.5} value={investReturnRate} onChange={(e) => updateField('investReturnRate', Number(e.target.value))} className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-600 hover:accent-emerald-700 transition-all`} />
                </div>
             </div>
             
             <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">目前學貸利率</span>
-                <span className="font-bold text-slate-700">{loanRate.toFixed(3)}%</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">資金活化總期程</span>
-                <span className="font-bold text-blue-600">{totalDuration} 年</span>
-              </div>
+                <div className="flex justify-between text-sm">
+                   <span className="text-slate-500">目前學貸利率</span>
+                   <span className="font-bold text-slate-700">{loanRate.toFixed(3)}%</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                   <span className="text-slate-500">資金活化總期程</span>
+                   <span className="font-bold text-blue-600">{totalDuration} 年</span>
+                </div>
             </div>
           </div>
           
           {/* 效益摘要卡 */}
           <div className="bg-white rounded-2xl shadow border border-slate-200 p-6 flex flex-col items-center justify-center relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-cyan-400"></div>
-            <div className="text-center mb-4 w-full">
-              <div className="flex justify-between items-center mb-2 px-2">
-                <span className="text-slate-500 text-sm">總還款額度</span>
-                <span className="text-red-500 font-bold text-lg">${totalLoanRepaymentWan.toLocaleString()}萬</span>
-              </div>
-              <div className="w-full h-px bg-slate-100"></div>
-            </div>
-            
-            <div className="text-center">
-              <p className="text-slate-500 text-sm font-medium mb-1">總累積淨獲利</p>
-              <p className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600 font-mono">
-                +${pureProfitWan.toLocaleString()}萬
-              </p>
-              <div className="mt-2 inline-flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full font-bold">
-                <TrendingUp size={12}/> 
-                最終資產價值: ${finalInvestValueWan.toLocaleString()}萬
-              </div>
-            </div>
+             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-cyan-400"></div>
+             <div className="text-center mb-4 w-full">
+               <div className="flex justify-between items-center mb-2 px-2">
+                  <span className="text-slate-500 text-sm">總還款額度</span>
+                  <span className="text-red-500 font-bold text-lg">${totalLoanRepaymentWan.toLocaleString()}萬</span>
+               </div>
+               <div className="w-full h-px bg-slate-100"></div>
+             </div>
+             
+             <div className="text-center">
+               <p className="text-slate-500 text-sm font-medium mb-1">總累積淨獲利</p>
+               <p className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600 font-mono">
+                 +${pureProfitWan.toLocaleString()}萬
+               </p>
+               <div className="mt-2 inline-flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full font-bold">
+                  <TrendingUp size={12}/> 
+                  最終資產價值: ${finalInvestValueWan.toLocaleString()}萬
+               </div>
+             </div>
           </div>
         </div>
 
@@ -398,94 +360,104 @@ export const StudentLoanTool = ({ data, setData }: any) => {
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart data={dataArr} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                 
-                {/* 在學期 */}
-                {studyStartLabel && studyEndLabel && (
+                {/* 修正 2: ReferenceArea 渲染，使用數值軸的精確位置 */}
+                
+                {/* 在學期 (Start Year 1 to studyYears) */}
+                {studyYears > 0 && 
                   <ReferenceArea 
-                    x1={studyStartLabel}
-                    x2={studyEndLabel}
+                    key="study"
+                    x1={1} 
+                    x2={studyYears + 0.5} // 擴展到下一個數據點中間
                     fill={phaseColors['在學期']}
                     fillOpacity={1}
                     stroke="none"
-                    y1="dataMin"
-                    y2="dataMax"
+                    y1="dataMin" y2="dataMax" 
                   />
-                )}
+                }
                 
-                {/* 寬限期 */}
-                {gracePeriod > 0 && graceStartLabel && graceEndLabel && (
+                {/* 寬限期 (studyYears + 1 to graceEndYear) */}
+                {gracePeriod > 0 && 
                   <ReferenceArea 
-                    x1={graceStartLabel}
-                    x2={graceEndLabel}
+                    key="grace"
+                    x1={studyYears + 0.5} 
+                    x2={graceEndYear + 0.5} 
                     fill={phaseColors['寬限期']}
                     fillOpacity={1}
                     stroke="none"
-                    y1="dataMin"
-                    y2="dataMax"
+                    y1="dataMin" y2="dataMax"
                   />
-                )}
+                }
                 
-                {/* 只繳息期 */}
-                {interestOnlyPeriod > 0 && interestStartLabel && interestEndLabel && (
+                {/* 只繳息期 (graceEndYear + 1 to interestOnlyEndYear) */}
+                {interestOnlyEndYear > graceEndYear && 
                   <ReferenceArea 
-                    x1={interestStartLabel}
-                    x2={interestEndLabel}
+                    key="interest"
+                    x1={graceEndYear + 0.5} 
+                    x2={interestOnlyEndYear + 0.5}
                     fill={phaseColors['只繳息期']}
                     fillOpacity={1}
                     stroke="none"
-                    y1="dataMin"
-                    y2="dataMax"
+                    y1="dataMin" y2="dataMax" 
                   />
-                )}
+                }
                 
-                {/* 本息攤還期 */}
-                {repayStartLabel && repayEndLabel && (
+                {/* 本息攤還期 (interestOnlyEndYear + 1 to repaymentEndYear) */}
+                {repaymentEndYear > interestOnlyEndYear && 
                   <ReferenceArea 
-                    x1={repayStartLabel}
-                    x2={repayEndLabel}
+                    key="repayment"
+                    x1={interestOnlyEndYear + 0.5} 
+                    x2={repaymentEndYear + 0.5}
                     fill={phaseColors['本息攤還期']}
                     fillOpacity={1}
                     stroke="none"
-                    y1="dataMin"
-                    y2="dataMax"
+                    y1="dataMin" y2="dataMax" 
                   />
-                )}
+                }
 
+
+                <defs>
+                  <linearGradient id="colorInvest" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis
-                  dataKey="year"
-                  tick={{fontSize: 12, fill: '#64748b'}}
-                  axisLine={false}
-                  tickLine={false}
-                  allowDuplicatedCategory={false}
+                {/* XAxis type="number" dataKey="year" and use tickFormatter for labels */}
+                <XAxis 
+                    dataKey="year" 
+                    type="number" 
+                    domain={[1, totalDuration]}
+                    allowDecimals={false}
+                    tickFormatter={formatXAxisTick} 
+                    tick={{fontSize: 12, fill: '#64748b'}} 
+                    axisLine={false} 
+                    tickLine={false}
                 /> 
-                <YAxis
-                  unit="萬"
-                  tick={{fontSize: 12, fill: '#64748b'}}
-                  axisLine={false}
-                  tickLine={false}
-                  domain={['dataMin', 'dataMax']}
-                />
+                <YAxis unit="萬" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} domain={['dataMin', 'dataMax']}/>
                 <Tooltip 
                   contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px'}} 
                   itemStyle={{padding: '2px 0'}}
+                  // 顯示 yearLabel 而非 year number
+                  labelFormatter={(value) => `第${value}年`} 
                 />
                 <Legend iconType="circle" />
-                <Line type="monotone" name="活化專案淨資產" dataKey="淨資產" stroke="#0ea5e9" strokeWidth={3} />
+                <Line type="monotone" name="活化專案淨資產" dataKey="淨資產" stroke="#0ea5e9" fill="url(#colorInvest)" strokeWidth={3} />
+                {/* 修正 4: 若直接繳掉的資產始終為 0 */}
                 <Line type="monotone" name="若直接繳掉 (資產歸零)" dataKey="若直接繳掉" stroke="#94a3b8" strokeWidth={2} dot={false} strokeDasharray="4 4" />
                 <Line type="monotone" name="投資複利總值" dataKey="投資複利價值" stroke="#10b981" strokeWidth={2} dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
-            <div className="flex justify-center gap-4 mt-2 text-sm">
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-500/20"></span> 在學期</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-lime-500/20"></span> 寬限期</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-amber-500/20"></span> 只繳息期</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-cyan-500/20"></span> 本息攤還期</span>
+             <div className="flex justify-center gap-4 mt-2 text-sm">
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-500/20"></span> 在學期</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-lime-500/20"></span> 寬限期</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-amber-500/20"></span> 只繳息期</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-cyan-500/20"></span> 本息攤還期</span>
             </div>
           </div>
         </div>
       </div>
       
-      {/* 底部策略區 */}
+      {/* 底部策略區 (執行三部曲 + 專案四大效益) */}
       <div className="grid md:grid-cols-2 gap-8 pt-6 border-t border-slate-200 print-break-inside">
         
         {/* 1. 執行三部曲 */}
