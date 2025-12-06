@@ -27,12 +27,6 @@ const calculateMonthlyPayment = (principal: number, rate: number, years: number)
   return isNaN(result) ? 0 : result;
 };
 
-const calculateMonthlyIncome = (principal: number, rate: number) => {
-  const p = Number(principal) || 0;
-  const r = Number(rate) || 0;
-  return (p * 10000 * (r / 100)) / 12;
-};
-
 const calculateRemainingBalance = (principal: number, rate: number, totalYears: number, yearsElapsed: number) => {
   const pVal = Number(principal) || 0;
   const rVal = Number(rate) || 0;
@@ -77,6 +71,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
     
     let cumulativeInvestmentPrincipal = 0; 
     let accumulatedInterest = 0; 
+    let index = 0; // 新增索引
 
     const monthlyInterestOnly = (loanAmount * 10000 * (loanRate / 100)) / 12; 
     const monthlyPaymentP_I = calculateMonthlyPayment(loanAmount, loanRate, years);
@@ -130,10 +125,11 @@ export const StudentLoanTool = ({ data, setData }: any) => {
       // 5. 圖表數據點 (每年紀錄一次)
       if (month % 12 === 0 || month === totalDuration * 12) { 
         dataArr.push({
+          index: index++, // 新增索引
           year: `第${year}年`,
           投資複利價值: Math.round(investmentValue / 10000),
           淨資產: Math.round(netWorth / 10000),
-          若直接繳掉: 0, // 修正: 若直接繳掉，資產淨值應為 0
+          若直接繳掉: 0, 
           phase: repaymentPhase, 
           repaymentYear: year, 
         });
@@ -200,12 +196,6 @@ export const StudentLoanTool = ({ data, setData }: any) => {
       '寬限期': '#84cc1633', // 綠色 (Lime-500, 20%)
       '只繳息期': '#f59e0b33', // 橘色 (Amber-500, 20%)
       '本息攤還期': '#06b6d433', // 青色 (Cyan-500, 20%)
-  };
-  
-  // 輔助函式，取得 Recharts ReferenceArea 需要的 X 軸 category 值
-  const getXCategory = (year, fallback) => {
-    const dataPoint = dataArr.find(d => d.repaymentYear === year);
-    return dataPoint ? d.year : fallback;
   };
   
   // 找出各階段結束點的索引 (Index)
