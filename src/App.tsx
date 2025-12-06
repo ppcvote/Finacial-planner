@@ -33,7 +33,8 @@ import {
   HeartHandshake
 } from 'lucide-react';
 import { 
-  BarChart, // 修正：已正確引入 BarChart
+  BarChart, 
+  AreaChart, // 修正：補上 AreaChart，解決大小水庫白屏問題
   Bar, 
   XAxis, 
   YAxis, 
