@@ -7,7 +7,8 @@ import {
   TrendingUp, 
   CheckCircle2, 
   ArrowRight,
-  Target
+  Target,
+  RefreshCw // <--- 修正: 補上缺少的圖示匯入
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Area, Line, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
