@@ -51,7 +51,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
     gracePeriod: Number(data?.gracePeriod) || 1, 
     interestOnlyPeriod: Number(data?.interestOnlyPeriod) || 0 
   };
-  const { loanAmount, loanRate, investReturnRate, semesters, years, gracePeriod, interestOnlyPeriod } = safeData;
+  const { loanAmount, loanTerm, loanRate, investReturnRate, semesters, years, gracePeriod, interestOnlyPeriod } = safeData;
 
   const totalDuration = gracePeriod + interestOnlyPeriod + years;
   
@@ -78,7 +78,9 @@ export const StudentLoanTool = ({ data, setData }: any) => {
       // 1. 計算學費現金流投入 (假設每學期初投入，即 0, 6, 12, ... 月初)
       if ((month - 1) % 6 === 0 && cumulativeInvestmentPrincipal < totalPrincipalPaid) {
          // 僅在學貸發放期內投入 (假設學貸發放期等於 semesters / 2 年)
-         if (year <= semesters / 2) { 
+         // 修正：當 semesters 為奇數時，需調整年限計算
+         const fundingYears = Math.ceil(semesters / 2);
+         if (year <= fundingYears) { 
              const semesterInput = monthlySavingPerSemester * 6;
              investmentValue += semesterInput; 
              cumulativeInvestmentPrincipal += semesterInput;
@@ -126,7 +128,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
           year: `第${year}年`,
           投資複利價值: Math.round(investmentValue / 10000),
           淨資產: Math.round(netWorth / 10000),
-          若直接繳掉: Math.round(loanAmount * 10000 / 10000), // 若直接繳掉，資產永遠為 0，這裡顯示為學貸總額，但實際資產是 0
+          若直接繳掉: 0, // 修正 4: 若直接繳掉，資產淨值應為 0
           phase: repaymentPhase, // 用於圖表分色
           repaymentYear: year, // 用於計算分界線
         });
@@ -152,11 +154,12 @@ export const StudentLoanTool = ({ data, setData }: any) => {
       let newValue = Number(value);
 
       if (field === 'loanAmount') {
-          // 確保 loanAmount 在 10 到 100 之間，且為整數
           const clampedValue = Math.max(10, Math.min(100, newValue));
           setData({ ...safeData, [field]: Math.round(clampedValue) });
+          // 滑桿連動時，同步更新 tempLoanAmount
+          setTempLoanAmount(Math.round(clampedValue));
       } else if (field === 'semesters') {
-          // 修正: 級距改為 1，範圍 1-20
+          // 修正 2: 級距改為 1，範圍 1-20
           const clampedValue = Math.max(1, Math.min(20, newValue));
           setData({ ...safeData, [field]: Math.round(clampedValue) });
       } else if (field === 'investReturnRate') {
@@ -196,23 +199,25 @@ export const StudentLoanTool = ({ data, setData }: any) => {
       '寬限期': 'rgba(100, 116, 139, 0.15)', // Slate-400
       '只繳息期': 'rgba(251, 191, 36, 0.15)', // Amber-400
       '本息攤還期': 'rgba(56, 189, 248, 0.15)', // Sky-400
+      '期滿': 'rgba(255, 255, 255, 0)', // 期滿後的區域透明
   };
-
-  const ReferenceArea = ({ year, phase }) => {
-    const startMonth = (year - 1) * 12 + 1;
-    const endMonth = year * 12;
-    
-    // 檢查是否有該年數據，避免崩潰
-    if (!dataArr.find(d => d.repaymentYear === year)) return null; 
+  
+  // 修正 3: ReferenceArea 必須是 Line 或 Area 以外的元素，且用於 ComposedChart 無法像 AreaChart 那樣直接繪製區塊
+  // 我們使用 Line/Area 的假數據來實現區塊顏色的渲染 (如前版本嘗試的，但這次使用正確的 XAxis 範圍)
+  // 由於 Recharts 的限制，我們將使用 XAxis 的 ReferenceArea
+  const ReferenceAreaComponent = ({ startYear, endYear, fill, label }) => {
+    // 確保 startYear 和 endYear 在圖表數據範圍內
+    const startX = dataArr.find(d => d.repaymentYear === startYear)?.year || `第${startYear}年`;
+    const endX = dataArr.find(d => d.repaymentYear === endYear)?.year || `第${endYear}年`;
 
     return (
         <Area 
-            dataKey="淨資產" 
-            data={dataArr.filter(d => d.repaymentYear === year)}
-            fill={phaseColors[phase]} 
+            dataKey="淨資產"
+            data={dataArr.filter(d => d.repaymentYear >= startYear && d.repaymentYear <= endYear)}
+            fill={fill}
             stroke="none"
+            legendType="none"
             isAnimationActive={false}
-            dot={false}
         />
     );
   };
@@ -265,7 +270,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                                min={10} 
                                max={100} 
                                step={1}
-                               value={tempLoanAmount} 
+                               value={tempLoanAmount} // 使用暫存值
                                onChange={handleLoanAmountInput}
                                onBlur={finalizeLoanAmount}
                                onKeyDown={(e) => { if (e.key === 'Enter') finalizeLoanAmount(); }}
@@ -360,21 +365,41 @@ export const StudentLoanTool = ({ data, setData }: any) => {
             <h4 className="font-bold text-slate-700 mb-4 pl-2 border-l-4 border-blue-500">資產成長趨勢模擬</h4>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart data={dataArr} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-                {/* 修正 3: 新增 ReferenceArea 區分各階段 */}
-                {dataArr.map((d, index) => {
-                    const phase = d.phase;
-                    if (phase === '寬限期' && d.repaymentYear <= graceYear) {
-                        return <ReferenceArea key={`g-${index}`} x1={`第${d.repaymentYear}年`} x2={`第${d.repaymentYear}年`} fill={phaseColors['寬限期']} />;
-                    }
-                    if (phase === '只繳息期' && d.repaymentYear > graceYear && d.repaymentYear <= interestOnlyYear) {
-                        return <ReferenceArea key={`i-${index}`} x1={`第${d.repaymentYear}年`} x2={`第${d.repaymentYear}年`} fill={phaseColors['只繳息期']} />;
-                    }
-                    if (phase === '本息攤還期' && d.repaymentYear > interestOnlyYear && d.repaymentYear <= repaymentEndYear) {
-                        return <ReferenceArea key={`r-${index}`} x1={`第${d.repaymentYear}年`} x2={`第${d.repaymentYear}年`} fill={phaseColors['本息攤還期']} />;
-                    }
-                    return null;
-                })}
-
+                {/* 修正 3: 圖表區域顏色修正 (使用 Recharts 的 Area 元件來模擬 ReferenceArea 的效果) */}
+                {/* 寬限期區域渲染 */}
+                <Area 
+                    dataKey="淨資產"
+                    data={dataArr.filter(d => d.repaymentYear <= graceYear)}
+                    name="寬限期"
+                    fill={phaseColors['寬限期']}
+                    stroke="none"
+                    legendType="none"
+                    isAnimationActive={false}
+                    dot={false}
+                />
+                {/* 只繳息期區域渲染 */}
+                <Area 
+                    dataKey="淨資產"
+                    data={dataArr.filter(d => d.repaymentYear > graceYear && d.repaymentYear <= interestOnlyYear)}
+                    name="只繳息期"
+                    fill={phaseColors['只繳息期']}
+                    stroke="none"
+                    legendType="none"
+                    isAnimationActive={false}
+                    dot={false}
+                />
+                {/* 本息攤還期區域渲染 */}
+                <Area 
+                    dataKey="淨資產"
+                    data={dataArr.filter(d => d.repaymentYear > interestOnlyYear && d.repaymentYear <= repaymentEndYear)}
+                    name="本息攤還期"
+                    fill={phaseColors['本息攤還期']}
+                    stroke="none"
+                    legendType="none"
+                    isAnimationActive={false}
+                    dot={false}
+                />
+                
                 <defs>
                   <linearGradient id="colorInvest" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.2}/>
@@ -389,7 +414,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   itemStyle={{padding: '2px 0'}}
                 />
                 <Legend iconType="circle" />
-                <Area type="monotone" name="活化專案淨資產" dataKey="淨資產" stroke="#0ea5e9" fill="url(#colorInvest)" strokeWidth={3} />
+                <Line type="monotone" name="活化專案淨資產" dataKey="淨資產" stroke="#0ea5e9" fill="url(#colorInvest)" strokeWidth={3} />
                 {/* 修正 4: 若直接繳掉的資產始終為 0 */}
                 <Line type="monotone" name="若直接繳掉 (資產歸零)" dataKey="若直接繳掉" stroke="#94a3b8" strokeWidth={2} dot={false} strokeDasharray="4 4" />
                 <Line type="monotone" name="投資複利總值" dataKey="投資複利價值" stroke="#10b981" strokeWidth={2} dot={false} />
@@ -404,7 +429,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
         </div>
       </div>
       
-      {/* 修正 5: 新增總繳大學學費卡片 (解決下方空白過多) */}
+      {/* 修正 5 & 6: 新增總繳大學學費卡片 (並移除原有的，並將策略區往上提) */}
       <div className="grid md:grid-cols-2 gap-6 pt-6 border-t border-slate-200">
          <div className="md:col-span-1 bg-white rounded-2xl shadow-lg border border-red-200 p-6 print-break-inside">
              <h3 className="text-xl font-bold text-red-700 mb-4 flex items-center gap-2">
