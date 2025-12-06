@@ -33,8 +33,7 @@ import {
   HeartHandshake,
   Droplets,
   AlertTriangle,
-  FileBarChart,
-  PieChart
+  FileBarChart
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -147,7 +146,92 @@ const calculateRemainingBalance = (principal, rate, totalYears, yearsElapsed) =>
 };
 
 // ------------------------------------------------------------------
-// Report Component (Updated with Charts)
+// UI Components (Missing in previous version)
+// ------------------------------------------------------------------
+
+const PrintStyles = () => (
+  <style>{`
+    @media print {
+      aside, .no-print, .toast-container, .mobile-header, .mobile-menu { display: none !important; }
+      body, main { background: white !important; height: auto !important; overflow: visible !important; }
+      .print-break-inside { break-inside: avoid; }
+      .shadow-lg, .shadow-sm { box-shadow: none !important; border: 1px solid #ddd !important; }
+      .text-white { color: black !important; }
+      .bg-gradient-to-r, .bg-gradient-to-br { background: none !important; background-color: #f0f9ff !important; color: black !important; }
+      header { display: none !important; } 
+      .print-header { display: block !important; margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+      .recharts-wrapper { width: 100% !important; height: auto !important; }
+    }
+  `}</style>
+);
+
+const Toast = ({ message, type = 'success', onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => { onClose(); }, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const bgColors = {
+    success: 'bg-green-600',
+    error: 'bg-red-600',
+    info: 'bg-blue-600'
+  };
+
+  return (
+    <div className={`fixed bottom-6 right-6 ${bgColors[type]} text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-bounce-in z-[100] toast-container`}>
+      {type === 'success' && <Check size={20} />}
+      {type === 'error' && <ShieldAlert size={20} />}
+      <span className="font-bold">{message}</span>
+    </div>
+  );
+};
+
+const NavItem = ({ icon: Icon, label, active, onClick, disabled = false }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+      disabled 
+      ? 'opacity-50 cursor-not-allowed text-slate-500' 
+      : active 
+        ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
+        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+    }`}
+  >
+    <Icon size={20} />
+    <span className="font-medium flex-1 text-left">{label}</span>
+    {disabled && <Lock size={14} className="opacity-50" />}
+  </button>
+);
+
+const ProfileModal = ({ isOpen, onClose, profile, onSave, loading }) => {
+  const [formData, setFormData] = useState(profile);
+  useEffect(() => { if(isOpen) setFormData(profile); }, [isOpen, profile]);
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 space-y-4">
+        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Edit3 size={20} /> 修改顯示資料</h3>
+        <div>
+           <label className="block text-sm font-bold text-slate-700 mb-1">顯示名稱</label>
+           <input type="text" value={formData.displayName} onChange={e => setFormData({...formData, displayName: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="您的姓名" />
+        </div>
+        <div>
+           <label className="block text-sm font-bold text-slate-700 mb-1">專業職稱</label>
+           <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例如：資深理財顧問" />
+        </div>
+        <div className="flex gap-2 mt-4">
+           <button onClick={onClose} className="flex-1 py-2 border border-slate-300 rounded-lg text-slate-600 font-bold hover:bg-slate-50">取消</button>
+           <button onClick={() => onSave(formData)} disabled={loading} className="flex-1 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800 disabled:opacity-50">{loading ? '儲存中...' : '確認修改'}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ------------------------------------------------------------------
+// Report Component (Updated)
 // ------------------------------------------------------------------
 
 const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
@@ -162,18 +246,19 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
   // --- Logic Extraction for Report ---
   if (activeTab === 'gift') {
     const loan = data.loanAmount;
-    // Generate Chart Data
+    const monthlyLoanPayment = calculateMonthlyPayment(loan, data.loanRate, data.loanTerm);
+    const monthlyInvestIncomeSingle = calculateMonthlyIncome(loan, data.investReturnRate);
+    const phase1_NetOut = monthlyLoanPayment - monthlyInvestIncomeSingle;
+    const standardTotalCost = loan * 3 * 10000; 
+    const standardMonthlySaving = standardTotalCost / (data.loanTerm * 2 * 12);
+    const monthlySaved = Math.round(standardMonthlySaving - phase1_NetOut);
+
+    // Chart
     const chartData = [];
     let cumulativeStandard = 0;
     let cumulativeProjectCost = 0;
     let projectAssetValue = 0;
-    const monthlyLoanPayment = calculateMonthlyPayment(loan, data.loanRate, data.loanTerm);
-    const monthlyInvestIncomeSingle = calculateMonthlyIncome(loan, data.investReturnRate);
-    const phase1_NetOut = monthlyLoanPayment - monthlyInvestIncomeSingle;
     const phase2_NetOut = monthlyLoanPayment - (monthlyInvestIncomeSingle * 2);
-    const standardTotalCost = loan * 3 * 10000; 
-    const standardMonthlySaving = standardTotalCost / (data.loanTerm * 2 * 12);
-
     for (let year = 1; year <= 14; year++) {
       cumulativeStandard += standardMonthlySaving * 12;
       if (year <= 7) {
@@ -206,6 +291,7 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
         { label: '第 14 年', col1: '收割期', col2: `資產 ${loan*2} 萬` },
       ],
       highlights: [
+        `比一般存錢每月省下 $${monthlySaved.toLocaleString()}，負擔減輕。`,
         '善用銀行低利資金，用時間換取資產增值。',
         '強迫儲蓄效應，避免資金隨意花費。',
         '雙倍資產槓桿，比單純存錢速度快一倍。'
@@ -221,7 +307,6 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
     const isNegativeCashFlow = monthlyCashFlow < 0;
     const totalOutOfPocket = Math.abs(monthlyCashFlow) * 12 * data.loanTerm;
 
-    // Generate Chart Data
     const chartData = [];
     let cumulativeNetIncome = 0; 
     for (let year = 1; year <= data.loanTerm; year++) {
@@ -250,23 +335,21 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
         { label: `第 ${data.loanTerm} 年`, col1: '自由期', col2: `擁有 ${loan} 萬` },
       ],
       highlights: isNegativeCashFlow ? [
-        `槓桿效益：20年總自付約 ${Math.round(totalOutOfPocket/10000)} 萬，換取 ${loan} 萬資產。`,
+        `槓桿效益驚人：${data.loanTerm}年總自付約 ${Math.round(totalOutOfPocket/10000)} 萬，卻換取 ${loan} 萬資產。`,
+        `如同買房，房客(配息)幫您繳了大部分房貸(本息)。`,
         `用小錢換大資產，強迫儲蓄的最佳工具。`,
         `期滿後資產完全屬於您，並持續產生被動收入。`
       ] : [
         '以息養貸，完全無需自掏腰包。',
-        '每月還能創造額外現金流。',
+        '每月還能創造額外現金流，生活品質提升。',
         '期滿後無痛擁有千萬資產。'
       ],
       chartData: chartData,
       chartType: 'composed_estate'
     };
   } else if (activeTab === 'student') {
-     // ... (student chart data generation logic)
-     // For brevity, using simplified logic for demo, real logic matches component
      const profit = Math.round(data.loanAmount * 10000 * Math.pow((1 + data.investReturnRate/100), data.years + data.gracePeriod) - (calculateMonthlyPayment(data.loanAmount, 1.775, data.years) * 12 * data.years));
      
-     // Chart Data
      const chartData = [];
      const totalDuration = data.gracePeriod + data.interestOnlyPeriod + data.years;
      let investmentValue = data.loanAmount * 10000;
@@ -299,15 +382,15 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
         { label: '8 年後', col1: '無債期', col2: '多賺一筆' },
       ],
       highlights: [
-          '利用一生一次的低利貸款機會創造財富。',
+          `關鍵話術：學貸利率僅 1.775%，是這輩子最便宜的資金。`,
           '不急著還本金，讓時間複利為您工作。',
-          '畢業即擁有人生第一桶金，贏在起跑點。'
+          '畢業即擁有人生第一桶金，贏在起跑點。',
+          '培養「理財大於還債」的富人思維。'
       ],
       chartData: chartData,
       chartType: 'composed_student'
     };
   } else if (activeTab === 'super_active') {
-    // ... super active chart logic
     const chartData = [];
     let passiveAccumulation = 0; 
     let activeInvestment = 0; 
@@ -338,15 +421,15 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
         { label: `第 30 年`, col1: '爆發期', col2: '財富自由' },
       ],
       highlights: [
-          '只需辛苦一陣子，享受一輩子。',
+          '關鍵效益：相比苦存40年，您只需專注存錢15年。',
           '利用複利效應，大幅減少本金投入。',
-          '提早達成財務目標，擁有更多人生選擇權。'
+          '提早達成財務目標，擁有更多人生選擇權。',
+          '只需辛苦一陣子，享受一輩子。'
       ],
       chartData: chartData,
       chartType: 'composed_active'
     };
   } else if (activeTab === 'car') {
-    // ... car chart logic
     const cycles = [];
     let policyPrincipal = data.carPrice * 1; 
     const loanAmount = data.carPrice - 20;
@@ -381,15 +464,15 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
         { label: '第 3 台', col1: '資產滾大', col2: '幾近免費' },
       ],
       highlights: [
+          '關鍵思維：不要讓錢花掉就沒了。',
           '打破買車即負債的傳統觀念。',
-          '資產越滾越大，車貸越繳越少。',
+          '透過「舊車換新車」的資金回流，讓資產雪球越滾越大。',
           '維持生活品質，每五年輕鬆換新車。'
       ],
       chartData: cycles,
       chartType: 'composed_car'
     };
   } else if (activeTab === 'reservoir') {
-    // ... reservoir chart logic
     const chartData = [];
     const annualDividend = data.initialCapital * (data.dividendRate / 100);
     let reinvestedTotal = 0; 
@@ -418,15 +501,15 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
         { label: `第 ${data.years} 年`, col1: '收割期', col2: '資產翻倍' },
       ],
       highlights: [
+          '策略效益：完全不需要再拿錢出來，只需搬運配息。',
           '母金不動，僅用孳息創造第二桶金。',
-          '零風險資產倍增術。',
+          '零風險資產倍增術，母錢生子錢，子錢再生孫錢。',
           '適合保守型高資產客戶，穩健傳承。'
       ],
       chartData: chartData,
       chartType: 'area_reservoir'
     };
   } else if (activeTab === 'pension') {
-     // ... pension logic
      const laborInsBase = Math.min(Math.max(data.salary, 26400), 45800); 
      const laborInsMonthly = laborInsBase * data.laborInsYears * 0.0155;
      const monthlyContribution = Math.min(data.salary, 150000) * (0.06 + (data.selfContribution ? 0.06 : 0));
@@ -451,9 +534,10 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
         { label: '85 歲', col1: '長壽風險', col2: '現金流不斷' },
       ],
       highlights: [
-          '政府退休金僅能維持基本溫飽，無法享受生活。',
+          '專家解讀：政府退休金僅能維持基本溫飽，無法享受生活。',
+          `勞退自提讓您的退休金翻倍！(若無自提，退休金將少一半)`,
           '提早規劃，用時間複利填補缺口。',
-          '勞退自提與商業保險是關鍵解方。'
+          `想要過上理想生活，您現在必須開始填補這 $${Math.max(0, Math.round(gap)).toLocaleString()} 元的缺口。`
       ],
       chartData: [
         { name: '勞保年金', value: Math.round(laborInsMonthly), fill: '#3b82f6' },
@@ -463,7 +547,6 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
       chartType: 'bar_pension'
     };
   } else if (activeTab === 'tax') {
-     // ... tax logic
      const exemption = 1333; 
      const deductionSpouse = data.spouse ? 553 : 0;
      const deductionChildren = data.children * 56;
@@ -497,9 +580,10 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
         { label: '傳承時', col1: '現金足夠', col2: '無痛繳稅' },
       ],
       highlights: [
-          '善用保險給付免稅額度，合法降低遺產總額。',
+          '善用保險給付免稅額度(3330萬)，合法降低遺產總額。',
           '預留現金稅源，避免子孫變賣家產繳稅。',
-          '資產保全，讓財富完整傳承給下一代。'
+          '資產保全，讓財富完整傳承給下一代。',
+          '注意實質課稅原則，避免重病/高齡/短期投保。'
       ],
       chartData: [
         { name: '未規劃稅金', value: Math.round(taxRaw), fill: '#ef4444' },
@@ -695,9 +779,9 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
   );
 };
 
-// ... (Rest of the App component remains the same, ensuring ReportModal is used)
-// Note: Due to file length limits, I'm ensuring the key logic is above. 
-// The main App structure is standard React state/effect as before.
+// ------------------------------------------------------------------
+// Main App Shell
+// ------------------------------------------------------------------
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -715,7 +799,8 @@ export default function App() {
   const [pensionData, setPensionData] = useState({ currentAge: 30, retireAge: 65, salary: 45000, laborInsYears: 35, selfContribution: false, pensionReturnRate: 3, desiredMonthlyIncome: 60000 });
   const [reservoirData, setReservoirData] = useState({ initialCapital: 1000, dividendRate: 6, reinvestRate: 6, years: 10 });
   const [taxData, setTaxData] = useState({ spouse: true, children: 2, parents: 0, cash: 3000, realEstate: 2000, stocks: 1000, insurancePlan: 0 });
-  
+
+  const [userProfile, setUserProfile] = useState({ displayName: '', title: '' });
   const [savedFiles, setSavedFiles] = useState([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
 
@@ -723,6 +808,12 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setLoading(false);
+      if (currentUser) {
+        setUserProfile({ 
+            displayName: currentUser.displayName || '', 
+            title: '理財顧問' 
+        });
+      }
     });
     return () => unsubscribe();
   }, []);
