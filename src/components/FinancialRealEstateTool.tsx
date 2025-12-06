@@ -89,7 +89,13 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   const totalPrincipalInputTargetWan = isNegativeCashFlow 
     ? loanAmount + (totalOutOfPocket / 10000)
     : loanAmount;
-  // --- 修正結束 總貸款期 淨利潤計算 ---
+  
+  // --- 輔助變數計算 (修正：移到這裡確保定義在前面) ---
+  const remainingLoanTarget = calculateRemainingBalance(loanAmount, loanRate, loanTerm, targetYear);
+  const remainingLoanTargetWan = Math.round(remainingLoanTarget / 10000);
+  const cumulativeNetIncomeTargetWan = Math.round(cumulativeNetIncomeTarget / 10000);
+  const assetEquityTargetWan = Math.round((loanAmount * 10000 - remainingLoanTarget) / 10000);
+  // --- 修正結束 總貸款期 淨利潤計算與輔助變數 ---
 
 
   const generateHouseChartData = () => {
@@ -157,7 +163,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       </div>
 
       <div className="grid lg:grid-cols-12 gap-8">
-        {/* 左側：參數設定 (只保留參數) */}
+        {/* 左側：參數設定與試算 */}
         <div className="lg:col-span-4 space-y-6 print-break-inside">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 no-print">
             <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2">
@@ -225,7 +231,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
             </div>
           </div>
 
-          {/* 策略說明 (移到最下方以平衡佈局) */}
+          {/* 策略說明 (這部分已移除左側重複，現為單一區塊) */}
           <div className="space-y-4 pt-4 print-break-inside">
              <div className="flex items-center gap-2 mb-2">
                 <Landmark className="text-emerald-600" size={24} />
@@ -338,8 +344,8 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                  <div className="grid grid-cols-2 gap-4 text-sm">
                      <div className="flex justify-between"><span className="text-slate-500">初始貸款總額</span><span className="font-bold text-slate-700">{loanAmount.toLocaleString()} 萬</span></div>
                      <div className="flex justify-between"><span className="text-slate-500">期末剩餘貸款</span><span className="font-bold text-red-500">{remainingLoanTargetWan.toLocaleString()} 萬</span></div>
-                     <div className="flex justify-between"><span className="text-slate-500">期末累積淨現金流</span><span className="font-bold text-green-600">{Math.round(cumulativeNetIncomeTarget / 10000).toLocaleString()} 萬</span></div>
-                     <div className="flex justify-between"><span className="text-slate-500">期末股權累積</span><span className="font-bold text-teal-600">{Math.round((loanAmount * 10000 - remainingLoanTarget) / 10000).toLocaleString()} 萬</span></div>
+                     <div className="flex justify-between"><span className="text-slate-500">期末累積淨現金流</span><span className="font-bold text-green-600">{cumulativeNetIncomeTargetWan.toLocaleString()} 萬</span></div>
+                     <div className="flex justify-between"><span className="text-slate-500">期末股權累積</span><span className="font-bold text-teal-600">{assetEquityTargetWan.toLocaleString()} 萬</span></div>
                  </div>
                  <div className="mt-3 pt-3 border-t border-slate-200">
                      <div className="flex justify-between"><span className="text-slate-600 font-bold">總累積投入本金</span><span className="font-bold text-red-600">{totalPrincipalInputTargetWan.toLocaleString()} 萬</span></div>
@@ -398,7 +404,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
         {/* 2. 專案效益 (保持不變) */}
         <div className="space-y-4 lg:col-span-1">
            <div className="flex items-center gap-2 mb-2">
-             <Landmark className="text-emerald-600" size={24} />
+             <RefreshCw className="text-emerald-600" size={24} />
              <h3 className="text-xl font-bold text-slate-800">專案四大效益</h3>
            </div>
            
