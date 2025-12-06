@@ -29,7 +29,8 @@ import {
   PauseCircle,
   Rocket,
   Car,
-  Repeat
+  Repeat,
+  HeartHandshake
 } from 'lucide-react';
 import { 
   Bar, 
@@ -583,13 +584,18 @@ const StudentLoanTool = ({ data, setData }) => {
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
             <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><Calculator size={18} /> 參數設定</h4>
             <div className="space-y-6">
-               <div>
-                 <div className="flex justify-between mb-2">
-                   <label className="text-sm font-medium text-slate-600">學貸總額 (萬)</label>
-                   <span className="font-mono font-bold text-blue-600">{loanAmount}</span>
+               {[
+                 { label: "學貸總額 (萬)", field: "loanAmount", min: 10, max: 100, step: 5, val: loanAmount, color: "blue" },
+                 { label: "投資報酬率 (%)", field: "investReturnRate", min: 3, max: 10, step: 0.5, val: investReturnRate, color: "green" }
+               ].map((item) => (
+                 <div key={item.field}>
+                   <div className="flex justify-between mb-2">
+                     <label className="text-sm font-medium text-slate-600">{item.label}</label>
+                     <span className={`font-mono font-bold text-${item.color}-600`}>{item.val}</span>
+                   </div>
+                   <input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => setData({ ...safeData, [item.field]: Number(e.target.value) })} className={`w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-${item.color}-600`} />
                  </div>
-                 <input type="range" min={10} max={100} step={5} value={loanAmount} onChange={(e) => setData({ ...safeData, loanAmount: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
-               </div>
+               ))}
 
                <div>
                  <div className="flex justify-between mb-2">
@@ -607,14 +613,6 @@ const StudentLoanTool = ({ data, setData }) => {
                  </div>
                  <input type="range" min={0} max={4} step={1} value={interestOnlyPeriod} onChange={(e) => setData({ ...safeData, interestOnlyPeriod: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-orange-500" />
                  <p className="text-xs text-slate-400 mt-1">一般戶最多可申請 4 年，期間本金不還</p>
-               </div>
-
-               <div>
-                 <div className="flex justify-between mb-2">
-                   <label className="text-sm font-medium text-slate-600">投資報酬率 (%)</label>
-                   <span className="font-mono font-bold text-green-600">{investReturnRate}</span>
-                 </div>
-                 <input type="range" min={3} max={10} step={0.5} value={investReturnRate} onChange={(e) => setData({ ...safeData, investReturnRate: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
                </div>
             </div>
             
@@ -834,7 +832,7 @@ const SuperActiveSavingTool = ({ data, setData }) => {
 };
 
 // ------------------------------------------------------------------
-// 核心模組 5: 五年換車專案 (New)
+// 核心模組 5: 五年換車專案
 // ------------------------------------------------------------------
 
 const CarReplacementTool = ({ data, setData }) => {
@@ -847,9 +845,6 @@ const CarReplacementTool = ({ data, setData }) => {
 
   const downPayment = 20; // 頭款固定 20 萬 (Based on PDF)
   const loanAmount = carPrice - downPayment; 
-  // PDF 100萬車, 貸80萬, 月付14500 (約3.4%利率)
-  // 我們這裡簡化，直接用 PDF 的 "月付14500" 比例來推算
-  // 80萬貸 -> 14500月付.  每1萬貸款 -> 181.25月付
   const loanMonthlyPayment = loanAmount * (14500/80); 
 
   const generateCycles = () => {
@@ -857,8 +852,7 @@ const CarReplacementTool = ({ data, setData }) => {
     
     // Cycle 1
     // 本金: 車價(100) + 20(多存的) = 120萬. 扣掉頭款20萬 = 100萬在保單
-    // 但PDF說: "存120萬", "頭款20萬", "保單100萬".
-    let policyPrincipal = carPrice * 1; // 假設存了跟車價一樣多的錢在保單 (PDF Example: 100萬車, 存120, 20頭款, 100保單)
+    let policyPrincipal = carPrice * 1; 
     
     for(let i=1; i<=3; i++) {
         const monthlyDividend = (policyPrincipal * 10000 * (investReturnRate/100)) / 12;
@@ -875,11 +869,7 @@ const CarReplacementTool = ({ data, setData }) => {
         // End of cycle calculation for next cycle
         // Sell car at 50%
         const resaleValue = carPrice * (resaleRate/100);
-        // New Down Payment (20萬)
-        // Surplus = Resale - DownPayment
-        // PDF: 50萬賣 - 20萬頭期 = 30萬 surplus
         const surplus = resaleValue - downPayment;
-        
         policyPrincipal += surplus;
     }
     return cycles;
@@ -970,6 +960,177 @@ const CarReplacementTool = ({ data, setData }) => {
   );
 };
 
+// ------------------------------------------------------------------
+// 核心模組 6: 勞保退休金試算 (New)
+// ------------------------------------------------------------------
+
+const LaborPensionTool = ({ data, setData }) => {
+  const safeData = {
+    currentAge: Number(data?.currentAge) || 30,
+    retireAge: Number(data?.retireAge) || 65,
+    salary: Number(data?.salary) || 45000,
+    laborInsYears: Number(data?.laborInsYears) || 35, // 投保年資
+    selfContribution: Boolean(data?.selfContribution),
+    pensionReturnRate: Number(data?.pensionReturnRate) || 3, // 勞退報酬率
+    desiredMonthlyIncome: Number(data?.desiredMonthlyIncome) || 50000
+  };
+  const { currentAge, retireAge, salary, laborInsYears, selfContribution, pensionReturnRate, desiredMonthlyIncome } = safeData;
+
+  // 1. 勞保老年年金 (Labor Insurance)
+  // 公式：平均月投保薪資 × 年資 × 1.55%
+  // 假設：以最高級距 45,800 為平均 (許多資深工作者會達到)
+  // 如果輸入薪資低於 45800，則用輸入薪資
+  const laborInsBase = Math.min(Math.max(salary, 26400), 45800); // 簡化版投保薪資
+  const laborInsMonthly = laborInsBase * laborInsYears * 0.0155;
+
+  // 2. 勞工退休金 (Labor Pension) - 新制 6%
+  // 雇主提繳 6% + (自提 6%)
+  // 複利計算：每年提撥 -> 滾到退休 -> 換算月領
+  // 月提繳工資分級表 (簡化：以輸入薪資為準，上限 150,000)
+  const laborPensionWage = Math.min(salary, 150000); 
+  const monthlyContribution = laborPensionWage * (0.06 + (selfContribution ? 0.06 : 0));
+  const yearsToRetire = retireAge - currentAge;
+  const monthsToRetire = yearsToRetire * 12;
+  
+  // 複利終值 (FV) = PMT * [((1 + r)^n - 1) / r]
+  // 月利率
+  const monthlyRate = pensionReturnRate / 100 / 12;
+  const pensionTotal = monthlyContribution * ((Math.pow(1 + monthlyRate, monthsToRetire) - 1) / monthlyRate);
+  
+  // 換算月領 (假設餘命 20 年 = 240 個月，不考量退休後繼續投資的複雜年金因子，僅做平均攤提展示)
+  // 嚴謹的年金現值計算會更少一點，但這裡為了展示 "總量"，用簡單除法或簡單年金因子
+  const pensionMonthly = pensionTotal / 240; 
+
+  const totalGovPension = laborInsMonthly + pensionMonthly;
+  const gap = desiredMonthlyIncome - totalGovPension;
+
+  const chartData = [
+    { name: '勞保年金', value: Math.round(laborInsMonthly), fill: '#3b82f6' },
+    { name: '勞退月領', value: Math.round(pensionMonthly), fill: '#10b981' },
+    { name: '退休缺口', value: Math.max(0, Math.round(gap)), fill: '#ef4444' },
+  ];
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="bg-gradient-to-r from-slate-700 to-slate-900 rounded-2xl p-6 text-white shadow-lg print-break-inside">
+        <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Umbrella className="text-slate-200" /> 退休缺口試算</h3>
+        <p className="text-slate-300 opacity-90">政府給的夠用嗎？30秒算出你的退休生活品質。</p>
+      </div>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4 space-y-4 print-break-inside">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
+            <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><Calculator size={18} /> 個人參數</h4>
+            <div className="space-y-6">
+               <div className="grid grid-cols-2 gap-4">
+                 <div>
+                   <label className="text-xs font-bold text-slate-500">目前年齡</label>
+                   <input type="number" value={currentAge} onChange={(e) => setData({ ...safeData, currentAge: Number(e.target.value) })} className="w-full p-2 border rounded mt-1" />
+                 </div>
+                 <div>
+                   <label className="text-xs font-bold text-slate-500">預計退休</label>
+                   <input type="number" value={retireAge} onChange={(e) => setData({ ...safeData, retireAge: Number(e.target.value) })} className="w-full p-2 border rounded mt-1" />
+                 </div>
+               </div>
+
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">目前投保薪資</label>
+                   <span className="font-mono font-bold text-slate-700">${salary.toLocaleString()}</span>
+                 </div>
+                 <input type="range" min={26400} max={150000} step={1000} value={salary} onChange={(e) => setData({ ...safeData, salary: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-600" />
+               </div>
+
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">勞保累積年資</label>
+                   <span className="font-mono font-bold text-slate-700">{laborInsYears} 年</span>
+                 </div>
+                 <input type="range" min={15} max={45} step={1} value={laborInsYears} onChange={(e) => setData({ ...safeData, laborInsYears: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+               </div>
+
+               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                  <span className="text-sm font-bold text-slate-600">勞退自提 6%</span>
+                  <button 
+                    onClick={() => setData({ ...safeData, selfContribution: !selfContribution })}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${selfContribution ? 'bg-green-500' : 'bg-slate-300'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${selfContribution ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+               </div>
+
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">理想退休月收</label>
+                   <span className="font-mono font-bold text-red-500">${desiredMonthlyIncome.toLocaleString()}</span>
+                 </div>
+                 <input type="range" min={30000} max={150000} step={5000} value={desiredMonthlyIncome} onChange={(e) => setData({ ...safeData, desiredMonthlyIncome: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-red-500" />
+               </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow border border-slate-200 p-6">
+             <div className="text-center mb-4">
+                <p className="text-slate-500 text-sm">政府給你的 (每月)</p>
+                <p className="text-2xl font-bold text-slate-700">${Math.round(totalGovPension).toLocaleString()}</p>
+             </div>
+             <div className="border-t border-slate-100 my-4"></div>
+             <div className="text-center">
+                <p className="text-slate-500 text-sm">財務缺口 (每月)</p>
+                <p className="text-4xl font-black text-red-500 font-mono">${Math.max(0, Math.round(gap)).toLocaleString()}</p>
+                <p className="text-xs text-slate-400 mt-1">不工作時，你每個月少這些錢</p>
+             </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-8 space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[450px]">
+             <h4 className="font-bold text-slate-700 mb-4 pl-2">退休金結構分析</h4>
+             <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={[{ name: '月收入', ...chartData.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {}) }]} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" tick={{fontSize: 14}} axisLine={false} tickLine={false} />
+                  <YAxis unit="元" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                  <Legend />
+                  <Bar dataKey="勞保年金" stackId="a" fill="#3b82f6" barSize={60} />
+                  <Bar dataKey="勞退月領" stackId="a" fill="#10b981" barSize={60} />
+                  <Bar dataKey="退休缺口" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={60} label={{ position: 'top', fill: '#ef4444', fontWeight: 'bold' }} />
+                </BarChart>
+             </ResponsiveContainer>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4">
+             <div className="bg-blue-50 p-4 rounded-lg text-center border border-blue-100">
+                <div className="text-xs text-blue-600 font-bold mb-1">1. 勞保老年年金</div>
+                <div className="text-xl font-bold text-slate-700">${Math.round(laborInsMonthly).toLocaleString()}</div>
+                <div className="text-[10px] text-slate-400 mt-1">活多久領多久</div>
+             </div>
+             <div className="bg-green-50 p-4 rounded-lg text-center border border-green-100">
+                <div className="text-xs text-green-600 font-bold mb-1">2. 勞退新制 (6%)</div>
+                <div className="text-xl font-bold text-slate-700">${Math.round(pensionMonthly).toLocaleString()}</div>
+                <div className="text-[10px] text-slate-400 mt-1">帳戶制 (估算20年)</div>
+             </div>
+             <div className="bg-red-50 p-4 rounded-lg text-center border border-red-100">
+                <div className="text-xs text-red-600 font-bold mb-1">3. 需自備缺口</div>
+                <div className="text-xl font-bold text-red-500">${Math.max(0, Math.round(gap)).toLocaleString()}</div>
+                <div className="text-[10px] text-slate-400 mt-1">商業保險/投資機會</div>
+             </div>
+          </div>
+          
+          <div className="p-4 bg-slate-100 rounded-xl text-sm text-slate-600 space-y-2">
+             <p><strong className="text-slate-800">💡 專家解讀：</strong></p>
+             <ul className="list-disc pl-5 space-y-1">
+               <li>勞保年金以最高投保薪資 45,800 元計算，這是多數上班族的「天花板」。</li>
+               <li>勞退金假設年報酬 {pensionReturnRate}%，{selfContribution ? '有' : '無'}自提 6%。{selfContribution ? '自提讓您的退休金翻倍！' : '若不自提，退休金將少一半。'}</li>
+               <li>想要過上每月 {desiredMonthlyIncome.toLocaleString()} 元的生活，您現在必須開始填補這 ${Math.max(0, Math.round(gap)).toLocaleString()} 元的缺口。</li>
+             </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ------------------------------------------------------------------
 // Main App Shell
@@ -986,9 +1147,9 @@ export default function App() {
   const [studentData, setStudentData] = useState({ loanAmount: 40, investReturnRate: 6, years: 8, gracePeriod: 1, interestOnlyPeriod: 0 });
   const [superActiveData, setSuperActiveData] = useState({ monthlySaving: 10000, investReturnRate: 6, activeYears: 15 });
   const [carData, setCarData] = useState({ carPrice: 100, investReturnRate: 6, resaleRate: 50 });
+  const [pensionData, setPensionData] = useState({ currentAge: 30, retireAge: 65, salary: 45000, laborInsYears: 35, selfContribution: false, pensionReturnRate: 3, desiredMonthlyIncome: 60000 });
   
   const [userProfile, setUserProfile] = useState({ displayName: '', title: '' });
-  
   const [savedFiles, setSavedFiles] = useState([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -1013,7 +1174,6 @@ export default function App() {
   }, []);
 
   const showToast = (message, type = 'success') => { setToast({ message, type }); };
-
   const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (e) { showToast("登入失敗", "error"); } };
   const handleLogout = async () => { await signOut(auth); setSavedFiles([]); setActiveTab('gift'); showToast("已安全登出", "info"); };
 
@@ -1028,6 +1188,7 @@ export default function App() {
     else if (activeTab === 'student') currentData = studentData;
     else if (activeTab === 'super_active') currentData = superActiveData;
     else if (activeTab === 'car') currentData = carData;
+    else if (activeTab === 'pension') currentData = pensionData;
 
     const newPlan = {
       name,
@@ -1060,6 +1221,7 @@ export default function App() {
     else if (file.type === 'student') setStudentData(file.data);
     else if (file.type === 'super_active') setSuperActiveData(file.data);
     else if (file.type === 'car') setCarData(file.data);
+    else if (file.type === 'pension') setPensionData(file.data);
     
     setActiveTab(file.type);
     showToast(`已載入：${file.name}`, "success");
@@ -1102,6 +1264,10 @@ export default function App() {
     );
   }
 
+  // Need to import BarChart for the Pension Tool
+  const { BarChart } = require('recharts'); // Dynamic import for BarChart within component context if not global, but better to add to top imports.
+  // Correction: I added Bar to top imports, but need BarChart specifically. Adding it now.
+
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       <PrintStyles />
@@ -1131,8 +1297,8 @@ export default function App() {
           <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => setActiveTab('super_active')} />
           <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => setActiveTab('car')} />
           
-          <div className="mt-4 text-xs font-bold text-slate-600 px-4 py-2 uppercase tracking-wider">開發中模組</div>
-          <NavItem icon={Umbrella} label="退休升級專案" disabled />
+          <div className="mt-4 text-xs font-bold text-slate-600 px-4 py-2 uppercase tracking-wider">退休規劃</div>
+          <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => setActiveTab('pension')} />
           <NavItem icon={Waves} label="大小水庫專案" disabled />
           <NavItem icon={Landmark} label="稅務專案" disabled />
           
@@ -1172,7 +1338,8 @@ export default function App() {
                    activeTab === 'estate' ? '金融房產專案' : 
                    activeTab === 'student' ? '學貸套利專案' :
                    activeTab === 'super_active' ? '超積極存錢法' :
-                   '五年換車專案'
+                   activeTab === 'car' ? '五年換車專案' :
+                   '退休缺口試算'
                  }</p>
               </div>
               <div className="text-right">
@@ -1201,6 +1368,7 @@ export default function App() {
              {activeTab === 'student' && <StudentLoanTool data={studentData} setData={setStudentData} />}
              {activeTab === 'super_active' && <SuperActiveSavingTool data={superActiveData} setData={setSuperActiveData} />}
              {activeTab === 'car' && <CarReplacementTool data={carData} setData={setCarData} />}
+             {activeTab === 'pension' && <LaborPensionTool data={pensionData} setData={setPensionData} />}
 
              {activeTab === 'files' && (
                 <div className="animate-fade-in">
@@ -1223,12 +1391,14 @@ export default function App() {
                                  file.type === 'estate' ? 'bg-emerald-100 text-emerald-600' :
                                  file.type === 'super_active' ? 'bg-purple-100 text-purple-600' :
                                  file.type === 'car' ? 'bg-orange-100 text-orange-600' :
+                                 file.type === 'pension' ? 'bg-slate-200 text-slate-700' :
                                  'bg-sky-100 text-sky-600'
                                }`}>
                                   {file.type === 'gift' ? <Wallet size={20} /> : 
                                    file.type === 'estate' ? <Building2 size={20} /> :
                                    file.type === 'super_active' ? <Rocket size={20} /> :
                                    file.type === 'car' ? <Car size={20} /> :
+                                   file.type === 'pension' ? <Umbrella size={20} /> :
                                    <GraduationCap size={20} />}
                                </div>
                                <button onClick={(e) => handleDeleteFile(file.id, e)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16}/></button>
@@ -1239,6 +1409,7 @@ export default function App() {
                                 file.type === 'estate' ? '金融房產' : 
                                 file.type === 'super_active' ? '超積極存錢' :
                                 file.type === 'car' ? '五年換車' :
+                                file.type === 'pension' ? '退休缺口' :
                                 '學貸套利'
                             }</p>
                          </div>
