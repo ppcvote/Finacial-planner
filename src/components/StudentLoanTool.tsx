@@ -203,22 +203,20 @@ export const StudentLoanTool = ({ data, setData }: any) => {
   };
   
   // 輔助函式，取得 Recharts ReferenceArea 需要的 X 軸 category 值
-  const getXCategory = (year, fallback) => {
-    // 修正: 確保當數據點存在時，返回正確的 year 標籤
-    const dataPoint = dataArr.find(d => d.repaymentYear === year);
-    return dataPoint ? dataPoint.year : fallback;
+  // 為了確保邊界是連續的，我們需要 X 軸的索引，而不是類別名稱本身。
+  // 我們將使用 Recharts 內建的 index 屬性，並在 ReferenceArea 中使用它。
+  
+  // 找出各階段結束點的索引 (Index)
+  const getPhaseIndex = (year) => {
+    const index = dataArr.findIndex(d => d.repaymentYear === year);
+    // 如果是中間點，我們需要下一個點的索引來畫到邊界
+    return index !== -1 ? index : dataArr.length - 1; 
   };
   
-  // 為了讓 ReferenceArea 覆蓋整個 Y 軸範圍，我們需要找到 Y 軸的實際最大/最小值
-  const getMinMaxY = () => {
-    if (dataArr.length === 0) return { min: -10, max: 10 };
-    const allValues = dataArr.flatMap(d => [d.淨資產, d.投資複利價值, d.若直接繳掉]);
-    // 稍微擴展範圍以避免邊緣裁切
-    const min = Math.min(...allValues, 0) - 10; 
-    const max = Math.max(...allValues, 10) + 10;
-    return { min, max };
-  };
-  const { min: yMin, max: yMax } = getMinMaxY();
+  const studyEndIndex = getPhaseIndex(studyYears);
+  const graceEndIndex = getPhaseIndex(graceEndYear);
+  const interestOnlyEndIndex = getPhaseIndex(interestOnlyEndYear);
+  const repaymentEndIndex = getPhaseIndex(repaymentEndYear);
 
 
   return (
@@ -367,12 +365,12 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                 
                 {/* 修正 2: ReferenceArea 渲染，確保邏輯連續且不重疊 */}
                 
-                {/* 在學期 (Start Year 1 to studyYears) */}
+                {/* 在學期 (Start Index 0 to studyEndIndex) */}
                 {studyYears > 0 && 
                   <ReferenceArea 
                     key="study"
-                    x1={getXCategory(1, '第1年')} 
-                    x2={getXCategory(studyYears + 1, `第${studyYears + 1}年`)} // 擴展到下一個起始點
+                    x1={0} 
+                    x2={studyEndIndex} // 使用 Index
                     fill={phaseColors['在學期']}
                     fillOpacity={1}
                     stroke="none"
@@ -380,12 +378,12 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   />
                 }
                 
-                {/* 寬限期 (studyYears + 1 to graceEndYear) */}
+                {/* 寬限期 (studyEndIndex to graceEndIndex) */}
                 {gracePeriod > 0 && 
                   <ReferenceArea 
                     key="grace"
-                    x1={getXCategory(studyYears + 1, `第${studyYears + 1}年`)} 
-                    x2={getXCategory(graceEndYear + 1, `第${graceEndYear + 1}年`)} // 擴展到下一個起始點
+                    x1={studyEndIndex} 
+                    x2={graceEndIndex} // 使用 Index
                     fill={phaseColors['寬限期']}
                     fillOpacity={1}
                     stroke="none"
@@ -393,12 +391,12 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   />
                 }
                 
-                {/* 只繳息期 (graceEndYear + 1 to interestOnlyEndYear) */}
+                {/* 只繳息期 (graceEndIndex to interestOnlyEndIndex) */}
                 {interestOnlyEndYear > graceEndYear && 
                   <ReferenceArea 
                     key="interest"
-                    x1={getXCategory(graceEndYear + 1, `第${graceEndYear + 1}年`)} 
-                    x2={getXCategory(interestOnlyEndYear + 1, `第${interestOnlyEndYear + 1}年`)} // 擴展到下一個起始點
+                    x1={graceEndIndex} 
+                    x2={interestOnlyEndIndex} // 使用 Index
                     fill={phaseColors['只繳息期']}
                     fillOpacity={1}
                     stroke="none"
@@ -406,12 +404,12 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   />
                 }
                 
-                {/* 本息攤還期 (interestOnlyEndYear + 1 to repaymentEndYear) */}
+                {/* 本息攤還期 (interestOnlyEndIndex to repaymentEndIndex) */}
                 {repaymentEndYear > interestOnlyEndYear && 
                   <ReferenceArea 
                     key="repayment"
-                    x1={getXCategory(interestOnlyEndYear + 1, `第${interestOnlyEndYear + 1}年`)} 
-                    x2={getXCategory(repaymentEndYear, `第${repaymentEndYear}年`)}
+                    x1={interestOnlyEndIndex} 
+                    x2={repaymentEndIndex} // 使用 Index
                     fill={phaseColors['本息攤還期']}
                     fillOpacity={1}
                     stroke="none"
@@ -427,7 +425,8 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="year" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} />
+                {/* 為了使用 Index，需要將 XAxis 設為 Index */}
+                <XAxis dataKey="year" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} allowDuplicatedCategory={false} /> 
                 <YAxis unit="萬" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} domain={['dataMin', 'dataMax']}/>
                 <Tooltip 
                   contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px'}} 
