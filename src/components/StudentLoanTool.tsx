@@ -155,26 +155,35 @@ export const StudentLoanTool = ({ data, setData }: any) => {
   
   const { dataArr, finalInvestValueWan, cumulativeInvestmentPrincipalWan, totalLoanRepaymentWan, pureProfitWan } = generateChartData();
 
-  // --- 2. UI 渲染 ---
-  const updateField = (field: string, value: number) => { 
-      let newValue = Number(value);
-
-      if (field === 'loanAmount') {
-          const clampedValue = Math.max(10, Math.min(100, newValue));
-          setData({ ...safeData, [field]: Math.round(clampedValue) });
-          // 滑桿連動時，同步更新 tempLoanAmount
-          setTempLoanAmount(Math.round(clampedValue));
-      } else if (field === 'semesters') {
-          // 修正: 級距改為 1，範圍 1-20
-          const clampedValue = Math.max(1, Math.min(20, newValue));
-          setData({ ...safeData, [field]: Math.round(clampedValue) });
-      } else if (field === 'investReturnRate') {
-          // 確保利率級距為 0.5
-          setData({ ...safeData, [field]: Number(newValue.toFixed(1)) });
-      } else {
-          setData({ ...safeData, [field]: newValue }); 
-      }
+  // --- 輔助函式 (移至組件頂部作用域) ---
+  const formatXAxisTick = (value) => {
+    // 這裡我們直接使用 dataArr 中的 yearLabel
+    const dataPoint = dataArr.find(d => d.year === value);
+    return dataPoint ? dataPoint.yearLabel : `第${value}年`;
   };
+  // 為了讓 ReferenceArea 覆蓋整個 Y 軸範圍，我們需要找到 Y 軸的實際最大/最小值
+  const getMinMaxY = () => {
+    if (dataArr.length === 0) return { min: -10, max: 10 };
+    const allValues = dataArr.flatMap(d => [d.淨資產, d.投資複利價值, d.若直接繳掉]);
+    // 稍微擴展範圍以避免邊緣裁切
+    const min = Math.min(...allValues, 0) - 10; 
+    const max = Math.max(...allValues, 10) + 10;
+    return { min, max };
+  };
+  const { min: yMin, max: yMax } = getMinMaxY();
+  
+  // 找出各階段結束點的索引 (Index)
+  const getPhaseIndex = (year) => {
+    // 由於 XAxis 是數值軸，使用 year 數值本身作為 x1/x2 參數
+    return year; 
+  };
+  
+  // 修正：使用 year 數值作為 ReferenceArea 的 x1/x2 數值
+  const studyEndIndex = getPhaseIndex(studyYears);
+  const graceEndIndex = getPhaseIndex(graceEndYear);
+  const interestOnlyEndIndex = getPhaseIndex(interestOnlyEndYear);
+  const repaymentEndIndex = getPhaseIndex(repaymentEndYear);
+
 
   // 數字輸入框連動滑桿的處理
   const [tempLoanAmount, setTempLoanAmount] = useState(loanAmount);
@@ -203,26 +212,6 @@ export const StudentLoanTool = ({ data, setData }: any) => {
       '本息攤還期': '#06b6d433', // 青色 (Cyan-500, 20%)
   };
   
-  // 輔助函式，取得 Recharts ReferenceArea 需要的 X 軸 category 值
-  const getXCategory = (year) => {
-    const dataPoint = dataArr.find(d => d.repaymentYear === year);
-    // 修正 XCategory 函式，防止未定義的呼叫
-    return dataPoint ? dataPoint.year : year; 
-  };
-  
-  // 找出各階段結束點的索引 (Index)
-  const getPhaseIndex = (year) => {
-    // 這裡我們必須找到 repaymentYear 匹配的數據點的 INDEX
-    const index = dataArr.findIndex(d => d.repaymentYear === year);
-    // 由於 XAxis 是數值軸，使用 year 數值本身作為 x1/x2 參數
-    return year; 
-  };
-  
-  // 修正：使用 year 數值作為 ReferenceArea 的 x1/x2 數值
-  const studyEndIndex = getPhaseIndex(studyYears);
-  const graceEndIndex = getPhaseIndex(graceEndYear);
-  const interestOnlyEndIndex = getPhaseIndex(interestOnlyEndYear);
-  const repaymentEndIndex = getPhaseIndex(repaymentEndYear);
 
 
   return (
@@ -369,14 +358,14 @@ export const StudentLoanTool = ({ data, setData }: any) => {
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart data={dataArr} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                 
-                {/* 修正 2: ReferenceArea 渲染 - 採用數值軸邏輯，確保連續性 */}
+                {/* 修正 2: ReferenceArea 渲染，使用數值軸的精確位置 */}
                 
                 {/* 在學期 (Start Year 1 to studyYears) */}
                 {studyYears > 0 && 
                   <ReferenceArea 
                     key="study"
-                    x1={1} // 數值軸起始點
-                    x2={studyYears + 0.5} // 修正: 擴展到該點的中心線
+                    x1={1} 
+                    x2={studyYears + 0.5} // 擴展到下一個數據點中間
                     fill={phaseColors['在學期']}
                     fillOpacity={1}
                     stroke="none"
@@ -388,8 +377,8 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                 {gracePeriod > 0 && 
                   <ReferenceArea 
                     key="grace"
-                    x1={studyYears + 0.5} // 上一階段的結束點
-                    x2={graceEndYear + 0.5} // 修正: 擴展到該點的中心線
+                    x1={studyYears + 0.5} 
+                    x2={graceEndYear + 0.5} 
                     fill={phaseColors['寬限期']}
                     fillOpacity={1}
                     stroke="none"
@@ -415,7 +404,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   <ReferenceArea 
                     key="repayment"
                     x1={interestOnlyEndYear + 0.5} 
-                    x2={repaymentEndYear + 0.5} // 擴展到圖表最右側
+                    x2={repaymentEndYear + 0.5}
                     fill={phaseColors['本息攤還期']}
                     fillOpacity={1}
                     stroke="none"
