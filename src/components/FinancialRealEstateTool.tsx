@@ -6,10 +6,8 @@ import {
   Landmark, 
   ArrowRight,
   TrendingUp,
-  PiggyBank,
   CheckCircle2,
   RefreshCw,
-  Wallet
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
@@ -71,19 +69,20 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   // 總自付成本 (用於負現金流的情況)
   const totalOutOfPocket = isNegativeCashFlow ? Math.abs(monthlyCashFlow) * 12 * loanTerm : 0;
   
-  // --- 修正 計算 總貸款期 淨利潤 ---
+  // --- 計算 總貸款期 淨利潤 ---
   const targetYear = loanTerm; // 年期由 loanTerm 決定
   const monthsTarget = targetYear * 12;
   
   // 1. 總貸款期後累積的淨現金流 (元)
   const cumulativeNetIncomeTarget = monthlyCashFlow * monthsTarget;
 
-  // 2. 總貸款期後的淨獲利 (萬) - 依據使用者邏輯: 累積淨現金流 + 初始貸款總額 (期滿為股權) - 初始貸款總額 (投入本金)
+  // 2. 總貸款期後的淨獲利 (萬) - 依據使用者邏輯
   const totalProfitTargetWan = Math.round(
       (cumulativeNetIncomeTarget + (loanAmount * 10000)) / 10000 - loanAmount
   );
   
   // 3. 總貸款期後的總資產價值 (萬)
+  // 期滿時剩餘貸款趨近於0，股權趨近於 LoanAmount
   const totalWealthTargetWan = Math.round(loanAmount + (cumulativeNetIncomeTarget / 10000));
 
   // 4. 總累積自付本金 (萬) - 用於關鍵數據顯示
@@ -259,8 +258,8 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                </div>
             </div>
           </div>
-
-          {/* 策略說明 - 執行三部曲 (這部分不再重複) */}
+          
+          {/* 這是策略說明 - 執行三部曲 (修正：這部分是保留的) */}
           <div className="space-y-4 pt-4 print-break-inside">
              <div className="flex items-center gap-2 mb-2">
                 <RefreshCw className="text-emerald-600" size={24} />
@@ -323,11 +322,10 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
         </div>
       </div>
       
-      {/* --- 修正排版：關鍵指標區域 --- */}
-      {/* 讓三張卡片在圖表下方保持平衡，佔滿下方空間 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-200">
+      {/* --- 修正排版：關鍵指標區域 (兩欄) --- */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-200">
          
-         {/* 1. 每月現金流試算 (佔 1/3) */}
+         {/* 1. 每月現金流試算 (佔 1/2) */}
          <div className="md:col-span-1 bg-white rounded-2xl shadow border border-slate-200 p-6 print-break-inside">
               <h3 className="text-center font-bold text-slate-700 mb-4 flex items-center justify-center gap-2"><Scale size={18}/> 每月現金流試算</h3>
               <div className="space-y-4 bg-slate-50 p-5 rounded-xl border border-slate-100">
@@ -357,8 +355,10 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
               </div>
           </div>
 
-         {/* 2. 總貸款期累積總效益 (佔 1/3) */}
-         <div className="md:col-span-1 print-break-inside">
+         {/* 2. 總貸款期累積總效益 (佔 1/2) */}
+         <div className="md:col-span-1 print-break-inside space-y-6">
+            
+            {/* 總貸款期累積總效益 */}
             <div className="bg-white rounded-2xl shadow-lg border border-teal-200 p-6 h-full">
                  <h3 className="text-xl font-bold text-teal-700 mb-2 flex items-center gap-2">
                      <TrendingUp size={24} /> 總貸款期 ({loanTerm}年) 累積總效益
@@ -375,32 +375,14 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                      </div>
                  </div>
             </div>
-         </div>
-         
-         {/* 3. 關鍵數據 (佔 1/3) - 這是原先的第三張卡片 */}
-         <div className="md:col-span-1 print-break-inside">
-            <div className="bg-slate-50 rounded-2xl border border-slate-100 p-6 space-y-3 h-full">
-                 <h3 className="text-xl font-bold text-slate-700 mb-3 flex items-center gap-2">
-                     <Scale size={20} /> 關鍵數據 ({targetYear} 年結算)
-                 </h3>
-                 <div className="grid grid-cols-2 gap-4 text-sm">
-                     <div className="flex justify-between"><span className="text-slate-500">初始貸款總額</span><span className="font-bold text-slate-700">{loanAmount.toLocaleString()} 萬</span></div>
-                     <div className="flex justify-between"><span className="text-slate-500">期末剩餘貸款</span><span className="font-bold text-red-500">{remainingLoanTargetWan.toLocaleString()} 萬</span></div>
-                     <div className="flex justify-between"><span className="text-slate-500">期末累積淨現金流</span><span className="font-bold text-green-600">{cumulativeNetIncomeTargetWan.toLocaleString()} 萬</span></div>
-                     <div className="flex justify-between"><span className="text-slate-500">期末股權累積</span><span className="font-bold text-teal-600">{assetEquityTargetWan.toLocaleString()} 萬</span></div>
-                 </div>
-                 <div className="mt-3 pt-3 border-t border-slate-200">
-                     <div className="flex justify-between"><span className="text-slate-600 font-bold">總累積投入本金</span><span className="font-bold text-red-600">{totalPrincipalInputTargetWan.toLocaleString()} 萬</span></div>
-                 </div>
-            </div>
+            
          </div>
       </div>
-
-
-      {/* Strategy Section: 策略說明 (這部分已移除左側重複，現為單一區塊) */}
+      
+      {/* 底部策略區 (執行三部曲 + 專案四大效益) */}
       <div className="grid md:grid-cols-2 gap-8 pt-6 border-t border-slate-200 print-break-inside">
         
-        {/* 1. 執行循環 (保持不變) */}
+        {/* 1. 執行循環 */}
         <div className="space-y-4 lg:col-span-1">
           <div className="flex items-center gap-2 mb-2">
              <RefreshCw className="text-emerald-600" size={24} />
@@ -443,7 +425,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
           </div>
         </div>
 
-        {/* 2. 專案效益 (保持不變) */}
+        {/* 2. 專案效益 */}
         <div className="space-y-4 lg:col-span-1">
            <div className="flex items-center gap-2 mb-2">
              <RefreshCw className="text-emerald-600" size={24} />
