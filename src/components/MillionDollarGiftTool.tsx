@@ -177,7 +177,8 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
           // 限制 loanAmount 在 10 到 500 之間
           if (field === 'loanAmount') {
              const clampedValue = Math.max(10, Math.min(500, Number(value)));
-             setData({ ...safeData, [field]: clampedValue }); 
+             // 確保值是整數，因為 step=1
+             setData({ ...safeData, [field]: Math.round(clampedValue) }); 
           } else {
             setData({ ...safeData, [field]: Number(value) }); 
           }
@@ -219,6 +220,42 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
               參數設定
             </h4>
             <div className="space-y-6">
+               
+               {/* --- 1. 單次借貸額度 - 數字輸入與滑桿連動 --- */}
+               <div>
+                   <div className="flex justify-between items-center mb-2">
+                       <label className="text-sm font-medium text-slate-600">單次借貸額度 (萬)</label>
+                       <div className="flex items-center">
+                           {/* 數字可直接編輯，使用 input type="number" */}
+                           <input 
+                               type="number" 
+                               min={10} 
+                               max={500} 
+                               step={1}
+                               value={loanAmount} 
+                               onChange={(e) => updateField('loanAmount', Number(e.target.value))} 
+                               // 關鍵樣式：使其看起來像顯示值，但又可編輯
+                               className="w-16 text-right bg-transparent border-none p-0 font-mono font-bold text-blue-600 text-lg focus:ring-0 focus:border-blue-500 focus:bg-blue-50/50 rounded"
+                               style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }} // 隱藏 Chrome/Firefox 的上下箭頭
+                           />
+                           <span className="font-mono font-bold text-blue-600 text-lg ml-1">萬</span>
+                       </div>
+                   </div>
+                   {/* 滑桿連動 */}
+                   <input 
+                       type="range" 
+                       min={10} 
+                       max={500} 
+                       step={1}
+                       value={loanAmount} 
+                       onChange={(e) => updateField('loanAmount', Number(e.target.value))} 
+                       className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600 hover:accent-blue-700 transition-all`} 
+                   />
+                   <p className="text-xs text-slate-400 mt-1">範圍: 10 萬 ~ 500 萬</p>
+               </div>
+               {/* --- 結束: 單次借貸額度 --- */}
+
+               {/* 其他參數 (利率和配息率) - 使用迴圈 */}
                {[
                  { label: "信貸利率 (%)", field: "loanRate", min: 1.5, max: 15.0, step: 0.1, val: loanRate, color: "indigo", unit: "%" },
                  { label: "投資配息率 (%)", field: "investReturnRate", min: 3, max: 12, step: 0.1, val: investReturnRate, color: "purple", unit: "%" }
@@ -231,24 +268,6 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                    <input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => updateField(item.field, Number(e.target.value))} className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-${item.color}-600 hover:accent-${item.color}-700 transition-all`} />
                  </div>
                ))}
-
-               {/* 單次借貸額度 - 改為數字輸入框 */}
-               <div>
-                  <div className="flex justify-between mb-2">
-                     <label className="text-sm font-medium text-slate-600">單次借貸額度 (萬)</label>
-                     <span className={`font-mono font-bold text-blue-600 text-lg`}>{loanAmount.toLocaleString()} 萬</span>
-                  </div>
-                  <input 
-                     type="number" 
-                     min={10} 
-                     max={500} 
-                     step={1}
-                     value={loanAmount} 
-                     onChange={(e) => updateField('loanAmount', Number(e.target.value))} 
-                     className="w-full p-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  />
-                  <p className="text-xs text-slate-400 mt-1">範圍: 10 萬 ~ 500 萬</p>
-               </div>
             </div>
             
             <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-100 grid grid-cols-2 gap-4">
