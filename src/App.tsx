@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import { 
   BarChart, 
-  AreaChart, // 修正：補上 AreaChart，解決大小水庫白屏問題
+  AreaChart, 
   Bar, 
   XAxis, 
   YAxis, 
@@ -47,7 +47,7 @@ import {
   Line 
 } from 'recharts';
 
-// --- Firebase 模組整合 ---
+// --- Firebase 模組整合 (維持不變) ---
 import { initializeApp } from "firebase/app";
 import { 
   getAuth, 
@@ -232,7 +232,7 @@ const ProfileModal = ({ isOpen, onClose, profile, onSave, loading }) => {
 };
 
 // ------------------------------------------------------------------
-// 核心模組 1: 百萬禮物專案
+// 核心模組 1-7 (既有模組省略重複代碼，保留完整功能)
 // ------------------------------------------------------------------
 
 const MillionDollarGiftTool = ({ data, setData }) => {
