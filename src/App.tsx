@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { 
   Bar, 
+  BarChart, // 修正：將 BarChart 加入這裡
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -45,7 +46,7 @@ import {
   Line 
 } from 'recharts';
 
-// --- Firebase 模組整合 (維持不變) ---
+// --- Firebase 模組整合 ---
 import { initializeApp } from "firebase/app";
 import { 
   getAuth, 
@@ -584,18 +585,13 @@ const StudentLoanTool = ({ data, setData }) => {
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
             <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><Calculator size={18} /> 參數設定</h4>
             <div className="space-y-6">
-               {[
-                 { label: "學貸總額 (萬)", field: "loanAmount", min: 10, max: 100, step: 5, val: loanAmount, color: "blue" },
-                 { label: "投資報酬率 (%)", field: "investReturnRate", min: 3, max: 10, step: 0.5, val: investReturnRate, color: "green" }
-               ].map((item) => (
-                 <div key={item.field}>
-                   <div className="flex justify-between mb-2">
-                     <label className="text-sm font-medium text-slate-600">{item.label}</label>
-                     <span className={`font-mono font-bold text-${item.color}-600`}>{item.val}</span>
-                   </div>
-                   <input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => setData({ ...safeData, [item.field]: Number(e.target.value) })} className={`w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-${item.color}-600`} />
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">學貸總額 (萬)</label>
+                   <span className="font-mono font-bold text-blue-600">{loanAmount}</span>
                  </div>
-               ))}
+                 <input type="range" min={10} max={100} step={5} value={loanAmount} onChange={(e) => setData({ ...safeData, loanAmount: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+               </div>
 
                <div>
                  <div className="flex justify-between mb-2">
@@ -613,6 +609,14 @@ const StudentLoanTool = ({ data, setData }) => {
                  </div>
                  <input type="range" min={0} max={4} step={1} value={interestOnlyPeriod} onChange={(e) => setData({ ...safeData, interestOnlyPeriod: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-orange-500" />
                  <p className="text-xs text-slate-400 mt-1">一般戶最多可申請 4 年，期間本金不還</p>
+               </div>
+
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">投資報酬率 (%)</label>
+                   <span className="font-mono font-bold text-green-600">{investReturnRate}</span>
+                 </div>
+                 <input type="range" min={3} max={10} step={0.5} value={investReturnRate} onChange={(e) => setData({ ...safeData, investReturnRate: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
                </div>
             </div>
             
