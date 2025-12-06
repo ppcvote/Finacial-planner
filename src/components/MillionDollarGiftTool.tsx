@@ -7,8 +7,6 @@ import {
   TrendingUp, 
   CheckCircle2, 
   ArrowRight,
-  PiggyBank,
-  RefreshCw,
   Target
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Area, Line, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
@@ -33,7 +31,53 @@ const calculateMonthlyIncome = (principal: number, rate: number) => {
 };
 
 // ------------------------------------------------------------------
-// 核心模組: 百萬禮物專案 (視覺升級版)
+// 輔助組件: 循環結果卡片 (統一化樣式)
+// ------------------------------------------------------------------
+const ResultCard = ({ phase, period, netOut, asset, totalOut, netProfitTotal, isFinal = false, loanTerm }: any) => {
+    const color = phase === 1 ? 'blue' : phase === 2 ? 'indigo' : 'purple';
+    const bgColor = phase === 1 ? 'bg-blue-50' : phase === 2 ? 'bg-indigo-50' : 'bg-purple-50';
+    const borderColor = phase === 1 ? 'border-blue-200' : phase === 2 ? 'border-indigo-200' : 'border-purple-200';
+    const icon = phase === 1 ? '01' : phase === 2 ? '02' : '03';
+
+    return (
+      <div className={`p-6 rounded-2xl shadow-lg border ${borderColor} ${bgColor}`}>
+        <div className="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
+           <h3 className={`font-black text-xl text-${color}-700`}>階段 {icon}</h3>
+           <span className="text-sm font-bold text-slate-500">{period}</span>
+        </div>
+        
+        <div className="space-y-3">
+           <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-600 font-medium">實質每月淨負擔</span>
+              <span className={`text-xl font-bold font-mono ${netOut > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                 ${Math.round(netOut).toLocaleString()}
+              </span>
+           </div>
+           
+           <div className="flex justify-between items-center text-sm pt-2 border-t border-gray-100">
+              <span className="text-slate-600 font-medium">期末資產規模 (萬)</span>
+              <span className="text-2xl font-black text-indigo-700 font-mono">{asset.toLocaleString()}</span>
+           </div>
+           
+           <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-600 font-medium">本期實質總付出 (萬)</span>
+              <span className={`text-lg font-bold font-mono ${totalOut > 0 ? 'text-red-500' : 'text-green-600'}`}>
+                 {totalOut.toLocaleString()} 萬
+              </span>
+           </div>
+
+           {isFinal && (
+             <div className="flex justify-between items-center pt-3 border-t-2 border-dashed border-gray-300 mt-4">
+                <span className="text-slate-700 font-bold">總計 {loanTerm * 3} 年淨獲利</span>
+                <span className={`text-3xl font-black font-mono ${netProfitTotal > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                   {netProfitTotal.toLocaleString()} 萬
+                </span>
+             </div>
+           )}
+        </div>
+      </div>
+    );
+  };
 // ------------------------------------------------------------------
 
 const MillionDollarGiftTool = ({ data, setData }: any) => {
@@ -58,23 +102,29 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
   // 第三階段 (T14-T21): 月付 - 3倍配息 (資產三倍)
   const phase3_NetOut = monthlyLoanPayment - (monthlyInvestIncomeSingle * 3);
 
-  // --- 新增計算邏輯 ---
-  // 這七年 (T0-T7) 總付出的實質本金 (元)
-  const totalCashOut_T0_T7_Raw = phase1_NetOut * loanTerm * 12;
+  // --- 總付出計算邏輯 (萬為單位) ---
+  const monthsPerCycle = loanTerm * 12;
+
+  // T0-T7 總實質付出
+  const totalCashOut_T0_T7_Raw = phase1_NetOut * monthsPerCycle;
   const totalCashOut_T0_T7_Wan = Math.round(totalCashOut_T0_T7_Raw / 10000);
 
-  // 下個七年 (T7-T14) 總付出的實質本金 (元)
-  const totalCashOut_T7_T14_Raw = phase2_NetOut * loanTerm * 12;
+  // T7-T14 總實質付出
+  const totalCashOut_T7_T14_Raw = phase2_NetOut * monthsPerCycle;
   const totalCashOut_T7_T14_Wan = Math.round(totalCashOut_T7_T14_Raw / 10000);
+
+  // T14-T21 總實質付出
+  const totalCashOut_T14_T21_Raw = phase3_NetOut * monthsPerCycle;
+  const totalCashOut_T14_T21_Wan = Math.round(totalCashOut_T14_T21_Raw / 10000);
   
-  // 14 年總實質付出 (T0-T14)
-  const totalCashOut_14_Years_Wan = totalCashOut_T0_T7_Wan + totalCashOut_T7_T14_Wan;
+  // 21 年總實質付出 (T0-T21)
+  const totalCashOut_21_Years_Wan = totalCashOut_T0_T7_Wan + totalCashOut_T7_T14_Wan + totalCashOut_T14_T21_Wan;
   
-  // 14 年後的資產 (第二階段結束)
-  const finalAssetValue_T14_Wan = loanAmount * 2;
+  // 21 年後的資產 (第三階段結束)
+  const finalAssetValue_T21_Wan = loanAmount * 3;
   
-  // 14 年淨獲利 (資產 - 總實質付出)
-  const netProfit_T14_Wan = finalAssetValue_T14_Wan - totalCashOut_14_Years_Wan;
+  // 21 年淨獲利 (資產 - 總實質付出)
+  const netProfit_21_Years_Wan = finalAssetValue_T21_Wan - totalCashOut_21_Years_Wan;
   
   // 修正：一般存錢的總目標應該等於專案的目標金額 (萬 -> 元)
   const standardTotalCost = targetAmount * 10000; 
@@ -94,22 +144,20 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
       // 假設一般存錢仍在進行
       cumulativeStandard += standardMonthlySaving * 12;
       
+      let currentPhaseNetOut;
       if (year <= loanTerm) {
-        // Phase 1: 1倍資產, 1倍配息
-        cumulativeProjectCost += phase1_NetOut * 12;
+        currentPhaseNetOut = phase1_NetOut;
         projectAssetValue = loanAmount * 1 * 10000;
       } else if (year <= loanTerm * 2) {
-        // Phase 2: 2倍資產, 2倍配息
-        cumulativeProjectCost += phase2_NetOut * 12;
+        currentPhaseNetOut = phase2_NetOut;
         projectAssetValue = loanAmount * 2 * 10000;
-      } else if (year <= loanTerm * 3) {
-        // Phase 3: 3倍資產, 3倍配息
-        cumulativeProjectCost += phase3_NetOut * 12; 
-        projectAssetValue = loanAmount * 3 * 10000;
       } else {
+        currentPhaseNetOut = phase3_NetOut; 
         projectAssetValue = loanAmount * 3 * 10000;
       }
 
+      cumulativeProjectCost += currentPhaseNetOut * 12;
+      
       dataArr.push({
         year: `第${year}年`,
         一般存錢成本: Math.round(cumulativeStandard / 10000),
@@ -125,7 +173,8 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
       if (field === 'investReturnRate') {
           setData({ ...safeData, [field]: Number(value.toFixed(1)) });
       } else {
-          setData({ ...safeData, [field]: value }); 
+          // loanAmount 級距調整為 1 萬
+          setData({ ...safeData, [field]: Number(value) }); 
       }
   };
 
@@ -165,15 +214,16 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
             </h4>
             <div className="space-y-6">
                {[
-                 { label: "單次借貸額度 (萬)", field: "loanAmount", min: 50, max: 500, step: 10, val: loanAmount, color: "blue" },
-                 { label: "信貸利率 (%)", field: "loanRate", min: 1.5, max: 15.0, step: 0.1, val: loanRate, color: "indigo" },
-                 // --- 調整投資配息率級距為 0.1 ---
-                 { label: "投資配息率 (%)", field: "investReturnRate", min: 3, max: 12, step: 0.1, val: investReturnRate, color: "purple" }
+                 // --- 修正單次借貸額度級距為 1 萬 ---
+                 { label: "單次借貸額度 (萬)", field: "loanAmount", min: 10, max: 500, step: 1, val: loanAmount, color: "blue", unit: " 萬" },
+                 { label: "信貸利率 (%)", field: "loanRate", min: 1.5, max: 15.0, step: 0.1, val: loanRate, color: "indigo", unit: "%" },
+                 // --- 投資配息率級距為 0.1 ---
+                 { label: "投資配息率 (%)", field: "investReturnRate", min: 3, max: 12, step: 0.1, val: investReturnRate, color: "purple", unit: "%" }
                ].map((item) => (
                  <div key={item.field}>
                    <div className="flex justify-between mb-2">
                      <label className="text-sm font-medium text-slate-600">{item.label}</label>
-                     <span className={`font-mono font-bold text-${item.color}-600 text-lg`}>{item.val.toFixed(item.step === 0.1 ? 1 : 0)}</span>
+                     <span className={`font-mono font-bold text-${item.color}-600 text-lg`}>{item.val.toFixed(item.step === 0.1 ? 1 : 0)}{item.unit}</span>
                    </div>
                    <input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => updateField(item.field, Number(e.target.value))} className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-${item.color}-600 hover:accent-${item.color}-700 transition-all`} />
                  </div>
@@ -187,72 +237,15 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                </div>
                <div>
                    <div className="text-xs text-slate-500 mb-1">專案總時程</div>
-                   <div className="text-lg font-bold text-slate-700">{loanTerm * 3} 年 (3 循環)</div>
+                   <div className="text-lg font-bold text-slate-700">{loanTerm * 3} 年</div>
                </div>
             </div>
           </div>
-          
-          {/* --- Phase 1 與 Phase 2 成果對比卡片 (並排) --- */}
-          <div className="grid grid-cols-1 gap-4 print-break-inside">
-             {/* Phase 1 (T0-T7) 結果卡 (原來的計算區) */}
-             <div className="bg-white rounded-2xl shadow border border-slate-200 p-6">
-                <div className="text-sm text-slate-500 mb-4 text-center">
-                   第一循環 (T0 - T{loanTerm}) 實質付出分析
-                </div>
-                <div className="space-y-4 bg-indigo-50/50 p-5 rounded-xl border border-indigo-100 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-100 rounded-bl-full -mr-8 -mt-8 opacity-50"></div>
-                    
-                    <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">1. 信貸每月還款</span><span className="text-red-500 font-bold font-mono">-${Math.round(monthlyLoanPayment).toLocaleString()}</span></div>
-                    <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">2. 扣除每月配息 (1X)</span><span className="text-green-600 font-bold font-mono">+${Math.round(monthlyInvestIncomeSingle).toLocaleString()}</span></div>
-                    <div className="border-t border-indigo-200 my-2 border-dashed"></div>
-                    <div className="flex justify-between items-end">
-                      <span className="text-indigo-800 font-bold">3. 實質每月應負</span>
-                      <span className="text-3xl font-black text-indigo-600 font-mono">${Math.round(phase1_NetOut).toLocaleString()}</span>
-                    </div>
-                </div>
-                {/* --- 需求 1: 這7年總付出的金額 --- */}
-                <div className="mt-4 text-center">
-                    <p className="text-sm font-bold text-red-600 italic">
-                        這 {loanTerm} 年總實質付出：<span className="text-lg">{totalCashOut_T0_T7_Wan.toLocaleString()}</span> 萬
-                    </p>
-                </div>
-             </div>
-             
-             {/* --- 需求 2: 下個七年 (T7-T14) 計算結果方塊 --- */}
-             <div className="bg-white rounded-2xl shadow border border-slate-200 p-6 bg-purple-50 border-purple-200">
-                <h3 className="text-center font-bold text-purple-700 mb-4 flex items-center justify-center gap-2">
-                    <Repeat size={18} /> 第二循環 (T{loanTerm} - T{loanTerm * 2}) 成果
-                </h3>
-                <div className="space-y-3">
-                   <div className="flex justify-between items-center text-sm">
-                      <span className="text-purple-600 font-medium">1. 實質每月應負 (2X 配息折抵)</span>
-                      <span className="text-xl font-bold font-mono text-purple-600">${Math.round(phase2_NetOut).toLocaleString()}</span>
-                   </div>
-                   <div className="border-t border-purple-200 my-2 border-dashed"></div>
-                   <div className="flex justify-between items-center">
-                      <span className="text-slate-600 font-medium">2. 總資產規模 (T{loanTerm * 2})</span>
-                      <span className="text-2xl font-black text-indigo-700 font-mono">{finalAssetValue_T14_Wan.toLocaleString()} 萬</span>
-                   </div>
-                   <div className="flex justify-between items-center">
-                      <span className="text-slate-600 font-medium">3. T{loanTerm}-T{loanTerm * 2} 總實質付出</span>
-                      <span className={`text-lg font-bold font-mono ${totalCashOut_T7_T14_Wan > 0 ? 'text-red-500' : 'text-green-600'}`}>
-                         {totalCashOut_T7_T14_Wan.toLocaleString()} 萬
-                      </span>
-                   </div>
-                   <div className="flex justify-between items-center pt-2 border-t border-purple-200">
-                      <span className="text-slate-700 font-bold">4. 總計 {loanTerm * 2} 年淨獲利</span>
-                      <span className={`text-2xl font-black font-mono ${netProfit_T14_Wan > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                         {netProfit_T14_Wan.toLocaleString()} 萬
-                      </span>
-                   </div>
-                </div>
-             </div>
-          </div>
         </div>
 
-        {/* 右側：圖表展示 */}
+        {/* 右側：圖表展示 - 調整高度讓版面更舒適 */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-[500px] print-break-inside relative">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-[400px] print-break-inside relative">
              <h4 className="font-bold text-slate-700 mb-4 pl-2 border-l-4 border-indigo-500">資產累積三階段 ({loanTerm * 3}年趨勢)</h4>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart data={generateChartData()} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
@@ -273,7 +266,45 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
         </div>
       </div>
 
-      {/* Strategy Section: 策略說明 */}
+      {/* --- 新增：三個循環的結果對比區 (統一化樣式) --- */}
+      <div className="pt-6 border-t border-slate-200">
+         <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+            <Repeat className="text-indigo-600" size={24} /> 三循環成果關鍵指標
+         </h2>
+         <div className="grid md:grid-cols-3 gap-6">
+            <ResultCard 
+               phase={1} 
+               period={`T0 - T${loanTerm} (累積期)`}
+               netOut={phase1_NetOut}
+               asset={loanAmount * 1}
+               totalOut={totalCashOut_T0_T7_Wan}
+               loanTerm={loanTerm}
+            />
+            <ResultCard 
+               phase={2} 
+               period={`T${loanTerm} - T${loanTerm * 2} (成長期)`}
+               netOut={phase2_NetOut}
+               asset={loanAmount * 2}
+               totalOut={totalCashOut_T7_T14_Wan}
+               loanTerm={loanTerm}
+            />
+            <ResultCard 
+               phase={3} 
+               period={`T${loanTerm * 2} - T${loanTerm * 3} (收穫期)`}
+               netOut={phase3_NetOut}
+               asset={loanAmount * 3}
+               totalOut={totalCashOut_T14_T21_Wan}
+               netProfitTotal={netProfit_21_Years_Wan}
+               isFinal={true}
+               loanTerm={loanTerm}
+            />
+         </div>
+         <div className="text-center mt-6 p-4 bg-white rounded-xl shadow border border-slate-200">
+             <p className="text-xl font-bold text-slate-700">總結：{loanTerm * 3} 年總計實質付出 <span className="text-red-600">${totalCashOut_21_Years_Wan.toLocaleString()} 萬</span>，最終換取 <span className="text-green-600">${finalAssetValue_T21_Wan.toLocaleString()} 萬</span> 資產！</p>
+         </div>
+      </div>
+
+      {/* Strategy Section: 策略說明 (保持原位，用於版面平衡) */}
       <div className="grid md:grid-cols-2 gap-8 pt-6 border-t border-slate-200 print-break-inside">
         
         {/* 1. 執行循環 */}
@@ -314,7 +345,7 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                    <span>收割</span>
                 </div>
                 <div>
-                   <h4 className="font-bold text-slate-800 flex items-center gap-2">收穫期 (第{loanTerm * 2 + 1}年起)</h4>
+                   <h4 className="font-bold text-slate-800 flex items-center gap-2">收穫期 (第{loanTerm * 2 + 1}-{loanTerm * 3}年)</h4>
                    <p className="text-sm text-slate-600 mt-1">第三次操作，資產達標。三份配息通常已超過貸款月付，開始產生正向現金流，或選擇結清享受成果。</p>
                    <div className="mt-2 text-xs font-bold text-purple-600 bg-purple-50 inline-block px-2 py-1 rounded">持有資產：{loanAmount*3} 萬</div>
                 </div>
