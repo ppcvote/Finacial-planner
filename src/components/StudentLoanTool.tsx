@@ -205,7 +205,6 @@ export const StudentLoanTool = ({ data, setData }: any) => {
   
   // X 軸格式化函式
   const formatXAxisTick = (value) => {
-    if (value === 0) return '第1年';
     // 這裡我們直接使用 dataArr 中的 yearLabel
     const dataPoint = dataArr.find(d => d.year === value);
     return dataPoint ? dataPoint.yearLabel : `第${value}年`;
@@ -224,7 +223,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
 
 
   return (
-    <div className="space-y-8 animate-fade-in font-sans text-slate-800">
+    <div className className="space-y-8 animate-fade-in font-sans text-slate-800">
       
       {/* Header Section: 專案標題與核心價值 */}
       <div className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden print-break-inside">
@@ -373,7 +372,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                 {studyYears > 0 && 
                   <ReferenceArea 
                     key="study"
-                    x1={0 - 0.5} // 修正: 從最左邊開始
+                    x1={0 - 0.5} 
                     x2={studyEndIndex - 0.5} // 修正: 擴展到該點的中心線
                     fill={phaseColors['在學期']}
                     fillOpacity={1}
@@ -408,7 +407,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   />
                 }
                 
-                {/* 本息攤還期 (interestOnlyEndIndex to repaymentEndYear) */}
+                {/* 本息攤還期 (interestOnlyEndYear to repaymentEndYear) */}
                 {repaymentEndYear > interestOnlyEndYear && 
                   <ReferenceArea 
                     key="repayment"
