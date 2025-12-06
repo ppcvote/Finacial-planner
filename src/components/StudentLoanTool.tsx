@@ -53,7 +53,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
   };
   const { loanAmount, loanRate, investReturnRate, semesters, years, gracePeriod, interestOnlyPeriod } = safeData;
 
-  // 修正 2: 階段計算的年數分界
+  // 修正編譯錯誤：將分界變數定義在函數外 (或使用 useMemo，但簡單計算放外邊即可)
   const studyYears = Math.ceil(semesters / 2); // 在學年數 (學貸發放期間)
   const graceEndYear = studyYears + gracePeriod;
   const interestOnlyEndYear = graceEndYear + interestOnlyPeriod;
@@ -66,7 +66,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
 
   const generateChartData = () => {
     const dataArr = [];
-    let investmentValue = 0; // 初始投資價值為 0
+    let investmentValue = 0; 
     let remainingLoan = loanAmount * 10000;
     
     let cumulativeInvestmentPrincipal = 0; 
@@ -127,7 +127,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
           year: `第${year}年`,
           投資複利價值: Math.round(investmentValue / 10000),
           淨資產: Math.round(netWorth / 10000),
-          若直接繳掉: 0, // 修正 4: 若直接繳掉，資產淨值應為 0
+          若直接繳掉: 0, // 修正: 若直接繳掉，資產淨值應為 0
           phase: repaymentPhase, 
           repaymentYear: year, 
         });
@@ -143,10 +143,10 @@ export const StudentLoanTool = ({ data, setData }: any) => {
 
     const pureProfitWan = finalInvestValueWan - cumulativeInvestmentPrincipalWan;
 
-    return { dataArr, finalInvestValueWan, cumulativeInvestmentPrincipalWan, totalLoanRepaymentWan, pureProfitWan, studyYears, graceEndYear, interestOnlyEndYear, repaymentEndYear };
+    return { dataArr, finalInvestValueWan, cumulativeInvestmentPrincipalWan, totalLoanRepaymentWan, pureProfitWan };
   };
   
-  const { dataArr, finalInvestValueWan, cumulativeInvestmentPrincipalWan, totalLoanRepaymentWan, pureProfitWan, studyYears, graceEndYear, interestOnlyEndYear, repaymentEndYear } = generateChartData();
+  const { dataArr, finalInvestValueWan, cumulativeInvestmentPrincipalWan, totalLoanRepaymentWan, pureProfitWan } = generateChartData();
 
   // --- 2. UI 渲染 ---
   const updateField = (field: string, value: number) => { 
@@ -158,7 +158,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
           // 滑桿連動時，同步更新 tempLoanAmount
           setTempLoanAmount(Math.round(clampedValue));
       } else if (field === 'semesters') {
-          // 修正 2: 級距改為 1，範圍 1-20
+          // 修正 1: 級距改為 1，範圍 1-20
           const clampedValue = Math.max(1, Math.min(20, newValue));
           setData({ ...safeData, [field]: Math.round(clampedValue) });
       } else if (field === 'investReturnRate') {
@@ -200,6 +200,73 @@ export const StudentLoanTool = ({ data, setData }: any) => {
   const getXCategory = (year, fallback) => {
     const dataPoint = dataArr.find(d => d.repaymentYear === year);
     return dataPoint ? dataPoint.year : fallback;
+  };
+  
+  // 修正 2: ReferenceArea 渲染邏輯 (使用 ReferenceArea 確保正確的分隔效果)
+  const renderPhaseReferenceArea = () => {
+    const areas = [];
+    
+    // 在學期 (Start Year 1 to studyYears)
+    if (studyYears > 0) {
+      areas.push(
+        <ReferenceArea 
+          key="study"
+          x1={getXCategory(1, '第1年')} 
+          x2={getXCategory(studyYears, `第${studyYears}年`)}
+          fill={phaseColors['在學期']}
+          fillOpacity={1}
+          stroke="none"
+          y1="dataMin" y2="dataMax" 
+        />
+      );
+    }
+    
+    // 寬限期 (studyYears + 1 to graceEndYear)
+    if (gracePeriod > 0) {
+      areas.push(
+        <ReferenceArea 
+          key="grace"
+          x1={getXCategory(studyYears + 1, `第${studyYears + 1}年`)} 
+          x2={getXCategory(graceEndYear, `第${graceEndYear}年`)}
+          fill={phaseColors['寬限期']}
+          fillOpacity={1}
+          stroke="none"
+          y1="dataMin" y2="dataMax" 
+        />
+      );
+    }
+    
+    // 只繳息期 (graceEndYear + 1 to interestOnlyEndYear)
+    if (interestOnlyPeriod > 0) {
+      areas.push(
+        <ReferenceArea 
+          key="interest"
+          x1={getXCategory(graceEndYear + 1, `第${graceEndYear + 1}年`)} 
+          x2={getXCategory(interestOnlyEndYear, `第${interestOnlyEndYear}年`)}
+          fill={phaseColors['只繳息期']}
+          fillOpacity={1}
+          stroke="none"
+          y1="dataMin" y2="dataMax" 
+        />
+      );
+    }
+    
+    // 本息攤還期 (interestOnlyEndYear + 1 to repaymentEndYear)
+    if (years > 0 && repaymentEndYear > interestOnlyEndYear) {
+      areas.push(
+        <ReferenceArea 
+          key="repayment"
+          x1={getXCategory(interestOnlyEndYear + 1, `第${interestOnlyEndYear + 1}年`)} 
+          x2={getXCategory(repaymentEndYear, `第${repaymentEndYear}年`)}
+          fill={phaseColors['本息攤還期']}
+          fillOpacity={1}
+          stroke="none"
+          y1="dataMin" y2="dataMax" 
+        />
+      );
+    }
+    
+    return areas;
   };
 
 
@@ -300,7 +367,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                    <label className="text-sm font-medium text-slate-600">預期年化報酬率 (%)</label>
                    <span className="font-mono font-bold text-emerald-600 text-lg">{investReturnRate.toFixed(1)}</span>
                  </div>
-                 <input type="range" min={3} max={10} step={0.5} value={investReturnRate} onChange={(e) => updateField('investReturnRate', Number(e.target.value))} className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-600 hover:accent-emerald-700 transition-all" />
+                 <input type="range" min={3} max={10} step={0.5} value={investReturnRate} onChange={(e) => updateField('investReturnRate', Number(e.target.value))} className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-600 hover:accent-emerald-700 transition-all`} />
                </div>
             </div>
             
@@ -347,7 +414,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart data={dataArr} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                 
-                {/* 修正 2: ReferenceArea 渲染，確保邏輯連續且不重疊 */}
+                {/* 修正 2: ReferenceArea 渲染 */}
                 
                 {/* 在學期 (Start Year 1 to studyYears) */}
                 {studyYears > 0 && 
@@ -374,7 +441,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                 }
                 
                 {/* 只繳息期 (graceEndYear + 1 to interestOnlyEndYear) */}
-                {interestOnlyPeriod > 0 && 
+                {interestOnlyEndYear > graceEndYear && 
                   <ReferenceArea 
                     x1={getXCategory(graceEndYear + 1, `第${graceEndYear + 1}年`)} 
                     x2={getXCategory(interestOnlyEndYear, `第${interestOnlyEndYear}年`)}
@@ -386,7 +453,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                 }
                 
                 {/* 本息攤還期 (interestOnlyEndYear + 1 to repaymentEndYear) */}
-                {years > 0 && 
+                {repaymentEndYear > interestOnlyEndYear && 
                   <ReferenceArea 
                     x1={getXCategory(interestOnlyEndYear + 1, `第${interestOnlyEndYear + 1}年`)} 
                     x2={getXCategory(repaymentEndYear, `第${repaymentEndYear}年`)}
@@ -468,7 +535,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
         {/* 2. 專案效益 */}
         <div className="space-y-4">
            <div className="flex items-center gap-2 mb-2">
-             <PiggyBank className="text-blue-600" size={24} />
+             <Landmark className="text-emerald-600" size={24} />
              <h3 className="text-xl font-bold text-slate-800">專案四大效益</h3>
            </div>
            
