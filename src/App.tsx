@@ -30,11 +30,10 @@ import {
   Rocket,
   Car,
   Repeat,
-  HeartHandshake,
-  Droplets
+  HeartHandshake
 } from 'lucide-react';
 import { 
-  BarChart, 
+  BarChart, // 修正：已正確引入 BarChart
   Bar, 
   XAxis, 
   YAxis, 
@@ -232,11 +231,8 @@ const ProfileModal = ({ isOpen, onClose, profile, onSave, loading }) => {
 };
 
 // ------------------------------------------------------------------
-// 核心模組 1-6 (既有模組省略重複代碼，保留完整功能)
+// 核心模組 1: 百萬禮物專案
 // ------------------------------------------------------------------
-// 為了避免檔案過大被截斷，這裡我將保留所有模組的完整代碼
-// 請確保 MillionDollarGiftTool, FinancialRealEstateTool, StudentLoanTool, 
-// SuperActiveSavingTool, CarReplacementTool, LaborPensionTool 都完整包含
 
 const MillionDollarGiftTool = ({ data, setData }) => {
   const safeData = {
@@ -477,6 +473,8 @@ const StudentLoanTool = ({ data, setData }) => {
   const monthlyInterestOnly = (loanAmount * 10000 * (loanRate / 100)) / 12; // 只繳息金額
 
   // 總時程 = 寬限期(1) + 只繳息期(0~4) + 本息攤還期(8)
+  // 注意：寬限期與只繳息期，通常是「外加」於還款期的，即還款期限順延。
+  // 本金還款期 years 固定為 8 年(或其他設定值)。
   const totalDuration = gracePeriod + interestOnlyPeriod + years;
 
   const generateChartData = () => {
@@ -486,14 +484,23 @@ const StudentLoanTool = ({ data, setData }) => {
     let investmentValue = initialCapital;
     let remainingLoan = loanAmount * 10000;
     
+    // 情境：直接還清 (基準線)
+    // 假設一開始就有這筆錢(40萬)。如果選擇還清，資產=0。如果選擇投資，資產=投資值-負債。
+
     for (let year = 1; year <= totalDuration + 2; year++) { 
+      // 1. 投資複利成長
       investmentValue = investmentValue * (1 + investReturnRate / 100);
       
+      // 2. 貸款餘額計算
       if (year <= gracePeriod) {
+         // 寬限期：不還本，通常也不繳息(或政府補貼)。本金不變。
+         // 這裡假設這段期間不用從口袋拿錢出來。
          remainingLoan = loanAmount * 10000;
       } else if (year <= gracePeriod + interestOnlyPeriod) {
+         // 只繳息期：只還利息，本金不變。
          remainingLoan = loanAmount * 10000;
       } else if (year <= totalDuration) {
+         // 本息攤還期：開始還本金
          const repaymentYearIndex = year - (gracePeriod + interestOnlyPeriod);
          remainingLoan = calculateRemainingBalance(loanAmount, loanRate, years, repaymentYearIndex);
       } else {
@@ -502,6 +509,7 @@ const StudentLoanTool = ({ data, setData }) => {
       
       const netWorth = investmentValue - remainingLoan;
 
+      // 標註階段
       let phase = "";
       if (year <= gracePeriod) phase = "寬限期";
       else if (year <= gracePeriod + interestOnlyPeriod) phase = "只繳息";
@@ -519,10 +527,15 @@ const StudentLoanTool = ({ data, setData }) => {
     return dataArr;
   };
   
+  // 計算最終獲利 (專案結束時)
   const finalInvestValue = loanAmount * 10000 * Math.pow((1 + investReturnRate/100), totalDuration);
+  
+  // 總支出成本 = (寬限期0) + (只繳息期利息總和) + (本息攤還期總額)
+  // 假設寬限期利息由政府補貼(不計入成本)或暫時不計
   const totalInterestOnlyCost = monthlyInterestOnly * 12 * interestOnlyPeriod;
   const totalAmortizationCost = monthlyPaymentP_I * 12 * years;
   const totalCost = totalInterestOnlyCost + totalAmortizationCost;
+  
   const pureProfit = finalInvestValue - totalCost;
 
   return (
@@ -959,10 +972,6 @@ const LaborPensionTool = ({ data, setData }) => {
   );
 };
 
-// ------------------------------------------------------------------
-// 核心模組 7: 大小水庫專案 (New)
-// ------------------------------------------------------------------
-
 const BigSmallReservoirTool = ({ data, setData }) => {
   const safeData = {
     initialCapital: Number(data?.initialCapital) || 1000, // 萬
@@ -979,17 +988,9 @@ const BigSmallReservoirTool = ({ data, setData }) => {
     let reinvestedTotal = 0; // 累積的小水庫資產
 
     for (let year = 1; year <= years + 5; year++) {
-      // 每年配息投入，複利滾存
-      // 期初年金公式 (假設年初投入) or 期末? 這裡用期末簡單算:
-      // 當年資產 = (去年資產 + 今年配息) * (1+r)
-      
-      // 修正邏輯：大水庫每年吐出 annualDividend。
-      // 這些錢進入小水庫。小水庫自己也在滾。
-      
       if (year <= years) {
          reinvestedTotal = (reinvestedTotal + annualDividend) * (1 + reinvestRate / 100);
       } else {
-         // 第11年起，不再投入(假設合約結束或停止)，純複利
          reinvestedTotal = reinvestedTotal * (1 + reinvestRate / 100);
       }
 
@@ -1066,10 +1067,6 @@ const BigSmallReservoirTool = ({ data, setData }) => {
                 <p className="text-xs text-slate-400 mt-1">
                    本金${initialCapital} + 小水庫${finalSmallReservoir}
                 </p>
-             </div>
-             <div className="mt-4 bg-cyan-50 p-3 rounded-lg border border-cyan-100 text-xs text-cyan-800 space-y-2">
-                <span className="font-bold">💡 策略效益：</span>
-                <p>您完全不需要再拿錢出來。只需將大水庫產生的配息，搬運到小水庫利滾利，時間一到，資產自然翻倍。</p>
              </div>
           </div>
         </div>
@@ -1251,13 +1248,6 @@ export default function App() {
       </div>
     );
   }
-
-  // Import AreaChart locally to ensure it's available
-  const { AreaChart } = require('recharts').default || require('recharts'); // Fallback purely for safety, though top imports should work.
-  // Wait, I promised to remove require. I will use the top level import.
-  // The top level import already has `AreaChart` if I add it.
-  // Let me check the top imports. I missed `AreaChart` in the top list in my previous thought block.
-  // I will add it now.
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
