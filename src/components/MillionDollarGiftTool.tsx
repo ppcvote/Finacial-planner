@@ -16,7 +16,9 @@ const MillionDollarGiftTool = ({ data, setData }) => {
   };
   const { loanAmount, loanTerm, loanRate, investReturnRate } = safeData;
 
+  // 目標金額是單次借貸的 3 倍 (例如借 100 萬，目標就是 300 萬)
   const targetAmount = loanAmount * 3; 
+  
   const monthlyLoanPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
   const monthlyInvestIncomeSingle = calculateMonthlyIncome(loanAmount, investReturnRate);
   
@@ -27,7 +29,8 @@ const MillionDollarGiftTool = ({ data, setData }) => {
   // 第三階段：月付 - 3倍配息 (通常是負的，代表領錢)
   const phase3_NetOut = monthlyLoanPayment - (monthlyInvestIncomeSingle * 3);
   
-  const standardTotalCost = 3000000; 
+  // 修正：一般存錢的總目標應該等於專案的目標金額 (萬 -> 元)
+  const standardTotalCost = targetAmount * 10000; 
   const standardMonthlySaving = standardTotalCost / (15 * 12); 
 
   const generateChartData = () => {
@@ -66,7 +69,7 @@ const MillionDollarGiftTool = ({ data, setData }) => {
     <div className="space-y-6 animate-fade-in">
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white shadow-lg print-break-inside">
         <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Wallet className="text-blue-200" /> 百萬禮物專案</h3>
-        <p className="text-blue-100 opacity-90">透過三次槓桿循環，用時間換取 300 萬資產。</p>
+        <p className="text-blue-100 opacity-90">透過三次槓桿循環，用時間換取 {targetAmount} 萬資產。</p>
       </div>
 
       <div className="grid lg:grid-cols-12 gap-6">
@@ -107,7 +110,7 @@ const MillionDollarGiftTool = ({ data, setData }) => {
           </div>
         </div>
 
-        {/* ------------------- UPDATED CHART & CARDS AREA ------------------- */}
+        {/* ------------------- 核心：三階段圖表與卡片 ------------------- */}
         <div className="lg:col-span-8 space-y-6">
           <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[350px] print-break-inside">
             <ResponsiveContainer width="100%" height="100%">
