@@ -204,8 +204,9 @@ export const StudentLoanTool = ({ data, setData }: any) => {
   
   // 輔助函式，取得 Recharts ReferenceArea 需要的 X 軸 category 值
   const getXCategory = (year, fallback) => {
+    // 修正: 確保當數據點存在時，返回正確的 year 標籤
     const dataPoint = dataArr.find(d => d.repaymentYear === year);
-    return dataPoint ? d.year : fallback;
+    return dataPoint ? dataPoint.year : fallback;
   };
   
   // 為了讓 ReferenceArea 覆蓋整個 Y 軸範圍，我們需要找到 Y 軸的實際最大/最小值
