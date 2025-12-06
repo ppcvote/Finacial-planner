@@ -203,16 +203,21 @@ export const StudentLoanTool = ({ data, setData }: any) => {
   };
   
   // 輔助函式，取得 Recharts ReferenceArea 需要的 X 軸 category 值
-  // 為了確保邊界是連續的，我們需要 X 軸的索引，而不是類別名稱本身。
-  // 我們將使用 Recharts 內建的 index 屬性，並在 ReferenceArea 中使用它。
+  const getXCategory = (year, fallback) => {
+    const dataPoint = dataArr.find(d => d.repaymentYear === year);
+    return dataPoint ? d.year : fallback;
+  };
   
   // 找出各階段結束點的索引 (Index)
   const getPhaseIndex = (year) => {
+    // 這裡我們必須找到 repaymentYear 匹配的數據點的 INDEX，而不是 year 標籤
     const index = dataArr.findIndex(d => d.repaymentYear === year);
-    // 如果是中間點，我們需要下一個點的索引來畫到邊界
+    // 如果找到了，返回 index + 0.5 (Recharts Hack: 在類別軸上，使用索引來畫區域邊界)
+    // 為了確保連續，我們需要找到下一個點的索引作為當前區塊的結束
     return index !== -1 ? index : dataArr.length - 1; 
   };
   
+  // 修正：使用索引作為 ReferenceArea 的 x1/x2 數值
   const studyEndIndex = getPhaseIndex(studyYears);
   const graceEndIndex = getPhaseIndex(graceEndYear);
   const interestOnlyEndIndex = getPhaseIndex(interestOnlyEndYear);
@@ -370,7 +375,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   <ReferenceArea 
                     key="study"
                     x1={0} 
-                    x2={studyEndIndex} // 使用 Index
+                    x2={studyEndIndex} 
                     fill={phaseColors['在學期']}
                     fillOpacity={1}
                     stroke="none"
@@ -383,7 +388,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   <ReferenceArea 
                     key="grace"
                     x1={studyEndIndex} 
-                    x2={graceEndIndex} // 使用 Index
+                    x2={graceEndIndex} 
                     fill={phaseColors['寬限期']}
                     fillOpacity={1}
                     stroke="none"
@@ -391,12 +396,12 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   />
                 }
                 
-                {/* 只繳息期 (graceEndIndex to interestOnlyEndIndex) */}
+                {/* 只繳息期 (graceEndIndex to interestOnlyEndYear) */}
                 {interestOnlyEndYear > graceEndYear && 
                   <ReferenceArea 
                     key="interest"
                     x1={graceEndIndex} 
-                    x2={interestOnlyEndIndex} // 使用 Index
+                    x2={interestOnlyEndIndex}
                     fill={phaseColors['只繳息期']}
                     fillOpacity={1}
                     stroke="none"
@@ -409,7 +414,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   <ReferenceArea 
                     key="repayment"
                     x1={interestOnlyEndIndex} 
-                    x2={repaymentEndIndex} // 使用 Index
+                    x2={repaymentEndIndex}
                     fill={phaseColors['本息攤還期']}
                     fillOpacity={1}
                     stroke="none"
