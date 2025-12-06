@@ -39,8 +39,11 @@ const calculateRemainingBalance = (principal: number, rate: number, totalYears: 
   const r = rVal / 100 / 12;
   const n = totalY * 12;
   const p = elapsed * 12;
-  if (rVal === 0) return pVal * 10000 * (1 - p/(n || 1));
-  const balance = (pVal * 10000 * (Math.pow(1 + r, n) - Math.pow(1 + r, p))) / (Math.pow(1 + r, n) - 1);
+  // 檢查是否已過期或利率為零
+  if (elapsed >= totalY || rVal === 0) return Math.max(0, pVal * 10000 * (1 - p / (n || 1)));
+  
+  // 剩餘本金公式 (等額本息)
+  const balance = (pVal * 10000) * (Math.pow(1 + r, n) - Math.pow(1 + r, p)) / (Math.pow(1 + r, n) - 1);
   return Math.max(0, isNaN(balance) ? 0 : balance);
 };
 
@@ -61,27 +64,68 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   const monthlyInvestIncome = calculateMonthlyIncome(loanAmount, investReturnRate);
   const monthlyCashFlow = monthlyInvestIncome - monthlyLoanPayment;
   const isNegativeCashFlow = monthlyCashFlow < 0; 
+  
+  // 總自付成本 (用於負現金流的情況)
   const totalOutOfPocket = isNegativeCashFlow ? Math.abs(monthlyCashFlow) * 12 * loanTerm : 0;
   
-  const finalAssetValue = loanAmount * 10000;
+  // --- 計算 20 年淨利潤 ---
+  const targetYear = 20;
+  const months20 = targetYear * 12;
+  
+  // 1. 20年後的剩餘貸款 (若貸款年期大於20年)
+  const remainingLoan20 = calculateRemainingBalance(loanAmount, loanRate, loanTerm, Math.min(loanTerm, targetYear));
+
+  // 2. 20年累積的淨現金流 (元)
+  const cumulativeNetIncome20 = monthlyCashFlow * months20;
+
+  // 3. 20年後的股權 (Asset Value - Remaining Loan)
+  const assetEquity20 = (loanAmount * 10000) - remainingLoan20;
+
+  // 4. 20年後的總資產價值 (萬) = (股權 + 累積淨現金流) / 10000
+  const totalWealth20Wan = Math.round((assetEquity20 + cumulativeNetIncome20) / 10000);
+  
+  // 5. 20年總淨利潤 (萬) = 總資產價值 - 初始貸款總額 (萬)
+  const totalProfit20Wan = Math.round(totalWealth20Wan - loanAmount);
+  // --- 結束 20 年淨利潤計算 ---
+
 
   const generateHouseChartData = () => {
     const dataArr = [];
     let cumulativeNetIncome = 0; 
+    const step = loanTerm > 20 ? 3 : 1; 
+    
     for (let year = 1; year <= loanTerm; year++) {
       cumulativeNetIncome += monthlyCashFlow * 12;
       const remainingLoan = calculateRemainingBalance(loanAmount, loanRate, loanTerm, year);
       const assetEquity = (loanAmount * 10000) - remainingLoan;
+      // 總資產價值 = 累積股權 + 累積淨現金流
       const financialTotalWealth = assetEquity + cumulativeNetIncome;
-      const step = loanTerm > 20 ? 3 : 1; 
+      
       if (year === 1 || year % step === 0 || year === loanTerm) {
-         dataArr.push({ year: `第${year}年`, 總資產價值: Math.round(financialTotalWealth / 10000), 剩餘貸款: Math.round(remainingLoan / 10000) });
+         dataArr.push({ 
+            year: `第${year}年`, 
+            總資產價值: Math.round(financialTotalWealth / 10000), 
+            剩餘貸款: Math.round(remainingLoan / 10000) 
+         });
       }
     }
     return dataArr;
   };
 
-  const updateField = (field: string, value: number) => { setData({ ...safeData, [field]: value }); };
+  const updateField = (field: string, value: number) => { 
+      let newValue = Number(value);
+
+      if (field === 'loanAmount') {
+          // 確保 loanAmount 在 500 到 3000 之間，且為整數
+          const clampedValue = Math.max(500, Math.min(3000, newValue));
+          setData({ ...safeData, [field]: Math.round(clampedValue) });
+      } else if (field === 'investReturnRate' || field === 'loanRate') {
+          // 確保利率級距為 0.1
+          setData({ ...safeData, [field]: Number(newValue.toFixed(1)) });
+      } else {
+          setData({ ...safeData, [field]: newValue }); 
+      }
+  };
 
   return (
     <div className="space-y-8 animate-fade-in font-sans text-slate-800">
@@ -118,20 +162,63 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
               參數設定
             </h4>
             <div className="space-y-6">
-               {[
-                 { label: "資產/貸款總額 (萬)", field: "loanAmount", min: 500, max: 3000, step: 100, val: loanAmount, color: "emerald" },
-                 { label: "貸款年期 (年)", field: "loanTerm", min: 20, max: 40, step: 1, val: loanTerm, color: "teal" },
-                 { label: "貸款利率 (%)", field: "loanRate", min: 1.5, max: 4.0, step: 0.1, val: loanRate, color: "emerald" },
-                 { label: "投資配息率 (%)", field: "investReturnRate", min: 3, max: 10, step: 0.5, val: investReturnRate, color: "blue" }
-               ].map((item) => (
-                 <div key={item.field}>
-                   <div className="flex justify-between mb-2">
-                     <label className="text-sm font-medium text-slate-600">{item.label}</label>
-                     <span className={`font-mono font-bold text-${item.color}-600 text-lg`}>{item.val}</span>
+               
+               {/* 1. 資產/貸款總額 (萬) - 數字輸入與滑桿連動 */}
+               <div>
+                   <div className="flex justify-between items-center mb-2">
+                       <label className="text-sm font-medium text-slate-600">資產/貸款總額 (萬)</label>
+                       <div className="flex items-center">
+                           <input 
+                               type="number" 
+                               min={500} 
+                               max={3000} 
+                               step={1} // 級距調整為 1 萬
+                               value={loanAmount} 
+                               onChange={(e) => updateField('loanAmount', Number(e.target.value))} 
+                               className="w-20 text-right bg-transparent border-none p-0 font-mono font-bold text-emerald-600 text-lg focus:ring-0 focus:border-emerald-500 focus:bg-emerald-50/50 rounded"
+                               style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+                           />
+                           <span className="font-mono font-bold text-emerald-600 text-lg ml-1">萬</span>
+                       </div>
                    </div>
-                   <input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => updateField(item.field, Number(e.target.value))} className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-${item.color}-600 hover:accent-${item.color}-700 transition-all`} />
-                 </div>
-               ))}
+                   <input 
+                       type="range" 
+                       min={500} 
+                       max={3000} 
+                       step={1} 
+                       value={loanAmount} 
+                       onChange={(e) => updateField('loanAmount', Number(e.target.value))} 
+                       className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-600 hover:accent-emerald-700 transition-all`} 
+                   />
+                   <p className="text-xs text-slate-400 mt-1">範圍: 500 萬 ~ 3000 萬</p>
+               </div>
+               
+               {/* 2. 貸款年期 */}
+               <div>
+                 <div className="flex justify-between mb-2">
+                     <label className="text-sm font-medium text-slate-600">貸款年期 (年)</label>
+                     <span className={`font-mono font-bold text-teal-600 text-lg`}>{loanTerm}</span>
+                   </div>
+                   <input type="range" min={20} max={40} step={1} value={loanTerm} onChange={(e) => updateField('loanTerm', Number(e.target.value))} className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-teal-600 hover:accent-teal-700 transition-all`} />
+               </div>
+
+               {/* 3. 貸款利率 */}
+               <div>
+                 <div className="flex justify-between mb-2">
+                     <label className="text-sm font-medium text-slate-600">貸款利率 (%)</label>
+                     <span className={`font-mono font-bold text-emerald-600 text-lg`}>{loanRate.toFixed(1)}</span>
+                   </div>
+                   <input type="range" min={1.5} max={4.0} step={0.1} value={loanRate} onChange={(e) => updateField('loanRate', Number(e.target.value))} className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-600 hover:accent-emerald-700 transition-all`} />
+               </div>
+               
+               {/* 4. 投資配息率 - 級距調整為 0.1 */}
+               <div>
+                 <div className="flex justify-between mb-2">
+                     <label className="text-sm font-medium text-slate-600">投資配息率 (%)</label>
+                     <span className={`font-mono font-bold text-blue-600 text-lg`}>{investReturnRate.toFixed(1)}</span>
+                   </div>
+                   <input type="range" min={3} max={10} step={0.1} value={investReturnRate} onChange={(e) => updateField('investReturnRate', Number(e.target.value))} className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600 hover:accent-blue-700 transition-all`} />
+               </div>
             </div>
           </div>
 
@@ -167,7 +254,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
 
         {/* 右側：圖表展示 */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-[500px] print-break-inside relative">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-[400px] print-break-inside relative">
              <h4 className="font-bold text-slate-700 mb-4 pl-2 border-l-4 border-emerald-500">資產淨值成長模擬</h4>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart data={generateHouseChartData()} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
@@ -184,6 +271,39 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
           </div>
         </div>
       </div>
+      
+      {/* 新增：20 年總淨利潤卡片 (排版調整) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="md:col-span-1 bg-white rounded-2xl shadow-lg border border-teal-200 p-6 print-break-inside">
+             <h3 className="text-xl font-bold text-teal-700 mb-2 flex items-center gap-2">
+                 <TrendingUp size={24} /> 20 年累積總效益
+             </h3>
+             <div className="text-center">
+                 <p className="text-slate-500 text-sm font-medium mb-1">
+                     專案執行 {targetYear} 年後淨獲利 (股權 + 淨現金流)
+                 </p>
+                 <p className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-green-600 font-mono">
+                     +${totalProfit20Wan.toLocaleString()} 萬
+                 </p>
+                 <div className="mt-2 text-xs text-slate-500">
+                     總資產價值: ${totalWealth20Wan.toLocaleString()} 萬
+                 </div>
+             </div>
+          </div>
+          
+          <div className="md:col-span-2 bg-slate-50 rounded-2xl border border-slate-100 p-6 space-y-3 print-break-inside">
+             <h3 className="text-xl font-bold text-slate-700 mb-3 flex items-center gap-2">
+                 <Scale size={20} /> 關鍵數據
+             </h3>
+             <div className="grid grid-cols-2 gap-4 text-sm">
+                 <div className="flex justify-between"><span className="text-slate-500">初始貸款總額</span><span className="font-bold text-slate-700">{loanAmount.toLocaleString()} 萬</span></div>
+                 <div className="flex justify-between"><span className="text-slate-500">20年後剩餘貸款</span><span className="font-bold text-red-500">{Math.round(remainingLoan20 / 10000).toLocaleString()} 萬</span></div>
+                 <div className="flex justify-between"><span className="text-slate-500">20年累積淨現金流</span><span className="font-bold text-green-600">{Math.round(cumulativeNetIncome20 / 10000).toLocaleString()} 萬</span></div>
+                 <div className="flex justify-between"><span className="text-slate-500">20年股權累積</span><span className="font-bold text-teal-600">{Math.round(assetEquity20 / 10000).toLocaleString()} 萬</span></div>
+             </div>
+          </div>
+      </div>
+
 
       {/* Strategy Section: 策略說明 */}
       <div className="grid md:grid-cols-2 gap-8 pt-6 border-t border-slate-200 print-break-inside">
