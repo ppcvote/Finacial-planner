@@ -210,10 +210,9 @@ export const StudentLoanTool = ({ data, setData }: any) => {
   
   // 找出各階段結束點的索引 (Index)
   const getPhaseIndex = (year) => {
-    // 這裡我們必須找到 repaymentYear 匹配的數據點的 INDEX，而不是 year 標籤
+    // 這裡我們必須找到 repaymentYear 匹配的數據點的 INDEX
     const index = dataArr.findIndex(d => d.repaymentYear === year);
-    // 如果找到了，返回 index + 0.5 (Recharts Hack: 在類別軸上，使用索引來畫區域邊界)
-    // 為了確保連續，我們需要找到下一個點的索引作為當前區塊的結束
+    // 為了確保 ReferenceArea 涵蓋整個區間，我們返回該點的索引
     return index !== -1 ? index : dataArr.length - 1; 
   };
   
@@ -368,14 +367,14 @@ export const StudentLoanTool = ({ data, setData }: any) => {
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart data={dataArr} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                 
-                {/* 修正 2: ReferenceArea 渲染，確保邏輯連續且不重疊 */}
+                {/* 修正 2: ReferenceArea 渲染，使用 Index 確保連續且不重疊 */}
                 
                 {/* 在學期 (Start Index 0 to studyEndIndex) */}
                 {studyYears > 0 && 
                   <ReferenceArea 
                     key="study"
                     x1={0} 
-                    x2={studyEndIndex} 
+                    x2={studyEndIndex} // 使用 Index
                     fill={phaseColors['在學期']}
                     fillOpacity={1}
                     stroke="none"
@@ -409,7 +408,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   />
                 }
                 
-                {/* 本息攤還期 (interestOnlyEndIndex to repaymentEndIndex) */}
+                {/* 本息攤還期 (interestOnlyEndIndex to repaymentEndYear) */}
                 {repaymentEndYear > interestOnlyEndYear && 
                   <ReferenceArea 
                     key="repayment"
