@@ -42,17 +42,17 @@ const PrintStyles = () => (
 
 const Toast = ({ message, type = 'success', onClose }: { message: string, type: string, onClose: () => void }) => {
   useEffect(() => {
-    const timer = setTimeout(() => { onClose(); }, 3000);
+    const timer = setTimeout(() => { onClose(); }, 4000); // 延長顯示時間以便閱讀錯誤
     return () => clearTimeout(timer);
   }, [onClose]);
 
   const bgColors: Record<string, string> = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
 
   return (
-    <div className={`fixed bottom-6 right-6 ${bgColors[type] || 'bg-blue-600'} text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-bounce-in z-[100] toast-container`}>
-      {type === 'success' && <Check size={20} />}
-      {type === 'error' && <ShieldAlert size={20} />}
-      <span className="font-bold">{message}</span>
+    <div className={`fixed bottom-6 right-6 ${bgColors[type] || 'bg-blue-600'} text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-bounce-in z-[100] toast-container max-w-[90vw]`}>
+      {type === 'success' && <Check size={20} className="shrink-0" />}
+      {type === 'error' && <ShieldAlert size={20} className="shrink-0" />}
+      <span className="font-bold text-sm md:text-base break-words">{message}</span>
     </div>
   );
 };
@@ -118,7 +118,34 @@ export default function App() {
   }, []);
 
   const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
-  const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (e) { showToast("登入失敗", "error"); } };
+  
+  // --- 修正後的登入邏輯：顯示具體錯誤訊息 ---
+  const handleLogin = async () => { 
+    try { 
+      await signInWithPopup(auth, googleProvider); 
+    } catch (e: any) { 
+      console.error("Login Error Full:", e);
+      
+      let errorMsg = "登入失敗";
+      
+      // 根據錯誤代碼提供更清楚的指引
+      if (e.code === 'auth/unauthorized-domain') {
+        errorMsg = "網域未授權：請至 Firebase Console 新增此網域";
+      } else if (e.code === 'auth/popup-closed-by-user') {
+        errorMsg = "登入視窗已被關閉";
+      } else if (e.code === 'auth/popup-blocked') {
+        errorMsg = "瀏覽器封鎖了彈跳視窗，請允許後重試";
+      } else if (e.code === 'auth/operation-not-allowed') {
+        errorMsg = "Google 登入功能未啟用，請檢查 Firebase 設定";
+      } else if (e.message) {
+        // 顯示原始錯誤訊息以便除錯
+        errorMsg = `錯誤: ${e.message}`; 
+      }
+      
+      showToast(errorMsg, "error"); 
+    } 
+  };
+  
   const handleLogout = async () => { await signOut(auth); setActiveTab('gift'); showToast("已安全登出", "info"); };
 
   const getCurrentData = () => {
@@ -173,7 +200,7 @@ export default function App() {
               <div className="text-xs font-bold text-slate-500 px-4 py-2 uppercase tracking-wider">資產軍火庫</div>
               <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => {setActiveTab('gift'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => {setActiveTab('estate'); setIsMobileMenuOpen(false);}} />
-              <NavItem icon={GraduationCap} label="學貸套利專案" active={activeTab === 'student'} onClick={() => {setActiveTab('student'); setIsMobileMenuOpen(false);}} />
+              <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => {setActiveTab('student'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => {setActiveTab('super_active'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => {setActiveTab('car'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => {setActiveTab('reservoir'); setIsMobileMenuOpen(false);}} />
@@ -209,7 +236,7 @@ export default function App() {
           <div className="text-xs font-bold text-slate-500 px-4 py-2 uppercase tracking-wider">資產軍火庫</div>
           <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => setActiveTab('gift')} />
           <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => setActiveTab('estate')} />
-          <NavItem icon={GraduationCap} label="學貸套利專案" active={activeTab === 'student'} onClick={() => setActiveTab('student')} />
+          <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => setActiveTab('student')} />
           <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => setActiveTab('super_active')} />
           <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => setActiveTab('car')} />
           <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => setActiveTab('reservoir')} />
