@@ -1180,7 +1180,7 @@ const SuperActiveSavingTool = ({ data, setData }) => {
   };
   const { monthlySaving, investReturnRate, activeYears, totalYears } = safeData;
 
-  // --- 計算邏輯 ---
+  // --- 計算邏輯 (修正部分) ---
   const fullChartData = [];
   let pAcc = 0; // 消極累積
   let aInv = 0; // 積極累積
@@ -1280,9 +1280,6 @@ const SuperActiveSavingTool = ({ data, setData }) => {
     </div>
   );
 };
-  return renderChart(); // Wait, this is incorrect again! I will fix it below in the final output.
-};
-// Correcting the function above within the final output block.
 
 const CarReplacementTool = ({ data, setData }) => {
   const safeData = {
