@@ -865,7 +865,7 @@ const MillionDollarGiftTool = ({ data, setData }) => {
           </div>
         </div>
 
-          <div className="lg:col-span-8 space-y-6">
+           <div className="lg:col-span-8 space-y-6">
           {/* 原本的圖表區塊 */}
           <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[350px] print-break-inside">
             <ResponsiveContainer width="100%" height="100%">
@@ -943,6 +943,26 @@ const MillionDollarGiftTool = ({ data, setData }) => {
              </div>
           </div>
         </div>
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[350px] print-break-inside">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={generateChartData()} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorAssetGift" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="year" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                <YAxis unit="萬" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Legend />
+                <Area type="monotone" dataKey="專案持有資產" stroke="#3b82f6" fill="url(#colorAssetGift)" strokeWidth={2} />
+                <Bar dataKey="一般存錢成本" fill="#cbd5e1" barSize={12} radius={[4,4,0,0]} />
+                <Line type="monotone" dataKey="專案實付成本" stroke="#f59e0b" strokeWidth={3} dot={false} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
