@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
-  GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2
+  GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key
 } from 'lucide-react';
 
-import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { 
+  signInWithPopup, signOut, onAuthStateChanged, signInWithEmailAndPassword, 
+  signInWithRedirect, getRedirectResult // 導入 Email/Password 登入
+} from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
 import { auth, db, googleProvider } from './firebase'; 
@@ -87,6 +90,12 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false); 
 
+  // New states for testing Email/Password login
+  const [testEmail, setTestEmail] = useState('');
+  const [testPassword, setTestPassword] = useState('');
+  const [isEmailLoginOpen, setIsEmailLoginOpen] = useState(false);
+
+
   // Tool Data States
   const [giftData, setGiftData] = useState({ loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 });
   const [estateData, setEstateData] = useState({ loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6 });
@@ -97,32 +106,67 @@ export default function App() {
   const [reservoirData, setReservoirData] = useState({ initialCapital: 1000, dividendRate: 6, reinvestRate: 6, years: 10 });
   const [taxData, setTaxData] = useState({ spouse: true, children: 2, parents: 0, cash: 3000, realEstate: 2000, stocks: 1000, insurancePlan: 0 });
 
-  // const [userProfile, setUserProfile] = useState({ displayName: '', title: '' }); // 暫未使用
-
   useEffect(() => {
+    // 1. 檢查是否是 Redirect 回來的登入 (手機版)
+    const checkRedirect = async () => {
+      try {
+        await getRedirectResult(auth);
+      } catch (error: any) {
+        // 專門處理 iOS/瀏覽器分區儲存導致的狀態丟失錯誤 (missing state)
+        if (error.code === 'auth/missing-or-invalid-nonce' || error.code === 'auth/cancelled-popup-request') {
+           showToast(`登入錯誤：瀏覽器狀態丟失，請重試或改用一般視窗`, "error");
+        } else {
+           showToast(`登入錯誤: ${error.message}`, "error");
+        }
+      }
+    };
+    checkRedirect();
+
+    // 2. 監聽登入狀態
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setLoading(false);
-      // 如果需要讀取 user profile 可在此處處理
+      if (currentUser) {
+        // 載入使用者設定
+      }
     });
     return () => unsubscribe();
   }, []);
 
   const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
   
-  // 登入邏輯：顯示具體錯誤訊息
-  const handleLogin = async () => { 
+  // 登入邏輯：自動切換 Popup 與 Redirect (Google 登入)
+  const handleGoogleLogin = async () => { 
+    // 判斷是否為手機或平板環境 (用於強制 redirect，解決 disallowed_useragent)
+    const isMobileOrTablet = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+
+    if (isMobileOrTablet) {
+         showToast("偵測到行動裝置，切換至全頁登入模式...", "info");
+         // 直接使用 Redirect 避免瀏覽器內建視窗問題 (disallowed_useragent)
+         await signInWithRedirect(auth, googleProvider);
+         return;
+    }
+
     try { 
+      // 嘗試彈跳視窗 (桌機體驗較好)
       await signInWithPopup(auth, googleProvider); 
     } catch (e: any) { 
-      console.error("Login Error Full:", e);
-      let errorMsg = "登入失敗";
+      
+      // 如果 PopUp 失敗，通常是瀏覽器封鎖，則嘗試切換到 Redirect
+      if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user' || e.message?.includes('invalid')) {
+        showToast("彈窗被封鎖或登入失敗，嘗試全頁登入...", "info");
+        try {
+           await signInWithRedirect(auth, googleProvider);
+        } catch (redirectError: any) {
+           showToast("登入錯誤: " + redirectError.message, "error");
+        }
+        return;
+      }
+
+      // 其他一般錯誤處理
+      let errorMsg = "Google 登入失敗";
       if (e.code === 'auth/unauthorized-domain') {
         errorMsg = "網域未授權：請至 Firebase Console 新增此網域";
-      } else if (e.code === 'auth/popup-closed-by-user') {
-        errorMsg = "登入視窗已被關閉";
-      } else if (e.code === 'auth/popup-blocked') {
-        errorMsg = "瀏覽器封鎖了彈跳視窗，請允許後重試";
       } else if (e.message) {
         errorMsg = `錯誤: ${e.message}`; 
       }
@@ -130,6 +174,30 @@ export default function App() {
     } 
   };
   
+  // 測試用的 Email/Password 登入
+  const handleEmailLogin = async () => {
+    if (!testEmail || !testPassword) {
+      showToast("請輸入 Email 和密碼", "error");
+      return;
+    }
+    try {
+      await signInWithEmailAndPassword(auth, testEmail, testPassword);
+      setIsEmailLoginOpen(false); // 登入成功後關閉視窗
+      showToast("管理員登入成功", "success");
+    } catch (e: any) {
+      let errorMsg = "Email 登入失敗";
+       if (e.code === 'auth/user-not-found') {
+        errorMsg = "查無此 Email 帳號";
+      } else if (e.code === 'auth/wrong-password') {
+        errorMsg = "密碼錯誤";
+      } else if (e.code === 'auth/invalid-email') {
+        errorMsg = "Email 格式無效";
+      }
+      showToast(errorMsg, "error");
+    }
+  };
+
+
   const handleLogout = async () => { await signOut(auth); setActiveTab('gift'); showToast("已安全登出", "info"); };
 
   const getCurrentData = () => {
@@ -151,10 +219,67 @@ export default function App() {
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+         {/* Email Login Modal */}
+         {isEmailLoginOpen && (
+            <div className="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
+                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                      <Mail size={20} className="text-blue-600"/> 管理員登入測試
+                    </h3>
+                    <p className="text-sm text-slate-500">
+                      此為測試專用，請確保您已在 Firebase Auth 建立一組 Email 帳號。
+                    </p>
+                    <input 
+                      type="email" 
+                      placeholder="Email 帳號" 
+                      value={testEmail}
+                      onChange={(e) => setTestEmail(e.target.value)}
+                      className="w-full p-3 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <input 
+                      type="password" 
+                      placeholder="密碼" 
+                      value={testPassword}
+                      onChange={(e) => setTestPassword(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleEmailLogin()}
+                      className="w-full p-3 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <div className="flex justify-between gap-3">
+                       <button 
+                         onClick={() => setIsEmailLoginOpen(false)} 
+                         className="flex-1 px-4 py-2 text-slate-600 border border-slate-300 rounded-xl hover:bg-slate-100 transition-colors"
+                       >
+                         取消
+                       </button>
+                       <button 
+                         onClick={handleEmailLogin} 
+                         className="flex-1 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors"
+                       >
+                         <Key size={18} className="inline mr-1"/> 登入
+                       </button>
+                    </div>
+                </div>
+            </div>
+         )}
         <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center space-y-6 shadow-2xl animate-fade-in-up">
           <div className="flex justify-center"><div className="bg-blue-100 p-4 rounded-full"><Coins size={48} className="text-blue-600" /></div></div>
           <div><h1 className="text-3xl font-black text-slate-800">超業菁英戰情室</h1><p className="text-slate-500 mt-2">武裝您的專業，讓數字幫您說故事</p></div>
-          <button onClick={handleLogin} className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-100 hover:bg-slate-50 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all"><div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center font-bold text-blue-600">G</div>使用 Google 帳號登入</button>
+          
+          <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-100 hover:bg-slate-50 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all">
+            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center font-bold text-blue-600">G</div>
+            使用 Google 帳號登入
+          </button>
+          
+          {/* Email/Password 測試入口 */}
+          <div className="text-center text-sm">
+            <button 
+              onClick={() => setIsEmailLoginOpen(true)} 
+              className="text-slate-500 hover:text-blue-600 transition-colors underline"
+            >
+              管理員測試登入
+            </button>
+          </div>
+          
         </div>
       </div>
     );
@@ -173,7 +298,7 @@ export default function App() {
         data={getCurrentData()} 
       />
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu Overlay (略) */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900 text-white flex flex-col animate-fade-in md:hidden">
            <div className="p-4 flex justify-between items-center border-b border-slate-800">
@@ -202,7 +327,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Sidebar (Desktop) */}
+      {/* Sidebar (Desktop) / Main Content (略) */}
       <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10 print:hidden">
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center gap-3 mb-1">
@@ -240,9 +365,7 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        {/* Mobile Header */}
         <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center shadow-md shrink-0 print:hidden">
           <div className="font-bold flex items-center gap-2"><Coins className="text-yellow-400"/> 資產規劃</div>
           <div className="flex gap-2">
@@ -255,7 +378,6 @@ export default function App() {
           </div>
         </div>
         
-        {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 relative">
            <div className="max-w-5xl mx-auto pb-20 md:pb-0">
              {activeTab === 'gift' && <MillionDollarGiftTool data={giftData} setData={setGiftData} />}
