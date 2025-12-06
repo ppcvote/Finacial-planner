@@ -75,13 +75,11 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   // 1. 總貸款期後累積的淨現金流 (元)
   const cumulativeNetIncomeTarget = monthlyCashFlow * (targetYear * 12);
 
-  // 2. 總貸款期後的淨獲利 (萬) - 依據使用者邏輯
-  const totalProfitTargetWan = Math.round(
-      (cumulativeNetIncomeTarget + (loanAmount * 10000)) / 10000 - loanAmount
-  );
+  // 2. 總貸款期後的淨獲利 (萬) - 依據使用者邏輯: 僅計算淨現金流累積的盈虧 (期滿後資產歸零相抵)
+  const totalProfitTargetWan = Math.round(cumulativeNetIncomeTarget / 10000);
   
   // 3. 總貸款期後的總資產價值 (萬)
-  // 期滿時剩餘貸款趨近於0，股權趨近於 LoanAmount
+  // 總資產價值 = 初始貸款總額 (股權) + 累積淨現金流
   const totalWealthTargetWan = Math.round(loanAmount + (cumulativeNetIncomeTarget / 10000));
   
   // --- 輔助變數計算 ---
@@ -175,7 +173,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       </div>
 
       <div className="grid lg:grid-cols-12 gap-8">
-        {/* 左側：參數設定 (修正：此處只保留參數設定區塊) */}
+        {/* 左側：參數設定與策略說明 */}
         <div className="lg:col-span-4 space-y-6 print-break-inside">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 no-print">
             <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2">
