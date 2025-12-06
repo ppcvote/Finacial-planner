@@ -250,7 +250,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
             </div>
           </div>
           
-          {/* 策略說明 - 執行三部曲 (修正: 這是左側保留的單一策略區) */}
+          {/* 策略說明 - 執行三部曲 (這部分是保留的) */}
           <div className="space-y-4 pt-4 print-break-inside">
              <div className="flex items-center gap-2 mb-2">
                 <RefreshCw className="text-emerald-600" size={24} />
@@ -290,6 +290,37 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                     </div>
                  </div>
               </div>
+          </div>
+          
+          {/* 專案四大效益 (這部分是保留的) */}
+          <div className="space-y-4 pt-4 print-break-inside">
+             <div className="flex items-center gap-2 mb-2">
+               <Landmark className="text-emerald-600" size={24} />
+               <h3 className="text-xl font-bold text-slate-800">專案四大效益</h3>
+             </div>
+             
+             <div className="grid grid-cols-1 gap-3">
+                {[
+                  { title: "數位包租公", desc: "如同擁有房產收租，但沒有空租期、修繕費、稅金與惡房客的煩惱。" },
+                  { title: "抗通膨", desc: "利用負債對抗通膨。隨著時間推移，貨幣貶值，您償還的貸款實質價值在下降，但資產在增值。" },
+                  { title: "資產擁有權", desc: "與租房不同，付出的每一分錢最後都換來實實在在的資產，而不只是消費。" },
+                  { title: "極低門檻", desc: "不需要數百萬頭期款，只需良好的信用與穩定的現金流即可啟動千萬資產計畫。" }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-100 hover:bg-emerald-50/50 transition-colors">
+                    <CheckCircle2 className="text-green-500 shrink-0 mt-0.5" size={20} />
+                    <div>
+                      <h4 className="font-bold text-slate-800">{item.title}</h4>
+                      <p className="text-sm text-slate-600 mt-1 leading-relaxed">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+             </div>
+  
+             <div className="mt-6 p-4 bg-slate-800 rounded-xl text-center shadow-lg">
+               <p className="text-slate-300 italic text-sm">
+                 「富人買資產，窮人買負債，中產階級買他們以為是資產的負債。金融房產，是真正的資產。」
+               </p>
+             </div>
           </div>
         </div>
 
