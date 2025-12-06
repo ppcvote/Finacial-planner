@@ -1180,38 +1180,39 @@ const SuperActiveSavingTool = ({ data, setData }) => {
   };
   const { monthlySaving, investReturnRate, activeYears, totalYears } = safeData;
 
-  const generateChartData = () => {
-    const dataArr = [];
-    let passiveAccumulation = 0; 
-    let activeInvestment = 0; 
-    for (let year = 1; year <= 40; year++) {
-      passiveAccumulation += data.monthlySaving * 12;
-      if (year <= data.activeYears) activeInvestment = (activeInvestment + data.monthlySaving * 12) * (1 + data.investReturnRate / 100);
-      else activeInvestment = activeInvestment * (1 + data.investReturnRate / 100);
-      if (year % 5 === 0 || year === data.activeYears || year === 40) {
-        dataArr.push({
-          year: `第${year}年`,
-          消極存錢: Math.round(passiveAccumulation / 10000),
-          積極存錢: Math.round(activeInvestment / 10000),
-        });
+  // --- 計算邏輯 ---
+  const fullChartData = [];
+  let pAcc = 0; // 消極累積
+  let aInv = 0; // 積極累積
+  
+  for (let year = 1; year <= totalYears; year++) {
+      pAcc += monthlySaving * 12;
+      
+      if (year <= activeYears) {
+          // 投入期：本金 + 利息
+          aInv = (aInv + monthlySaving * 12) * (1 + investReturnRate / 100);
+      } else {
+          // 複利期：只滚利息
+          aInv = aInv * (1 + investReturnRate / 100);
       }
-    }
-    // Full data for chart
-    const fullChartData = [];
-    let pAcc = 0, aInv = 0;
-    for (let year = 1; year <= 40; year++) {
-        pAcc += data.monthlySaving * 12;
-        if (year <= data.activeYears) aInv = (aInv + data.monthlySaving * 12) * (1 + data.investReturnRate / 100);
-        else aInv = aInv * (1 + data.investReturnRate / 100);
-        fullChartData.push({
-            year: `第${year}年`,
-            消極存錢: Math.round(pAcc / 10000),
-            積極存錢: Math.round(aInv / 10000),
-        });
-    }
+      
+      fullChartData.push({
+          year: `第${year}年`,
+          消極存錢: Math.round(pAcc / 10000),
+          積極存錢: Math.round(aInv / 10000),
+      });
+  }
 
-    const finalAsset = Math.round(aInv / 10000);
-    return (
+  const finalPassive = pAcc;
+  const finalAsset = Math.round(aInv / 10000);
+  const totalPrincipalActive = monthlySaving * 12 * activeYears;
+  const totalPrincipalPassive = monthlySaving * 12 * totalYears;
+
+  const updateField = (field, value) => {
+    setData({ ...safeData, [field]: value });
+  };
+
+  return (
     <div className="space-y-6 animate-fade-in">
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 text-white shadow-lg print-break-inside">
         <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Rocket className="text-purple-200" /> 超積極存錢法</h3>
@@ -1233,7 +1234,7 @@ const SuperActiveSavingTool = ({ data, setData }) => {
                      <label className="text-sm font-medium text-slate-600">{item.label}</label>
                      <span className={`font-mono font-bold text-${item.color}-600`}>{item.field === 'monthlySaving' ? '$' : ''}{item.val.toLocaleString()}</span>
                    </div>
-                   <input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => setData({ ...safeData, [item.field]: Number(e.target.value) })} className={`w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-${item.color}-600`} />
+                   <input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => updateField(item.field, Number(e.target.value))} className={`w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-${item.color}-600`} />
                  </div>
                ))}
             </div>
@@ -1243,13 +1244,16 @@ const SuperActiveSavingTool = ({ data, setData }) => {
              <div className="text-center mb-4">
                <p className="text-slate-500 text-sm">消極存錢 (存40年)</p>
                <p className="text-xl font-bold text-slate-600">${Math.round(finalPassive/10000)}萬</p>
-               <p className="text-xs text-slate-400 mt-1">本金投入 ${Math.round(monthlySaving*12*totalYears/10000)}萬</p>
+               <p className="text-xs text-slate-400 mt-1">本金投入 ${Math.round(totalPrincipalPassive/10000)}萬</p>
              </div>
              <div className="border-t border-slate-100 my-4"></div>
              <div className="text-center">
                <p className="text-slate-500 text-sm">積極存錢 (存{activeYears}年)</p>
                <p className="text-3xl font-black text-purple-600 font-mono">${finalAsset}萬</p>
-               <p className="text-xs text-slate-400 mt-1">本金投入 ${Math.round(monthlySaving*12*activeYears/10000)}萬 (省下 ${(monthlySaving*12*(totalYears-activeYears)/10000)}萬)</p>
+               <p className="text-xs text-slate-400 mt-1">
+                 本金投入 ${Math.round(totalPrincipalActive/10000)}萬 
+                 <span className="text-green-600 font-bold ml-1">(省下 ${Math.round((totalPrincipalPassive - totalPrincipalActive)/10000)}萬)</span>
+               </p>
              </div>
           </div>
         </div>
@@ -1275,7 +1279,7 @@ const SuperActiveSavingTool = ({ data, setData }) => {
       </div>
     </div>
   );
-  };
+};
   return renderChart(); // Wait, this is incorrect again! I will fix it below in the final output.
 };
 // Correcting the function above within the final output block.
