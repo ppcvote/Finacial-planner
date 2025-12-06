@@ -71,10 +71,9 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   
   // --- 計算 總貸款期 淨利潤 ---
   const targetYear = loanTerm; // 年期由 loanTerm 決定
-  const monthsTarget = targetYear * 12;
   
   // 1. 總貸款期後累積的淨現金流 (元)
-  const cumulativeNetIncomeTarget = monthlyCashFlow * monthsTarget;
+  const cumulativeNetIncomeTarget = monthlyCashFlow * (targetYear * 12);
 
   // 2. 總貸款期後的淨獲利 (萬) - 依據使用者邏輯
   const totalProfitTargetWan = Math.round(
@@ -84,17 +83,9 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   // 3. 總貸款期後的總資產價值 (萬)
   // 期滿時剩餘貸款趨近於0，股權趨近於 LoanAmount
   const totalWealthTargetWan = Math.round(loanAmount + (cumulativeNetIncomeTarget / 10000));
-
-  // 4. 總累積自付本金 (萬) - 用於關鍵數據顯示
-  const totalPrincipalInputTargetWan = isNegativeCashFlow 
-    ? loanAmount + (totalOutOfPocket / 10000)
-    : loanAmount;
   
-  // --- 輔助變數計算 (確保定義在前面) ---
-  const remainingLoanTarget = calculateRemainingBalance(loanAmount, loanRate, loanTerm, targetYear);
-  const remainingLoanTargetWan = Math.round(remainingLoanTarget / 10000);
+  // --- 輔助變數計算 ---
   const cumulativeNetIncomeTargetWan = Math.round(cumulativeNetIncomeTarget / 10000);
-  const assetEquityTargetWan = Math.round((loanAmount * 10000 - remainingLoanTarget) / 10000);
   // --- 修正結束 總貸款期 淨利潤計算與輔助變數 ---
 
 
@@ -184,7 +175,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       </div>
 
       <div className="grid lg:grid-cols-12 gap-8">
-        {/* 左側：參數設定與策略說明 */}
+        {/* 左側：參數設定與試算 */}
         <div className="lg:col-span-4 space-y-6 print-break-inside">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 no-print">
             <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2">
@@ -258,8 +249,49 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                </div>
             </div>
           </div>
-          
-          
+
+          {/* 策略說明 - 執行三部曲 (這部分是保留的) */}
+          <div className="space-y-4 pt-4 print-break-inside">
+             <div className="flex items-center gap-2 mb-2">
+                <RefreshCw className="text-emerald-600" size={24} />
+                <h3 className="text-xl font-bold text-slate-800">執行三部曲</h3>
+             </div>
+             <div className="space-y-3">
+                 <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-emerald-200 transition-colors">
+                    <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-emerald-50 text-emerald-600 flex flex-col items-center justify-center font-bold text-xs">
+                       <span className="text-lg">01</span>
+                       <span>建置</span>
+                    </div>
+                    <div>
+                       <h4 className="font-bold text-slate-800 flex items-center gap-2">建置期 (第1年)</h4>
+                       <p className="text-sm text-slate-600 mt-1">透過銀行融資取得大筆資金，單筆投入穩健配息資產。就像買房出租，但省去頭期款與管理麻煩。</p>
+                    </div>
+                 </div>
+    
+                 <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-teal-200 transition-colors">
+                    <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-teal-50 text-teal-600 flex flex-col items-center justify-center font-bold text-xs">
+                       <span className="text-lg">02</span>
+                       <span>持守</span>
+                    </div>
+                    <div>
+                       <h4 className="font-bold text-slate-800 flex items-center gap-2">持守期 (第2-{loanTerm}年)</h4>
+                       <p className="text-sm text-slate-600 mt-1">讓資產產生的配息自動償還貸款本息。您只需補貼少許差額(甚至有找)，時間是您最好的朋友。</p>
+                    </div>
+                 </div>
+    
+                 <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-green-200 transition-colors">
+                    <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-green-50 text-green-600 flex flex-col items-center justify-center font-bold text-xs">
+                       <span className="text-lg">03</span>
+                       <span>自由</span>
+                    </div>
+                    <div>
+                       <h4 className="font-bold text-slate-800 flex items-center gap-2">自由期 (期滿)</h4>
+                       <p className="text-sm text-slate-600 mt-1">貸款完全清償。此刻起，這筆千萬資產與每月的配息收入完全屬於您，成為真正的被動收入。</p>
+                    </div>
+                 </div>
+              </div>
+          </div>
+        </div>
 
         {/* 右側：圖表展示 */}
         <div className="lg:col-span-8 space-y-6">
@@ -315,9 +347,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
           </div>
 
          {/* 2. 總貸款期累積總效益 (佔 1/2) */}
-         <div className="md:col-span-1 print-break-inside space-y-6">
-            
-            {/* 總貸款期累積總效益 */}
+         <div className="md:col-span-1 print-break-inside">
             <div className="bg-white rounded-2xl shadow-lg border border-teal-200 p-6 h-full">
                  <h3 className="text-xl font-bold text-teal-700 mb-2 flex items-center gap-2">
                      <TrendingUp size={24} /> 總貸款期 ({loanTerm}年) 累積總效益
@@ -387,7 +417,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
         {/* 2. 專案效益 */}
         <div className="space-y-4 lg:col-span-1">
            <div className="flex items-center gap-2 mb-2">
-             <RefreshCw className="text-emerald-600" size={24} />
+             <Landmark className="text-emerald-600" size={24} />
              <h3 className="text-xl font-bold text-slate-800">專案四大效益</h3>
            </div>
            
