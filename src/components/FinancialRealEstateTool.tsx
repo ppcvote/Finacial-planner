@@ -79,17 +79,19 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   const remainingLoanTarget = calculateRemainingBalance(loanAmount, loanRate, loanTerm, targetYear);
   
   // 3. 總貸款期後的股權 (Asset Value - Remaining Loan)
-  // 由於是期滿，股權應接近 LoanAmount * 10000
   const assetEquityTarget = (loanAmount * 10000) - remainingLoanTarget;
 
   // 4. 總貸款期後的總資產價值 (萬) = (股權 + 累積淨現金流) / 10000
   const totalWealthTargetWan = Math.round((assetEquityTarget + cumulativeNetIncomeTarget) / 10000);
   
-  // 5. 總累積自付本金 (萬) = 初始貸款總額 (萬) + 總貸款期累積的自付現金流 (若為負)
-  // 淨投入的本金 = 初始貸款 + 總累積淨付出現金流
-  const totalPrincipalInputTargetWan = loanAmount + (Math.abs(Math.min(0, cumulativeNetIncomeTarget)) / 10000);
-  
-  // 6. 總淨利潤 (萬) = 總資產價值 (萬) - 總累積自付本金 (萬)
+  // 5. 總累積自付本金 (萬)
+  // 如果是負現金流，總投入本金 = 初始貸款總額 + 總自付現金流（絕對值）
+  // 如果是正現金流，總投入本金 = 初始貸款總額
+  const totalPrincipalInputTargetWan = isNegativeCashFlow 
+    ? loanAmount + (totalOutOfPocket / 10000)
+    : loanAmount;
+
+  // 6. 總淨利潤 (萬) = 總資產價值 (期滿) - 總投入本金
   const totalProfitTargetWan = Math.round(totalWealthTargetWan - totalPrincipalInputTargetWan);
   // --- 修正結束 總貸款期 淨利潤計算 ---
 
@@ -126,8 +128,8 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       let newValue = Number(value);
 
       if (field === 'loanAmount') {
-          // 確保 loanAmount 在 500 到 3000 之間，且為整數
-          const clampedValue = Math.max(500, Math.min(3000, newValue));
+          // 確保 loanAmount 在 100 到 3000 之間，且為整數
+          const clampedValue = Math.max(100, Math.min(3000, newValue));
           setData({ ...safeData, [field]: Math.round(clampedValue) });
       } else if (field === 'investReturnRate' || field === 'loanRate') {
           // 確保利率級距為 0.1
@@ -180,7 +182,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                        <div className="flex items-center">
                            <input 
                                type="number" 
-                               min={500} 
+                               min={100} // 修正範圍：100
                                max={3000} 
                                step={1} // 級距調整為 1 萬
                                value={loanAmount} 
@@ -193,14 +195,14 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                    </div>
                    <input 
                        type="range" 
-                       min={500} 
+                       min={100} // 修正範圍：100
                        max={3000} 
                        step={1} 
                        value={loanAmount} 
                        onChange={(e) => updateField('loanAmount', Number(e.target.value))} 
                        className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-600 hover:accent-emerald-700 transition-all`} 
                    />
-                   <p className="text-xs text-slate-400 mt-1">範圍: 500 萬 ~ 3000 萬</p>
+                   <p className="text-xs text-slate-400 mt-1">範圍: 100 萬 ~ 3000 萬</p>
                </div>
                
                {/* 2. 貸款年期 */}
@@ -238,7 +240,6 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                 <RefreshCw className="text-emerald-600" size={24} />
                 <h3 className="text-xl font-bold text-slate-800">執行三部曲</h3>
              </div>
-             {/* 執行三部曲的內容... (保持不變) */}
              <div className="space-y-3">
                  <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-emerald-200 transition-colors">
                     <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-emerald-50 text-emerald-600 flex flex-col items-center justify-center font-bold text-xs">
@@ -296,12 +297,12 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
         </div>
       </div>
       
-      {/* --- 重新排版：關鍵指標區域 --- */}
-      {/* 將三張卡片放在圖表下方，平衡左右兩側的內容 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-12 gap-6 pt-6 border-t border-slate-200">
+      {/* --- 修正排版：關鍵指標區域 --- */}
+      {/* 讓三張卡片在圖表下方保持平衡，佔滿下方空間 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-200">
          
-         {/* 1. 每月現金流試算 (佔 4/12) */}
-         <div className="md:col-span-1 lg:col-span-4 bg-white rounded-2xl shadow border border-slate-200 p-6 print-break-inside">
+         {/* 1. 每月現金流試算 (佔 1/3) */}
+         <div className="md:col-span-1 bg-white rounded-2xl shadow border border-slate-200 p-6 print-break-inside">
               <h3 className="text-center font-bold text-slate-700 mb-4 flex items-center justify-center gap-2"><Scale size={18}/> 每月現金流試算</h3>
               <div className="space-y-4 bg-slate-50 p-5 rounded-xl border border-slate-100">
                 <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">1. 每月配息收入</span><span className="font-mono text-emerald-600 font-bold">+${Math.round(monthlyInvestIncome).toLocaleString()}</span></div>
@@ -313,7 +314,9 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                      <div className="text-xs text-slate-400 mb-1">每月需自行負擔</div>
                      <div className="text-4xl font-black text-red-500 font-mono">-${Math.abs(Math.round(monthlyCashFlow)).toLocaleString()}</div>
                      <div className="mt-4 bg-orange-50 rounded-lg p-3 border border-orange-100">
-                        <div className="text-xs text-orange-800 font-bold mb-1">總自付成本: ${Math.round(totalOutOfPocket/10000).toLocaleString()} 萬</div>
+                        <div className="text-xs text-orange-800 font-bold mb-1">槓桿效益分析</div>
+                        <div className="text-xs text-orange-700">總共只付出 <span className="font-bold underline">${Math.round(totalOutOfPocket/10000).toLocaleString()}萬</span></div>
+                        <div className="text-xs text-orange-700">換取 <span className="font-bold text-lg">${loanAmount}萬</span> 原始資產</div>
                      </div>
                    </div>
                 ) : (
@@ -328,15 +331,15 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
               </div>
           </div>
 
-         {/* 2. 總貸款期累積總效益 (佔 4/12) */}
-         <div className="md:col-span-1 lg:col-span-4 print-break-inside">
+         {/* 2. 總貸款期累積總效益 (佔 1/3) */}
+         <div className="md:col-span-1 print-break-inside">
             <div className="bg-white rounded-2xl shadow-lg border border-teal-200 p-6 h-full">
                  <h3 className="text-xl font-bold text-teal-700 mb-2 flex items-center gap-2">
                      <TrendingUp size={24} /> 總貸款期 ({loanTerm}年) 累積總效益
                  </h3>
                  <div className="text-center h-full flex flex-col justify-center">
                      <p className="text-slate-500 text-sm font-medium mb-1">
-                         專案執行期滿後總淨獲利 (總資產 - 總投入)
+                         專案執行期滿後總淨獲利 (總資產 - 總投入本金)
                      </p>
                      <p className={`text-5xl font-black font-mono ${totalProfitTargetWan >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                          {totalProfitTargetWan >= 0 ? '+' : ''}${totalProfitTargetWan.toLocaleString()} 萬
@@ -348,8 +351,8 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
             </div>
          </div>
          
-         {/* 3. 關鍵數據 (佔 4/12) */}
-         <div className="md:col-span-1 lg:col-span-4 print-break-inside">
+         {/* 3. 關鍵數據 (佔 1/3) */}
+         <div className="md:col-span-1 print-break-inside">
             <div className="bg-slate-50 rounded-2xl border border-slate-100 p-6 space-y-3 h-full">
                  <h3 className="text-xl font-bold text-slate-700 mb-3 flex items-center gap-2">
                      <Scale size={20} /> 關鍵數據 ({targetYear} 年結算)
