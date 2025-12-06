@@ -7,14 +7,18 @@ import {
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
-// --- 重要：現在我們從各個檔案匯入工具，而不是全部寫在這裡 ---
-import { auth, db, googleProvider } from './firebase'; // 確保您有建立 firebase.ts
+import { auth, db, googleProvider } from './firebase'; 
 import ReportModal from './components/ReportModal';
 import MillionDollarGiftTool from './components/MillionDollarGiftTool';
-import { 
-  FinancialRealEstateTool, StudentLoanTool, SuperActiveSavingTool, CarReplacementTool, 
-  LaborPensionTool, BigSmallReservoirTool, TaxPlannerTool 
-} from './components/AllTools';
+
+// --- 更新引用：從各個獨立檔案匯入工具 ---
+import { FinancialRealEstateTool } from './components/FinancialRealEstateTool';
+import { StudentLoanTool } from './components/StudentLoanTool';
+import { SuperActiveSavingTool } from './components/SuperActiveSavingTool';
+import { CarReplacementTool } from './components/CarReplacementTool';
+import { LaborPensionTool } from './components/LaborPensionTool';
+import { BigSmallReservoirTool } from './components/BigSmallReservoirTool';
+import { TaxPlannerTool } from './components/TaxPlannerTool';
 
 // ------------------------------------------------------------------
 // UI Components
@@ -36,7 +40,7 @@ const PrintStyles = () => (
   `}</style>
 );
 
-const Toast = ({ message, type = 'success', onClose }) => {
+const Toast = ({ message, type = 'success', onClose }: { message: string, type: string, onClose: () => void }) => {
   useEffect(() => {
     const timer = setTimeout(() => { onClose(); }, 3000);
     return () => clearTimeout(timer);
@@ -53,7 +57,7 @@ const Toast = ({ message, type = 'success', onClose }) => {
   );
 };
 
-const NavItem = ({ icon: Icon, label, active, onClick, disabled = false }) => (
+const NavItem = ({ icon: Icon, label, active, onClick, disabled = false }: any) => (
   <button
     onClick={onClick}
     disabled={disabled}
