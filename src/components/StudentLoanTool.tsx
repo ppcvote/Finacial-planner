@@ -27,6 +27,12 @@ const calculateMonthlyPayment = (principal: number, rate: number, years: number)
   return isNaN(result) ? 0 : result;
 };
 
+const calculateMonthlyIncome = (principal: number, rate: number) => {
+  const p = Number(principal) || 0;
+  const r = Number(rate) || 0;
+  return (p * 10000 * (r / 100)) / 12;
+};
+
 const calculateRemainingBalance = (principal: number, rate: number, totalYears: number, yearsElapsed: number) => {
   const pVal = Number(principal) || 0;
   const rVal = Number(rate) || 0;
@@ -36,7 +42,7 @@ const calculateRemainingBalance = (principal: number, rate: number, totalYears: 
   const n = totalY * 12;
   const p = elapsed * 12;
   if (rVal === 0) return pVal * 10000 * (1 - p/(n || 1));
-  const balance = (pVal * 10000 * (Math.pow(1 + r, n) - Math.pow(1 + r, p))) / (Math.pow(1 + r, n) - 1);
+  const balance = (pVal * 10000) * (Math.pow(1 + r, n) - Math.pow(1 + r, p)) / (Math.pow(1 + r, n) - 1);
   return Math.max(0, isNaN(balance) ? 0 : balance);
 };
 
@@ -291,7 +297,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                    <label className="text-sm font-medium text-slate-600 flex items-center gap-1"><Clock size={14}/> 畢業後寬限期 (年)</label>
                    <span className="font-mono font-bold text-cyan-600 text-lg">{gracePeriod} 年</span>
                  </div>
-                 <input type="range" min={0} max={3} step={1} value={gracePeriod} onChange={(e) => updateField('gracePeriod', Number(e.target.value))} className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-cyan-500 hover:accent-cyan-600 transition-all`} />
+                 <input type="range" min={0} max={3} step={1} value={gracePeriod} onChange={(e) => updateField('gracePeriod', Number(e.target.value))} className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-cyan-500 hover:accent-cyan-600 transition-all`} />
                  <p className="text-xs text-slate-400 mt-1">期間免還本息，通常為 1 年</p>
                </div>
 
@@ -301,7 +307,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                    <label className="text-sm font-medium text-slate-600 flex items-center gap-1"><PauseCircle size={14}/> 申請只繳息期 (年)</label>
                    <span className="font-mono font-bold text-orange-500 text-lg">{interestOnlyPeriod} 年</span>
                  </div>
-                 <input type="range" min={0} max={4} step={1} value={interestOnlyPeriod} onChange={(e) => updateField('interestOnlyPeriod', Number(e.target.value))} className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-orange-500 hover:accent-orange-600 transition-all`} />
+                 <input type="range" min={0} max={4} step={1} value={interestOnlyPeriod} onChange={(e) => updateField('interestOnlyPeriod', Number(e.target.value))} className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-orange-500 hover:accent-orange-600 transition-all`} />
                  <p className="text-xs text-slate-400 mt-1">一般戶最多申請 4 年</p>
                </div>
 
