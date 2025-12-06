@@ -33,7 +33,8 @@ import {
   HeartHandshake,
   Droplets,
   AlertTriangle,
-  FileBarChart
+  FileBarChart,
+  PieChart
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -146,92 +147,7 @@ const calculateRemainingBalance = (principal, rate, totalYears, yearsElapsed) =>
 };
 
 // ------------------------------------------------------------------
-// UI Components (Missing in previous version)
-// ------------------------------------------------------------------
-
-const PrintStyles = () => (
-  <style>{`
-    @media print {
-      aside, .no-print, .toast-container, .mobile-header, .mobile-menu { display: none !important; }
-      body, main { background: white !important; height: auto !important; overflow: visible !important; }
-      .print-break-inside { break-inside: avoid; }
-      .shadow-lg, .shadow-sm { box-shadow: none !important; border: 1px solid #ddd !important; }
-      .text-white { color: black !important; }
-      .bg-gradient-to-r, .bg-gradient-to-br { background: none !important; background-color: #f0f9ff !important; color: black !important; }
-      header { display: none !important; } 
-      .print-header { display: block !important; margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
-      .recharts-wrapper { width: 100% !important; height: auto !important; }
-    }
-  `}</style>
-);
-
-const Toast = ({ message, type = 'success', onClose }) => {
-  useEffect(() => {
-    const timer = setTimeout(() => { onClose(); }, 3000);
-    return () => clearTimeout(timer);
-  }, [onClose]);
-
-  const bgColors = {
-    success: 'bg-green-600',
-    error: 'bg-red-600',
-    info: 'bg-blue-600'
-  };
-
-  return (
-    <div className={`fixed bottom-6 right-6 ${bgColors[type]} text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-bounce-in z-[100] toast-container`}>
-      {type === 'success' && <Check size={20} />}
-      {type === 'error' && <ShieldAlert size={20} />}
-      <span className="font-bold">{message}</span>
-    </div>
-  );
-};
-
-const NavItem = ({ icon: Icon, label, active, onClick, disabled = false }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-      disabled 
-      ? 'opacity-50 cursor-not-allowed text-slate-500' 
-      : active 
-        ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
-        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-    }`}
-  >
-    <Icon size={20} />
-    <span className="font-medium flex-1 text-left">{label}</span>
-    {disabled && <Lock size={14} className="opacity-50" />}
-  </button>
-);
-
-const ProfileModal = ({ isOpen, onClose, profile, onSave, loading }) => {
-  const [formData, setFormData] = useState(profile);
-  useEffect(() => { if(isOpen) setFormData(profile); }, [isOpen, profile]);
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 space-y-4">
-        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Edit3 size={20} /> 修改顯示資料</h3>
-        <div>
-           <label className="block text-sm font-bold text-slate-700 mb-1">顯示名稱</label>
-           <input type="text" value={formData.displayName} onChange={e => setFormData({...formData, displayName: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="您的姓名" />
-        </div>
-        <div>
-           <label className="block text-sm font-bold text-slate-700 mb-1">專業職稱</label>
-           <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例如：資深理財顧問" />
-        </div>
-        <div className="flex gap-2 mt-4">
-           <button onClick={onClose} className="flex-1 py-2 border border-slate-300 rounded-lg text-slate-600 font-bold hover:bg-slate-50">取消</button>
-           <button onClick={() => onSave(formData)} disabled={loading} className="flex-1 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800 disabled:opacity-50">{loading ? '儲存中...' : '確認修改'}</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ------------------------------------------------------------------
-// Report Component (Updated)
+// Report Component (Updated with Charts)
 // ------------------------------------------------------------------
 
 const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
@@ -246,19 +162,19 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
   // --- Logic Extraction for Report ---
   if (activeTab === 'gift') {
     const loan = data.loanAmount;
-    const monthlyLoanPayment = calculateMonthlyPayment(loan, data.loanRate, data.loanTerm);
-    const monthlyInvestIncomeSingle = calculateMonthlyIncome(loan, data.investReturnRate);
-    const phase1_NetOut = monthlyLoanPayment - monthlyInvestIncomeSingle;
-    const standardTotalCost = loan * 3 * 10000; 
-    const standardMonthlySaving = standardTotalCost / (data.loanTerm * 2 * 12);
-    const monthlySaved = Math.round(standardMonthlySaving - phase1_NetOut);
-
-    // Chart
+    // Generate Chart Data
     const chartData = [];
     let cumulativeStandard = 0;
     let cumulativeProjectCost = 0;
     let projectAssetValue = 0;
+    const monthlyLoanPayment = calculateMonthlyPayment(loan, data.loanRate, data.loanTerm);
+    const monthlyInvestIncomeSingle = calculateMonthlyIncome(loan, data.investReturnRate);
+    const phase1_NetOut = monthlyLoanPayment - monthlyInvestIncomeSingle;
     const phase2_NetOut = monthlyLoanPayment - (monthlyInvestIncomeSingle * 2);
+    const standardTotalCost = loan * 3 * 10000; 
+    const standardMonthlySaving = standardTotalCost / (data.loanTerm * 2 * 12);
+    const monthlySaved = Math.round(standardMonthlySaving - phase1_NetOut);
+
     for (let year = 1; year <= 14; year++) {
       cumulativeStandard += standardMonthlySaving * 12;
       if (year <= 7) {
@@ -307,6 +223,7 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
     const isNegativeCashFlow = monthlyCashFlow < 0;
     const totalOutOfPocket = Math.abs(monthlyCashFlow) * 12 * data.loanTerm;
 
+    // Generate Chart Data
     const chartData = [];
     let cumulativeNetIncome = 0; 
     for (let year = 1; year <= data.loanTerm; year++) {
@@ -774,6 +691,1150 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
            <p className="mt-1">© {new Date().getFullYear()} 超業菁英戰情室 • Professional Financial Planning</p>
         </div>
 
+      </div>
+    </div>
+  );
+};
+
+// ------------------------------------------------------------------
+// UI Components
+// ------------------------------------------------------------------
+
+const PrintStyles = () => (
+  <style>{`
+    @media print {
+      aside, .no-print, .toast-container, .mobile-header, .mobile-menu { display: none !important; }
+      body, main { background: white !important; height: auto !important; overflow: visible !important; }
+      .print-break-inside { break-inside: avoid; }
+      .shadow-lg, .shadow-sm { box-shadow: none !important; border: 1px solid #ddd !important; }
+      .text-white { color: black !important; }
+      .bg-gradient-to-r, .bg-gradient-to-br { background: none !important; background-color: #f0f9ff !important; color: black !important; }
+      header { display: none !important; } 
+      .print-header { display: block !important; margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+      .recharts-wrapper { width: 100% !important; height: auto !important; }
+    }
+  `}</style>
+);
+
+const Toast = ({ message, type = 'success', onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => { onClose(); }, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const bgColors = {
+    success: 'bg-green-600',
+    error: 'bg-red-600',
+    info: 'bg-blue-600'
+  };
+
+  return (
+    <div className={`fixed bottom-6 right-6 ${bgColors[type]} text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-bounce-in z-[100] toast-container`}>
+      {type === 'success' && <Check size={20} />}
+      {type === 'error' && <ShieldAlert size={20} />}
+      <span className="font-bold">{message}</span>
+    </div>
+  );
+};
+
+const NavItem = ({ icon: Icon, label, active, onClick, disabled = false }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+      disabled 
+      ? 'opacity-50 cursor-not-allowed text-slate-500' 
+      : active 
+        ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
+        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+    }`}
+  >
+    <Icon size={20} />
+    <span className="font-medium flex-1 text-left">{label}</span>
+    {disabled && <Lock size={14} className="opacity-50" />}
+  </button>
+);
+
+// ------------------------------------------------------------------
+// 核心模組 1-8 (完整保留)
+// ------------------------------------------------------------------
+
+const MillionDollarGiftTool = ({ data, setData }) => {
+  const safeData = {
+    loanAmount: Number(data?.loanAmount) || 100,
+    loanTerm: Number(data?.loanTerm) || 7,
+    loanRate: Number(data?.loanRate) || 2.8,
+    investReturnRate: Number(data?.investReturnRate) || 6
+  };
+  const { loanAmount, loanTerm, loanRate, investReturnRate } = safeData;
+
+  const targetAmount = loanAmount * 3; 
+  const monthlyLoanPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
+  const monthlyInvestIncomeSingle = calculateMonthlyIncome(loanAmount, investReturnRate);
+  const phase1_NetOut = monthlyLoanPayment - monthlyInvestIncomeSingle;
+  const phase2_NetOut = monthlyLoanPayment - (monthlyInvestIncomeSingle * 2);
+  const standardTotalCost = targetAmount * 10000; 
+  const standardMonthlySaving = standardTotalCost / (loanTerm * 2 * 12);
+
+  const generateChartData = () => {
+    const dataArr = [];
+    let cumulativeStandard = 0;
+    let cumulativeProjectCost = 0;
+    let projectAssetValue = 0;
+    for (let year = 1; year <= 14; year++) {
+      cumulativeStandard += standardMonthlySaving * 12;
+      if (year <= 7) {
+        cumulativeProjectCost += phase1_NetOut * 12;
+        projectAssetValue = loanAmount * 10000;
+      } else {
+        cumulativeProjectCost += phase2_NetOut * 12;
+        projectAssetValue = loanAmount * 2 * 10000;
+      }
+      dataArr.push({
+        year: `第${year}年`,
+        一般存錢成本: Math.round(cumulativeStandard / 10000),
+        專案實付成本: Math.round(cumulativeProjectCost / 10000),
+        專案持有資產: Math.round(projectAssetValue / 10000),
+      });
+    }
+    return dataArr;
+  };
+
+  const updateField = (field, value) => { setData({ ...safeData, [field]: value }); };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white shadow-lg print-break-inside">
+        <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Wallet className="text-blue-200" /> 百萬禮物專案</h3>
+        <p className="text-blue-100 opacity-90">透過 7 年一輪的小額槓桿循環，用時間換取資產。</p>
+      </div>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4 space-y-4 print-break-inside">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
+            <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><Calculator size={18} /> 參數設定</h4>
+            <div className="space-y-6">
+               {[
+                 { label: "單次借貸額度 (萬)", field: "loanAmount", min: 50, max: 500, step: 10, val: loanAmount, color: "blue" },
+                 { label: "信貸利率 (%)", field: "loanRate", min: 1.5, max: 15.0, step: 0.1, val: loanRate, color: "blue" },
+                 { label: "配息率 (%)", field: "investReturnRate", min: 3, max: 12, step: 0.5, val: investReturnRate, color: "green" }
+               ].map((item) => (
+                 <div key={item.field}>
+                   <div className="flex justify-between mb-2">
+                     <label className="text-sm font-medium text-slate-600">{item.label}</label>
+                     <span className={`font-mono font-bold text-${item.color}-600`}>{item.val}</span>
+                   </div>
+                   <input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => updateField(item.field, Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                 </div>
+               ))}
+            </div>
+          </div>
+          
+          <div className="hidden print-only border p-4 mb-4 rounded border-slate-300">
+             <h3 className="font-bold mb-2">規劃參數</h3>
+             <div className="grid grid-cols-2 gap-2 text-sm"><div>信貸額度：{loanAmount} 萬</div><div>信貸利率：{loanRate} %</div><div>配息率：{investReturnRate} %</div><div>總目標：{targetAmount} 萬</div></div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow border border-slate-200 p-5 print-break-inside">
+              <div className="text-sm text-slate-500 mb-4 text-center">一般存錢月存金額 <span className="line-through decoration-slate-400 font-bold ml-2">${Math.round(standardMonthlySaving).toLocaleString()}</span></div>
+              <div className="space-y-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">1. 信貸每月還款</span><span className="text-red-500 font-bold font-mono">-${Math.round(monthlyLoanPayment).toLocaleString()}</span></div>
+                <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">2. 扣除每月配息</span><span className="text-green-600 font-bold font-mono">+${Math.round(monthlyInvestIncomeSingle).toLocaleString()}</span></div>
+                <div className="border-t border-slate-200 my-2"></div>
+                <div className="flex justify-between items-end"><span className="text-blue-700 font-bold">3. 實質每月應負</span><span className="text-3xl font-black text-blue-600 font-mono">${Math.round(phase1_NetOut).toLocaleString()}</span></div>
+              </div>
+              <div className="mt-4 text-center"><div className="text-xs bg-green-100 text-green-700 py-1.5 px-3 rounded-full inline-block font-bold">比一般存錢每月省下 ${Math.round(standardMonthlySaving - phase1_NetOut).toLocaleString()}</div></div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-8 space-y-6">
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[350px] print-break-inside">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={generateChartData()} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorAssetGift" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="year" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                <YAxis unit="萬" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Legend />
+                <Area type="monotone" dataKey="專案持有資產" stroke="#3b82f6" fill="url(#colorAssetGift)" strokeWidth={2} />
+                <Bar dataKey="一般存錢成本" fill="#cbd5e1" barSize={12} radius={[4,4,0,0]} />
+                <Line type="monotone" dataKey="專案實付成本" stroke="#f59e0b" strokeWidth={3} dot={false} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FinancialRealEstateTool = ({ data, setData }) => {
+  const safeData = {
+    loanAmount: Number(data?.loanAmount) || 1000,
+    loanTerm: Number(data?.loanTerm) || 30,
+    loanRate: Number(data?.loanRate) || 2.2,
+    investReturnRate: Number(data?.investReturnRate) || 6
+  };
+  const { loanAmount, loanTerm, loanRate, investReturnRate } = safeData;
+
+  const monthlyLoanPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
+  const monthlyInvestIncome = calculateMonthlyIncome(loanAmount, investReturnRate);
+  const monthlyCashFlow = monthlyInvestIncome - monthlyLoanPayment;
+  const isNegativeCashFlow = monthlyCashFlow < 0; 
+  const totalOutOfPocket = Math.abs(monthlyCashFlow) * 12 * loanTerm; 
+
+  const generateHouseChartData = () => {
+    const dataArr = [];
+    let cumulativeNetIncome = 0; 
+    for (let year = 1; year <= loanTerm; year++) {
+      cumulativeNetIncome += monthlyCashFlow * 12;
+      const remainingLoan = calculateRemainingBalance(loanAmount, loanRate, loanTerm, year);
+      const assetEquity = (loanAmount * 10000) - remainingLoan;
+      const financialTotalWealth = assetEquity + cumulativeNetIncome;
+      const step = loanTerm > 20 ? 3 : 1; 
+      if (year === 1 || year % step === 0 || year === loanTerm) {
+         dataArr.push({ year: `第${year}年`, 總資產價值: Math.round(financialTotalWealth / 10000), 剩餘貸款: Math.round(remainingLoan / 10000) });
+      }
+    }
+    return dataArr;
+  };
+
+  const chartData = generateHouseChartData();
+  const finalData = chartData[chartData.length - 1];
+  const updateField = (field, value) => { setData({ ...safeData, [field]: value }); };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-lg print-break-inside">
+        <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Building2 className="text-emerald-200" /> 金融房產專案</h3>
+        <p className="text-emerald-100 opacity-90">以息養貸，利用長年期貸款讓資產自動增值，打造數位包租公模式。</p>
+      </div>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4 space-y-4 print-break-inside">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
+            <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><Calculator size={18} /> 資產參數</h4>
+            <div className="space-y-6">
+               {[
+                 { label: "資產/貸款總額 (萬)", field: "loanAmount", min: 500, max: 3000, step: 100, val: loanAmount, color: "emerald" },
+                 { label: "貸款年期 (年)", field: "loanTerm", min: 20, max: 40, step: 1, val: loanTerm, color: "emerald" },
+                 { label: "貸款利率 (%)", field: "loanRate", min: 1.5, max: 4.0, step: 0.1, val: loanRate, color: "emerald" },
+                 { label: "配息率 (%)", field: "investReturnRate", min: 3, max: 10, step: 0.5, val: investReturnRate, color: "blue" }
+               ].map((item) => (
+                 <div key={item.field}>
+                   <div className="flex justify-between mb-2">
+                     <label className="text-sm font-medium text-slate-600">{item.label}</label>
+                     <span className={`font-mono font-bold text-${item.color}-600`}>{item.val}</span>
+                   </div>
+                   <input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => setData({ ...safeData, [item.field]: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+                 </div>
+               ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow border border-slate-200 p-6 print-break-inside">
+              <h3 className="text-center font-bold text-slate-700 mb-4">每月現金流試算</h3>
+              <div className="space-y-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">1. 每月配息收入</span><span className="font-mono text-emerald-600 font-bold">+${Math.round(monthlyInvestIncome).toLocaleString()}</span></div>
+                <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">2. 扣除貸款支出</span><span className="font-mono text-red-500 font-bold">-${Math.round(monthlyLoanPayment).toLocaleString()}</span></div>
+                <div className="border-t border-slate-200 my-2"></div>
+                {isNegativeCashFlow ? (
+                   <div className="text-center">
+                     <div className="text-xs text-slate-400 mb-1">每月需負擔</div>
+                     <div className="text-3xl font-black text-red-500 font-mono">-${Math.abs(Math.round(monthlyCashFlow)).toLocaleString()}</div>
+                     <div className="mt-4 bg-orange-50 rounded-lg p-3 border border-orange-100">
+                        <div className="flex items-center justify-center gap-2 text-orange-800 font-bold text-sm mb-1"><Scale className="w-4 h-4" /> 槓桿效益分析</div>
+                        <div className="text-xs text-orange-700 mb-2">{loanTerm}年總共只付出 <span className="font-bold underline">${Math.round(totalOutOfPocket/10000)}萬</span></div>
+                        <div className="text-xs bg-white rounded py-1 px-2 text-orange-800 border border-orange-200">換取 <span className="font-bold text-lg">${loanAmount}萬</span> 原始資產</div>
+                     </div>
+                   </div>
+                ) : (
+                   <div className="text-center">
+                     <div className="text-xs text-slate-400 mb-1">每月淨現金流</div>
+                     <div className="text-3xl font-black text-emerald-600 font-mono">+${Math.round(monthlyCashFlow).toLocaleString()}</div>
+                     <div className="text-xs mt-2 text-slate-500">完全由資產養貸，還有找！</div>
+                   </div>
+                )}
+              </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-8 space-y-6">
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[350px] print-break-inside">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={generateHouseChartData()} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                <defs><linearGradient id="colorWealth" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient></defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="year" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                <YAxis unit="萬" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Legend />
+                <Area type="monotone" name="總資產價值" dataKey="總資產價值" stroke="#10b981" fill="url(#colorWealth)" strokeWidth={3} />
+                <Line type="monotone" name="剩餘房貸" dataKey="剩餘貸款" stroke="#ef4444" strokeWidth={1} dot={false} opacity={0.5} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const StudentLoanTool = ({ data, setData }) => {
+  const safeData = {
+    loanAmount: Number(data?.loanAmount) || 40,
+    loanRate: 1.775, // 固定利率 1.775%
+    investReturnRate: Number(data?.investReturnRate) || 6,
+    years: Number(data?.years) || 8,
+    gracePeriod: Number(data?.gracePeriod) || 1, // 寬限期預設 1 年
+    interestOnlyPeriod: Number(data?.interestOnlyPeriod) || 0 // 只繳息期預設 0 年
+  };
+  const { loanAmount, loanRate, investReturnRate, years, gracePeriod, interestOnlyPeriod } = safeData;
+
+  const monthlyPaymentP_I = calculateMonthlyPayment(loanAmount, loanRate, years); // 本息攤還金額
+  const monthlyInterestOnly = (loanAmount * 10000 * (loanRate / 100)) / 12; // 只繳息金額
+
+  // 總時程 = 寬限期(1) + 只繳息期(0~4) + 本息攤還期(8)
+  // 注意：寬限期與只繳息期，通常是「外加」於還款期的，即還款期限順延。
+  // 本金還款期 years 固定為 8 年(或其他設定值)。
+  const totalDuration = gracePeriod + interestOnlyPeriod + years;
+
+  const generateChartData = () => {
+    const dataArr = [];
+    const initialCapital = loanAmount * 10000; 
+    
+    let investmentValue = initialCapital;
+    let remainingLoan = loanAmount * 10000;
+    
+    // 情境：直接還清 (基準線)
+    // 假設一開始就有這筆錢(40萬)。如果選擇還清，資產=0。如果選擇投資，資產=投資值-負債。
+
+    for (let year = 1; year <= totalDuration + 2; year++) { 
+      // 1. 投資複利成長
+      investmentValue = investmentValue * (1 + investReturnRate / 100);
+      
+      // 2. 貸款餘額計算
+      if (year <= gracePeriod) {
+         // 寬限期：不還本，通常也不繳息(或政府補貼)。本金不變。
+         // 這裡假設這段期間不用從口袋拿錢出來。
+         remainingLoan = loanAmount * 10000;
+      } else if (year <= gracePeriod + interestOnlyPeriod) {
+         // 只繳息期：只還利息，本金不變。
+         remainingLoan = loanAmount * 10000;
+      } else if (year <= totalDuration) {
+         // 本息攤還期：開始還本金
+         const repaymentYearIndex = year - (gracePeriod + interestOnlyPeriod);
+         remainingLoan = calculateRemainingBalance(loanAmount, loanRate, years, repaymentYearIndex);
+      } else {
+         remainingLoan = 0;
+      }
+      
+      const netWorth = investmentValue - remainingLoan;
+
+      // 標註階段
+      let phase = "";
+      if (year <= gracePeriod) phase = "寬限期";
+      else if (year <= gracePeriod + interestOnlyPeriod) phase = "只繳息";
+      else if (year <= totalDuration) phase = "攤還期";
+      else phase = "自由期";
+
+      dataArr.push({
+        year: `第${year}年`,
+        投資複利價值: Math.round(investmentValue / 10000),
+        淨資產: Math.round(netWorth / 10000),
+        若直接繳掉: 0,
+        phase: phase
+      });
+    }
+    return dataArr;
+  };
+  
+  // 計算最終獲利 (專案結束時)
+  const finalInvestValue = loanAmount * 10000 * Math.pow((1 + investReturnRate/100), totalDuration);
+  
+  // 總支出成本 = (寬限期0) + (只繳息期利息總和) + (本息攤還期總額)
+  // 假設寬限期利息由政府補貼(不計入成本)或暫時不計
+  const totalInterestOnlyCost = monthlyInterestOnly * 12 * interestOnlyPeriod;
+  const totalAmortizationCost = monthlyPaymentP_I * 12 * years;
+  const totalCost = totalInterestOnlyCost + totalAmortizationCost;
+  
+  const pureProfit = finalInvestValue - totalCost;
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="bg-gradient-to-r from-sky-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg print-break-inside">
+        <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><GraduationCap className="text-sky-100" /> 學貸套利專案 (進階版)</h3>
+        <p className="text-sky-100 opacity-90">善用「寬限期」與「只繳息期」延長資金壽命，最大化複利效應。</p>
+      </div>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4 space-y-4 print-break-inside">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
+            <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><Calculator size={18} /> 參數設定</h4>
+            <div className="space-y-6">
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">學貸總額 (萬)</label>
+                   <span className="font-mono font-bold text-blue-600">{loanAmount}</span>
+                 </div>
+                 <input type="range" min={10} max={100} step={5} value={loanAmount} onChange={(e) => setData({ ...safeData, loanAmount: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+               </div>
+
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600 flex items-center gap-1"><Clock size={14}/> 畢業後寬限期 (年)</label>
+                   <span className="font-mono font-bold text-sky-600">{gracePeriod} 年</span>
+                 </div>
+                 <input type="range" min={0} max={3} step={1} value={gracePeriod} onChange={(e) => setData({ ...safeData, gracePeriod: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-sky-500" />
+                 <p className="text-xs text-slate-400 mt-1">通常為畢業後 1 年</p>
+               </div>
+
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600 flex items-center gap-1"><PauseCircle size={14}/> 申請只繳息期 (年)</label>
+                   <span className="font-mono font-bold text-orange-500">{interestOnlyPeriod} 年</span>
+                 </div>
+                 <input type="range" min={0} max={4} step={1} value={interestOnlyPeriod} onChange={(e) => setData({ ...safeData, interestOnlyPeriod: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-orange-500" />
+                 <p className="text-xs text-slate-400 mt-1">一般戶最多可申請 4 年，期間本金不還</p>
+               </div>
+
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">投資報酬率 (%)</label>
+                   <span className="font-mono font-bold text-green-600">{investReturnRate}</span>
+                 </div>
+                 <input type="range" min={3} max={10} step={0.5} value={investReturnRate} onChange={(e) => setData({ ...safeData, investReturnRate: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-green-600" />
+               </div>
+            </div>
+            
+            <div className="mt-6 p-3 bg-slate-100 rounded-lg">
+                <div className="flex justify-between text-sm mb-1">
+                   <span className="text-slate-500">固定利率</span>
+                   <span className="font-bold text-slate-700">{loanRate}%</span>
+                </div>
+                <div className="flex justify-between text-sm mb-1">
+                   <span className="text-slate-500">總資金運用期</span>
+                   <span className="font-bold text-blue-600">{totalDuration} 年</span>
+                </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow border border-slate-200 p-6">
+             <div className="text-center mb-4">
+               <p className="text-slate-500 text-sm">若直接繳掉學費</p>
+               <p className="text-xl font-bold text-slate-400">資產歸零</p>
+             </div>
+             <div className="border-t border-slate-100 my-4"></div>
+             <div className="text-center">
+               <p className="text-slate-500 text-sm">若利用學貸套利</p>
+               <p className="text-3xl font-black text-sky-600 font-mono">+${Math.round(pureProfit / 10000)}萬</p>
+               <p className="text-xs text-slate-400 mt-1">{totalDuration}年後 淨賺金額</p>
+             </div>
+             
+             <div className="mt-4 bg-sky-50 p-3 rounded-lg border border-sky-100 text-xs text-sky-800 space-y-2">
+               <div>
+                 <span className="font-bold">💡 策略分析：</span>
+                 <ul className="list-disc pl-4 mt-1 space-y-1">
+                    {gracePeriod > 0 && <li>利用<span className="font-bold">{gracePeriod}年寬限期</span>，前{gracePeriod}年完全免費持有資金。</li>}
+                    {interestOnlyPeriod > 0 && <li>申請<span className="font-bold">{interestOnlyPeriod}年只繳息</span>，每月僅需付約 <span className="font-bold text-red-500">${Math.round(monthlyInterestOnly)}</span> 利息，本金繼續滾複利。</li>}
+                    <li>利用時間差，創造 <span className="font-bold">${Math.round(pureProfit / 10000)}萬</span> 的淨財富。</li>
+                 </ul>
+               </div>
+             </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-8 space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[450px]">
+             <h4 className="font-bold text-slate-700 mb-4 pl-2">資產累積 vs 負債遞減圖</h4>
+             <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={generateChartData()} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                <defs><linearGradient id="colorInvest" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3}/><stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/></linearGradient></defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="year" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                <YAxis unit="萬" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Legend />
+                <Area type="monotone" name="套利淨資產" dataKey="淨資產" stroke="#0ea5e9" fill="url(#colorInvest)" strokeWidth={3} />
+                <Line type="monotone" name="投資複利總值" dataKey="投資複利價值" stroke="#94a3b8" strokeWidth={1} strokeDasharray="3 3" />
+                <Line type="monotone" name="直接繳掉 (資產=0)" dataKey="若直接繳掉" stroke="#ef4444" strokeWidth={2} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4">
+             <div className="bg-slate-50 p-4 rounded-lg text-center">
+                <div className="text-xs text-slate-500">總利息成本</div>
+                <div className="font-bold text-red-500">${Math.round(totalCost - loanAmount*10000).toLocaleString()}</div>
+                <div className="text-[10px] text-slate-400 mt-1">含只繳息期利息</div>
+             </div>
+             <div className="bg-slate-50 p-4 rounded-lg text-center">
+                <div className="text-xs text-slate-500">投資複利獲利</div>
+                <div className="font-bold text-green-600">+${Math.round(finalInvestValue - loanAmount*10000).toLocaleString()}</div>
+             </div>
+             <div className="bg-slate-100 p-4 rounded-lg text-center border-l-4 border-sky-500">
+                <div className="text-xs text-slate-500">淨賺利差</div>
+                <div className="font-bold text-sky-700">+${Math.round(pureProfit).toLocaleString()}</div>
+             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SuperActiveSavingTool = ({ data, setData }) => {
+  const safeData = {
+    monthlySaving: Number(data?.monthlySaving) || 10000,
+    investReturnRate: Number(data?.investReturnRate) || 6,
+    activeYears: Number(data?.activeYears) || 15,
+    totalYears: 40 // 固定比較基準
+  };
+  const { monthlySaving, investReturnRate, activeYears, totalYears } = safeData;
+
+  const generateChartData = () => {
+    const dataArr = [];
+    let passiveAccumulation = 0; 
+    let activeInvestment = 0; 
+
+    for (let year = 1; year <= totalYears; year++) {
+      passiveAccumulation += monthlySaving * 12;
+
+      if (year <= activeYears) {
+        activeInvestment = (activeInvestment + monthlySaving * 12) * (1 + investReturnRate / 100);
+      } else {
+        activeInvestment = activeInvestment * (1 + investReturnRate / 100);
+      }
+
+      dataArr.push({
+        year: `第${year}年`,
+        消極存錢: Math.round(passiveAccumulation / 10000),
+        積極存錢: Math.round(activeInvestment / 10000),
+      });
+    }
+    return dataArr;
+  };
+
+  const chartData = generateChartData();
+  const finalPassive = chartData[chartData.length - 1].消極存錢;
+  const finalActive = chartData[chartData.length - 1].積極存錢;
+  
+  const targetAmount = monthlySaving * 12 * totalYears; 
+  const crossOverYearItem = chartData.find(d => d.積極存錢 >= targetAmount / 10000);
+  const crossOverYear = crossOverYearItem ? crossOverYearItem.year : "未達標";
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 text-white shadow-lg print-break-inside">
+        <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Rocket className="text-purple-200" /> 超積極存錢法</h3>
+        <p className="text-purple-100 opacity-90">辛苦 15 年，換來提早 10 年的財富自由。用複利對抗勞力。</p>
+      </div>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4 space-y-4 print-break-inside">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
+            <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><Calculator size={18} /> 參數設定</h4>
+            <div className="space-y-6">
+               {[
+                 { label: "每月存錢金額", field: "monthlySaving", min: 3000, max: 50000, step: 1000, val: monthlySaving, color: "purple" },
+                 { label: "只需辛苦 (年)", field: "activeYears", min: 5, max: 25, step: 1, val: activeYears, color: "pink" },
+                 { label: "投資報酬率 (%)", field: "investReturnRate", min: 3, max: 12, step: 0.5, val: investReturnRate, color: "green" }
+               ].map((item) => (
+                 <div key={item.field}>
+                   <div className="flex justify-between mb-2">
+                     <label className="text-sm font-medium text-slate-600">{item.label}</label>
+                     <span className={`font-mono font-bold text-${item.color}-600`}>{item.field === 'monthlySaving' ? '$' : ''}{item.val.toLocaleString()}</span>
+                   </div>
+                   <input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => setData({ ...safeData, [item.field]: Number(e.target.value) })} className={`w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-${item.color}-600`} />
+                 </div>
+               ))}
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow border border-slate-200 p-6">
+             <div className="text-center mb-4">
+               <p className="text-slate-500 text-sm">消極存錢 (存40年)</p>
+               <p className="text-xl font-bold text-slate-600">${finalPassive}萬</p>
+               <p className="text-xs text-slate-400 mt-1">本金投入 ${Math.round(monthlySaving*12*totalYears/10000)}萬</p>
+             </div>
+             <div className="border-t border-slate-100 my-4"></div>
+             <div className="text-center">
+               <p className="text-slate-500 text-sm">積極存錢 (存{activeYears}年)</p>
+               <p className="text-3xl font-black text-purple-600 font-mono">${finalActive}萬</p>
+               <p className="text-xs text-slate-400 mt-1">本金投入 ${Math.round(monthlySaving*12*activeYears/10000)}萬 (省下 ${(monthlySaving*12*(totalYears-activeYears)/10000)}萬)</p>
+             </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-8 space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[450px]">
+             <h4 className="font-bold text-slate-700 mb-4 pl-2">資產累積速度對比</h4>
+             <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                <defs>
+                  <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#9333ea" stopOpacity={0.3}/><stop offset="95%" stopColor="#9333ea" stopOpacity={0}/></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="year" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                <YAxis unit="萬" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Legend />
+                <Area type="monotone" name="積極存錢 (複利)" dataKey="積極存錢" stroke="#9333ea" fill="url(#colorActive)" strokeWidth={3} />
+                <Line type="monotone" name="消極存錢 (勞力)" dataKey="消極存錢" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4">
+             <div className="bg-slate-50 p-4 rounded-lg text-center">
+                <div className="text-xs text-slate-500">節省本金</div>
+                <div className="font-bold text-green-600">${Math.round((monthlySaving*12*(totalYears-activeYears))/10000)}萬</div>
+                <div className="text-[10px] text-slate-400 mt-1">少奮鬥 {totalYears - activeYears} 年</div>
+             </div>
+             <div className="bg-slate-50 p-4 rounded-lg text-center">
+                <div className="text-xs text-slate-500">第 30 年資產</div>
+                <div className="font-bold text-purple-600">${chartData[29]?.積極存錢}萬</div>
+                <div className="text-[10px] text-slate-400 mt-1">對比消極法 ${chartData[29]?.消極存錢}萬</div>
+             </div>
+             <div className="bg-slate-100 p-4 rounded-lg text-center border-l-4 border-purple-500">
+                <div className="text-xs text-slate-500">最終獲利倍數</div>
+                <div className="font-bold text-purple-700">{(finalActive/Math.round(monthlySaving*12*activeYears/10000)).toFixed(1)} 倍</div>
+                <div className="text-[10px] text-slate-400 mt-1">本金翻倍率</div>
+             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CarReplacementTool = ({ data, setData }) => {
+  const safeData = {
+    carPrice: Number(data?.carPrice) || 100, // 萬
+    investReturnRate: Number(data?.investReturnRate) || 6, // %
+    resaleRate: Number(data?.resaleRate) || 50 // %
+  };
+  const { carPrice, investReturnRate, resaleRate } = safeData;
+
+  const downPayment = 20; 
+  const loanAmount = carPrice - downPayment; 
+  const loanMonthlyPayment = loanAmount * (14500/80); 
+
+  const generateCycles = () => {
+    const cycles = [];
+    let policyPrincipal = carPrice * 1; 
+    
+    for(let i=1; i<=3; i++) {
+        const monthlyDividend = (policyPrincipal * 10000 * (investReturnRate/100)) / 12;
+        const netMonthlyPayment = loanMonthlyPayment - monthlyDividend;
+        
+        cycles.push({
+            cycle: `第 ${i} 台車`,
+            principal: Math.round(policyPrincipal),
+            dividend: Math.round(monthlyDividend),
+            originalPay: Math.round(loanMonthlyPayment),
+            netPay: Math.round(netMonthlyPayment)
+        });
+
+        const resaleValue = carPrice * (resaleRate/100);
+        const surplus = resaleValue - downPayment;
+        policyPrincipal += surplus;
+    }
+    return cycles;
+  };
+
+  const cyclesData = generateCycles();
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-6 text-white shadow-lg print-break-inside">
+        <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Car className="text-orange-100" /> 五年換車專案</h3>
+        <p className="text-orange-100 opacity-90">只存一次錢，運用時間複利與車輛殘值，實現每5年輕鬆換新車。</p>
+      </div>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4 space-y-4 print-break-inside">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
+            <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><Calculator size={18} /> 參數設定</h4>
+            <div className="space-y-6">
+               {[
+                 { label: "目標車價 (萬)", field: "carPrice", min: 60, max: 300, step: 10, val: carPrice, color: "orange" },
+                 { label: "投資報酬率 (%)", field: "investReturnRate", min: 3, max: 10, step: 0.5, val: investReturnRate, color: "green" },
+                 { label: "5年後中古殘值 (%)", field: "resaleRate", min: 30, max: 70, step: 5, val: resaleRate, color: "blue" }
+               ].map((item) => (
+                 <div key={item.field}>
+                   <div className="flex justify-between mb-2">
+                     <label className="text-sm font-medium text-slate-600">{item.label}</label>
+                     <span className={`font-mono font-bold text-${item.color}-600`}>{item.val}</span>
+                   </div>
+                   <input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => setData({ ...safeData, [item.field]: Number(e.target.value) })} className={`w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-${item.color}-600`} />
+                 </div>
+               ))}
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow border border-slate-200 p-6">
+             <div className="text-center mb-4">
+                <p className="text-slate-500 text-sm">傳統買車 (第3台)</p>
+                <p className="text-xl font-bold text-slate-600">月付 ${Math.round(cyclesData[0].originalPay).toLocaleString()}</p>
+                <p className="text-xs text-slate-400 mt-1">永遠在付全額車貸</p>
+             </div>
+             <div className="border-t border-slate-100 my-4"></div>
+             <div className="text-center">
+                <p className="text-slate-500 text-sm">專案換車 (第3台)</p>
+                <p className="text-3xl font-black text-orange-600 font-mono">月付 ${cyclesData[2].netPay.toLocaleString()}</p>
+                <p className="text-xs text-slate-400 mt-1">越換越輕鬆，負擔減少 {Math.round((1 - cyclesData[2].netPay/cyclesData[0].originalPay)*100)}%</p>
+             </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-8 space-y-6">
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[350px] print-break-inside">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={cyclesData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                <defs>
+                  <linearGradient id="colorNetPay" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/><stop offset="95%" stopColor="#f97316" stopOpacity={0.4}/></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="cycle" tick={{fontSize: 14, fontWeight: 'bold'}} axisLine={false} tickLine={false} />
+                <YAxis unit="元" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Legend />
+                <Bar dataKey="netPay" name="實際月付金" fill="url(#colorNetPay)" barSize={40} radius={[8, 8, 0, 0]} label={{ position: 'top', fill: '#f97316', fontSize: 12, fontWeight: 'bold' }} />
+                <Line type="monotone" dataKey="originalPay" name="原車貸月付" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" />
+                <Line type="monotone" dataKey="dividend" name="保單配息折抵" stroke="#22c55e" strokeWidth={2} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const BigSmallReservoirTool = ({ data, setData }) => {
+  const safeData = {
+    initialCapital: Number(data?.initialCapital) || 1000, // 萬
+    dividendRate: Number(data?.dividendRate) || 6, // %
+    reinvestRate: Number(data?.reinvestRate) || 6, // %
+    years: Number(data?.years) || 10 // 年
+  };
+  const { initialCapital, dividendRate, reinvestRate, years } = safeData;
+
+  const annualDividend = initialCapital * (dividendRate / 100);
+
+  const generateChartData = () => {
+    const dataArr = [];
+    let reinvestedTotal = 0; // 累積的小水庫資產
+
+    for (let year = 1; year <= years + 5; year++) {
+      if (year <= years) {
+         reinvestedTotal = (reinvestedTotal + annualDividend) * (1 + reinvestRate / 100);
+      } else {
+         reinvestedTotal = reinvestedTotal * (1 + reinvestRate / 100);
+      }
+
+      dataArr.push({
+        year: `第${year}年`,
+        大水庫本金: initialCapital,
+        小水庫累積: Math.round(reinvestedTotal),
+        total: initialCapital + Math.round(reinvestedTotal)
+      });
+    }
+    return dataArr;
+  };
+
+  const chartData = generateChartData();
+  const finalSmallReservoir = chartData[years-1]?.小水庫累積 || 0;
+  const totalAsset = initialCapital + finalSmallReservoir;
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="bg-gradient-to-r from-cyan-600 to-blue-700 rounded-2xl p-6 text-white shadow-lg print-break-inside">
+        <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Waves className="text-cyan-200" /> 大小水庫專案</h3>
+        <p className="text-cyan-100 opacity-90">資產活化術：母錢生子錢，子錢再生孫錢。十年翻倍計畫。</p>
+      </div>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4 space-y-4 print-break-inside">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
+            <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><Calculator size={18} /> 參數設定</h4>
+            <div className="space-y-6">
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">大水庫本金 (萬)</label>
+                   <span className="font-mono font-bold text-blue-600">${initialCapital}</span>
+                 </div>
+                 <input type="range" min={100} max={5000} step={50} value={initialCapital} onChange={(e) => setData({ ...safeData, initialCapital: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+               </div>
+
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">大水庫配息率 (%)</label>
+                   <span className="font-mono font-bold text-cyan-600">{dividendRate}%</span>
+                 </div>
+                 <input type="range" min={3} max={10} step={0.5} value={dividendRate} onChange={(e) => setData({ ...safeData, dividendRate: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-cyan-500" />
+                 <p className="text-xs text-slate-400 mt-1">每年產生 ${annualDividend}萬 現金流</p>
+               </div>
+
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">小水庫滾存率 (%)</label>
+                   <span className="font-mono font-bold text-orange-500">{reinvestRate}%</span>
+                 </div>
+                 <input type="range" min={3} max={12} step={0.5} value={reinvestRate} onChange={(e) => setData({ ...safeData, reinvestRate: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-orange-500" />
+               </div>
+               
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">規劃年期 (年)</label>
+                   <span className="font-mono font-bold text-slate-700">{years} 年</span>
+                 </div>
+                 <input type="range" min={5} max={20} step={1} value={years} onChange={(e) => setData({ ...safeData, years: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-500" />
+               </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow border border-slate-200 p-6">
+             <div className="text-center mb-4">
+                <p className="text-slate-500 text-sm">目前資產</p>
+                <p className="text-2xl font-bold text-slate-700">${initialCapital}萬</p>
+             </div>
+             <div className="border-t border-slate-100 my-4"></div>
+             <div className="text-center">
+                <p className="text-slate-500 text-sm">{years}年後總資產</p>
+                <p className="text-4xl font-black text-cyan-600 font-mono">${totalAsset}萬</p>
+                <p className="text-xs text-slate-400 mt-1">
+                   本金${initialCapital} + 小水庫${finalSmallReservoir}
+                </p>
+             </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-8 space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[450px]">
+             <h4 className="font-bold text-slate-700 mb-4 pl-2">資產堆疊增長圖</h4>
+             <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="colorBig" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0891b2" stopOpacity={0.8}/><stop offset="95%" stopColor="#0891b2" stopOpacity={0.4}/></linearGradient>
+                    <linearGradient id="colorSmall" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#fbbf24" stopOpacity={0.8}/><stop offset="95%" stopColor="#fbbf24" stopOpacity={0.4}/></linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="year" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                  <YAxis unit="萬" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                  <Legend />
+                  <Area type="monotone" dataKey="小水庫累積" stackId="1" stroke="#fbbf24" fill="url(#colorSmall)" />
+                  <Area type="monotone" dataKey="大水庫本金" stackId="1" stroke="#0891b2" fill="url(#colorBig)" />
+                </AreaChart>
+             </ResponsiveContainer>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4">
+             <div className="bg-cyan-50 p-4 rounded-lg text-center border border-cyan-100">
+                <div className="text-xs text-cyan-600 font-bold mb-1">大水庫 (母)</div>
+                <div className="text-xl font-bold text-slate-700">${initialCapital}萬</div>
+                <div className="text-[10px] text-slate-400 mt-1">本金不動</div>
+             </div>
+             <div className="bg-yellow-50 p-4 rounded-lg text-center border border-yellow-100">
+                <div className="text-xs text-yellow-600 font-bold mb-1">小水庫 (子)</div>
+                <div className="text-xl font-bold text-slate-700">${finalSmallReservoir}萬</div>
+                <div className="text-[10px] text-slate-400 mt-1">配息長大</div>
+             </div>
+             <div className="bg-blue-50 p-4 rounded-lg text-center border border-blue-100">
+                <div className="text-xs text-blue-600 font-bold mb-1">增值倍數</div>
+                <div className="text-xl font-bold text-blue-600">{(totalAsset/initialCapital).toFixed(2)} 倍</div>
+                <div className="text-[10px] text-slate-400 mt-1">{years}年成效</div>
+             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const LaborPensionTool = ({ data, setData }) => {
+  const safeData = {
+    currentAge: Number(data?.currentAge) || 30,
+    retireAge: Number(data?.retireAge) || 65,
+    salary: Number(data?.salary) || 45000,
+    laborInsYears: Number(data?.laborInsYears) || 35, 
+    selfContribution: Boolean(data?.selfContribution),
+    pensionReturnRate: Number(data?.pensionReturnRate) || 3, 
+    desiredMonthlyIncome: Number(data?.desiredMonthlyIncome) || 50000
+  };
+  const { currentAge, retireAge, salary, laborInsYears, selfContribution, pensionReturnRate, desiredMonthlyIncome } = safeData;
+
+  const laborInsBase = Math.min(Math.max(salary, 26400), 45800); 
+  const laborInsMonthly = laborInsBase * laborInsYears * 0.0155;
+
+  const laborPensionWage = Math.min(salary, 150000); 
+  const monthlyContribution = laborPensionWage * (0.06 + (selfContribution ? 0.06 : 0));
+  const yearsToRetire = retireAge - currentAge;
+  const monthsToRetire = yearsToRetire * 12;
+  
+  const monthlyRate = pensionReturnRate / 100 / 12;
+  const pensionTotal = monthlyContribution * ((Math.pow(1 + monthlyRate, monthsToRetire) - 1) / monthlyRate);
+  
+  const pensionMonthly = pensionTotal / 240; 
+
+  const totalGovPension = laborInsMonthly + pensionMonthly;
+  const gap = desiredMonthlyIncome - totalGovPension;
+
+  const chartData = [
+    { name: '勞保年金', value: Math.round(laborInsMonthly), fill: '#3b82f6' },
+    { name: '勞退月領', value: Math.round(pensionMonthly), fill: '#10b981' },
+    { name: '退休缺口', value: Math.max(0, Math.round(gap)), fill: '#ef4444' },
+  ];
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="bg-gradient-to-r from-slate-700 to-slate-900 rounded-2xl p-6 text-white shadow-lg print-break-inside">
+        <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Umbrella className="text-slate-200" /> 退休缺口試算</h3>
+        <p className="text-slate-300 opacity-90">政府給的夠用嗎？30秒算出你的退休生活品質。</p>
+      </div>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4 space-y-4 print-break-inside">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
+            <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><Calculator size={18} /> 個人參數</h4>
+            <div className="space-y-6">
+               <div className="grid grid-cols-2 gap-4">
+                 <div>
+                   <label className="text-xs font-bold text-slate-500">目前年齡</label>
+                   <input type="number" value={currentAge} onChange={(e) => setData({ ...safeData, currentAge: Number(e.target.value) })} className="w-full p-2 border rounded mt-1" />
+                 </div>
+                 <div>
+                   <label className="text-xs font-bold text-slate-500">預計退休</label>
+                   <input type="number" value={retireAge} onChange={(e) => setData({ ...safeData, retireAge: Number(e.target.value) })} className="w-full p-2 border rounded mt-1" />
+                 </div>
+               </div>
+
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">目前投保薪資</label>
+                   <span className="font-mono font-bold text-slate-700">${salary.toLocaleString()}</span>
+                 </div>
+                 <input type="range" min={26400} max={150000} step={1000} value={salary} onChange={(e) => setData({ ...safeData, salary: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-600" />
+               </div>
+
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">勞保累積年資</label>
+                   <span className="font-mono font-bold text-slate-700">{laborInsYears} 年</span>
+                 </div>
+                 <input type="range" min={15} max={45} step={1} value={laborInsYears} onChange={(e) => setData({ ...safeData, laborInsYears: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+               </div>
+
+               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                  <span className="text-sm font-bold text-slate-600">勞退自提 6%</span>
+                  <button 
+                    onClick={() => setData({ ...safeData, selfContribution: !selfContribution })}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${selfContribution ? 'bg-green-500' : 'bg-slate-300'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${selfContribution ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+               </div>
+
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">理想退休月收</label>
+                   <span className="font-mono font-bold text-red-500">${desiredMonthlyIncome.toLocaleString()}</span>
+                 </div>
+                 <input type="range" min={30000} max={150000} step={5000} value={desiredMonthlyIncome} onChange={(e) => setData({ ...safeData, desiredMonthlyIncome: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-red-500" />
+               </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow border border-slate-200 p-6">
+             <div className="text-center mb-4">
+                <p className="text-slate-500 text-sm">政府給你的 (每月)</p>
+                <p className="text-2xl font-bold text-slate-700">${Math.round(totalGovPension).toLocaleString()}</p>
+             </div>
+             <div className="border-t border-slate-100 my-4"></div>
+             <div className="text-center">
+                <p className="text-slate-500 text-sm">財務缺口 (每月)</p>
+                <p className="text-4xl font-black text-red-500 font-mono">${Math.max(0, Math.round(gap)).toLocaleString()}</p>
+                <p className="text-xs text-slate-400 mt-1">不工作時，你每個月少這些錢</p>
+             </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-8 space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[450px]">
+             <h4 className="font-bold text-slate-700 mb-4 pl-2">退休金結構分析</h4>
+             <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={[{ name: '月收入', ...chartData.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {}) }]} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" tick={{fontSize: 14}} axisLine={false} tickLine={false} />
+                  <YAxis unit="元" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                  <Legend />
+                  <Bar dataKey="勞保年金" stackId="a" fill="#3b82f6" barSize={60} />
+                  <Bar dataKey="勞退月領" stackId="a" fill="#10b981" barSize={60} />
+                  <Bar dataKey="退休缺口" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={60} label={{ position: 'top', fill: '#ef4444', fontWeight: 'bold' }} />
+                </BarChart>
+             </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const TaxPlannerTool = ({ data, setData }) => {
+  const safeData = {
+    spouse: Boolean(data?.spouse), // 有無配偶
+    children: Number(data?.children) || 2, // 子女人數
+    parents: Number(data?.parents) || 0, // 父母人數
+    cash: Number(data?.cash) || 3000, // 現金 (萬)
+    realEstate: Number(data?.realEstate) || 2000, // 不動產 (萬)
+    stocks: Number(data?.stocks) || 1000, // 股票 (萬)
+    insurancePlan: Number(data?.insurancePlan) || 0 // 規劃移轉至保險的金額 (萬)
+  };
+  const { spouse, children, parents, cash, realEstate, stocks, insurancePlan } = safeData;
+
+  const totalAssets = cash + realEstate + stocks;
+  
+  const exemption = 1333; // 免稅額
+  const deductionSpouse = spouse ? 553 : 0;
+  const deductionChildren = children * 56;
+  const deductionParents = parents * 138;
+  const deductionFuneral = 138; // 喪葬費
+  
+  const totalDeductions = exemption + deductionSpouse + deductionChildren + deductionParents + deductionFuneral;
+
+  const netEstateRaw = Math.max(0, totalAssets - totalDeductions);
+  
+  const plannedAssets = Math.max(0, totalAssets - insurancePlan);
+  const netEstatePlanned = Math.max(0, plannedAssets - totalDeductions);
+
+  const calculateTax = (netEstate) => {
+    if (netEstate <= 5000) return netEstate * 0.10;
+    if (netEstate <= 10000) return netEstate * 0.15 - 250;
+    return netEstate * 0.20 - 750;
+  };
+
+  const taxRaw = calculateTax(netEstateRaw);
+  const taxPlanned = calculateTax(netEstatePlanned);
+  const taxSaved = taxRaw - taxPlanned;
+
+  const chartData = [
+    { name: '未規劃稅金', value: Math.round(taxRaw), fill: '#ef4444' },
+    { name: '規劃後稅金', value: Math.round(taxPlanned), fill: '#3b82f6' },
+  ];
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="bg-gradient-to-r from-slate-600 to-zinc-700 rounded-2xl p-6 text-white shadow-lg print-break-inside">
+        <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Landmark className="text-slate-200" /> 稅務傳承專案</h3>
+        <p className="text-slate-300 opacity-90">善用保險免稅額度，合法預留稅源，讓資產無痛傳承。</p>
+      </div>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4 space-y-4 print-break-inside">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
+            <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><Calculator size={18} /> 資產與家庭</h4>
+            <div className="space-y-6">
+               <div className="space-y-3">
+                 <div className="flex items-center justify-between">
+                   <label className="text-sm text-slate-600">配偶健在</label>
+                   <input type="checkbox" checked={spouse} onChange={(e) => setData({...safeData, spouse: e.target.checked})} className="w-5 h-5 accent-slate-600" />
+                 </div>
+                 <div className="flex items-center justify-between">
+                   <label className="text-sm text-slate-600">子女人數</label>
+                   <input type="number" min={0} max={10} value={children} onChange={(e) => setData({...safeData, children: Number(e.target.value)})} className="w-16 p-1 border rounded text-right" />
+                 </div>
+               </div>
+
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">現金存款 (萬)</label>
+                   <span className="font-mono font-bold text-slate-700">${cash}</span>
+                 </div>
+                 <input type="range" min={0} max={10000} step={100} value={cash} onChange={(e) => setData({ ...safeData, cash: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-600" />
+               </div>
+               
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">不動產現值 (萬)</label>
+                   <span className="font-mono font-bold text-slate-700">${realEstate}</span>
+                 </div>
+                 <input type="range" min={0} max={10000} step={100} value={realEstate} onChange={(e) => setData({ ...safeData, realEstate: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-600" />
+               </div>
+
+               <div className="pt-4 border-t border-slate-100">
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-bold text-blue-600 flex items-center gap-1"><ShieldAlert size={14}/> 規劃轉入保險 (萬)</label>
+                   <span className="font-mono font-bold text-blue-600">${insurancePlan}</span>
+                 </div>
+                 <input type="range" min={0} max={Math.min(cash, 3330)} step={100} value={insurancePlan} onChange={(e) => setData({ ...safeData, insurancePlan: Number(e.target.value) })} className="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                 <p className="text-xs text-slate-400 mt-1">最高 3,330 萬 (最低稅負制免稅額)</p>
+               </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow border border-slate-200 p-6">
+             <div className="text-center mb-4">
+                <p className="text-slate-500 text-sm">原本應繳稅金</p>
+                <p className="text-2xl font-bold text-red-500">${Math.round(taxRaw).toLocaleString()}萬</p>
+             </div>
+             <div className="border-t border-slate-100 my-4"></div>
+             <div className="text-center">
+                <p className="text-slate-500 text-sm">節稅效益</p>
+                <p className="text-4xl font-black text-green-600 font-mono">省 ${Math.round(taxSaved).toLocaleString()}萬</p>
+                <p className="text-xs text-slate-400 mt-1">
+                   規劃後稅金僅需 ${Math.round(taxPlanned).toLocaleString()}萬
+                </p>
+             </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-8 space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[400px]">
+             <h4 className="font-bold text-slate-700 mb-4 pl-2">遺產稅負擔對比</h4>
+             <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="name" type="category" tick={{fontSize: 14}} axisLine={false} tickLine={false} width={100} />
+                  <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                  <Bar dataKey="value" barSize={40} radius={[0, 4, 4, 0]} label={{ position: 'right', fill: '#64748b', fontWeight: 'bold', formatter: (val) => `$${val}萬` }}>
+                  </Bar>
+                </BarChart>
+             </ResponsiveContainer>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4">
+             <div className="bg-slate-50 p-4 rounded-lg text-center border border-slate-200">
+                <div className="text-xs text-slate-500 font-bold mb-1">資產總額</div>
+                <div className="text-xl font-bold text-slate-700">${totalAssets}萬</div>
+             </div>
+             <div className="bg-slate-50 p-4 rounded-lg text-center border border-slate-200">
+                <div className="text-xs text-slate-500 font-bold mb-1">免稅額+扣除額</div>
+                <div className="text-xl font-bold text-slate-700">${totalDeductions}萬</div>
+             </div>
+             <div className="bg-slate-50 p-4 rounded-lg text-center border border-slate-200">
+                <div className="text-xs text-slate-500 font-bold mb-1">遺產淨額 (未規劃)</div>
+                <div className="text-xl font-bold text-slate-700">${netEstateRaw}萬</div>
+             </div>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4 flex gap-3">
+             <AlertTriangle className="text-yellow-600 flex-shrink-0" />
+             <div className="text-xs text-yellow-800 space-y-1">
+               <p className="font-bold">實質課稅原則提醒 (八大態樣)：</p>
+               <ul className="list-disc pl-4 opacity-90">
+                 <li>重病投保、高齡投保、短期投保、躉繳投保、舉債投保、鉅額投保、保費略高於保額、保費等於保額。</li>
+                 <li>以上情況可能被國稅局視為惡意避稅，仍需計入遺產總額課稅。建議及早規劃，分散風險。</li>
+               </ul>
+             </div>
+          </div>
+        </div>
       </div>
     </div>
   );
