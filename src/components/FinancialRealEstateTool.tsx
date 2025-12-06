@@ -75,11 +75,12 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   // 1. 總貸款期後累積的淨現金流 (元)
   const cumulativeNetIncomeTarget = monthlyCashFlow * (targetYear * 12);
 
-  // 2. 總貸款期後的淨獲利 (萬) - 依據使用者邏輯: 總淨獲利 = 累積淨現金流 (萬)
-  const totalProfitTargetWan = Math.round(cumulativeNetIncomeTarget / 10000);
-  
+  // 2. 總貸款期後的淨獲利 (萬) - 這是純粹的淨現金流累積 (元轉萬)
+  const totalProfitTargetWan = Math.round(cumulativeNetIncomeTarget / 10000); 
+
   // 3. 總貸款期後的總資產價值 (萬)
-  // 總資產價值 = 初始貸款總額 (股權) + 累積淨現金流
+  // 總資產價值 = 初始貸款總額 (萬) + 淨現金流累積 (萬)
+  // 這就是使用者定義的 "總累積效益"
   const totalWealthTargetWan = Math.round(loanAmount + (cumulativeNetIncomeTarget / 10000));
   
   // --- 輔助變數計算 ---
@@ -310,17 +311,21 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
             {/* 總貸款期累積總效益 */}
             <div className="bg-white rounded-2xl shadow-lg border border-teal-200 p-6 h-full">
                  <h3 className="text-xl font-bold text-teal-700 mb-2 flex items-center gap-2">
-                     <TrendingUp size={24} /> 總貸款期 ({loanTerm}年) 累積淨獲利
+                     <TrendingUp size={24} /> 總貸款期 ({loanTerm}年) 累積總效益
                  </h3>
                  <div className="text-center h-full flex flex-col justify-center">
                      <p className="text-slate-500 text-sm font-medium mb-1">
-                         期滿後淨累積盈餘/虧損 (淨現金流總和)
+                         期滿後總累積效益 (淨現金流總和 + 初始貸款總額)
                      </p>
-                     <p className={`text-5xl font-black font-mono ${totalProfitTargetWan >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                         {totalProfitTargetWan >= 0 ? '+' : ''}${totalProfitTargetWan.toLocaleString()} 萬
+                     {/* 修正: 採用您期望的公式 (淨現金流累積 + 初始貸款總額) */}
+                     <p className={`text-5xl font-black font-mono ${totalWealthTargetWan >= loanAmount ? 'text-green-600' : 'text-red-500'}`}>
+                         ${totalWealthTargetWan.toLocaleString()} 萬
                      </p>
                      <div className="mt-2 text-sm text-slate-500">
-                         期滿後總資產價值: ${totalWealthTargetWan.toLocaleString()} 萬
+                         其中，淨獲利 (利潤/虧損) 為: 
+                         <span className={`font-bold ${totalProfitTargetWan >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                            {totalProfitTargetWan >= 0 ? '+' : ''}${totalProfitTargetWan.toLocaleString()} 萬
+                         </span>
                      </div>
                  </div>
             </div>
