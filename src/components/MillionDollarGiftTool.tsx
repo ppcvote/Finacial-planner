@@ -8,7 +8,7 @@ import {
   CheckCircle2, 
   ArrowRight,
   Target,
-  RefreshCw // <--- 修正: 補上缺少的圖示匯入
+  RefreshCw
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Area, Line, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
@@ -174,8 +174,13 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
       if (field === 'investReturnRate') {
           setData({ ...safeData, [field]: Number(value.toFixed(1)) });
       } else {
-          // loanAmount 級距調整為 1 萬
-          setData({ ...safeData, [field]: Number(value) }); 
+          // 限制 loanAmount 在 10 到 500 之間
+          if (field === 'loanAmount') {
+             const clampedValue = Math.max(10, Math.min(500, Number(value)));
+             setData({ ...safeData, [field]: clampedValue }); 
+          } else {
+            setData({ ...safeData, [field]: Number(value) }); 
+          }
       }
   };
 
@@ -215,10 +220,7 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
             </h4>
             <div className="space-y-6">
                {[
-                 // --- 修正單次借貸額度級距為 1 萬 ---
-                 { label: "單次借貸額度 (萬)", field: "loanAmount", min: 10, max: 500, step: 1, val: loanAmount, color: "blue", unit: " 萬" },
                  { label: "信貸利率 (%)", field: "loanRate", min: 1.5, max: 15.0, step: 0.1, val: loanRate, color: "indigo", unit: "%" },
-                 // --- 投資配息率級距為 0.1 ---
                  { label: "投資配息率 (%)", field: "investReturnRate", min: 3, max: 12, step: 0.1, val: investReturnRate, color: "purple", unit: "%" }
                ].map((item) => (
                  <div key={item.field}>
@@ -229,6 +231,24 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                    <input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => updateField(item.field, Number(e.target.value))} className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-${item.color}-600 hover:accent-${item.color}-700 transition-all`} />
                  </div>
                ))}
+
+               {/* 單次借貸額度 - 改為數字輸入框 */}
+               <div>
+                  <div className="flex justify-between mb-2">
+                     <label className="text-sm font-medium text-slate-600">單次借貸額度 (萬)</label>
+                     <span className={`font-mono font-bold text-blue-600 text-lg`}>{loanAmount.toLocaleString()} 萬</span>
+                  </div>
+                  <input 
+                     type="number" 
+                     min={10} 
+                     max={500} 
+                     step={1}
+                     value={loanAmount} 
+                     onChange={(e) => updateField('loanAmount', Number(e.target.value))} 
+                     className="w-full p-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">範圍: 10 萬 ~ 500 萬</p>
+               </div>
             </div>
             
             <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-100 grid grid-cols-2 gap-4">
