@@ -68,7 +68,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   // 總自付成本 (用於負現金流的情況)
   const totalOutOfPocket = isNegativeCashFlow ? Math.abs(monthlyCashFlow) * 12 * loanTerm : 0;
   
-  // --- 計算 20 年淨利潤 ---
+  // --- 修正 計算 20 年淨利潤 ---
   const targetYear = 20;
   const months20 = targetYear * 12;
   
@@ -84,9 +84,13 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   // 4. 20年後的總資產價值 (萬) = (股權 + 累積淨現金流) / 10000
   const totalWealth20Wan = Math.round((assetEquity20 + cumulativeNetIncome20) / 10000);
   
-  // 5. 20年總淨利潤 (萬) = 總資產價值 - 初始貸款總額 (萬)
-  const totalProfit20Wan = Math.round(totalWealth20Wan - loanAmount);
-  // --- 結束 20 年淨利潤計算 ---
+  // 5. 20年累積總投入本金 (萬) = 初始貸款總額 (萬) + 20年累積的自付現金流 (若為負)
+  // 如果每月淨現金流是負的，代表這20年內額外付出了本金 (淨現金流為負數)
+  const totalPrincipalInput20Wan = loanAmount + (Math.abs(Math.min(0, cumulativeNetIncome20)) / 10000);
+  
+  // 6. 20年總淨利潤 (萬) = 20年後的總資產價值 (萬) - 20年累積總投入本金 (萬)
+  const totalProfit20Wan = Math.round(totalWealth20Wan - totalPrincipalInput20Wan);
+  // --- 修正結束 20 年淨利潤計算 ---
 
 
   const generateHouseChartData = () => {
@@ -272,36 +276,43 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
         </div>
       </div>
       
-      {/* 新增：20 年總淨利潤卡片 (排版調整) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="md:col-span-1 bg-white rounded-2xl shadow-lg border border-teal-200 p-6 print-break-inside">
-             <h3 className="text-xl font-bold text-teal-700 mb-2 flex items-center gap-2">
-                 <TrendingUp size={24} /> 20 年累積總效益
-             </h3>
-             <div className="text-center">
-                 <p className="text-slate-500 text-sm font-medium mb-1">
-                     專案執行 {targetYear} 年後淨獲利 (股權 + 淨現金流)
-                 </p>
-                 <p className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-green-600 font-mono">
-                     +${totalProfit20Wan.toLocaleString()} 萬
-                 </p>
-                 <div className="mt-2 text-xs text-slate-500">
-                     總資產價值: ${totalWealth20Wan.toLocaleString()} 萬
+      {/* 20 年總淨利潤卡片 + 關鍵數據 (重新排版至圖表下方，與右側內容平衡) */}
+      <div className="grid lg:grid-cols-12 gap-8 pt-6">
+         
+         {/* 20 年累積總效益 (左側單欄) */}
+         <div className="lg:col-span-4 print-break-inside">
+            <div className="bg-white rounded-2xl shadow-lg border border-teal-200 p-6">
+                 <h3 className="text-xl font-bold text-teal-700 mb-2 flex items-center gap-2">
+                     <TrendingUp size={24} /> 20 年累積總效益
+                 </h3>
+                 <div className="text-center">
+                     <p className="text-slate-500 text-sm font-medium mb-1">
+                         專案執行 {targetYear} 年後淨獲利 (總資產 - 總投入)
+                     </p>
+                     <p className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-green-600 font-mono">
+                         {totalProfit20Wan >= 0 ? '+' : ''}${totalProfit20Wan.toLocaleString()} 萬
+                     </p>
+                     <div className="mt-2 text-xs text-slate-500">
+                         總資產價值: ${totalWealth20Wan.toLocaleString()} 萬
+                     </div>
                  </div>
-             </div>
-          </div>
-          
-          <div className="md:col-span-2 bg-slate-50 rounded-2xl border border-slate-100 p-6 space-y-3 print-break-inside">
-             <h3 className="text-xl font-bold text-slate-700 mb-3 flex items-center gap-2">
-                 <Scale size={20} /> 關鍵數據
-             </h3>
-             <div className="grid grid-cols-2 gap-4 text-sm">
-                 <div className="flex justify-between"><span className="text-slate-500">初始貸款總額</span><span className="font-bold text-slate-700">{loanAmount.toLocaleString()} 萬</span></div>
-                 <div className="flex justify-between"><span className="text-slate-500">20年後剩餘貸款</span><span className="font-bold text-red-500">{Math.round(remainingLoan20 / 10000).toLocaleString()} 萬</span></div>
-                 <div className="flex justify-between"><span className="text-slate-500">20年累積淨現金流</span><span className="font-bold text-green-600">{Math.round(cumulativeNetIncome20 / 10000).toLocaleString()} 萬</span></div>
-                 <div className="flex justify-between"><span className="text-slate-500">20年股權累積</span><span className="font-bold text-teal-600">{Math.round(assetEquity20 / 10000).toLocaleString()} 萬</span></div>
-             </div>
-          </div>
+            </div>
+         </div>
+         
+         {/* 關鍵數據 (右側兩欄) */}
+         <div className="lg:col-span-8 print-break-inside">
+            <div className="bg-slate-50 rounded-2xl border border-slate-100 p-6 space-y-3">
+                 <h3 className="text-xl font-bold text-slate-700 mb-3 flex items-center gap-2">
+                     <Scale size={20} /> 關鍵數據 ({targetYear} 年結算)
+                 </h3>
+                 <div className="grid grid-cols-2 gap-4 text-sm">
+                     <div className="flex justify-between"><span className="text-slate-500">初始貸款總額</span><span className="font-bold text-slate-700">{loanAmount.toLocaleString()} 萬</span></div>
+                     <div className="flex justify-between"><span className="text-slate-500">20年累積自付本金 (若為負現金流)</span><span className="font-bold text-red-500">{(Math.abs(Math.min(0, cumulativeNetIncome20)) / 10000).toLocaleString()} 萬</span></div>
+                     <div className="flex justify-between"><span className="text-slate-500">20年後剩餘貸款</span><span className="font-bold text-red-500">{Math.round(remainingLoan20 / 10000).toLocaleString()} 萬</span></div>
+                     <div className="flex justify-between"><span className="text-slate-500">20年股權累積</span><span className="font-bold text-teal-600">{Math.round(assetEquity20 / 10000).toLocaleString()} 萬</span></div>
+                 </div>
+            </div>
+         </div>
       </div>
 
 
