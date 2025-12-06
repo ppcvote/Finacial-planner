@@ -175,7 +175,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       </div>
 
       <div className="grid lg:grid-cols-12 gap-8">
-        {/* 左側：參數設定與試算 */}
+        {/* 左側：參數設定 */}
         <div className="lg:col-span-4 space-y-6 print-break-inside">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 no-print">
             <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2">
@@ -249,8 +249,10 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                </div>
             </div>
           </div>
-
+          
           {/* 策略說明 - 執行三部曲 (這部分是保留的) */}
+          {/* 修正: 移除了原本在左側的重複區塊，只保留最下方完整的策略說明 */}
+          {/* 這是左側最下方的策略說明區塊，現在是單一的策略區 */}
           <div className="space-y-4 pt-4 print-break-inside">
              <div className="flex items-center gap-2 mb-2">
                 <RefreshCw className="text-emerald-600" size={24} />
