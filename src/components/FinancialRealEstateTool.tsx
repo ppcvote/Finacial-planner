@@ -78,7 +78,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   // 1. 總貸款期後累積的淨現金流 (元)
   const cumulativeNetIncomeTarget = monthlyCashFlow * monthsTarget;
 
-  // 2. 總貸款期後的淨獲利 (萬) - 依據使用者邏輯: 累積淨現金流 + (初始貸款總額 * 10000) - (初始貸款總額 * 10000)
+  // 2. 總貸款期後的淨獲利 (萬) - 依據使用者邏輯: 累積淨現金流 + 初始貸款總額 (期滿為股權) - 初始貸款總額 (投入本金)
   const totalProfitTargetWan = Math.round(
       (cumulativeNetIncomeTarget + (loanAmount * 10000)) / 10000 - loanAmount
   );
@@ -141,13 +141,15 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   
   // 處理數字輸入框失去焦點或按 Enter
   const handleLoanAmountInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Number(e.target.value);
-    setTempLoanAmount(value); // 更新輸入框的暫存值
+    // 允許輸入任何數字，不立即限制
+    const value = e.target.value === '' ? '' : Number(e.target.value);
+    setTempLoanAmount(value as number); // 更新輸入框的暫存值
   };
 
   const finalizeLoanAmount = () => {
     // 檢查並限制輸入值
-    let finalValue = Math.max(100, Math.min(3000, tempLoanAmount));
+    let finalValue = isNaN(tempLoanAmount) || tempLoanAmount === 0 ? 100 : tempLoanAmount;
+    finalValue = Math.max(100, Math.min(3000, finalValue));
     finalValue = Math.round(finalValue);
     
     // 更新正式的 data state (觸發計算)
@@ -183,7 +185,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       </div>
 
       <div className="grid lg:grid-cols-12 gap-8">
-        {/* 左側：參數設定與試算 */}
+        {/* 左側：參數設定與策略說明 */}
         <div className="lg:col-span-4 space-y-6 print-break-inside">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 no-print">
             <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2">
