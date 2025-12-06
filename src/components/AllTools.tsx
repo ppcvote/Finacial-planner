@@ -18,7 +18,13 @@ export const FinancialRealEstateTool = ({ data, setData }) => {
   const monthlyInvestIncome = calculateMonthlyIncome(loanAmount, investReturnRate);
   const monthlyCashFlow = monthlyInvestIncome - monthlyLoanPayment;
   const isNegativeCashFlow = monthlyCashFlow < 0; 
-  const totalOutOfPocket = Math.abs(monthlyCashFlow) * 12 * loanTerm; 
+  const totalOutOfPocket = isNegativeCashFlow ? Math.abs(monthlyCashFlow) * 12 * loanTerm : 0;
+  
+  // 計算期滿後的總資產價值 (本金 + 累積的正現金流 或 扣除負現金流後的淨值，但這邊強調"擁有的資產")
+  // 邏輯：期滿時，貸款為0，擁有的資產為 loanAmount (假設本金不變)，加上累積的現金流(如果是正的)
+  // 若是負現金流，其實資產還是 loanAmount，只是過程有付出。
+  // 為了簡單有力，這裡顯示「期滿資產現值」(假設本金沒虧損)
+  const finalAssetValue = loanAmount * 10000;
 
   const generateHouseChartData = () => {
     const dataArr = [];
@@ -27,6 +33,7 @@ export const FinancialRealEstateTool = ({ data, setData }) => {
       cumulativeNetIncome += monthlyCashFlow * 12;
       const remainingLoan = calculateRemainingBalance(loanAmount, loanRate, loanTerm, year);
       const assetEquity = (loanAmount * 10000) - remainingLoan;
+      // 這裡顯示的是「淨資產」概念：(資產市值 - 剩餘貸款) + 累積現金流
       const financialTotalWealth = assetEquity + cumulativeNetIncome;
       const step = loanTerm > 20 ? 3 : 1; 
       if (year === 1 || year % step === 0 || year === loanTerm) {
@@ -108,6 +115,66 @@ export const FinancialRealEstateTool = ({ data, setData }) => {
                 <Line type="monotone" name="剩餘房貸" dataKey="剩餘貸款" stroke="#ef4444" strokeWidth={1} dot={false} opacity={0.5} />
               </ComposedChart>
             </ResponsiveContainer>
+          </div>
+
+          {/* 新增：金融房產專案 - 核心總結卡片 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print-break-inside">
+             {/* Card 1: 過程 (現金流) */}
+             <div className={`border rounded-xl p-5 relative overflow-hidden group hover:shadow-md transition-all ${isNegativeCashFlow ? 'bg-orange-50 border-orange-100' : 'bg-emerald-50 border-emerald-100'}`}>
+                <div className="relative">
+                  <div className={`font-bold text-lg mb-1 flex items-center gap-2 ${isNegativeCashFlow ? 'text-orange-800' : 'text-emerald-800'}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${isNegativeCashFlow ? 'bg-orange-200' : 'bg-emerald-200'}`}>過程</span>
+                    每月現金流
+                  </div>
+                  <div className="text-xs text-slate-500 mb-2 font-medium">
+                    {isNegativeCashFlow ? '每月僅需負擔' : '每月被動收入'}
+                  </div>
+                  <div className={`text-3xl font-black font-mono tracking-tight ${isNegativeCashFlow ? 'text-orange-600' : 'text-emerald-600'}`}>
+                     {isNegativeCashFlow ? '-' : '+'}${Math.abs(Math.round(monthlyCashFlow)).toLocaleString()}
+                  </div>
+                  <div className="mt-2 text-xs font-bold text-slate-500">
+                    {isNegativeCashFlow ? '房客(配息)幫您繳了大半房貸' : '無痛養房，資金完全自給自足'}
+                  </div>
+                </div>
+             </div>
+
+             {/* Card 2: 投入 (槓桿成本) */}
+             <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 relative overflow-hidden group hover:shadow-md transition-all">
+                <div className="relative">
+                  <div className="text-slate-800 font-bold text-lg mb-1 flex items-center gap-2">
+                    <span className="bg-slate-200 text-slate-800 text-xs px-2 py-0.5 rounded-full">投入</span>
+                    總自付成本
+                  </div>
+                  <div className="text-xs text-slate-500 mb-2 font-medium">{loanTerm} 年總計投入</div>
+                  <div className="text-3xl font-black text-slate-700 font-mono tracking-tight">
+                     ${Math.round(totalOutOfPocket).toLocaleString()}
+                  </div>
+                   <div className="mt-2 text-xs text-slate-500">
+                    <span className="text-emerald-600 font-bold bg-emerald-100 px-1 py-0.5 rounded mr-1">
+                      {totalOutOfPocket > 0 ? `槓桿 ${(loanAmount * 10000 / totalOutOfPocket).toFixed(1)} 倍` : '無限大'}
+                    </span>
+                    以小博大換取 {loanAmount} 萬資產
+                  </div>
+                </div>
+             </div>
+
+             {/* Card 3: 終局 (資產歸屬) */}
+             <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-5 relative overflow-hidden group hover:shadow-md transition-all">
+                <div className="absolute -right-4 -top-4 w-16 h-16 bg-emerald-100 rounded-full opacity-50 group-hover:scale-150 transition-transform"></div>
+                <div className="relative">
+                  <div className="text-emerald-800 font-bold text-lg mb-1 flex items-center gap-2">
+                    <span className="bg-emerald-200 text-emerald-800 text-xs px-2 py-0.5 rounded-full">終局</span>
+                    期滿擁有資產
+                  </div>
+                  <div className="text-xs text-slate-500 mb-2 font-medium">貸款還清，資產全拿</div>
+                  <div className="text-3xl font-black text-emerald-600 font-mono tracking-tight">
+                     ${(finalAssetValue / 10000).toLocaleString()}萬
+                  </div>
+                  <div className="mt-2 text-xs text-emerald-600 font-bold">
+                    資產完全屬於您 + 終身領息
+                  </div>
+                </div>
+             </div>
           </div>
         </div>
       </div>
@@ -396,7 +463,7 @@ export const CarReplacementTool = ({ data, setData }) => {
             netPay: Math.round(netMonthlyPayment)
         });
 
-        const resaleValue = carPrice * (resaleRate/100);
+        const resaleValue = data.carPrice * (data.resaleRate/100);
         const surplus = resaleValue - downPayment;
         policyPrincipal += surplus;
     }
@@ -482,13 +549,13 @@ export const LaborPensionTool = ({ data, setData }) => {
   const { currentAge, retireAge, salary, laborInsYears, selfContribution, pensionReturnRate, desiredMonthlyIncome } = safeData;
 
   const laborInsBase = Math.min(Math.max(salary, 26400), 45800); 
-  const laborInsMonthly = laborInsBase * laborInsYears * 0.0155;
-  const monthlyContribution = Math.min(salary, 150000) * (0.06 + (selfContribution ? 0.06 : 0));
-  const monthsToRetire = (retireAge - currentAge) * 12;
-  const monthlyRate = pensionReturnRate / 100 / 12;
+  const laborInsMonthly = laborInsBase * data.laborInsYears * 0.0155;
+  const monthlyContribution = Math.min(data.salary, 150000) * (0.06 + (data.selfContribution ? 0.06 : 0));
+  const monthsToRetire = (data.retireAge - data.currentAge) * 12;
+  const monthlyRate = data.pensionReturnRate / 100 / 12;
   const pensionTotal = monthlyContribution * ((Math.pow(1 + monthlyRate, monthsToRetire) - 1) / monthlyRate);
   const pensionMonthly = pensionTotal / 240; 
-  const gap = desiredMonthlyIncome - (laborInsMonthly + pensionMonthly);
+  const gap = data.desiredMonthlyIncome - (laborInsMonthly + pensionMonthly);
 
   const chartData = [
     { name: '勞保年金', value: Math.round(laborInsMonthly), fill: '#3b82f6' },
@@ -573,17 +640,17 @@ export const BigSmallReservoirTool = ({ data, setData }) => {
   };
   const { initialCapital, dividendRate, reinvestRate, years } = safeData;
 
-  const annualDividend = initialCapital * (dividendRate / 100);
+  const annualDividend = data.initialCapital * (data.dividendRate / 100);
 
   const generateChartData = () => {
     const dataArr = [];
     let reinvestedTotal = 0; 
-    for (let year = 1; year <= years + 5; year++) {
-      if (year <= years) reinvestedTotal = (reinvestedTotal + annualDividend) * (1 + reinvestRate / 100);
-      else reinvestedTotal = reinvestedTotal * (1 + reinvestRate / 100);
+    for (let year = 1; year <= data.years + 5; year++) {
+      if (year <= data.years) reinvestedTotal = (reinvestedTotal + annualDividend) * (1 + data.reinvestRate / 100);
+      else reinvestedTotal = reinvestedTotal * (1 + data.reinvestRate / 100);
       dataArr.push({
         year: `第${year}年`,
-        大水庫本金: initialCapital,
+        大水庫本金: data.initialCapital,
         小水庫累積: Math.round(reinvestedTotal),
       });
     }
@@ -656,24 +723,21 @@ export const TaxPlannerTool = ({ data, setData }) => {
 
   const totalAssets = cash + realEstate + stocks;
   const exemption = 1333; 
-  const deductionSpouse = spouse ? 553 : 0;
-  const deductionChildren = children * 56;
-  const deductionParents = parents * 138;
+  const deductionSpouse = data.spouse ? 553 : 0;
+  const deductionChildren = data.children * 56;
+  const deductionParents = data.parents * 138;
   const deductionFuneral = 138; 
   const totalDeductions = exemption + deductionSpouse + deductionChildren + deductionParents + deductionFuneral;
   const netEstateRaw = Math.max(0, totalAssets - totalDeductions);
-  const plannedAssets = Math.max(0, totalAssets - insurancePlan);
+  const plannedAssets = Math.max(0, totalAssets - data.insurancePlan);
   const netEstatePlanned = Math.max(0, plannedAssets - totalDeductions);
-
   const calculateTax = (netEstate) => {
     if (netEstate <= 5000) return netEstate * 0.10;
     if (netEstate <= 10000) return netEstate * 0.15 - 250;
     return netEstate * 0.20 - 750;
   };
-
   const taxRaw = calculateTax(netEstateRaw);
   const taxPlanned = calculateTax(netEstatePlanned);
-  const taxSaved = taxRaw - taxPlanned;
 
   const chartData = [
     { name: '未規劃稅金', value: Math.round(taxRaw), fill: '#ef4444' },
@@ -713,7 +777,7 @@ export const TaxPlannerTool = ({ data, setData }) => {
           <div className="bg-white rounded-xl shadow border border-slate-200 p-6">
              <div className="text-center mb-4">
                 <p className="text-slate-500 text-sm">節稅效益</p>
-                <p className="text-4xl font-black text-green-600 font-mono">省 ${Math.round(taxSaved).toLocaleString()}萬</p>
+                <p className="text-4xl font-black text-green-600 font-mono">省 ${Math.round(taxRaw - taxPlanned).toLocaleString()}萬</p>
              </div>
           </div>
         </div>
