@@ -175,7 +175,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       </div>
 
       <div className="grid lg:grid-cols-12 gap-8">
-        {/* 左側：參數設定與策略說明 */}
+        {/* 左側：參數設定 (修正：此處僅保留參數設定區塊) */}
         <div className="lg:col-span-4 space-y-6 print-break-inside">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 no-print">
             <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2">
@@ -250,79 +250,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
             </div>
           </div>
           
-          {/* 策略說明 - 執行三部曲 (這部分是保留的) */}
-          <div className="space-y-4 pt-4 print-break-inside">
-             <div className="flex items-center gap-2 mb-2">
-                <RefreshCw className="text-emerald-600" size={24} />
-                <h3 className="text-xl font-bold text-slate-800">執行三部曲</h3>
-             </div>
-             <div className="space-y-3">
-                 <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-emerald-200 transition-colors">
-                    <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-emerald-50 text-emerald-600 flex flex-col items-center justify-center font-bold text-xs">
-                       <span className="text-lg">01</span>
-                       <span>建置</span>
-                    </div>
-                    <div>
-                       <h4 className="font-bold text-slate-800 flex items-center gap-2">建置期 (第1年)</h4>
-                       <p className="text-sm text-slate-600 mt-1">透過銀行融資取得大筆資金，單筆投入穩健配息資產。就像買房出租，但省去頭期款與管理麻煩。</p>
-                    </div>
-                 </div>
-    
-                 <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-teal-200 transition-colors">
-                    <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-teal-50 text-teal-600 flex flex-col items-center justify-center font-bold text-xs">
-                       <span className="text-lg">02</span>
-                       <span>持守</span>
-                    </div>
-                    <div>
-                       <h4 className="font-bold text-slate-800 flex items-center gap-2">持守期 (第2-{loanTerm}年)</h4>
-                       <p className="text-sm text-slate-600 mt-1">讓資產產生的配息自動償還貸款本息。您只需補貼少許差額(甚至有找)，時間是您最好的朋友。</p>
-                    </div>
-                 </div>
-    
-                 <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-green-200 transition-colors">
-                    <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-green-50 text-green-600 flex flex-col items-center justify-center font-bold text-xs">
-                       <span className="text-lg">03</span>
-                       <span>自由</span>
-                    </div>
-                    <div>
-                       <h4 className="font-bold text-slate-800 flex items-center gap-2">自由期 (期滿)</h4>
-                       <p className="text-sm text-slate-600 mt-1">貸款完全清償。此刻起，這筆千萬資產與每月的配息收入完全屬於您，成為真正的被動收入。</p>
-                    </div>
-                 </div>
-              </div>
-          </div>
-          
-          {/* 專案四大效益 (這部分是保留的) */}
-          <div className="space-y-4 pt-4 print-break-inside">
-             <div className="flex items-center gap-2 mb-2">
-               <Landmark className="text-emerald-600" size={24} />
-               <h3 className="text-xl font-bold text-slate-800">專案四大效益</h3>
-             </div>
-             
-             <div className="grid grid-cols-1 gap-3">
-                {[
-                  { title: "數位包租公", desc: "如同擁有房產收租，但沒有空租期、修繕費、稅金與惡房客的煩惱。" },
-                  { title: "抗通膨", desc: "利用負債對抗通膨。隨著時間推移，貨幣貶值，您償還的貸款實質價值在下降，但資產在增值。" },
-                  { title: "資產擁有權", desc: "與租房不同，付出的每一分錢最後都換來實實在在的資產，而不只是消費。" },
-                  { title: "極低門檻", desc: "不需要數百萬頭期款，只需良好的信用與穩定的現金流即可啟動千萬資產計畫。" }
-                ].map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-100 hover:bg-emerald-50/50 transition-colors">
-                    <CheckCircle2 className="text-green-500 shrink-0 mt-0.5" size={20} />
-                    <div>
-                      <h4 className="font-bold text-slate-800">{item.title}</h4>
-                      <p className="text-sm text-slate-600 mt-1 leading-relaxed">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-             </div>
-  
-             <div className="mt-6 p-4 bg-slate-800 rounded-xl text-center shadow-lg">
-               <p className="text-slate-300 italic text-sm">
-                 「富人買資產，窮人買負債，中產階級買他們以為是資產的負債。金融房產，是真正的資產。」
-               </p>
-             </div>
-          </div>
-        </div>
+        </div> {/* 結束左側 lg:col-span-4 */}
 
         {/* 右側：圖表展示 */}
         <div className="lg:col-span-8 space-y-6">
