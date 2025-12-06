@@ -175,7 +175,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       </div>
 
       <div className="grid lg:grid-cols-12 gap-8">
-        {/* 左側：參數設定 (修正：此處僅保留參數設定區塊) */}
+        {/* 左側：參數設定 (修正：此處只保留參數設定區塊) */}
         <div className="lg:col-span-4 space-y-6 print-break-inside">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 no-print">
             <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2">
@@ -249,6 +249,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                </div>
             </div>
           </div>
+          
           
         </div> {/* 結束左側 lg:col-span-4 */}
 
