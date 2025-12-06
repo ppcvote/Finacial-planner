@@ -75,7 +75,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   // 1. 總貸款期後累積的淨現金流 (元)
   const cumulativeNetIncomeTarget = monthlyCashFlow * (targetYear * 12);
 
-  // 2. 總貸款期後的淨獲利 (萬) - 依據使用者邏輯: 僅計算淨現金流累積的盈虧 (期滿後資產歸零相抵)
+  // 2. 總貸款期後的淨獲利 (萬) - 依據使用者邏輯: 總淨獲利 = 累積淨現金流 (萬)
   const totalProfitTargetWan = Math.round(cumulativeNetIncomeTarget / 10000);
   
   // 3. 總貸款期後的總資產價值 (萬)
@@ -173,7 +173,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       </div>
 
       <div className="grid lg:grid-cols-12 gap-8">
-        {/* 左側：參數設定與策略說明 */}
+        {/* 左側：參數設定 */}
         <div className="lg:col-span-4 space-y-6 print-break-inside">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 no-print">
             <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2">
@@ -310,11 +310,11 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
             {/* 總貸款期累積總效益 */}
             <div className="bg-white rounded-2xl shadow-lg border border-teal-200 p-6 h-full">
                  <h3 className="text-xl font-bold text-teal-700 mb-2 flex items-center gap-2">
-                     <TrendingUp size={24} /> 總貸款期 ({loanTerm}年) 累積總效益
+                     <TrendingUp size={24} /> 總貸款期 ({loanTerm}年) 累積淨獲利
                  </h3>
                  <div className="text-center h-full flex flex-col justify-center">
                      <p className="text-slate-500 text-sm font-medium mb-1">
-                         專案執行期滿後總淨獲利 (總資產 - 總投入本金)
+                         期滿後淨累積盈餘/虧損 (淨現金流總和)
                      </p>
                      <p className={`text-5xl font-black font-mono ${totalProfitTargetWan >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                          {totalProfitTargetWan >= 0 ? '+' : ''}${totalProfitTargetWan.toLocaleString()} 萬
