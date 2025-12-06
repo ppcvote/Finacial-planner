@@ -175,7 +175,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       </div>
 
       <div className="grid lg:grid-cols-12 gap-8">
-        {/* 左側：參數設定 */}
+        {/* 左側：參數設定與策略說明 */}
         <div className="lg:col-span-4 space-y-6 print-break-inside">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 no-print">
             <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2">
@@ -250,9 +250,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
             </div>
           </div>
           
-          {/* 策略說明 - 執行三部曲 (這部分是保留的) */}
-          {/* 修正: 移除了原本在左側的重複區塊，只保留最下方完整的策略說明 */}
-          {/* 這是左側最下方的策略說明區塊，現在是單一的策略區 */}
+          {/* 策略說明 - 執行三部曲 (修正: 這是左側保留的單一策略區) */}
           <div className="space-y-4 pt-4 print-break-inside">
              <div className="flex items-center gap-2 mb-2">
                 <RefreshCw className="text-emerald-600" size={24} />
@@ -349,7 +347,9 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
           </div>
 
          {/* 2. 總貸款期累積總效益 (佔 1/2) */}
-         <div className="md:col-span-1 print-break-inside">
+         <div className="md:col-span-1 print-break-inside space-y-6">
+            
+            {/* 總貸款期累積總效益 */}
             <div className="bg-white rounded-2xl shadow-lg border border-teal-200 p-6 h-full">
                  <h3 className="text-xl font-bold text-teal-700 mb-2 flex items-center gap-2">
                      <TrendingUp size={24} /> 總貸款期 ({loanTerm}年) 累積總效益
@@ -370,7 +370,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
          </div>
       </div>
       
-      {/* 底部策略區 (執行三部曲 + 專案四大效益) */}
+      {/* 底部策略區 (執行三部曲 + 專案四大效益) - 這是唯一的策略區 */}
       <div className="grid md:grid-cols-2 gap-8 pt-6 border-t border-slate-200 print-break-inside">
         
         {/* 1. 執行循環 */}
