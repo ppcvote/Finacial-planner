@@ -203,27 +203,30 @@ export const StudentLoanTool = ({ data, setData }: any) => {
       '本息攤還期': '#06b6d433', // 青色 (Cyan-500, 20%)
   };
   
-  // X 軸格式化函式
-  const formatXAxisTick = (value) => {
-    // 這裡我們直接使用 dataArr 中的 yearLabel
-    const dataPoint = dataArr.find(d => d.year === value);
-    return dataPoint ? dataPoint.yearLabel : `第${value}年`;
+  // 輔助函式，取得 Recharts ReferenceArea 需要的 X 軸 category 值
+  const getXCategory = (year) => {
+    const dataPoint = dataArr.find(d => d.repaymentYear === year);
+    // 修正 XCategory 函式，防止未定義的呼叫
+    return dataPoint ? dataPoint.year : year; 
   };
   
-  // 修正 Y 軸的 Domain
-  const getMinMaxY = () => {
-    if (dataArr.length === 0) return { min: -10, max: 10 };
-    const allValues = dataArr.flatMap(d => [d.淨資產, d.投資複利價值, d.若直接繳掉]);
-    // 稍微擴展範圍以避免邊緣裁切
-    const min = Math.min(...allValues, 0) - 10; 
-    const max = Math.max(...allValues, 10) + 10;
-    return { min, max };
+  // 找出各階段結束點的索引 (Index)
+  const getPhaseIndex = (year) => {
+    // 這裡我們必須找到 repaymentYear 匹配的數據點的 INDEX
+    const index = dataArr.findIndex(d => d.repaymentYear === year);
+    // 由於 XAxis 是數值軸，使用 year 數值本身作為 x1/x2 參數
+    return year; 
   };
-  const { min: yMin, max: yMax } = getMinMaxY();
+  
+  // 修正：使用 year 數值作為 ReferenceArea 的 x1/x2 數值
+  const studyEndIndex = getPhaseIndex(studyYears);
+  const graceEndIndex = getPhaseIndex(graceEndYear);
+  const interestOnlyEndIndex = getPhaseIndex(interestOnlyEndYear);
+  const repaymentEndIndex = getPhaseIndex(repaymentEndYear);
 
 
   return (
-    <div className className="space-y-8 animate-fade-in font-sans text-slate-800">
+    <div className="space-y-8 animate-fade-in font-sans text-slate-800">
       
       {/* Header Section: 專案標題與核心價值 */}
       <div className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden print-break-inside">
@@ -366,14 +369,14 @@ export const StudentLoanTool = ({ data, setData }: any) => {
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart data={dataArr} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                 
-                {/* 修正 2: ReferenceArea 渲染，使用 Index 確保連續且不重疊 */}
+                {/* 修正 2: ReferenceArea 渲染 - 採用數值軸邏輯，確保連續性 */}
                 
-                {/* 在學期 (Start Index 0 to studyEndIndex) */}
+                {/* 在學期 (Start Year 1 to studyYears) */}
                 {studyYears > 0 && 
                   <ReferenceArea 
                     key="study"
-                    x1={0 - 0.5} 
-                    x2={studyEndIndex - 0.5} // 修正: 擴展到該點的中心線
+                    x1={1} // 數值軸起始點
+                    x2={studyYears + 0.5} // 修正: 擴展到該點的中心線
                     fill={phaseColors['在學期']}
                     fillOpacity={1}
                     stroke="none"
@@ -381,12 +384,12 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   />
                 }
                 
-                {/* 寬限期 (studyEndIndex to graceEndIndex) */}
+                {/* 寬限期 (studyYears + 1 to graceEndYear) */}
                 {gracePeriod > 0 && 
                   <ReferenceArea 
                     key="grace"
-                    x1={studyEndIndex - 0.5} 
-                    x2={graceEndIndex - 0.5} 
+                    x1={studyYears + 0.5} // 上一階段的結束點
+                    x2={graceEndYear + 0.5} // 修正: 擴展到該點的中心線
                     fill={phaseColors['寬限期']}
                     fillOpacity={1}
                     stroke="none"
@@ -394,12 +397,12 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   />
                 }
                 
-                {/* 只繳息期 (graceEndIndex to interestOnlyEndYear) */}
+                {/* 只繳息期 (graceEndYear + 1 to interestOnlyEndYear) */}
                 {interestOnlyEndYear > graceEndYear && 
                   <ReferenceArea 
                     key="interest"
-                    x1={graceEndIndex - 0.5} 
-                    x2={interestOnlyEndIndex - 0.5}
+                    x1={graceEndYear + 0.5} 
+                    x2={interestOnlyEndYear + 0.5}
                     fill={phaseColors['只繳息期']}
                     fillOpacity={1}
                     stroke="none"
@@ -407,12 +410,12 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   />
                 }
                 
-                {/* 本息攤還期 (interestOnlyEndYear to repaymentEndYear) */}
+                {/* 本息攤還期 (interestOnlyEndYear + 1 to repaymentEndYear) */}
                 {repaymentEndYear > interestOnlyEndYear && 
                   <ReferenceArea 
                     key="repayment"
-                    x1={interestOnlyEndIndex - 0.5} 
-                    x2={repaymentEndIndex - 0.5}
+                    x1={interestOnlyEndYear + 0.5} 
+                    x2={repaymentEndYear + 0.5} // 擴展到圖表最右側
                     fill={phaseColors['本息攤還期']}
                     fillOpacity={1}
                     stroke="none"
@@ -428,12 +431,23 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                {/* XAxis type="category" 且 dataKey="year" */}
-                <XAxis dataKey="yearLabel" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} /> 
+                {/* XAxis type="number" dataKey="year" and use tickFormatter for labels */}
+                <XAxis 
+                    dataKey="year" 
+                    type="number" 
+                    domain={[1, totalDuration]}
+                    allowDecimals={false}
+                    tickFormatter={formatXAxisTick} 
+                    tick={{fontSize: 12, fill: '#64748b'}} 
+                    axisLine={false} 
+                    tickLine={false}
+                /> 
                 <YAxis unit="萬" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} domain={['dataMin', 'dataMax']}/>
                 <Tooltip 
                   contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px'}} 
                   itemStyle={{padding: '2px 0'}}
+                  // 顯示 yearLabel 而非 year number
+                  labelFormatter={(value) => `第${value}年`} 
                 />
                 <Legend iconType="circle" />
                 <Line type="monotone" name="活化專案淨資產" dataKey="淨資產" stroke="#0ea5e9" fill="url(#colorInvest)" strokeWidth={3} />
