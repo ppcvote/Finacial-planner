@@ -155,7 +155,7 @@ const calculateRemainingBalance = (principal, rate, totalYears, yearsElapsed) =>
 const PrintStyles = () => (
   <style>{`
     @media print {
-      aside, .no-print, .toast-container { display: none !important; }
+      aside, .no-print, .toast-container, .mobile-header, .mobile-menu { display: none !important; }
       body, main { background: white !important; height: auto !important; overflow: visible !important; }
       .print-break-inside { break-inside: avoid; }
       .shadow-lg, .shadow-sm { box-shadow: none !important; border: 1px solid #ddd !important; }
@@ -235,7 +235,7 @@ const ProfileModal = ({ isOpen, onClose, profile, onSave, loading }) => {
 };
 
 // ------------------------------------------------------------------
-// 核心模組 1-7 (既有模組)
+// 核心模組 1-8 (完整保留)
 // ------------------------------------------------------------------
 
 const MillionDollarGiftTool = ({ data, setData }) => {
@@ -1094,33 +1094,11 @@ const BigSmallReservoirTool = ({ data, setData }) => {
                 </AreaChart>
              </ResponsiveContainer>
           </div>
-          
-          <div className="grid grid-cols-3 gap-4">
-             <div className="bg-cyan-50 p-4 rounded-lg text-center border border-cyan-100">
-                <div className="text-xs text-cyan-600 font-bold mb-1">大水庫 (母)</div>
-                <div className="text-xl font-bold text-slate-700">${initialCapital}萬</div>
-                <div className="text-[10px] text-slate-400 mt-1">本金不動</div>
-             </div>
-             <div className="bg-yellow-50 p-4 rounded-lg text-center border border-yellow-100">
-                <div className="text-xs text-yellow-600 font-bold mb-1">小水庫 (子)</div>
-                <div className="text-xl font-bold text-slate-700">${finalSmallReservoir}萬</div>
-                <div className="text-[10px] text-slate-400 mt-1">配息長大</div>
-             </div>
-             <div className="bg-blue-50 p-4 rounded-lg text-center border border-blue-100">
-                <div className="text-xs text-blue-600 font-bold mb-1">增值倍數</div>
-                <div className="text-xl font-bold text-blue-600">{(totalAsset/initialCapital).toFixed(2)} 倍</div>
-                <div className="text-[10px] text-slate-400 mt-1">{years}年成效</div>
-             </div>
-          </div>
         </div>
       </div>
     </div>
   );
 };
-
-// ------------------------------------------------------------------
-// 核心模組 8: 稅務傳承專案 (New)
-// ------------------------------------------------------------------
 
 const TaxPlannerTool = ({ data, setData }) => {
   const safeData = {
@@ -1292,6 +1270,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('gift'); 
   const [toast, setToast] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu State
 
   const [giftData, setGiftData] = useState({ loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 });
   const [estateData, setEstateData] = useState({ loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6 });
@@ -1382,6 +1361,7 @@ export default function App() {
     
     setActiveTab(file.type);
     showToast(`已載入：${file.name}`, "success");
+    setIsMobileMenuOpen(false); // Close menu on load
   };
 
   const handleDeleteFile = async (id, e) => {
@@ -1394,14 +1374,21 @@ export default function App() {
     } catch (e) { showToast("刪除失敗", "error"); }
   };
 
+  // Fixed handleSaveProfile with timeout
   const handleSaveProfile = async (newProfile) => {
       setIsProfileSaving(true);
       try {
-        await setDoc(doc(db, "users", user.uid), { profile: newProfile }, { merge: true });
+        await withTimeout(
+          setDoc(doc(db, "users", user.uid), { profile: newProfile }, { merge: true }),
+          10000, // 10s timeout
+          "儲存超時，請檢查網路"
+        );
         setUserProfile(newProfile);
         setIsProfileModalOpen(false);
         showToast("資料已更新", "success");
-      } catch (e) { showToast("更新失敗", "error"); }
+      } catch (e) { 
+        showToast(e.message || "更新失敗", "error"); 
+      }
       finally { setIsProfileSaving(false); }
   };
 
@@ -1427,7 +1414,42 @@ export default function App() {
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} profile={userProfile} onSave={handleSaveProfile} loading={isProfileSaving} />
 
-      {/* Sidebar */}
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900 text-white flex flex-col animate-fade-in md:hidden">
+           <div className="p-4 flex justify-between items-center border-b border-slate-800">
+              <span className="font-bold text-lg">功能選單</span>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-slate-800 rounded-full"><X size={24}/></button>
+           </div>
+           <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              <div className="text-xs font-bold text-slate-500 px-4 py-2 uppercase tracking-wider">資產軍火庫</div>
+              <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => {setActiveTab('gift'); setIsMobileMenuOpen(false);}} />
+              <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => {setActiveTab('estate'); setIsMobileMenuOpen(false);}} />
+              <NavItem icon={GraduationCap} label="學貸套利專案" active={activeTab === 'student'} onClick={() => {setActiveTab('student'); setIsMobileMenuOpen(false);}} />
+              <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => {setActiveTab('super_active'); setIsMobileMenuOpen(false);}} />
+              <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => {setActiveTab('car'); setIsMobileMenuOpen(false);}} />
+              <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => {setActiveTab('reservoir'); setIsMobileMenuOpen(false);}} />
+              
+              <div className="mt-4 text-xs font-bold text-slate-500 px-4 py-2 uppercase tracking-wider">退休與傳承</div>
+              <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => {setActiveTab('pension'); setIsMobileMenuOpen(false);}} />
+              <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => {setActiveTab('tax'); setIsMobileMenuOpen(false);}} />
+              
+              <div className="mt-8 text-xs font-bold text-slate-500 px-4 py-2 uppercase tracking-wider">資料管理</div>
+              <NavItem icon={FileText} label="已存規劃檔案" active={activeTab === 'files'} onClick={() => { setActiveTab('files'); loadFiles(); }} />
+              
+              <div className="mt-8 pt-4 border-t border-slate-800">
+                <button onClick={() => { setIsProfileModalOpen(true); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white">
+                  <Edit3 size={20} /> <span className="font-medium">修改名片</span>
+                </button>
+                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white">
+                  <LogOut size={20} /> <span className="font-medium">登出系統</span>
+                </button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* Sidebar (Desktop) */}
       <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10 print:hidden">
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center gap-3 mb-1">
@@ -1471,14 +1493,12 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        {/* Mobile Header */}
+        {/* Mobile Header (Updated) */}
         <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center shadow-md shrink-0 print:hidden">
           <div className="font-bold flex items-center gap-2"><Coins className="text-yellow-400"/> 資產規劃</div>
-          <div className="flex gap-2">
-            <button onClick={() => setActiveTab(activeTab === 'gift' ? 'estate' : 'gift')} className="p-2 bg-slate-800 rounded-lg"><Calculator size={20}/></button>
-            <button onClick={() => { setActiveTab('files'); loadFiles(); }} className="p-2 bg-slate-800 rounded-lg"><FileText size={20}/></button>
-            <button onClick={() => setIsProfileModalOpen(true)} className="p-2 bg-slate-800 rounded-lg"><Settings size={20}/></button>
-          </div>
+          <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-slate-800 rounded-lg active:bg-slate-700">
+            <Menu size={24} />
+          </button>
         </div>
         
         {/* Print Header */}
