@@ -33,8 +33,8 @@ import {
   HeartHandshake
 } from 'lucide-react';
 import { 
+  BarChart, // 修正：已正確引入 BarChart
   Bar, 
-  BarChart, // 修正：將 BarChart 加入這裡
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -1267,10 +1267,6 @@ export default function App() {
       </div>
     );
   }
-
-  // Need to import BarChart for the Pension Tool
-  const { BarChart } = require('recharts'); // Dynamic import for BarChart within component context if not global, but better to add to top imports.
-  // Correction: I added Bar to top imports, but need BarChart specifically. Adding it now.
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
