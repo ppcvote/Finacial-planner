@@ -259,48 +259,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
             </div>
           </div>
           
-          {/* 這是策略說明 - 執行三部曲 (修正：這部分是保留的) */}
-          <div className="space-y-4 pt-4 print-break-inside">
-             <div className="flex items-center gap-2 mb-2">
-                <RefreshCw className="text-emerald-600" size={24} />
-                <h3 className="text-xl font-bold text-slate-800">執行三部曲</h3>
-             </div>
-             <div className="space-y-3">
-                 <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-emerald-200 transition-colors">
-                    <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-emerald-50 text-emerald-600 flex flex-col items-center justify-center font-bold text-xs">
-                       <span className="text-lg">01</span>
-                       <span>建置</span>
-                    </div>
-                    <div>
-                       <h4 className="font-bold text-slate-800 flex items-center gap-2">建置期 (第1年)</h4>
-                       <p className="text-sm text-slate-600 mt-1">透過銀行融資取得大筆資金，單筆投入穩健配息資產。就像買房出租，但省去頭期款與管理麻煩。</p>
-                    </div>
-                 </div>
-    
-                 <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-teal-200 transition-colors">
-                    <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-teal-50 text-teal-600 flex flex-col items-center justify-center font-bold text-xs">
-                       <span className="text-lg">02</span>
-                       <span>持守</span>
-                    </div>
-                    <div>
-                       <h4 className="font-bold text-slate-800 flex items-center gap-2">持守期 (第2-{loanTerm}年)</h4>
-                       <p className="text-sm text-slate-600 mt-1">讓資產產生的配息自動償還貸款本息。您只需補貼少許差額(甚至有找)，時間是您最好的朋友。</p>
-                    </div>
-                 </div>
-    
-                 <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-green-200 transition-colors">
-                    <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-green-50 text-green-600 flex flex-col items-center justify-center font-bold text-xs">
-                       <span className="text-lg">03</span>
-                       <span>自由</span>
-                    </div>
-                    <div>
-                       <h4 className="font-bold text-slate-800 flex items-center gap-2">自由期 (期滿)</h4>
-                       <p className="text-sm text-slate-600 mt-1">貸款完全清償。此刻起，這筆千萬資產與每月的配息收入完全屬於您，成為真正的被動收入。</p>
-                    </div>
-                 </div>
-              </div>
-          </div>
-        </div>
+          
 
         {/* 右側：圖表展示 */}
         <div className="lg:col-span-8 space-y-6">
