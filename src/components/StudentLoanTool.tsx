@@ -291,7 +291,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                    <label className="text-sm font-medium text-slate-600 flex items-center gap-1"><Clock size={14}/> 畢業後寬限期 (年)</label>
                    <span className="font-mono font-bold text-cyan-600 text-lg">{gracePeriod} 年</span>
                  </div>
-                 <input type="range" min={0} max={3} step={1} value={gracePeriod} onChange={(e) => updateField('gracePeriod', Number(e.target.value))} className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-cyan-500 hover:accent-cyan-600 transition-all" />
+                 <input type="range" min={0} max={3} step={1} value={gracePeriod} onChange={(e) => updateField('gracePeriod', Number(e.target.value))} className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-cyan-500 hover:accent-cyan-600 transition-all`} />
                  <p className="text-xs text-slate-400 mt-1">期間免還本息，通常為 1 年</p>
                </div>
 
@@ -301,7 +301,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                    <label className="text-sm font-medium text-slate-600 flex items-center gap-1"><PauseCircle size={14}/> 申請只繳息期 (年)</label>
                    <span className="font-mono font-bold text-orange-500 text-lg">{interestOnlyPeriod} 年</span>
                  </div>
-                 <input type="range" min={0} max={4} step={1} value={interestOnlyPeriod} onChange={(e) => updateField('interestOnlyPeriod', Number(e.target.value))} className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-orange-500 hover:accent-orange-600 transition-all" />
+                 <input type="range" min={0} max={4} step={1} value={interestOnlyPeriod} onChange={(e) => updateField('interestOnlyPeriod', Number(e.target.value))} className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-orange-500 hover:accent-orange-600 transition-all`} />
                  <p className="text-xs text-slate-400 mt-1">一般戶最多申請 4 年</p>
                </div>
 
@@ -365,11 +365,11 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   <ReferenceArea 
                     key="study"
                     x1={getXCategory(1, '第1年')} 
-                    x2={getXCategory(studyYears, `第${studyYears}年`)}
+                    x2={getXCategory(studyYears + 1, `第${studyYears + 1}年`)} // 擴展到下一個起始點
                     fill={phaseColors['在學期']}
                     fillOpacity={1}
                     stroke="none"
-                    y1={yMin} y2={yMax} 
+                    y1="dataMin" y2="dataMax" 
                   />
                 }
                 
@@ -378,11 +378,11 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   <ReferenceArea 
                     key="grace"
                     x1={getXCategory(studyYears + 1, `第${studyYears + 1}年`)} 
-                    x2={getXCategory(graceEndYear, `第${graceEndYear}年`)}
+                    x2={getXCategory(graceEndYear + 1, `第${graceEndYear + 1}年`)} // 擴展到下一個起始點
                     fill={phaseColors['寬限期']}
                     fillOpacity={1}
                     stroke="none"
-                    y1={yMin} y2={yMax}
+                    y1="dataMin" y2="dataMax"
                   />
                 }
                 
@@ -391,11 +391,11 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   <ReferenceArea 
                     key="interest"
                     x1={getXCategory(graceEndYear + 1, `第${graceEndYear + 1}年`)} 
-                    x2={getXCategory(interestOnlyEndYear, `第${interestOnlyEndYear}年`)}
+                    x2={getXCategory(interestOnlyEndYear + 1, `第${interestOnlyEndYear + 1}年`)} // 擴展到下一個起始點
                     fill={phaseColors['只繳息期']}
                     fillOpacity={1}
                     stroke="none"
-                    y1={yMin} y2={yMax} 
+                    y1="dataMin" y2="dataMax" 
                   />
                 }
                 
@@ -408,7 +408,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                     fill={phaseColors['本息攤還期']}
                     fillOpacity={1}
                     stroke="none"
-                    y1={yMin} y2={yMax} 
+                    y1="dataMin" y2="dataMax" 
                   />
                 }
 
@@ -421,7 +421,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="year" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} />
-                <YAxis unit="萬" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} domain={[yMin, yMax]}/>
+                <YAxis unit="萬" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} domain={['dataMin', 'dataMax']}/>
                 <Tooltip 
                   contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px'}} 
                   itemStyle={{padding: '2px 0'}}
