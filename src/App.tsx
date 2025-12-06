@@ -6,7 +6,6 @@ import {
   Coins, 
   CheckCircle2, 
   Scale, 
-  Save, 
   FileText, 
   Menu, 
   X, 
@@ -62,14 +61,7 @@ import {
 } from 'firebase/auth';
 import { 
   getFirestore, 
-  collection, 
-  addDoc, 
-  query, 
-  getDocs, 
-  deleteDoc, 
   doc, 
-  orderBy, 
-  setDoc, 
   getDoc, 
   initializeFirestore, 
   memoryLocalCache 
@@ -147,7 +139,7 @@ const calculateRemainingBalance = (principal, rate, totalYears, yearsElapsed) =>
 };
 
 // ------------------------------------------------------------------
-// Report Component (Updated with Charts)
+// Report Component (Updated)
 // ------------------------------------------------------------------
 
 const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
@@ -162,28 +154,41 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
   // --- Logic Extraction for Report ---
   if (activeTab === 'gift') {
     const loan = data.loanAmount;
-    // Generate Chart Data
-    const chartData = [];
-    let cumulativeStandard = 0;
-    let cumulativeProjectCost = 0;
-    let projectAssetValue = 0;
     const monthlyLoanPayment = calculateMonthlyPayment(loan, data.loanRate, data.loanTerm);
     const monthlyInvestIncomeSingle = calculateMonthlyIncome(loan, data.investReturnRate);
     const phase1_NetOut = monthlyLoanPayment - monthlyInvestIncomeSingle;
-    const phase2_NetOut = monthlyLoanPayment - (monthlyInvestIncomeSingle * 2);
     const standardTotalCost = loan * 3 * 10000; 
     const standardMonthlySaving = standardTotalCost / (data.loanTerm * 2 * 12);
     const monthlySaved = Math.round(standardMonthlySaving - phase1_NetOut);
 
-    for (let year = 1; year <= 14; year++) {
+    // Chart - Logic Update: Goal is 300万 (3 * loanAmount)
+    const chartData = [];
+    let cumulativeStandard = 0;
+    let cumulativeProjectCost = 0;
+    let projectAssetValue = 0;
+    const phase2_NetOut = monthlyLoanPayment - (monthlyInvestIncomeSingle * 2); // Phase 2 pays for 1st loan, receives 2 dividends
+
+    // Simulation for 15 years (to show the 3rd loan effect)
+    for (let year = 1; year <= 15; year++) {
       cumulativeStandard += standardMonthlySaving * 12;
+      
       if (year <= 7) {
+        // Phase 1: 1 Loan
         cumulativeProjectCost += phase1_NetOut * 12;
         projectAssetValue = loan * 10000;
-      } else {
+      } else if (year <= 14) {
+        // Phase 2: 2 Loans (Technically loan 1 is replaced or paid by loan 2 logic visually, but asset doubles)
+        // In this model: Asset = 200万
         cumulativeProjectCost += phase2_NetOut * 12;
         projectAssetValue = loan * 2 * 10000;
+      } else {
+        // Phase 3: Year 15 - 3 Loans active asset-wise
+        // Asset = 300万
+        // Cost? Usually Phase 3 is fully covered by dividends if rates align
+        cumulativeProjectCost += (monthlyLoanPayment - monthlyInvestIncomeSingle * 3) * 12; 
+        projectAssetValue = loan * 3 * 10000;
       }
+
       chartData.push({
         year: `第${year}年`,
         一般存錢成本: Math.round(cumulativeStandard / 10000),
@@ -198,19 +203,19 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
         { label: '核心策略', value: '以息養貸' },
         { label: '投入資源', value: `信貸 ${loan} 萬` },
         { label: '時間槓桿', value: `${data.loanTerm} 年循環` },
-        { label: '預期成果', value: `資產 ${loan*2} 萬` },
+        { label: '預期成果', value: `資產 ${loan*3} 萬` }, // Update to 3x
         { label: '人生意義', value: '第一桶金' }
       ],
       table: [
-        { label: '第 1 年', col1: '啟動期', col2: '建立信用' },
-        { label: '第 7 年', col1: '循環期', col2: `資產 ${loan} 萬` },
-        { label: '第 14 年', col1: '收割期', col2: `資產 ${loan*2} 萬` },
+        { label: '第 1 年', col1: '啟動期', col2: `資產 ${loan} 萬` },
+        { label: '第 8 年', col1: '循環期', col2: `資產 ${loan*2} 萬` },
+        { label: '第 15 年', col1: '收割期', col2: `資產 ${loan*3} 萬` },
       ],
       highlights: [
-        `比一般存錢每月省下 $${monthlySaved.toLocaleString()}，負擔減輕。`,
+        `每月僅需負擔約 $${Math.round(phase1_NetOut).toLocaleString()}，比一般存錢更輕鬆。`,
         '善用銀行低利資金，用時間換取資產增值。',
-        '強迫儲蓄效應，避免資金隨意花費。',
-        '雙倍資產槓桿，比單純存錢速度快一倍。'
+        '透過三次循環，15年後無痛擁有300萬資產。',
+        '強迫儲蓄效應，避免資金隨意花費。'
       ],
       chartData: chartData,
       chartType: 'composed_gift'
@@ -267,6 +272,7 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
   } else if (activeTab === 'student') {
      const profit = Math.round(data.loanAmount * 10000 * Math.pow((1 + data.investReturnRate/100), data.years + data.gracePeriod) - (calculateMonthlyPayment(data.loanAmount, 1.775, data.years) * 12 * data.years));
      
+     // Chart Data
      const chartData = [];
      const totalDuration = data.gracePeriod + data.interestOnlyPeriod + data.years;
      let investmentValue = data.loanAmount * 10000;
@@ -294,20 +300,21 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
         { label: '人生意義', value: '理財紀律' }
       ],
       table: [
-        { label: '畢業時', col1: '負債期', col2: '啟動投資' },
+        { label: '辦理學貸時', col1: '投入期', col2: '啟動投資規劃' }, // 修正：改為辦理時投入
         { label: '寬限結束', col1: '還款期', col2: '以息繳貸' },
         { label: '8 年後', col1: '無債期', col2: '多賺一筆' },
       ],
       highlights: [
-          `關鍵話術：學貸利率僅 1.775%，是這輩子最便宜的資金。`,
+          '利用政府補貼的低利貸款創造財富。',
+          '學費不繳掉，轉為資產種子。',
           '不急著還本金，讓時間複利為您工作。',
-          '畢業即擁有人生第一桶金，贏在起跑點。',
-          '培養「理財大於還債」的富人思維。'
+          '畢業即擁有人生第一桶金，贏在起跑點。'
       ],
       chartData: chartData,
       chartType: 'composed_student'
     };
   } else if (activeTab === 'super_active') {
+    // ... super active chart logic
     const chartData = [];
     let passiveAccumulation = 0; 
     let activeInvestment = 0; 
@@ -338,15 +345,15 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
         { label: `第 30 年`, col1: '爆發期', col2: '財富自由' },
       ],
       highlights: [
-          '關鍵效益：相比苦存40年，您只需專注存錢15年。',
+          '只需辛苦一陣子，享受一輩子。',
           '利用複利效應，大幅減少本金投入。',
-          '提早達成財務目標，擁有更多人生選擇權。',
-          '只需辛苦一陣子，享受一輩子。'
+          '提早達成財務目標，擁有更多人生選擇權。'
       ],
       chartData: chartData,
       chartType: 'composed_active'
     };
   } else if (activeTab === 'car') {
+    // ... car chart logic
     const cycles = [];
     let policyPrincipal = data.carPrice * 1; 
     const loanAmount = data.carPrice - 20;
@@ -381,15 +388,15 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
         { label: '第 3 台', col1: '資產滾大', col2: '幾近免費' },
       ],
       highlights: [
-          '關鍵思維：不要讓錢花掉就沒了。',
           '打破買車即負債的傳統觀念。',
-          '透過「舊車換新車」的資金回流，讓資產雪球越滾越大。',
+          '資產越滾越大，車貸越繳越少。',
           '維持生活品質，每五年輕鬆換新車。'
       ],
       chartData: cycles,
       chartType: 'composed_car'
     };
   } else if (activeTab === 'reservoir') {
+    // ... reservoir chart logic
     const chartData = [];
     const annualDividend = data.initialCapital * (data.dividendRate / 100);
     let reinvestedTotal = 0; 
@@ -420,13 +427,13 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
       highlights: [
           '策略效益：完全不需要再拿錢出來，只需搬運配息。',
           '母金不動，僅用孳息創造第二桶金。',
-          '零風險資產倍增術，母錢生子錢，子錢再生孫錢。',
-          '適合保守型高資產客戶，穩健傳承。'
+          '零風險資產倍增術，母錢生子錢，子錢再生孫錢。'
       ],
       chartData: chartData,
       chartType: 'area_reservoir'
     };
   } else if (activeTab === 'pension') {
+     // ... pension logic
      const laborInsBase = Math.min(Math.max(data.salary, 26400), 45800); 
      const laborInsMonthly = laborInsBase * data.laborInsYears * 0.0155;
      const monthlyContribution = Math.min(data.salary, 150000) * (0.06 + (data.selfContribution ? 0.06 : 0));
@@ -453,8 +460,7 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
       highlights: [
           '專家解讀：政府退休金僅能維持基本溫飽，無法享受生活。',
           `勞退自提讓您的退休金翻倍！(若無自提，退休金將少一半)`,
-          '提早規劃，用時間複利填補缺口。',
-          `想要過上理想生活，您現在必須開始填補這 $${Math.max(0, Math.round(gap)).toLocaleString()} 元的缺口。`
+          '提早規劃，用時間複利填補缺口。'
       ],
       chartData: [
         { name: '勞保年金', value: Math.round(laborInsMonthly), fill: '#3b82f6' },
@@ -464,6 +470,7 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
       chartType: 'bar_pension'
     };
   } else if (activeTab === 'tax') {
+     // ... tax logic
      const exemption = 1333; 
      const deductionSpouse = data.spouse ? 553 : 0;
      const deductionChildren = data.children * 56;
@@ -499,8 +506,7 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
       highlights: [
           '善用保險給付免稅額度(3330萬)，合法降低遺產總額。',
           '預留現金稅源，避免子孫變賣家產繳稅。',
-          '資產保全，讓財富完整傳承給下一代。',
-          '注意實質課稅原則，避免重病/高齡/短期投保。'
+          '資產保全，讓財富完整傳承給下一代。'
       ],
       chartData: [
         { name: '未規劃稅金', value: Math.round(taxRaw), fill: '#ef4444' },
@@ -545,7 +551,7 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
            </div>
            <div className="text-right text-sm text-slate-600">
               <p className="font-bold text-lg mb-1">{customerName ? customerName + ' 貴賓' : '貴賓專屬'}</p>
-              <p>規劃顧問：{user?.displayName || '專業理財顧問'}</p>
+              <p>規劃顧問：理財顧問</p>
               <p>規劃日期：{dateStr}</p>
            </div>
         </div>
@@ -592,10 +598,10 @@ const ReportModal = ({ isOpen, onClose, user, activeTab, data }) => {
                    <BarChart data={[{ name: 'Analysis', ...reportContent.chartData.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {}) }]} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                       <XAxis type="number" hide />
-                      <YAxis dataKey="name" type="category" hide />
+                      <YAxis dataKey="name" type="category" hide width={80} />
                       <Legend />
                       {reportContent.chartData.map((d, i) => (
-                         <Bar key={i} dataKey={d.name} fill={d.fill} barSize={40} label={{ position: 'right', fill: '#64748b', fontWeight: 'bold' }} />
+                         <Bar key={i} dataKey={d.name} fill={d.fill} barSize={40} label={{ position: 'right', fill: '#64748b', fontWeight: 'bold', formatter: (val) => `$${val}萬` }} />
                       ))}
                    </BarChart>
                 ) : reportContent.chartType === 'composed_car' ? (
@@ -756,7 +762,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, disabled = false }) => (
 );
 
 // ------------------------------------------------------------------
-// 核心模組 1-8 (完整保留)
+// 核心模組 1: 百萬禮物專案
 // ------------------------------------------------------------------
 
 const MillionDollarGiftTool = ({ data, setData }) => {
@@ -773,23 +779,38 @@ const MillionDollarGiftTool = ({ data, setData }) => {
   const monthlyInvestIncomeSingle = calculateMonthlyIncome(loanAmount, investReturnRate);
   const phase1_NetOut = monthlyLoanPayment - monthlyInvestIncomeSingle;
   const phase2_NetOut = monthlyLoanPayment - (monthlyInvestIncomeSingle * 2);
+  // Phase 3 Net Out would be Loan Payment - (Income * 3)
+  const phase3_NetOut = monthlyLoanPayment - (monthlyInvestIncomeSingle * 3);
+  
   const standardTotalCost = targetAmount * 10000; 
-  const standardMonthlySaving = standardTotalCost / (loanTerm * 2 * 12);
+  const standardMonthlySaving = standardTotalCost / (15 * 12); // 15 years total goal
+
+  // Logic update: 3 loans over 15 years approx
+  // Loan 1: Yr 1-7
+  // Loan 2: Yr 8-14
+  // Loan 3: Yr 15 (Asset hits 3M)
 
   const generateChartData = () => {
     const dataArr = [];
     let cumulativeStandard = 0;
     let cumulativeProjectCost = 0;
     let projectAssetValue = 0;
-    for (let year = 1; year <= 14; year++) {
+    
+    for (let year = 1; year <= 15; year++) {
       cumulativeStandard += standardMonthlySaving * 12;
+      
       if (year <= 7) {
         cumulativeProjectCost += phase1_NetOut * 12;
         projectAssetValue = loanAmount * 10000;
-      } else {
+      } else if (year <= 14) {
         cumulativeProjectCost += phase2_NetOut * 12;
         projectAssetValue = loanAmount * 2 * 10000;
+      } else {
+        // Year 15
+        cumulativeProjectCost += phase3_NetOut * 12; // Likely negative (profit)
+        projectAssetValue = loanAmount * 3 * 10000;
       }
+
       dataArr.push({
         year: `第${year}年`,
         一般存錢成本: Math.round(cumulativeStandard / 10000),
@@ -806,7 +827,7 @@ const MillionDollarGiftTool = ({ data, setData }) => {
     <div className="space-y-6 animate-fade-in">
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white shadow-lg print-break-inside">
         <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Wallet className="text-blue-200" /> 百萬禮物專案</h3>
-        <p className="text-blue-100 opacity-90">透過 7 年一輪的小額槓桿循環，用時間換取資產。</p>
+        <p className="text-blue-100 opacity-90">透過三次槓桿循環，用時間換取 300 萬資產。</p>
       </div>
 
       <div className="grid lg:grid-cols-12 gap-6">
@@ -998,8 +1019,6 @@ const StudentLoanTool = ({ data, setData }) => {
   const monthlyInterestOnly = (loanAmount * 10000 * (loanRate / 100)) / 12; // 只繳息金額
 
   // 總時程 = 寬限期(1) + 只繳息期(0~4) + 本息攤還期(8)
-  // 注意：寬限期與只繳息期，通常是「外加」於還款期的，即還款期限順延。
-  // 本金還款期 years 固定為 8 年(或其他設定值)。
   const totalDuration = gracePeriod + interestOnlyPeriod + years;
 
   const generateChartData = () => {
@@ -1009,23 +1028,14 @@ const StudentLoanTool = ({ data, setData }) => {
     let investmentValue = initialCapital;
     let remainingLoan = loanAmount * 10000;
     
-    // 情境：直接還清 (基準線)
-    // 假設一開始就有這筆錢(40萬)。如果選擇還清，資產=0。如果選擇投資，資產=投資值-負債。
-
     for (let year = 1; year <= totalDuration + 2; year++) { 
-      // 1. 投資複利成長
       investmentValue = investmentValue * (1 + investReturnRate / 100);
       
-      // 2. 貸款餘額計算
       if (year <= gracePeriod) {
-         // 寬限期：不還本，通常也不繳息(或政府補貼)。本金不變。
-         // 這裡假設這段期間不用從口袋拿錢出來。
          remainingLoan = loanAmount * 10000;
       } else if (year <= gracePeriod + interestOnlyPeriod) {
-         // 只繳息期：只還利息，本金不變。
          remainingLoan = loanAmount * 10000;
       } else if (year <= totalDuration) {
-         // 本息攤還期：開始還本金
          const repaymentYearIndex = year - (gracePeriod + interestOnlyPeriod);
          remainingLoan = calculateRemainingBalance(loanAmount, loanRate, years, repaymentYearIndex);
       } else {
@@ -1034,7 +1044,6 @@ const StudentLoanTool = ({ data, setData }) => {
       
       const netWorth = investmentValue - remainingLoan;
 
-      // 標註階段
       let phase = "";
       if (year <= gracePeriod) phase = "寬限期";
       else if (year <= gracePeriod + interestOnlyPeriod) phase = "只繳息";
@@ -1052,15 +1061,10 @@ const StudentLoanTool = ({ data, setData }) => {
     return dataArr;
   };
   
-  // 計算最終獲利 (專案結束時)
   const finalInvestValue = loanAmount * 10000 * Math.pow((1 + investReturnRate/100), totalDuration);
-  
-  // 總支出成本 = (寬限期0) + (只繳息期利息總和) + (本息攤還期總額)
-  // 假設寬限期利息由政府補貼(不計入成本)或暫時不計
   const totalInterestOnlyCost = monthlyInterestOnly * 12 * interestOnlyPeriod;
   const totalAmortizationCost = monthlyPaymentP_I * 12 * years;
   const totalCost = totalInterestOnlyCost + totalAmortizationCost;
-  
   const pureProfit = finalInvestValue - totalCost;
 
   return (
@@ -1133,24 +1137,12 @@ const StudentLoanTool = ({ data, setData }) => {
                <p className="text-3xl font-black text-sky-600 font-mono">+${Math.round(pureProfit / 10000)}萬</p>
                <p className="text-xs text-slate-400 mt-1">{totalDuration}年後 淨賺金額</p>
              </div>
-             
-             <div className="mt-4 bg-sky-50 p-3 rounded-lg border border-sky-100 text-xs text-sky-800 space-y-2">
-               <div>
-                 <span className="font-bold">💡 策略分析：</span>
-                 <ul className="list-disc pl-4 mt-1 space-y-1">
-                    {gracePeriod > 0 && <li>利用<span className="font-bold">{gracePeriod}年寬限期</span>，前{gracePeriod}年完全免費持有資金。</li>}
-                    {interestOnlyPeriod > 0 && <li>申請<span className="font-bold">{interestOnlyPeriod}年只繳息</span>，每月僅需付約 <span className="font-bold text-red-500">${Math.round(monthlyInterestOnly)}</span> 利息，本金繼續滾複利。</li>}
-                    <li>利用時間差，創造 <span className="font-bold">${Math.round(pureProfit / 10000)}萬</span> 的淨財富。</li>
-                 </ul>
-               </div>
-             </div>
           </div>
         </div>
 
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[450px]">
-             <h4 className="font-bold text-slate-700 mb-4 pl-2">資產累積 vs 負債遞減圖</h4>
-             <ResponsiveContainer width="100%" height="100%">
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[400px] print-break-inside">
+            <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={generateChartData()} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                 <defs><linearGradient id="colorInvest" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3}/><stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/></linearGradient></defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -1163,22 +1155,6 @@ const StudentLoanTool = ({ data, setData }) => {
                 <Line type="monotone" name="直接繳掉 (資產=0)" dataKey="若直接繳掉" stroke="#ef4444" strokeWidth={2} />
               </ComposedChart>
             </ResponsiveContainer>
-          </div>
-          
-          <div className="grid grid-cols-3 gap-4">
-             <div className="bg-slate-50 p-4 rounded-lg text-center">
-                <div className="text-xs text-slate-500">總利息成本</div>
-                <div className="font-bold text-red-500">${Math.round(totalCost - loanAmount*10000).toLocaleString()}</div>
-                <div className="text-[10px] text-slate-400 mt-1">含只繳息期利息</div>
-             </div>
-             <div className="bg-slate-50 p-4 rounded-lg text-center">
-                <div className="text-xs text-slate-500">投資複利獲利</div>
-                <div className="font-bold text-green-600">+${Math.round(finalInvestValue - loanAmount*10000).toLocaleString()}</div>
-             </div>
-             <div className="bg-slate-100 p-4 rounded-lg text-center border-l-4 border-sky-500">
-                <div className="text-xs text-slate-500">淨賺利差</div>
-                <div className="font-bold text-sky-700">+${Math.round(pureProfit).toLocaleString()}</div>
-             </div>
           </div>
         </div>
       </div>
@@ -1270,9 +1246,8 @@ const SuperActiveSavingTool = ({ data, setData }) => {
         </div>
 
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[450px]">
-             <h4 className="font-bold text-slate-700 mb-4 pl-2">資產累積速度對比</h4>
-             <ResponsiveContainer width="100%" height="100%">
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-[400px] print-break-inside">
+            <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                 <defs>
                   <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#9333ea" stopOpacity={0.3}/><stop offset="95%" stopColor="#9333ea" stopOpacity={0}/></linearGradient>
@@ -1286,24 +1261,6 @@ const SuperActiveSavingTool = ({ data, setData }) => {
                 <Line type="monotone" name="消極存錢 (勞力)" dataKey="消極存錢" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" />
               </ComposedChart>
             </ResponsiveContainer>
-          </div>
-          
-          <div className="grid grid-cols-3 gap-4">
-             <div className="bg-slate-50 p-4 rounded-lg text-center">
-                <div className="text-xs text-slate-500">節省本金</div>
-                <div className="font-bold text-green-600">${Math.round((monthlySaving*12*(totalYears-activeYears))/10000)}萬</div>
-                <div className="text-[10px] text-slate-400 mt-1">少奮鬥 {totalYears - activeYears} 年</div>
-             </div>
-             <div className="bg-slate-50 p-4 rounded-lg text-center">
-                <div className="text-xs text-slate-500">第 30 年資產</div>
-                <div className="font-bold text-purple-600">${chartData[29]?.積極存錢}萬</div>
-                <div className="text-[10px] text-slate-400 mt-1">對比消極法 ${chartData[29]?.消極存錢}萬</div>
-             </div>
-             <div className="bg-slate-100 p-4 rounded-lg text-center border-l-4 border-purple-500">
-                <div className="text-xs text-slate-500">最終獲利倍數</div>
-                <div className="font-bold text-purple-700">{(finalActive/Math.round(monthlySaving*12*activeYears/10000)).toFixed(1)} 倍</div>
-                <div className="text-[10px] text-slate-400 mt-1">本金翻倍率</div>
-             </div>
           </div>
         </div>
       </div>
@@ -1533,24 +1490,6 @@ const BigSmallReservoirTool = ({ data, setData }) => {
                 </AreaChart>
              </ResponsiveContainer>
           </div>
-          
-          <div className="grid grid-cols-3 gap-4">
-             <div className="bg-cyan-50 p-4 rounded-lg text-center border border-cyan-100">
-                <div className="text-xs text-cyan-600 font-bold mb-1">大水庫 (母)</div>
-                <div className="text-xl font-bold text-slate-700">${initialCapital}萬</div>
-                <div className="text-[10px] text-slate-400 mt-1">本金不動</div>
-             </div>
-             <div className="bg-yellow-50 p-4 rounded-lg text-center border border-yellow-100">
-                <div className="text-xs text-yellow-600 font-bold mb-1">小水庫 (子)</div>
-                <div className="text-xl font-bold text-slate-700">${finalSmallReservoir}萬</div>
-                <div className="text-[10px] text-slate-400 mt-1">配息長大</div>
-             </div>
-             <div className="bg-blue-50 p-4 rounded-lg text-center border border-blue-100">
-                <div className="text-xs text-blue-600 font-bold mb-1">增值倍數</div>
-                <div className="text-xl font-bold text-blue-600">{(totalAsset/initialCapital).toFixed(2)} 倍</div>
-                <div className="text-[10px] text-slate-400 mt-1">{years}年成效</div>
-             </div>
-          </div>
         </div>
       </div>
     </div>
@@ -1668,15 +1607,15 @@ const LaborPensionTool = ({ data, setData }) => {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[450px]">
              <h4 className="font-bold text-slate-700 mb-4 pl-2">退休金結構分析</h4>
              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={[{ name: '月收入', ...chartData.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {}) }]} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" tick={{fontSize: 14}} axisLine={false} tickLine={false} />
-                  <YAxis unit="元" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                <BarChart data={[{ name: '月收入', ...chartData.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {}) }]} margin={{ top: 20, right: 40, left: 40, bottom: 5 }} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="name" type="category" hide width={100} />
                   <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
                   <Legend />
-                  <Bar dataKey="勞保年金" stackId="a" fill="#3b82f6" barSize={60} />
-                  <Bar dataKey="勞退月領" stackId="a" fill="#10b981" barSize={60} />
-                  <Bar dataKey="退休缺口" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={60} label={{ position: 'top', fill: '#ef4444', fontWeight: 'bold' }} />
+                  {chartData.map((d, i) => (
+                     <Bar key={i} dataKey={d.name} fill={d.fill} barSize={40} label={{ position: 'right', fill: '#64748b', fontWeight: 'bold', formatter: (val) => `$${val}萬` }} />
+                  ))}
                 </BarChart>
              </ResponsiveContainer>
           </div>
@@ -1808,32 +1747,6 @@ const TaxPlannerTool = ({ data, setData }) => {
                 </BarChart>
              </ResponsiveContainer>
           </div>
-          
-          <div className="grid grid-cols-3 gap-4">
-             <div className="bg-slate-50 p-4 rounded-lg text-center border border-slate-200">
-                <div className="text-xs text-slate-500 font-bold mb-1">資產總額</div>
-                <div className="text-xl font-bold text-slate-700">${totalAssets}萬</div>
-             </div>
-             <div className="bg-slate-50 p-4 rounded-lg text-center border border-slate-200">
-                <div className="text-xs text-slate-500 font-bold mb-1">免稅額+扣除額</div>
-                <div className="text-xl font-bold text-slate-700">${totalDeductions}萬</div>
-             </div>
-             <div className="bg-slate-50 p-4 rounded-lg text-center border border-slate-200">
-                <div className="text-xs text-slate-500 font-bold mb-1">遺產淨額 (未規劃)</div>
-                <div className="text-xl font-bold text-slate-700">${netEstateRaw}萬</div>
-             </div>
-          </div>
-
-          <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4 flex gap-3">
-             <AlertTriangle className="text-yellow-600 flex-shrink-0" />
-             <div className="text-xs text-yellow-800 space-y-1">
-               <p className="font-bold">實質課稅原則提醒 (八大態樣)：</p>
-               <ul className="list-disc pl-4 opacity-90">
-                 <li>重病投保、高齡投保、短期投保、躉繳投保、舉債投保、鉅額投保、保費略高於保額、保費等於保額。</li>
-                 <li>以上情況可能被國稅局視為惡意避稅，仍需計入遺產總額課稅。建議及早規劃，分散風險。</li>
-               </ul>
-             </div>
-          </div>
         </div>
       </div>
     </div>
@@ -1861,92 +1774,17 @@ export default function App() {
   const [reservoirData, setReservoirData] = useState({ initialCapital: 1000, dividendRate: 6, reinvestRate: 6, years: 10 });
   const [taxData, setTaxData] = useState({ spouse: true, children: 2, parents: 0, cash: 3000, realEstate: 2000, stocks: 1000, insurancePlan: 0 });
 
-  const [userProfile, setUserProfile] = useState({ displayName: '', title: '' });
-  const [savedFiles, setSavedFiles] = useState([]);
-  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setLoading(false);
-      if (currentUser) {
-        setUserProfile({ 
-            displayName: currentUser.displayName || '', 
-            title: '理財顧問' 
-        });
-      }
     });
     return () => unsubscribe();
   }, []);
 
   const showToast = (message, type = 'success') => { setToast({ message, type }); };
   const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (e) { showToast("登入失敗", "error"); } };
-  const handleLogout = async () => { await signOut(auth); setSavedFiles([]); setActiveTab('gift'); showToast("已安全登出", "info"); };
-
-  const handleSavePlan = async () => {
-    if (!user) return;
-    const name = prompt("請輸入規劃名稱：");
-    if (!name) return;
-
-    let currentData = {};
-    if (activeTab === 'gift') currentData = giftData;
-    else if (activeTab === 'estate') currentData = estateData;
-    else if (activeTab === 'student') currentData = studentData;
-    else if (activeTab === 'super_active') currentData = superActiveData;
-    else if (activeTab === 'car') currentData = carData;
-    else if (activeTab === 'pension') currentData = pensionData;
-    else if (activeTab === 'reservoir') currentData = reservoirData;
-    else if (activeTab === 'tax') currentData = taxData;
-
-    const newPlan = {
-      name,
-      date: new Date().toLocaleDateString(),
-      type: activeTab,
-      data: currentData
-    };
-
-    try {
-      await withTimeout(addDoc(collection(db, "users", user.uid, "plans"), newPlan), 15000, "Timeout");
-      showToast("規劃已儲存！", "success");
-      loadFiles(); 
-    } catch (e) { showToast("儲存失敗", "error"); }
-  };
-
-  const loadFiles = async () => {
-    if (!user) return;
-    setIsLoadingFiles(true);
-    try {
-      const q = query(collection(db, "users", user.uid, "plans"), orderBy("date", "desc"));
-      const snapshot = await getDocs(q);
-      setSavedFiles(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (e) { showToast("讀取失敗", "error"); }
-    finally { setIsLoadingFiles(false); }
-  };
-
-  const handleLoadFile = (file) => {
-    if (file.type === 'gift') setGiftData(file.data);
-    else if (file.type === 'estate') setEstateData(file.data);
-    else if (file.type === 'student') setStudentData(file.data);
-    else if (file.type === 'super_active') setSuperActiveData(file.data);
-    else if (file.type === 'car') setCarData(file.data);
-    else if (file.type === 'pension') setPensionData(file.data);
-    else if (file.type === 'reservoir') setReservoirData(file.data);
-    else if (file.type === 'tax') setTaxData(file.data);
-    
-    setActiveTab(file.type);
-    showToast(`已載入：${file.name}`, "success");
-    setIsMobileMenuOpen(false); // Close menu on load
-  };
-
-  const handleDeleteFile = async (id, e) => {
-    e.stopPropagation();
-    if(!confirm("確定刪除？")) return;
-    try {
-      await deleteDoc(doc(db, "users", user.uid, "plans", id));
-      setSavedFiles(prev => prev.filter(f => f.id !== id));
-      showToast("檔案已刪除", "success");
-    } catch (e) { showToast("刪除失敗", "error"); }
-  };
+  const handleLogout = async () => { await signOut(auth); setActiveTab('gift'); showToast("已安全登出", "info"); };
 
   // Helper to get current active data
   const getCurrentData = () => {
@@ -2011,9 +1849,6 @@ export default function App() {
               <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => {setActiveTab('pension'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => {setActiveTab('tax'); setIsMobileMenuOpen(false);}} />
               
-              <div className="mt-8 text-xs font-bold text-slate-500 px-4 py-2 uppercase tracking-wider">資料管理</div>
-              <NavItem icon={FileText} label="已存規劃檔案" active={activeTab === 'files'} onClick={() => { setActiveTab('files'); loadFiles(); }} />
-              
               <div className="mt-8 pt-4 border-t border-slate-800">
                 <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white">
                   <LogOut size={20} /> <span className="font-medium">登出系統</span>
@@ -2049,9 +1884,6 @@ export default function App() {
           <div className="mt-4 text-xs font-bold text-slate-600 px-4 py-2 uppercase tracking-wider">退休與傳承</div>
           <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => setActiveTab('pension')} />
           <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => setActiveTab('tax')} />
-          
-          <div className="mt-8 text-xs font-bold text-slate-500 px-4 py-2 uppercase tracking-wider">資料管理</div>
-          <NavItem icon={FileText} label="已存規劃檔案" active={activeTab === 'files'} onClick={() => { setActiveTab('files'); loadFiles(); }} />
         </nav>
 
         <div className="p-4 border-t border-slate-800 space-y-2">
@@ -2085,17 +1917,6 @@ export default function App() {
         
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 relative">
-           {/* Save Button */}
-           {(activeTab !== 'files') && (
-             <button 
-               onClick={handleSavePlan}
-               className="fixed bottom-6 right-6 md:absolute md:top-8 md:right-8 md:bottom-auto bg-slate-900 text-white p-3 md:px-5 md:py-2 rounded-full md:rounded-lg shadow-lg hover:bg-slate-700 transition-all flex items-center gap-2 z-50 group print:hidden"
-             >
-               <Save size={20} />
-               <span className="hidden md:inline font-bold">儲存目前規劃</span>
-             </button>
-           )}
-
            <div className="max-w-5xl mx-auto pb-20 md:pb-0">
              {activeTab === 'gift' && <MillionDollarGiftTool data={giftData} setData={setGiftData} />}
              {activeTab === 'estate' && <FinancialRealEstateTool data={estateData} setData={setEstateData} />}
@@ -2105,61 +1926,6 @@ export default function App() {
              {activeTab === 'reservoir' && <BigSmallReservoirTool data={reservoirData} setData={setReservoirData} />}
              {activeTab === 'pension' && <LaborPensionTool data={pensionData} setData={setPensionData} />}
              {activeTab === 'tax' && <TaxPlannerTool data={taxData} setData={setTaxData} />}
-
-             {activeTab === 'files' && (
-                <div className="animate-fade-in">
-                   <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2"><FileText /> 客戶規劃檔案庫</h2>
-                   {isLoadingFiles ? (
-                     <div className="text-center py-12 text-slate-400">載入中...</div>
-                   ) : savedFiles.length === 0 ? (
-                     <div className="bg-white rounded-2xl p-12 text-center border-2 border-dashed border-slate-200">
-                        <Wallet size={48} className="mx-auto text-slate-300 mb-4" />
-                        <p className="text-slate-500">目前沒有儲存的規劃</p>
-                        <p className="text-sm text-slate-400 mt-1">在工具頁面點擊「儲存」即可建立檔案</p>
-                     </div>
-                   ) : (
-                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                       {savedFiles.map(file => (
-                         <div key={file.id} onClick={() => handleLoadFile(file)} className="bg-white p-5 rounded-xl border border-slate-200 hover:border-blue-500 hover:shadow-md transition-all cursor-pointer group relative">
-                            <div className="flex justify-between items-start mb-3">
-                               <div className={`p-2 rounded-lg ${
-                                 file.type === 'gift' ? 'bg-blue-100 text-blue-600' : 
-                                 file.type === 'estate' ? 'bg-emerald-100 text-emerald-600' :
-                                 file.type === 'super_active' ? 'bg-purple-100 text-purple-600' :
-                                 file.type === 'car' ? 'bg-orange-100 text-orange-600' :
-                                 file.type === 'reservoir' ? 'bg-cyan-100 text-cyan-600' :
-                                 file.type === 'pension' ? 'bg-slate-200 text-slate-700' :
-                                 file.type === 'tax' ? 'bg-zinc-200 text-zinc-700' :
-                                 'bg-sky-100 text-sky-600'
-                               }`}>
-                                  {file.type === 'gift' ? <Wallet size={20} /> : 
-                                   file.type === 'estate' ? <Building2 size={20} /> :
-                                   file.type === 'super_active' ? <Rocket size={20} /> :
-                                   file.type === 'car' ? <Car size={20} /> :
-                                   file.type === 'reservoir' ? <Waves size={20} /> :
-                                   file.type === 'pension' ? <Umbrella size={20} /> :
-                                   file.type === 'tax' ? <Landmark size={20} /> :
-                                   <GraduationCap size={20} />}
-                               </div>
-                               <button onClick={(e) => handleDeleteFile(file.id, e)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16}/></button>
-                            </div>
-                            <h3 className="font-bold text-slate-800 text-lg mb-1">{file.name}</h3>
-                            <p className="text-xs text-slate-400">{file.date} • {
-                                file.type === 'gift' ? '百萬禮物' : 
-                                file.type === 'estate' ? '金融房產' : 
-                                file.type === 'super_active' ? '超積極存錢' :
-                                file.type === 'car' ? '五年換車' :
-                                file.type === 'reservoir' ? '大小水庫' :
-                                file.type === 'pension' ? '退休缺口' :
-                                file.type === 'tax' ? '稅務傳承' :
-                                '學貸套利'
-                            }</p>
-                         </div>
-                       ))}
-                     </div>
-                   )}
-                </div>
-             )}
            </div>
         </div>
       </main>
