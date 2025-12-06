@@ -30,8 +30,11 @@ import {
   Rocket,
   Car,
   Repeat,
-  HeartHandshake
+  HeartHandshake,
+  Droplets,
+  AlertTriangle
 } from 'lucide-react';
+// 修正：確保 AreaChart 與 BarChart 都已正確引入
 import { 
   BarChart, 
   AreaChart, 
@@ -47,7 +50,7 @@ import {
   Line 
 } from 'recharts';
 
-// --- Firebase 模組整合 (維持不變) ---
+// --- Firebase 模組整合 ---
 import { initializeApp } from "firebase/app";
 import { 
   getAuth, 
@@ -232,7 +235,7 @@ const ProfileModal = ({ isOpen, onClose, profile, onSave, loading }) => {
 };
 
 // ------------------------------------------------------------------
-// 核心模組 1-7 (既有模組省略重複代碼，保留完整功能)
+// 核心模組 1-7 (既有模組)
 // ------------------------------------------------------------------
 
 const MillionDollarGiftTool = ({ data, setData }) => {
@@ -1116,6 +1119,171 @@ const BigSmallReservoirTool = ({ data, setData }) => {
 };
 
 // ------------------------------------------------------------------
+// 核心模組 8: 稅務傳承專案 (New)
+// ------------------------------------------------------------------
+
+const TaxPlannerTool = ({ data, setData }) => {
+  const safeData = {
+    spouse: Boolean(data?.spouse), // 有無配偶
+    children: Number(data?.children) || 2, // 子女人數
+    parents: Number(data?.parents) || 0, // 父母人數
+    cash: Number(data?.cash) || 3000, // 現金 (萬)
+    realEstate: Number(data?.realEstate) || 2000, // 不動產 (萬)
+    stocks: Number(data?.stocks) || 1000, // 股票 (萬)
+    insurancePlan: Number(data?.insurancePlan) || 0 // 規劃移轉至保險的金額 (萬)
+  };
+  const { spouse, children, parents, cash, realEstate, stocks, insurancePlan } = safeData;
+
+  // 1. 遺產總額
+  const totalAssets = cash + realEstate + stocks;
+  
+  // 2. 免稅額與扣除額 (2024-2025 標準)
+  const exemption = 1333; // 免稅額
+  const deductionSpouse = spouse ? 553 : 0;
+  const deductionChildren = children * 56;
+  const deductionParents = parents * 138;
+  const deductionFuneral = 138; // 喪葬費
+  
+  const totalDeductions = exemption + deductionSpouse + deductionChildren + deductionParents + deductionFuneral;
+
+  // 3. 課稅遺產淨額 (未規劃)
+  const netEstateRaw = Math.max(0, totalAssets - totalDeductions);
+  
+  // 4. 課稅遺產淨額 (有規劃)
+  // 保險給付不計入遺產總額 (保險法112條)，但需注意最低稅負制 (3330萬額度)
+  // 假設規劃金額在 3330 萬以內，全額免計入遺產
+  const plannedAssets = Math.max(0, totalAssets - insurancePlan);
+  const netEstatePlanned = Math.max(0, plannedAssets - totalDeductions);
+
+  // 稅率計算函數
+  const calculateTax = (netEstate) => {
+    if (netEstate <= 5000) return netEstate * 0.10;
+    if (netEstate <= 10000) return netEstate * 0.15 - 250;
+    return netEstate * 0.20 - 750;
+  };
+
+  const taxRaw = calculateTax(netEstateRaw);
+  const taxPlanned = calculateTax(netEstatePlanned);
+  const taxSaved = taxRaw - taxPlanned;
+
+  const chartData = [
+    { name: '未規劃稅金', value: Math.round(taxRaw), fill: '#ef4444' },
+    { name: '規劃後稅金', value: Math.round(taxPlanned), fill: '#3b82f6' },
+  ];
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="bg-gradient-to-r from-slate-600 to-zinc-700 rounded-2xl p-6 text-white shadow-lg print-break-inside">
+        <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Landmark className="text-slate-200" /> 稅務傳承專案</h3>
+        <p className="text-slate-300 opacity-90">善用保險免稅額度，合法預留稅源，讓資產無痛傳承。</p>
+      </div>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4 space-y-4 print-break-inside">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-print">
+            <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2"><Calculator size={18} /> 資產與家庭</h4>
+            <div className="space-y-6">
+               <div className="space-y-3">
+                 <div className="flex items-center justify-between">
+                   <label className="text-sm text-slate-600">配偶健在</label>
+                   <input type="checkbox" checked={spouse} onChange={(e) => setData({...safeData, spouse: e.target.checked})} className="w-5 h-5 accent-slate-600" />
+                 </div>
+                 <div className="flex items-center justify-between">
+                   <label className="text-sm text-slate-600">子女人數</label>
+                   <input type="number" min={0} max={10} value={children} onChange={(e) => setData({...safeData, children: Number(e.target.value)})} className="w-16 p-1 border rounded text-right" />
+                 </div>
+               </div>
+
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">現金存款 (萬)</label>
+                   <span className="font-mono font-bold text-slate-700">${cash}</span>
+                 </div>
+                 <input type="range" min={0} max={10000} step={100} value={cash} onChange={(e) => setData({ ...safeData, cash: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-600" />
+               </div>
+               
+               <div>
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-medium text-slate-600">不動產現值 (萬)</label>
+                   <span className="font-mono font-bold text-slate-700">${realEstate}</span>
+                 </div>
+                 <input type="range" min={0} max={10000} step={100} value={realEstate} onChange={(e) => setData({ ...safeData, realEstate: Number(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-600" />
+               </div>
+
+               <div className="pt-4 border-t border-slate-100">
+                 <div className="flex justify-between mb-2">
+                   <label className="text-sm font-bold text-blue-600 flex items-center gap-1"><ShieldAlert size={14}/> 規劃轉入保險 (萬)</label>
+                   <span className="font-mono font-bold text-blue-600">${insurancePlan}</span>
+                 </div>
+                 <input type="range" min={0} max={Math.min(cash, 3330)} step={100} value={insurancePlan} onChange={(e) => setData({ ...safeData, insurancePlan: Number(e.target.value) })} className="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                 <p className="text-xs text-slate-400 mt-1">最高 3,330 萬 (最低稅負制免稅額)</p>
+               </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow border border-slate-200 p-6">
+             <div className="text-center mb-4">
+                <p className="text-slate-500 text-sm">原本應繳稅金</p>
+                <p className="text-2xl font-bold text-red-500">${Math.round(taxRaw).toLocaleString()}萬</p>
+             </div>
+             <div className="border-t border-slate-100 my-4"></div>
+             <div className="text-center">
+                <p className="text-slate-500 text-sm">節稅效益</p>
+                <p className="text-4xl font-black text-green-600 font-mono">省 ${Math.round(taxSaved).toLocaleString()}萬</p>
+                <p className="text-xs text-slate-400 mt-1">
+                   規劃後稅金僅需 ${Math.round(taxPlanned).toLocaleString()}萬
+                </p>
+             </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-8 space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[400px]">
+             <h4 className="font-bold text-slate-700 mb-4 pl-2">遺產稅負擔對比</h4>
+             <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="name" type="category" tick={{fontSize: 14}} axisLine={false} tickLine={false} width={100} />
+                  <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                  <Bar dataKey="value" barSize={40} radius={[0, 4, 4, 0]} label={{ position: 'right', fill: '#64748b', fontWeight: 'bold', formatter: (val) => `$${val}萬` }}>
+                  </Bar>
+                </BarChart>
+             </ResponsiveContainer>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4">
+             <div className="bg-slate-50 p-4 rounded-lg text-center border border-slate-200">
+                <div className="text-xs text-slate-500 font-bold mb-1">資產總額</div>
+                <div className="text-xl font-bold text-slate-700">${totalAssets}萬</div>
+             </div>
+             <div className="bg-slate-50 p-4 rounded-lg text-center border border-slate-200">
+                <div className="text-xs text-slate-500 font-bold mb-1">免稅額+扣除額</div>
+                <div className="text-xl font-bold text-slate-700">${totalDeductions}萬</div>
+             </div>
+             <div className="bg-slate-50 p-4 rounded-lg text-center border border-slate-200">
+                <div className="text-xs text-slate-500 font-bold mb-1">遺產淨額 (未規劃)</div>
+                <div className="text-xl font-bold text-slate-700">${netEstateRaw}萬</div>
+             </div>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4 flex gap-3">
+             <AlertTriangle className="text-yellow-600 flex-shrink-0" />
+             <div className="text-xs text-yellow-800 space-y-1">
+               <p className="font-bold">實質課稅原則提醒 (八大態樣)：</p>
+               <ul className="list-disc pl-4 opacity-90">
+                 <li>重病投保、高齡投保、短期投保、躉繳投保、舉債投保、鉅額投保、保費略高於保額、保費等於保額。</li>
+                 <li>以上情況可能被國稅局視為惡意避稅，仍需計入遺產總額課稅。建議及早規劃，分散風險。</li>
+               </ul>
+             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ------------------------------------------------------------------
 // Main App Shell
 // ------------------------------------------------------------------
 
@@ -1132,7 +1300,8 @@ export default function App() {
   const [carData, setCarData] = useState({ carPrice: 100, investReturnRate: 6, resaleRate: 50 });
   const [pensionData, setPensionData] = useState({ currentAge: 30, retireAge: 65, salary: 45000, laborInsYears: 35, selfContribution: false, pensionReturnRate: 3, desiredMonthlyIncome: 60000 });
   const [reservoirData, setReservoirData] = useState({ initialCapital: 1000, dividendRate: 6, reinvestRate: 6, years: 10 });
-  
+  const [taxData, setTaxData] = useState({ spouse: true, children: 2, parents: 0, cash: 3000, realEstate: 2000, stocks: 1000, insurancePlan: 0 });
+
   const [userProfile, setUserProfile] = useState({ displayName: '', title: '' });
   const [savedFiles, setSavedFiles] = useState([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
@@ -1174,6 +1343,7 @@ export default function App() {
     else if (activeTab === 'car') currentData = carData;
     else if (activeTab === 'pension') currentData = pensionData;
     else if (activeTab === 'reservoir') currentData = reservoirData;
+    else if (activeTab === 'tax') currentData = taxData;
 
     const newPlan = {
       name,
@@ -1208,6 +1378,7 @@ export default function App() {
     else if (file.type === 'car') setCarData(file.data);
     else if (file.type === 'pension') setPensionData(file.data);
     else if (file.type === 'reservoir') setReservoirData(file.data);
+    else if (file.type === 'tax') setTaxData(file.data);
     
     setActiveTab(file.type);
     showToast(`已載入：${file.name}`, "success");
@@ -1280,9 +1451,9 @@ export default function App() {
           <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => setActiveTab('car')} />
           <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => setActiveTab('reservoir')} />
           
-          <div className="mt-4 text-xs font-bold text-slate-600 px-4 py-2 uppercase tracking-wider">退休規劃</div>
+          <div className="mt-4 text-xs font-bold text-slate-600 px-4 py-2 uppercase tracking-wider">退休與傳承</div>
           <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => setActiveTab('pension')} />
-          <NavItem icon={Landmark} label="稅務專案" disabled />
+          <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => setActiveTab('tax')} />
           
           <div className="mt-8 text-xs font-bold text-slate-500 px-4 py-2 uppercase tracking-wider">資料管理</div>
           <NavItem icon={FileText} label="已存規劃檔案" active={activeTab === 'files'} onClick={() => { setActiveTab('files'); loadFiles(); }} />
@@ -1322,7 +1493,8 @@ export default function App() {
                    activeTab === 'super_active' ? '超積極存錢法' :
                    activeTab === 'car' ? '五年換車專案' :
                    activeTab === 'reservoir' ? '大小水庫專案' :
-                   '退休缺口試算'
+                   activeTab === 'pension' ? '退休缺口試算' :
+                   '稅務傳承專案'
                  }</p>
               </div>
               <div className="text-right">
@@ -1353,6 +1525,7 @@ export default function App() {
              {activeTab === 'car' && <CarReplacementTool data={carData} setData={setCarData} />}
              {activeTab === 'reservoir' && <BigSmallReservoirTool data={reservoirData} setData={setReservoirData} />}
              {activeTab === 'pension' && <LaborPensionTool data={pensionData} setData={setPensionData} />}
+             {activeTab === 'tax' && <TaxPlannerTool data={taxData} setData={setTaxData} />}
 
              {activeTab === 'files' && (
                 <div className="animate-fade-in">
@@ -1377,6 +1550,7 @@ export default function App() {
                                  file.type === 'car' ? 'bg-orange-100 text-orange-600' :
                                  file.type === 'reservoir' ? 'bg-cyan-100 text-cyan-600' :
                                  file.type === 'pension' ? 'bg-slate-200 text-slate-700' :
+                                 file.type === 'tax' ? 'bg-zinc-200 text-zinc-700' :
                                  'bg-sky-100 text-sky-600'
                                }`}>
                                   {file.type === 'gift' ? <Wallet size={20} /> : 
@@ -1385,6 +1559,7 @@ export default function App() {
                                    file.type === 'car' ? <Car size={20} /> :
                                    file.type === 'reservoir' ? <Waves size={20} /> :
                                    file.type === 'pension' ? <Umbrella size={20} /> :
+                                   file.type === 'tax' ? <Landmark size={20} /> :
                                    <GraduationCap size={20} />}
                                </div>
                                <button onClick={(e) => handleDeleteFile(file.id, e)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16}/></button>
@@ -1397,6 +1572,7 @@ export default function App() {
                                 file.type === 'car' ? '五年換車' :
                                 file.type === 'reservoir' ? '大小水庫' :
                                 file.type === 'pension' ? '退休缺口' :
+                                file.type === 'tax' ? '稅務傳承' :
                                 '學貸套利'
                             }</p>
                          </div>
