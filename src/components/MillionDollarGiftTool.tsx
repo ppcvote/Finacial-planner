@@ -175,6 +175,12 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
   // 節省金額
   const savedAmount_Wan = standardCost_Wan - totalProjectCost_Wan;
 
+  // --- 新增計算：每月平均需要存多少 ---
+  const totalYears = loanTerm * 3;
+  const monthlyStandardSaving = Math.round((finalAssetValue_Wan * 10000) / (totalYears * 12));
+  const monthlyProjectCost = Math.round((totalProjectCost_Wan * 10000) / (totalYears * 12));
+
+
   // --- 圖表數據生成 ---
   const generateChartData = () => {
     const dataArr = [];
@@ -182,7 +188,6 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
     let cumulativeProjectCost = 0;
     
     // 一般存錢每月需存金額 (為了在 totalYears 達到 finalAssetValue_Wan)
-    const totalYears = loanTerm * 3; 
     const standardMonthlySaving = (finalAssetValue_Wan * 10000) / (totalYears * 12); 
 
     // 模擬資產成長曲線 (用於圖表顯示)
@@ -294,7 +299,7 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
         </div>
       </div>
 
-      {/* --- 新增：成本效益比較卡片區 --- */}
+      {/* --- 成本效益比較卡片區 --- */}
       <div className="grid md:grid-cols-3 gap-6 print-break-inside">
          {/* 卡片 1: 一般存錢成本 */}
          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 relative overflow-hidden group hover:border-slate-300 transition-all">
@@ -306,9 +311,14 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
              <p className="text-3xl font-black text-slate-700 font-mono">
                  ${standardCost_Wan.toLocaleString()} <span className="text-lg text-slate-500">萬</span>
              </p>
-             <p className="text-xs text-slate-500 mt-2 bg-slate-100 inline-block px-2 py-1 rounded">
-                需準備全額本金
-             </p>
+             <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                   需準備全額本金
+                </span>
+                <span className="text-sm font-bold text-slate-600">
+                   月存 ${monthlyStandardSaving.toLocaleString()}
+                </span>
+             </div>
          </div>
 
          {/* 卡片 2: 專案成本 */}
@@ -321,9 +331,14 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
              <p className="text-3xl font-black text-indigo-600 font-mono">
                  ${totalProjectCost_Wan.toLocaleString()} <span className="text-lg text-indigo-400">萬</span>
              </p>
-             <p className="text-xs text-indigo-600 mt-2 bg-indigo-50 inline-block px-2 py-1 rounded">
-                槓桿效益：用小錢換大錢
-             </p>
+             <div className="mt-3 flex items-center justify-between border-t border-indigo-50 pt-3">
+                <span className="text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
+                   槓桿效益
+                </span>
+                <span className="text-sm font-bold text-indigo-600">
+                   平均月存 ${monthlyProjectCost.toLocaleString()}
+                </span>
+             </div>
          </div>
 
          {/* 卡片 3: 差額 (省下/獲利) */}
@@ -520,6 +535,13 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                 </div>
              </div>
           </div>
+
+          {/* 金句卡片移至此處 */}
+          <div className="mt-2 p-4 bg-slate-800 rounded-xl text-center shadow-lg">
+             <p className="text-slate-300 italic text-sm">
+               「給孩子的不是一筆錢，而是一套會長大的資產，以及受用一生的理財智慧。」
+             </p>
+           </div>
         </div>
 
         {/* 2. 專案效益 */}
@@ -544,12 +566,6 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                   </div>
                 </div>
               ))}
-           </div>
-
-           <div className="mt-6 p-4 bg-slate-800 rounded-xl text-center shadow-lg">
-             <p className="text-slate-300 italic text-sm">
-               「給孩子的不是一筆錢，而是一套會長大的資產，以及受用一生的理財智慧。」
-             </p>
            </div>
         </div>
       </div>
