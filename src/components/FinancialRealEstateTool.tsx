@@ -13,7 +13,7 @@ import {
   ChevronUp,   
   ArrowRightLeft, 
   PiggyBank,
-  Briefcase     // 新增 icon 用於資產顯示
+  Briefcase     
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
@@ -446,7 +446,8 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                       <PiggyBank size={18}/> 期滿資產效益比較
                   </h3>
                   
-                  <div className="grid grid-cols-2 gap-4 mt-2 h-full">
+                  {/* 修正：移除 h-full，並將 grid 改為手機版堆疊、平板以上並排 */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                       {/* 舊模式結局 */}
                       <div className="bg-slate-50 p-4 rounded-xl text-center border border-slate-100 flex flex-col items-center justify-center">
                           <div className="text-xs font-bold text-slate-500 mb-2">一般繳房貸結局</div>
