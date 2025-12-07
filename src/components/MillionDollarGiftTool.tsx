@@ -9,9 +9,12 @@ import {
   RefreshCw,
   PiggyBank,
   Coins,
-  Settings,    // 新增
-  ChevronDown, // 新增
-  ChevronUp    // 新增
+  Settings,    
+  ChevronDown, 
+  ChevronUp,
+  PieChart, // 新增圖標
+  Activity, // 新增圖標
+  Scale     // 新增圖標
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Area, Line, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
@@ -147,46 +150,24 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
       // --- 複利模式 ---
       // 負擔：使用者需全額支付貸款月付金 (不拿配息出來)
       phase1_NetOut = payment1;
-      phase2_NetOut = payment1 + payment2; // 假設第一筆續貸或重貸? 這裡簡化為累積負債概念：手上同時背負的貸款
-      // 但專案邏輯通常是：還完第一筆，再借第二筆。
-      // 如果是「循環」，代表 T7 時第一筆已還完。
-      // 所以 Phase 2 的負擔應該只有 payment2 (因為 Loan1 已清償)
-      // Phase 3 的負擔應該只有 payment3 (因為 Loan2 已清償)
-      
-      // 修正邏輯：這是「循環」操作，前債已清。
-      phase1_NetOut = payment1;
-      phase2_NetOut = payment2; 
+      phase2_NetOut = payment2; // 前債已清，只負擔新債
       phase3_NetOut = payment3; 
       
       // 資產：期初本金 * 複利因子
-      // Phase 1 結束資產
       phase1_Asset = Math.round(loanAmount * compoundFactor);
-      
-      // Phase 2 結束資產 = (Phase 1 結束資產 + Phase 2 新本金) * 複利
       phase2_Asset = Math.round((phase1_Asset + c2Loan) * compoundFactor);
-      
-      // Phase 3 結束資產 = (Phase 2 結束資產 + Phase 3 新本金) * 複利
       phase3_Asset = Math.round((phase2_Asset + c3Loan) * compoundFactor);
 
   } else {
       // --- 現金流模式 (以息養貸) ---
-      // 資產累積 (線性)：本金不變，配息領出繳貸
-      // P1 結束時持有: Loan1
-      // P2 結束時持有: Loan1 + Loan2
-      // P3 結束時持有: Loan1 + Loan2 + Loan3
-      
+      // 資產累積 (線性)
       phase1_Asset = loanAmount;
       phase2_Asset = loanAmount + c2Loan;
       phase3_Asset = loanAmount + c2Loan + c3Loan;
 
       // 負擔：
-      // Phase 1: 繳 Loan1, 領 Income1
       phase1_NetOut = payment1 - income1;
-
-      // Phase 2: 繳 Loan2 (Loan1已還完), 領 Income1 + Income2 (Loan1留下的資產繼續配息)
       phase2_NetOut = payment2 - (income1 + income2);
-
-      // Phase 3: 繳 Loan3, 領 Income1 + Income2 + Income3
       phase3_NetOut = payment3 - (income1 + income2 + income3);
   }
 
@@ -219,6 +200,29 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
   const totalYears = loanTerm * 3;
   const monthlyStandardSaving = Math.round((finalAssetValue_Wan * 10000) / (totalYears * 12));
   const monthlyProjectCost = Math.round((totalProjectCost_Wan * 10000) / (totalYears * 12));
+
+  // --- 財務結構分析計算 (Dashboard Data) ---
+  
+  // 1. 總利息成本計算
+  const totalInterest1 = (payment1 * loanTerm * 12) - (loanAmount * 10000);
+  const totalInterest2 = (payment2 * loanTerm * 12) - (c2Loan * 10000);
+  const totalInterest3 = (payment3 * loanTerm * 12) - (c3Loan * 10000);
+  const totalInterestRaw = totalInterest1 + totalInterest2 + totalInterest3;
+  const totalInterestWan = Math.round(totalInterestRaw / 10000);
+
+  // 2. 平均月現金流負擔 (3階段平均)
+  const avgMonthlyNetPay = Math.round((phase1_NetOut + phase2_NetOut + phase3_NetOut) / 3);
+
+  // 3. 資產槓桿倍數 (期末資產 / 總實付成本)
+  // 若總實付成本 <= 0 (完全無痛或正現金流)，顯示 ∞ 或高倍數
+  const leverageMultiplier = totalProjectCost_Wan > 0 
+    ? (finalAssetValue_Wan / totalProjectCost_Wan).toFixed(1) 
+    : "∞";
+
+  // 4. 進度條比例 (利息 vs 淨利)
+  const totalBarValue = totalInterestWan + netProfit_Wan;
+  const interestPercent = totalBarValue > 0 ? (totalInterestWan / totalBarValue) * 100 : 0;
+  const profitPercent = totalBarValue > 0 ? (netProfit_Wan / totalBarValue) * 100 : 0;
 
 
   // --- 圖表數據生成 ---
@@ -581,7 +585,7 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
           </div>
         </div>
 
-        {/* 右側：圖表展示 */}
+        {/* 右側：圖表展示與財務分析 */}
         <div className="lg:col-span-8 space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-[400px] print-break-inside relative">
              <div className="flex justify-between items-center mb-4 pl-2 border-l-4 border-indigo-500">
@@ -613,6 +617,67 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
               </ComposedChart>
             </ResponsiveContainer>
           </div>
+
+          {/* --- 新增：財務結構分析面板 --- */}
+          <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
+             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                
+                {/* 左塊：利息與獲利進度條 */}
+                <div className="flex-1 w-full">
+                    <h5 className="text-sm font-bold text-slate-700 flex items-center gap-2 mb-3">
+                        <PieChart size={16} className="text-slate-500" />
+                        總利息 vs 總獲利結構
+                    </h5>
+                    
+                    <div className="flex justify-between text-xs mb-1.5">
+                        <span className="text-rose-500 font-bold">總利息成本: {totalInterestWan.toLocaleString()} 萬</span>
+                        <span className="text-emerald-600 font-bold">淨獲利 (扣除成本): {netProfit_Wan.toLocaleString()} 萬</span>
+                    </div>
+
+                    <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden flex">
+                        <div 
+                           className="h-full bg-rose-400" 
+                           style={{ width: `${interestPercent}%` }}
+                        ></div>
+                        <div 
+                           className="h-full bg-emerald-500" 
+                           style={{ width: `${profitPercent}%` }}
+                        ></div>
+                    </div>
+                    
+                    <div className="mt-2 text-xs text-slate-400 flex justify-between">
+                         <span>付出 {Math.round(interestPercent)}% 成本</span>
+                         <span>換取 {Math.round(profitPercent)}% 利潤</span>
+                    </div>
+                </div>
+
+                {/* 中塊：平均月付擔 */}
+                <div className="md:w-1/4">
+                    <h5 className="text-sm font-bold text-slate-700 flex items-center gap-2 mb-2">
+                        <Activity size={16} className="text-slate-500" />
+                        平均月負擔
+                    </h5>
+                    <div className="text-2xl font-black text-slate-700 font-mono">
+                        ${avgMonthlyNetPay.toLocaleString()}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">三循環平均淨支出</p>
+                </div>
+
+                {/* 右塊：資產槓桿倍數 */}
+                <div className="md:w-1/4">
+                    <h5 className="text-sm font-bold text-slate-700 flex items-center gap-2 mb-2">
+                        <Scale size={16} className="text-slate-500" />
+                        資產放大倍數
+                    </h5>
+                    <div className="text-2xl font-black text-indigo-600 font-mono">
+                        {leverageMultiplier} x
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">期末資產 / 總實付</p>
+                </div>
+
+             </div>
+          </div>
+
         </div>
       </div>
 
