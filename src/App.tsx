@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
-  GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key, Save
+  GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key
 } from 'lucide-react';
 
 import { 
@@ -89,16 +89,18 @@ export default function App() {
   const [toast, setToast] = useState<{message: string, type: string} | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false); 
-  const [isSaving, setIsSaving] = useState(false); // 儲存狀態顯示
-  const [isDataLoaded, setIsDataLoaded] = useState(false); // 確保資料載入後才開啟自動儲存
+  const [isSaving, setIsSaving] = useState(false); 
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  // 用來記錄「上一次成功儲存的資料字串」，防止重複存檔
+  const lastSavedDataStr = useRef<string>("");
 
   // New states for testing Email/Password login
   const [testEmail, setTestEmail] = useState('');
   const [testPassword, setTestPassword] = useState('');
   const [isEmailLoginOpen, setIsEmailLoginOpen] = useState(false);
 
-
-  // Tool Data States - 定義初始預設值
+  // Tool Data States - 初始預設值
   const defaultStates = {
     gift: { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 },
     estate: { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6, existingLoanBalance: 700, existingMonthlyPayment: 38000 },
@@ -123,53 +125,99 @@ export default function App() {
 
   // --- 1. 初始化與資料載入邏輯 ---
   useEffect(() => {
-    let unsubscribeSnapshot:  (() => void) | undefined;
+    let unsubscribeSnapshot: (() => void) | undefined;
+    
+    // 安全機制：如果 8 秒內還沒載入完畢（例如網路卡住），強制關閉 Loading，讓使用者可以先用
+    const forceLoadingTimer = setTimeout(() => {
+        if (loading) {
+            console.warn("Loading timeout triggered. Forcing app to show.");
+            setLoading(false);
+            // 雖然沒載入完，但也設為 true 讓 save 功能啟用 (或可設為 false 禁用 save)
+            // 這裡設為 true 讓使用者能操作，但可能會覆蓋雲端資料，需權衡。
+            // 比較安全的做法是讓 isDataLoaded = false，但介面可操作
+            setIsDataLoaded(true); 
+        }
+    }, 8000);
 
     const checkRedirectAndAuth = async () => {
-      // 處理 Redirect 結果 (Mobile)
       try {
         await getRedirectResult(auth);
       } catch (error: any) {
         if (error.code !== 'auth/popup-closed-by-user') {
            console.error("Redirect Error:", error);
-           // 不顯示錯誤，以免干擾正常流程，除非嚴重
         }
       }
 
-      // 監聽 Auth 狀態
       const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
         setUser(currentUser);
         
         if (currentUser) {
-           // 有使用者 -> 建立 Firestore 監聽器
            const userDocRef = doc(db, 'users', currentUser.uid);
            unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
                if (docSnap.exists()) {
                    const data = docSnap.data();
-                   // 使用 Object.assign 或 spread 來合併雲端資料與預設值，確保欄位不缺失
-                   if (data.giftData) setGiftData(prev => ({...prev, ...data.giftData}));
-                   if (data.estateData) setEstateData(prev => ({...prev, ...data.estateData}));
-                   if (data.studentData) setStudentData(prev => ({...prev, ...data.studentData}));
-                   if (data.superActiveData) setSuperActiveData(prev => ({...prev, ...data.superActiveData}));
-                   if (data.carData) setCarData(prev => ({...prev, ...data.carData}));
-                   if (data.pensionData) setPensionData(prev => ({...prev, ...data.pensionData}));
-                   if (data.reservoirData) setReservoirData(prev => ({...prev, ...data.reservoirData}));
-                   if (data.taxData) setTaxData(prev => ({...prev, ...data.taxData}));
+                   
+                   // --- 關鍵修正：智慧比對 (防止無限迴圈) ---
+                   // 只有當「雲端資料」跟「本地目前資料」不一樣時，才執行 setState
+                   // 使用 JSON.stringify 進行深度比對
+                   const updateIfChanged = (setter: any, currentVal: any, newVal: any) => {
+                       if (newVal && JSON.stringify(currentVal) !== JSON.stringify(newVal)) {
+                           setter((prev: any) => ({ ...prev, ...newVal }));
+                       }
+                   };
+
+                   // 這裡無法直接取得最新的 giftData state (閉包問題)，
+                   // 所以改用 setState 的 functional update 內部進行比對
+                   setGiftData(prev => {
+                       if (data.giftData && JSON.stringify(prev) !== JSON.stringify(data.giftData)) return { ...prev, ...data.giftData };
+                       return prev; // 返回原本的 reference，React 不會觸發 re-render
+                   });
+                   setEstateData(prev => {
+                       if (data.estateData && JSON.stringify(prev) !== JSON.stringify(data.estateData)) return { ...prev, ...data.estateData };
+                       return prev;
+                   });
+                   setStudentData(prev => {
+                       if (data.studentData && JSON.stringify(prev) !== JSON.stringify(data.studentData)) return { ...prev, ...data.studentData };
+                       return prev;
+                   });
+                   setSuperActiveData(prev => {
+                       if (data.superActiveData && JSON.stringify(prev) !== JSON.stringify(data.superActiveData)) return { ...prev, ...data.superActiveData };
+                       return prev;
+                   });
+                   setCarData(prev => {
+                       if (data.carData && JSON.stringify(prev) !== JSON.stringify(data.carData)) return { ...prev, ...data.carData };
+                       return prev;
+                   });
+                   setPensionData(prev => {
+                       if (data.pensionData && JSON.stringify(prev) !== JSON.stringify(data.pensionData)) return { ...prev, ...data.pensionData };
+                       return prev;
+                   });
+                   setReservoirData(prev => {
+                       if (data.reservoirData && JSON.stringify(prev) !== JSON.stringify(data.reservoirData)) return { ...prev, ...data.reservoirData };
+                       return prev;
+                   });
+                   setTaxData(prev => {
+                       if (data.taxData && JSON.stringify(prev) !== JSON.stringify(data.taxData)) return { ...prev, ...data.taxData };
+                       return prev;
+                   });
                }
-               // 資料載入完成 (或確認無資料為新用戶)
+               
+               // 資料載入完成
                setIsDataLoaded(true);
-               setLoading(false);
+               setLoading(false); 
+               clearTimeout(forceLoadingTimer); // 清除強制載入計時器
            }, (error) => {
                console.error("Firestore Read Error:", error);
                showToast("讀取雲端資料失敗", "error");
                setLoading(false);
-               setIsDataLoaded(true); // 即使失敗也設為 true 讓用戶能繼續操作
+               setIsDataLoaded(true); 
+               clearTimeout(forceLoadingTimer);
            });
 
         } else {
-           // 無使用者
            setLoading(false);
            setIsDataLoaded(false);
+           clearTimeout(forceLoadingTimer);
         }
       });
       return unsubscribeAuth;
@@ -178,55 +226,67 @@ export default function App() {
     const unsubAuthPromise = checkRedirectAndAuth();
 
     return () => {
-       // Cleanup listeners
-       if (typeof unsubAuthPromise === 'function') unsubAuthPromise(); // 這裡邏輯簡化，實際上 onAuthStateChanged 回傳 unsubscribe
+       if (typeof unsubAuthPromise === 'function') unsubAuthPromise(); // 修正 unsubscribe 型別
        if (unsubscribeSnapshot) unsubscribeSnapshot();
+       clearTimeout(forceLoadingTimer);
     };
-  }, []);
+  }, []); // 依賴為空，只執行一次
 
 
   // --- 2. 自動儲存邏輯 (Auto-Save) ---
-  // 使用 useRef 避免閉包舊值問題，但在 useEffect 依賴中列出 data 即可
   useEffect(() => {
     // 只有當使用者已登入 且 資料已載入完畢 (避免覆蓋雲端資料) 才執行儲存
     if (!user || !isDataLoaded) return;
+
+    const dataPayload = {
+        giftData,
+        estateData,
+        studentData,
+        superActiveData,
+        carData,
+        pensionData,
+        reservoirData,
+        taxData
+    };
+
+    // 將當前資料轉為字串
+    const currentDataStr = JSON.stringify(dataPayload);
+
+    // 比對：如果跟「上一次存檔的內容」完全一樣，就直接跳過，不執行存檔
+    // 這能有效防止 onSnapshot 更新本地 state 後，又觸發 useEffect 導致的迴圈
+    if (currentDataStr === lastSavedDataStr.current) {
+        return;
+    }
 
     const saveData = async () => {
         setIsSaving(true);
         try {
             await setDoc(doc(db, 'users', user.uid), {
-                giftData,
-                estateData,
-                studentData,
-                superActiveData,
-                carData,
-                pensionData,
-                reservoirData,
-                taxData,
+                ...dataPayload,
                 lastUpdated: new Date()
             }, { merge: true });
             
-            // 儲存成功後，短暫延遲後關閉狀態
+            // 更新「上一次存檔」的紀錄
+            lastSavedDataStr.current = currentDataStr;
+
             setTimeout(() => setIsSaving(false), 500);
         } catch (error) {
             console.error("Auto-save failed:", error);
             setIsSaving(false);
-            // 靜默失敗或顯示小紅點，避免一直彈 Toast 擾民
         }
     };
 
-    // 防抖動：延遲 1.5 秒執行儲存，若期間有新變更則重置計時器
+    // 防抖動：延遲 1.5 秒執行儲存
     const handler = setTimeout(saveData, 1500);
 
     return () => clearTimeout(handler);
   }, [
-    // 依賴所有數據狀態，任一變更皆觸發倒數
     giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData, 
     user, isDataLoaded
   ]);
 
 
-  // 登入邏輯：自動切換 Popup 與 Redirect (Google 登入)
+  // 登入邏輯
   const handleGoogleLogin = async () => { 
     const isMobileOrTablet = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
 
@@ -255,7 +315,6 @@ export default function App() {
     } 
   };
   
-  // 測試用的 Email/Password 登入
   const handleEmailLogin = async () => {
     if (!testEmail || !testPassword) {
       showToast("請輸入 Email 和密碼", "error");
@@ -277,11 +336,16 @@ export default function App() {
 
   const handleLogout = async () => { 
       await signOut(auth); 
-      // 登出後重置資料為預設值，避免殘留
       setGiftData(defaultStates.gift);
       setEstateData(defaultStates.estate);
-      // ... 重置其他 (略，因 component unmount 也會重置，但為了安全可加上)
+      setStudentData(defaultStates.student);
+      setSuperActiveData(defaultStates.super_active);
+      setCarData(defaultStates.car);
+      setPensionData(defaultStates.pension);
+      setReservoirData(defaultStates.reservoir);
+      setTaxData(defaultStates.tax);
       setActiveTab('gift'); 
+      lastSavedDataStr.current = ""; // 清空存檔紀錄
       showToast("已安全登出", "info"); 
   };
 
@@ -304,7 +368,6 @@ export default function App() {
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-         {/* Email Login Modal */}
          {isEmailLoginOpen && (
             <div className="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4">
                 <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
@@ -355,7 +418,6 @@ export default function App() {
             使用 Google 帳號登入
           </button>
           
-          {/* Email/Password 測試入口 */}
           <div className="text-center text-sm">
             <button 
               onClick={() => setIsEmailLoginOpen(true)} 
@@ -383,7 +445,6 @@ export default function App() {
         data={getCurrentData()} 
       />
 
-      {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900 text-white flex flex-col animate-fade-in md:hidden">
            <div className="p-4 flex justify-between items-center border-b border-slate-800">
@@ -412,7 +473,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Sidebar (Desktop) */}
       <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10 print:hidden">
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center gap-3 mb-1">
@@ -424,7 +484,6 @@ export default function App() {
                 <div className="font-bold text-sm truncate text-white">{user.displayName || '訪客顧問'}</div>
              </div>
           </div>
-          {/* 雲端同步狀態指示器 */}
           <div className="mt-3 flex items-center gap-2 text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
              {isSaving ? (
                 <>
