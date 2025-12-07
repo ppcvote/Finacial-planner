@@ -14,9 +14,9 @@ import {
   Landmark,
   ArrowRight
 } from 'lucide-react';
-import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceArea } from 'recharts';
+import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceArea, ReferenceLine } from 'recharts';
 
-// --- 輔助函式 ---
+// --- 輔助函式 (定義在組件外部以避免作用域錯誤) ---
 
 const calculateMonthlyPayment = (principal: number, rate: number, years: number) => {
   const p = Number(principal) || 0;
@@ -42,7 +42,6 @@ const calculateRemainingBalance = (principal: number, rate: number, totalYears: 
   return Math.max(0, isNaN(balance) ? 0 : balance);
 };
 
-// 用於 X 軸 tick 格式化
 const formatXAxisTick = (value: any) => {
     return `第${value}年`;
 };
@@ -100,7 +99,6 @@ export const StudentLoanTool = ({ data, setData }: any) => {
       investmentValue = investmentValue * (1 + monthlyRate);
       
       // 3. 貸款階段和還款成本計算
-      let monthlyRepayment = 0;
       let repaymentPhase = '在學期'; 
       let repaymentYearIndex;
 
@@ -113,14 +111,12 @@ export const StudentLoanTool = ({ data, setData }: any) => {
       } else if (year <= interestOnlyEndYear) {
         repaymentPhase = '只繳息期';
         remainingLoan = loanAmount * 10000;
-        monthlyRepayment = monthlyInterestOnly;
-        accumulatedInterest += monthlyRepayment;
+        accumulatedInterest += monthlyInterestOnly;
       } else if (year <= repaymentEndYear) {
         repaymentPhase = '本息攤還期';
         repaymentYearIndex = year - interestOnlyEndYear; 
         remainingLoan = calculateRemainingBalance(loanAmount, loanRate, years, repaymentYearIndex);
-        monthlyRepayment = monthlyPaymentP_I;
-        accumulatedInterest += monthlyRepayment; 
+        accumulatedInterest += monthlyPaymentP_I; 
       } else {
         remainingLoan = 0;
         repaymentPhase = '期滿';
@@ -435,14 +431,14 @@ export const StudentLoanTool = ({ data, setData }: any) => {
 
           {/* 底部兩張卡片 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             {/* 左卡：總還款額度 */}
+             {/* 左卡：實質自付本金 (更新為您偏好的選項 A) */}
              <div className="bg-white rounded-2xl shadow border border-slate-200 p-6 text-center">
-                 <h3 className="text-slate-500 text-sm font-bold mb-2">專案總還款成本 (本金+利息)</h3>
-                 <p className="text-4xl font-black text-slate-700 font-mono">
-                     ${totalLoanRepaymentWan.toLocaleString()} 萬
+                 <h3 className="text-slate-500 text-sm font-bold mb-2">實質自付本金 (您的口袋)</h3>
+                 <p className="text-4xl font-black text-blue-600 font-mono">
+                     $0
                  </p>
                  <p className="text-xs text-slate-400 mt-2">
-                    比起直接繳學費，這是延後支付的總代價
+                    學貸本金與利息全額由投資帳戶扣繳
                  </p>
              </div>
 
@@ -460,7 +456,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                        <p className="text-xl font-bold text-slate-400 line-through decoration-red-400">${loanAmount} 萬</p>
                     </div>
                     <div className="text-right">
-                       <p className="text-xs text-emerald-600 font-bold">規劃後學費 0 元，還多賺</p>
+                       <p className="text-xs text-emerald-600 font-bold">規劃後學費 $0，還多賺</p>
                        <p className="text-4xl font-black text-emerald-600 font-mono">
                            +${pureProfitWan.toLocaleString()} 萬
                        </p>
@@ -506,6 +502,12 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                 </div>
              </div>
           </div>
+          {/* 金句移至此處 */}
+          <div className="mt-6 p-4 bg-slate-800 rounded-xl text-center shadow-lg">
+             <p className="text-slate-300 italic text-sm">
+               「學貸活化專案不是為了讓你不還錢，而是讓你用更聰明的方式，把負債變成人生第一筆投資本金。」
+             </p>
+           </div>
         </div>
 
         {/* 2. 專案效益 */}
@@ -529,11 +531,6 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                   </div>
                 </div>
               ))}
-           </div>
-           <div className="mt-6 p-4 bg-slate-800 rounded-xl text-center shadow-lg">
-             <p className="text-slate-300 italic text-sm">
-               「學貸活化專案不是為了讓你不還錢，而是讓你用更聰明的方式，把負債變成人生第一筆投資本金。」
-             </p>
            </div>
         </div>
       </div>
