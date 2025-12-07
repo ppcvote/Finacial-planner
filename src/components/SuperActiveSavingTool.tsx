@@ -9,7 +9,12 @@ import {
   ArrowRight, 
   Zap, 
   Hourglass,
-  PiggyBank
+  PiggyBank,
+  CheckCircle2, // 新增
+  RefreshCw,    // 新增
+  Landmark,     // 新增
+  Target,       // 新增
+  Smile         // 新增
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceLine, ReferenceArea } from 'recharts';
 
@@ -25,7 +30,7 @@ export const SuperActiveSavingTool = ({ data, setData }: any) => {
   // --- 計算邏輯 ---
   
   const fullChartData = [];
-  let pAcc = 0; // 消極累積 (勞力存錢 - 不投資或極低定存，這裡假設 0% 凸顯本金差異，或可視為被通膨抵銷)
+  let pAcc = 0; // 消極累積 (勞力存錢)
   let aInv = 0; // 積極累積 (複利存錢)
   
   for (let year = 1; year <= totalYears; year++) {
@@ -95,7 +100,7 @@ export const SuperActiveSavingTool = ({ data, setData }: any) => {
         </div>
       </div>
 
-      {/* --- 核心效益卡片區 (新增) --- */}
+      {/* --- 核心效益卡片區 --- */}
       <div className="grid md:grid-cols-3 gap-6 print-break-inside">
          
          {/* 卡片 1: 本金效率 (省下多少錢) */}
@@ -235,7 +240,7 @@ export const SuperActiveSavingTool = ({ data, setData }: any) => {
           </div>
         </div>
 
-        {/* 右側：圖表展示 */}
+        {/* 右側：圖表展示與選擇題 */}
         <div className="lg:col-span-8 space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-[500px] print-break-inside relative">
              <div className="flex justify-between items-center mb-4 pl-2 border-l-4 border-violet-500">
@@ -280,11 +285,9 @@ export const SuperActiveSavingTool = ({ data, setData }: any) => {
                 />
                 <Legend iconType="circle" />
 
-                {/* 背景色塊區分：奮鬥期 vs 躺平期 */}
                 <ReferenceArea x1={0} x2={activeYears} fill="#8b5cf6" fillOpacity={0.05} />
                 <ReferenceArea x1={activeYears} x2={totalYears} fill="#d946ef" fillOpacity={0.05} />
                 
-                {/* 分界線 */}
                 <ReferenceLine x={activeYears} stroke="#d946ef" strokeDasharray="3 3" label={{ position: 'top', value: '停止投入本金', fill: '#d946ef', fontSize: 12 }} />
 
                 <Area 
@@ -307,7 +310,6 @@ export const SuperActiveSavingTool = ({ data, setData }: any) => {
               </ComposedChart>
             </ResponsiveContainer>
             
-            {/* 圖表底部說明 */}
             <div className="absolute bottom-4 left-0 right-0 px-6 flex justify-between text-xs text-slate-400 pointer-events-none">
                 <div className="text-left w-1/3">
                     <span className="text-violet-500 font-bold">奮鬥期 (前{activeYears}年)</span>
@@ -319,29 +321,107 @@ export const SuperActiveSavingTool = ({ data, setData }: any) => {
                 </div>
             </div>
           </div>
+
+          {/* 移動後的選擇題卡片 */}
+          <div className="bg-slate-800 rounded-2xl p-6 text-center shadow-lg relative overflow-hidden">
+             <div className="relative z-10 space-y-4">
+                <h3 className="text-xl font-bold text-white flex items-center justify-center gap-2">
+                    <Target size={20} className="text-yellow-400"/> 您想選擇哪一種人生？
+                </h3>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <div className="flex-1 bg-slate-700/50 p-4 rounded-xl border border-slate-600 text-slate-300">
+                        <p className="font-bold mb-2 flex items-center justify-center gap-2"><Smile className="text-slate-400" size={16}/> 方案 A：勞碌人生</p>
+                        <p className="text-xs">工作 40 年，總投入 <span className="font-mono text-slate-200 text-sm">{Math.round(totalPrincipalPassive/10000)}萬</span></p>
+                        <p className="text-xs mt-1">最後資產：<span className="font-mono text-slate-200 text-sm">{passiveWan}萬</span></p>
+                    </div>
+                    <div className="flex-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 p-4 rounded-xl shadow-lg text-white border border-white/20">
+                        <p className="font-bold mb-2 flex items-center justify-center gap-2"><Rocket className="text-yellow-300" size={16}/> 方案 B：複利人生</p>
+                        <p className="text-xs">工作 {activeYears} 年，總投入 <span className="font-mono font-bold text-sm">{Math.round(totalPrincipalActive/10000)}萬</span></p>
+                        <p className="text-xs mt-1">最後資產：<span className="font-mono font-bold text-sm">{activeWan}萬</span></p>
+                    </div>
+                </div>
+             </div>
+          </div>
+
         </div>
       </div>
       
-      {/* 底部行動呼籲區 */}
-      <div className="mt-8 bg-slate-800 rounded-3xl p-8 text-center shadow-lg relative overflow-hidden print-break-inside">
-         <div className="relative z-10 max-w-2xl mx-auto space-y-4">
-            <h3 className="text-2xl font-bold text-white">您想選擇哪一種人生？</h3>
-            <div className="flex flex-col md:flex-row gap-4 justify-center mt-6">
-                <div className="flex-1 bg-slate-700/50 p-4 rounded-xl border border-slate-600 text-slate-300">
-                    <p className="font-bold mb-2">😭 方案 A：勞碌人生</p>
-                    <p className="text-sm">工作 40 年，總投入 {Math.round(totalPrincipalPassive/10000)} 萬本金</p>
-                    <p className="text-sm mt-1">最後資產：{passiveWan} 萬</p>
+      {/* 底部策略區 (執行三部曲 + 專案四大效益) */}
+      <div className="grid md:grid-cols-2 gap-8 pt-6 border-t border-slate-200 print-break-inside">
+        
+        {/* 1. 執行三部曲 */}
+        <div className="space-y-4 lg:col-span-1">
+          <div className="flex items-center gap-2 mb-2">
+             <RefreshCw className="text-violet-600" size={24} />
+             <h3 className="text-xl font-bold text-slate-800">執行三部曲</h3>
+          </div>
+          
+          <div className="space-y-3">
+             <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-violet-200 transition-colors">
+                <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-violet-50 text-violet-600 flex flex-col items-center justify-center font-bold text-xs">
+                   <span className="text-lg">01</span>
+                   <span>專注</span>
                 </div>
-                <div className="flex-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 p-4 rounded-xl shadow-lg text-white transform scale-105 border border-white/20">
-                    <p className="font-bold mb-2">🚀 方案 B：複利人生</p>
-                    <p className="text-sm">工作 {activeYears} 年，總投入 {Math.round(totalPrincipalActive/10000)} 萬本金</p>
-                    <p className="text-sm mt-1">最後資產：{activeWan} 萬</p>
+                <div>
+                   <h4 className="font-bold text-slate-800 flex items-center gap-2">專注本業 (前{activeYears}年)</h4>
+                   <p className="text-sm text-slate-600 mt-1">努力工作提高主動收入，並維持高儲蓄率。這是最辛苦的階段，也是資產起飛的燃料。</p>
                 </div>
-            </div>
-            <p className="text-slate-400 text-sm mt-6">
-                「種一棵樹最好的時間是十年前，其次是現在。」現在開始，讓複利成為您最好的朋友。
-            </p>
-         </div>
+             </div>
+
+             <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-fuchsia-200 transition-colors">
+                <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-fuchsia-50 text-fuchsia-600 flex flex-col items-center justify-center font-bold text-xs">
+                   <span className="text-lg">02</span>
+                   <span>投入</span>
+                </div>
+                <div>
+                   <h4 className="font-bold text-slate-800 flex items-center gap-2">紀律投入 (持續買進)</h4>
+                   <p className="text-sm text-slate-600 mt-1">將儲蓄全數投入高複利工具(如大盤ETF)，不看短期漲跌，只求長期持有，讓雪球越滾越大。</p>
+                </div>
+             </div>
+
+             <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-purple-200 transition-colors">
+                <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-purple-50 text-purple-600 flex flex-col items-center justify-center font-bold text-xs">
+                   <span className="text-lg">03</span>
+                   <span>爆發</span>
+                </div>
+                <div>
+                   <h4 className="font-bold text-slate-800 flex items-center gap-2">複利爆發 (後{totalYears - activeYears}年)</h4>
+                   <p className="text-sm text-slate-600 mt-1">停止投入本金，讓時間接手。您會發現資產增長的速度遠超過您的薪水，這就是財務自由。</p>
+                </div>
+             </div>
+          </div>
+          
+          <div className="mt-6 p-4 bg-slate-800 rounded-xl text-center shadow-lg">
+             <p className="text-slate-300 italic text-sm">
+               「複利是世界第八大奇蹟。了解它的人賺取它，不了解它的人支付它。」— 愛因斯坦
+             </p>
+           </div>
+        </div>
+
+        {/* 2. 專案效益 */}
+        <div className="space-y-4 lg:col-span-1">
+           <div className="flex items-center gap-2 mb-2">
+             <Landmark className="text-violet-600" size={24} />
+             <h3 className="text-xl font-bold text-slate-800">專案四大效益</h3>
+           </div>
+           
+           <div className="grid grid-cols-1 gap-3">
+              {[
+                { title: "縮短工時", desc: `您只需要努力工作 ${activeYears} 年，剩下 ${totalYears - activeYears} 年的時間都屬於您自己，提早贖回人生自由。` },
+                { title: "本金極省", desc: `相比傳統存法，您少付了超過 ${(Math.round(savedPrincipal/10000)).toLocaleString()} 萬的本金，卻達到同樣的財務目標。` },
+                { title: "抗通膨", desc: "將現金轉為資產，透過長期投資報酬率戰勝通膨，避免存款越存越薄。" },
+                { title: "選擇權", desc: "當資產大到一定程度，您工作是為了興趣而非生存，擁有隨時說「不」的權利。" }
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-100 hover:bg-violet-50/50 transition-colors">
+                  <CheckCircle2 className="text-green-500 shrink-0 mt-0.5" size={20} />
+                  <div>
+                    <h4 className="font-bold text-slate-800">{item.title}</h4>
+                    <p className="text-sm text-slate-600 mt-1 leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+           </div>
+        </div>
       </div>
     </div>
   );
