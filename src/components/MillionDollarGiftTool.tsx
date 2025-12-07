@@ -9,7 +9,9 @@ import {
   RefreshCw,
   PiggyBank,
   Coins,
-  ArrowRightLeft
+  Settings,    // 新增
+  ChevronDown, // 新增
+  ChevronUp    // 新增
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Area, Line, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
@@ -35,7 +37,7 @@ const calculateMonthlyIncome = (principal: number, rate: number) => {
 // ------------------------------------------------------------------
 // 輔助組件: 循環結果卡片 (統一化樣式)
 // ------------------------------------------------------------------
-const ResultCard = ({ phase, period, netOut, asset, totalOut, netProfitTotal, isFinal = false, loanTerm, isCompoundMode }: any) => {
+const ResultCard = ({ phase, period, netOut, asset, totalOut, netProfitTotal, isFinal = false, loanTerm, isCompoundMode, loanAmount, rate }: any) => {
     const color = phase === 1 ? 'blue' : phase === 2 ? 'indigo' : 'purple';
     const bgColor = phase === 1 ? 'bg-blue-50' : phase === 2 ? 'bg-indigo-50' : 'bg-purple-50';
     const borderColor = phase === 1 ? 'border-blue-200' : phase === 2 ? 'border-indigo-200' : 'border-purple-200';
@@ -50,6 +52,11 @@ const ResultCard = ({ phase, period, netOut, asset, totalOut, netProfitTotal, is
             </div>
             
             <div className="space-y-3">
+            <div className="flex justify-between items-center text-sm">
+                 <span className="text-slate-600 font-medium">新增貸款 / 利率</span>
+                 <span className={`font-bold text-${color}-600`}>{loanAmount}萬 / {rate}%</span>
+            </div>
+
             <div className="flex justify-between items-center text-sm">
                 <span className="text-slate-600 font-medium">
                     {isCompoundMode ? '每月全額負擔' : '每月實質淨負擔'}
@@ -94,56 +101,93 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
     loanAmount: Number(data?.loanAmount) || 100,
     loanTerm: Number(data?.loanTerm) || 7, // 假設信貸期數為 7 年
     loanRate: Number(data?.loanRate) || 2.8,
-    investReturnRate: Number(data?.investReturnRate) || 6
+    investReturnRate: Number(data?.investReturnRate) || 6,
+    // 進階參數：若無設定，預設為 undefined，計算時會 fallback 回第一循環的數值
+    cycle2Loan: data?.cycle2Loan !== undefined ? Number(data.cycle2Loan) : undefined,
+    cycle2Rate: data?.cycle2Rate !== undefined ? Number(data.cycle2Rate) : undefined,
+    cycle3Loan: data?.cycle3Loan !== undefined ? Number(data.cycle3Loan) : undefined,
+    cycle3Rate: data?.cycle3Rate !== undefined ? Number(data.cycle3Rate) : undefined,
   };
+  
   const { loanAmount, loanTerm, loanRate, investReturnRate } = safeData;
+
+  // 決定實際使用的參數 (若進階參數未設定，則使用第一循環參數)
+  const c2Loan = safeData.cycle2Loan !== undefined ? safeData.cycle2Loan : loanAmount;
+  const c2Rate = safeData.cycle2Rate !== undefined ? safeData.cycle2Rate : loanRate;
+  const c3Loan = safeData.cycle3Loan !== undefined ? safeData.cycle3Loan : loanAmount;
+  const c3Rate = safeData.cycle3Rate !== undefined ? safeData.cycle3Rate : loanRate;
 
   // 新增狀態：是否開啟複利模式 (回滾利息)
   const [isCompoundMode, setIsCompoundMode] = useState(false);
+  // 新增狀態：是否顯示進階設定
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // --- 計算邏輯 ---
-  const monthlyLoanPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
-  const monthlyInvestIncomeSingle = calculateMonthlyIncome(loanAmount, investReturnRate);
+  // --- 計算邏輯 (針對每一筆貸款獨立計算) ---
   
-  // 計算各階段的資產成長與現金流
+  // 1. 各筆貸款的月付金
+  const payment1 = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
+  const payment2 = calculateMonthlyPayment(c2Loan, c2Rate, loanTerm);
+  const payment3 = calculateMonthlyPayment(c3Loan, c3Rate, loanTerm);
+
+  // 2. 各筆貸款對應的月配息 (假設投入金額 = 貸款金額)
+  const income1 = calculateMonthlyIncome(loanAmount, investReturnRate);
+  const income2 = calculateMonthlyIncome(c2Loan, investReturnRate);
+  const income3 = calculateMonthlyIncome(c3Loan, investReturnRate);
+  
+  // 3. 計算各階段的資產與現金流
   let phase1_Asset, phase2_Asset, phase3_Asset;
   let phase1_NetOut, phase2_NetOut, phase3_NetOut;
 
   // 輔助計算：複利終值因子 (單一週期)
-  // 若是複利模式，資產會成長：Principal * (1 + monthlyRate)^(years*12)
-  // 這裡簡化假設：每年複利一次或每月複利 (使用月利率較準)
   const monthlyRate = investReturnRate / 100 / 12;
   const totalMonthsPerCycle = loanTerm * 12;
   const compoundFactor = Math.pow(1 + monthlyRate, totalMonthsPerCycle);
 
   if (isCompoundMode) {
-      // --- 複利模式 (利息滾入本金，不拿出來繳貸) ---
-      // 負擔：使用者需全額支付貸款月付金
-      phase1_NetOut = monthlyLoanPayment;
-      phase2_NetOut = monthlyLoanPayment; 
-      phase3_NetOut = monthlyLoanPayment; 
+      // --- 複利模式 ---
+      // 負擔：使用者需全額支付貸款月付金 (不拿配息出來)
+      phase1_NetOut = payment1;
+      phase2_NetOut = payment1 + payment2; // 假設第一筆續貸或重貸? 這裡簡化為累積負債概念：手上同時背負的貸款
+      // 但專案邏輯通常是：還完第一筆，再借第二筆。
+      // 如果是「循環」，代表 T7 時第一筆已還完。
+      // 所以 Phase 2 的負擔應該只有 payment2 (因為 Loan1 已清償)
+      // Phase 3 的負擔應該只有 payment3 (因為 Loan2 已清償)
+      
+      // 修正邏輯：這是「循環」操作，前債已清。
+      phase1_NetOut = payment1;
+      phase2_NetOut = payment2; 
+      phase3_NetOut = payment3; 
       
       // 資產：期初本金 * 複利因子
-      // 第一階段結束：本金100 -> 滾存
+      // Phase 1 結束資產
       phase1_Asset = Math.round(loanAmount * compoundFactor);
       
-      // 第二階段結束：(第一階段資產 + 新貸100) -> 滾存
-      phase2_Asset = Math.round((phase1_Asset + loanAmount) * compoundFactor);
+      // Phase 2 結束資產 = (Phase 1 結束資產 + Phase 2 新本金) * 複利
+      phase2_Asset = Math.round((phase1_Asset + c2Loan) * compoundFactor);
       
-      // 第三階段結束：(第二階段資產 + 新貸100) -> 滾存
-      phase3_Asset = Math.round((phase2_Asset + loanAmount) * compoundFactor);
+      // Phase 3 結束資產 = (Phase 2 結束資產 + Phase 3 新本金) * 複利
+      phase3_Asset = Math.round((phase2_Asset + c3Loan) * compoundFactor);
 
   } else {
       // --- 現金流模式 (以息養貸) ---
-      // 負擔：貸款月付金 - 配息
-      phase1_NetOut = monthlyLoanPayment - monthlyInvestIncomeSingle;
-      phase2_NetOut = monthlyLoanPayment - (monthlyInvestIncomeSingle * 2);
-      phase3_NetOut = monthlyLoanPayment - (monthlyInvestIncomeSingle * 3);
+      // 資產累積 (線性)：本金不變，配息領出繳貸
+      // P1 結束時持有: Loan1
+      // P2 結束時持有: Loan1 + Loan2
+      // P3 結束時持有: Loan1 + Loan2 + Loan3
+      
+      phase1_Asset = loanAmount;
+      phase2_Asset = loanAmount + c2Loan;
+      phase3_Asset = loanAmount + c2Loan + c3Loan;
 
-      // 資產：線性疊加 (配息領出，本金不變)
-      phase1_Asset = loanAmount * 1;
-      phase2_Asset = loanAmount * 2;
-      phase3_Asset = loanAmount * 3;
+      // 負擔：
+      // Phase 1: 繳 Loan1, 領 Income1
+      phase1_NetOut = payment1 - income1;
+
+      // Phase 2: 繳 Loan2 (Loan1已還完), 領 Income1 + Income2 (Loan1留下的資產繼續配息)
+      phase2_NetOut = payment2 - (income1 + income2);
+
+      // Phase 3: 繳 Loan3, 領 Income1 + Income2 + Income3
+      phase3_NetOut = payment3 - (income1 + income2 + income3);
   }
 
   // --- 總付出計算邏輯 (萬為單位) ---
@@ -168,14 +212,10 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
   const netProfit_Wan = finalAssetValue_Wan - totalProjectCost_Wan;
   
   // --- 一般存錢成本比較 ---
-  // 目標：要達到「專案最終資產 (finalAssetValue_Wan)」，一般存錢需要存多少？
-  // 這裡定義「一般存錢成本」=「目標資產金額」 (假設一般存錢無利息，或利息極低被通膨抵銷，呈現最保守比較)
-  const standardCost_Wan = finalAssetValue_Wan;
-
-  // 節省金額
+  const standardCost_Wan = finalAssetValue_Wan; // 目標資產
   const savedAmount_Wan = standardCost_Wan - totalProjectCost_Wan;
 
-  // --- 新增計算：每月平均需要存多少 ---
+  // --- 每月平均需要存多少 ---
   const totalYears = loanTerm * 3;
   const monthlyStandardSaving = Math.round((finalAssetValue_Wan * 10000) / (totalYears * 12));
   const monthlyProjectCost = Math.round((totalProjectCost_Wan * 10000) / (totalYears * 12));
@@ -187,7 +227,7 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
     let cumulativeStandard = 0;
     let cumulativeProjectCost = 0;
     
-    // 一般存錢每月需存金額 (為了在 totalYears 達到 finalAssetValue_Wan)
+    // 一般存錢每月需存金額
     const standardMonthlySaving = (finalAssetValue_Wan * 10000) / (totalYears * 12); 
 
     // 模擬資產成長曲線 (用於圖表顯示)
@@ -201,30 +241,35 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
       
       // 計算該年度的資產價值與成本
       if (year <= loanTerm) {
+        // Phase 1
         currentPhaseNetOut = phase1_NetOut;
         if(isCompoundMode) {
-            // 簡化模擬：每年成長
             currentAssetValue = (loanAmount * 10000) * Math.pow(1 + monthlyRate, year * 12);
         } else {
             currentAssetValue = loanAmount * 10000;
         }
       } else if (year <= loanTerm * 2) {
+        // Phase 2
         currentPhaseNetOut = phase2_NetOut;
         if(isCompoundMode) {
-             const prevAsset = phase1_Asset * 10000;
+             const prevAsset = phase1_Asset * 10000; // T7 結束時的金額
              const yearsInPhase2 = year - loanTerm;
-             currentAssetValue = (prevAsset + loanAmount * 10000) * Math.pow(1 + monthlyRate, yearsInPhase2 * 12);
+             // Phase 2 起點本金 = Phase 1 結束 + 新增 c2Loan
+             const startPrincipalP2 = prevAsset + (c2Loan * 10000);
+             currentAssetValue = startPrincipalP2 * Math.pow(1 + monthlyRate, yearsInPhase2 * 12);
         } else {
-            currentAssetValue = loanAmount * 2 * 10000;
+            currentAssetValue = (loanAmount + c2Loan) * 10000;
         }
       } else {
+        // Phase 3
         currentPhaseNetOut = phase3_NetOut; 
         if(isCompoundMode) {
             const prevAsset = phase2_Asset * 10000;
             const yearsInPhase3 = year - loanTerm * 2;
-            currentAssetValue = (prevAsset + loanAmount * 10000) * Math.pow(1 + monthlyRate, yearsInPhase3 * 12);
+            const startPrincipalP3 = prevAsset + (c3Loan * 10000);
+            currentAssetValue = startPrincipalP3 * Math.pow(1 + monthlyRate, yearsInPhase3 * 12);
         } else {
-            currentAssetValue = loanAmount * 3 * 10000;
+            currentAssetValue = (loanAmount + c2Loan + c3Loan) * 10000;
         }
       }
 
@@ -241,11 +286,11 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
   };
 
   const updateField = (field: string, value: number) => { 
-      if (field === 'investReturnRate') {
+      if (field === 'investReturnRate' || field.includes('Rate')) {
           setData({ ...safeData, [field]: Number(value.toFixed(1)) });
       } else {
-          if (field === 'loanAmount') {
-             const clampedValue = Math.max(10, Math.min(500, Number(value)));
+          if (field.includes('Amount') || field.includes('Loan')) {
+             const clampedValue = Math.max(10, Math.min(1000, Number(value)));
              setData({ ...safeData, [field]: Math.round(clampedValue) }); 
           } else {
             setData({ ...safeData, [field]: Number(value) }); 
@@ -368,48 +413,159 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
             </h4>
             <div className="space-y-6">
                
-               {/* --- 1. 單次借貸額度 --- */}
-               <div>
-                   <div className="flex justify-between items-center mb-2">
-                       <label className="text-sm font-medium text-slate-600">單次借貸額度 (萬)</label>
-                       <div className="flex items-center">
-                           <input 
-                               type="number" 
-                               min={10} 
-                               max={500} 
-                               step={1}
-                               value={loanAmount} 
-                               onChange={(e) => updateField('loanAmount', Number(e.target.value))} 
-                               className="w-16 text-right bg-transparent border-none p-0 font-mono font-bold text-blue-600 text-lg focus:ring-0 focus:border-blue-500 focus:bg-blue-50/50 rounded"
-                               style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
-                           />
-                           <span className="font-mono font-bold text-blue-600 text-lg ml-1">萬</span>
-                       </div>
+               {/* --- 基礎設定 --- */}
+               <div className="pb-4 border-b border-slate-100">
+                   <div className="flex items-center gap-2 mb-3">
+                       <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">1</span>
+                       <span className="text-sm font-bold text-slate-700">第一循環 (基礎設定)</span>
                    </div>
-                   <input 
-                       type="range" 
-                       min={10} 
-                       max={500} 
-                       step={1}
-                       value={loanAmount} 
-                       onChange={(e) => updateField('loanAmount', Number(e.target.value))} 
-                       className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600 hover:accent-blue-700 transition-all`} 
-                   />
+
+                   {/* 金額 */}
+                   <div className="mb-4">
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="text-sm font-medium text-slate-600">單次借貸額度 (萬)</label>
+                            <div className="flex items-center">
+                                <input 
+                                    type="number" 
+                                    min={10} 
+                                    max={1000} 
+                                    step={10}
+                                    value={loanAmount} 
+                                    onChange={(e) => updateField('loanAmount', Number(e.target.value))} 
+                                    className="w-16 text-right bg-transparent border-none p-0 font-mono font-bold text-blue-600 text-lg focus:ring-0 focus:border-blue-500 focus:bg-blue-50/50 rounded"
+                                />
+                                <span className="font-mono font-bold text-blue-600 text-lg ml-1">萬</span>
+                            </div>
+                        </div>
+                        <input 
+                            type="range" 
+                            min={10} 
+                            max={500} 
+                            step={10}
+                            value={loanAmount} 
+                            onChange={(e) => updateField('loanAmount', Number(e.target.value))} 
+                            className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600" 
+                        />
+                   </div>
+
+                   {/* 利率 */}
+                   <div>
+                        <div className="flex justify-between mb-1">
+                            <label className="text-sm font-medium text-slate-600">信貸利率 (%)</label>
+                            <span className="font-mono font-bold text-indigo-600 text-lg">{loanRate.toFixed(1)}%</span>
+                        </div>
+                        <input 
+                            type="range" 
+                            min={1.5} 
+                            max={10.0} 
+                            step={0.1} 
+                            value={loanRate} 
+                            onChange={(e) => updateField('loanRate', Number(e.target.value))} 
+                            className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600" 
+                        />
+                   </div>
+               </div>
+               
+               {/* 投資報酬率 (共用) */}
+               <div>
+                 <div className="flex justify-between mb-1">
+                     <label className="text-sm font-medium text-slate-600">投資年化報酬 (%)</label>
+                     <span className="font-mono font-bold text-purple-600 text-lg">{investReturnRate.toFixed(1)}%</span>
+                 </div>
+                 <input type="range" min={3} max={12} step={0.1} value={investReturnRate} onChange={(e) => updateField('investReturnRate', Number(e.target.value))} className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-purple-600" />
                </div>
 
-               {/* 其他參數 */}
-               {[
-                 { label: "信貸利率 (%)", field: "loanRate", min: 1.5, max: 15.0, step: 0.1, val: loanRate, color: "indigo", unit: "%" },
-                 { label: "投資年化報酬 (%)", field: "investReturnRate", min: 3, max: 12, step: 0.1, val: investReturnRate, color: "purple", unit: "%" }
-               ].map((item) => (
-                 <div key={item.field}>
-                   <div className="flex justify-between mb-2">
-                     <label className="text-sm font-medium text-slate-600">{item.label}</label>
-                     <span className={`font-mono font-bold text-${item.color}-600 text-lg`}>{item.val.toFixed(1)}{item.unit}</span>
-                   </div>
-                   <input type="range" min={item.min} max={item.max} step={item.step} value={item.val} onChange={(e) => updateField(item.field, Number(e.target.value))} className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-${item.color}-600 hover:accent-${item.color}-700 transition-all`} />
+               {/* --- 進階設定按鈕 --- */}
+               <button 
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all duration-200 ${
+                    showAdvanced 
+                      ? 'bg-slate-50 border-slate-300 text-slate-800' 
+                      : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                  }`}
+               >
+                  <div className="flex items-center gap-2 font-bold text-sm">
+                    <Settings size={16} />
+                    進階設定 (後續循環參數)
+                  </div>
+                  {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+               </button>
+
+               {/* --- 進階設定面板 --- */}
+               {showAdvanced && (
+                 <div className="space-y-6 animate-in slide-in-from-top-2 duration-300 pt-2">
+                    
+                    {/* 第二循環 */}
+                    <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">2</span>
+                            <span className="text-sm font-bold text-indigo-900">第二循環參數</span>
+                        </div>
+                        <div className="space-y-3">
+                            <div>
+                                <div className="flex justify-between text-xs text-slate-500 mb-1">
+                                    <span>貸款金額</span>
+                                    <span className="font-bold text-indigo-700">{c2Loan} 萬</span>
+                                </div>
+                                <input 
+                                    type="range" min={10} max={500} step={10} 
+                                    value={c2Loan} 
+                                    onChange={(e) => updateField('cycle2Loan', Number(e.target.value))} 
+                                    className="w-full h-1.5 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" 
+                                />
+                            </div>
+                            <div>
+                                <div className="flex justify-between text-xs text-slate-500 mb-1">
+                                    <span>貸款利率</span>
+                                    <span className="font-bold text-indigo-700">{c2Rate}%</span>
+                                </div>
+                                <input 
+                                    type="range" min={1.5} max={10} step={0.1} 
+                                    value={c2Rate} 
+                                    onChange={(e) => updateField('cycle2Rate', Number(e.target.value))} 
+                                    className="w-full h-1.5 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" 
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 第三循環 */}
+                    <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold">3</span>
+                            <span className="text-sm font-bold text-purple-900">第三循環參數</span>
+                        </div>
+                        <div className="space-y-3">
+                            <div>
+                                <div className="flex justify-between text-xs text-slate-500 mb-1">
+                                    <span>貸款金額</span>
+                                    <span className="font-bold text-purple-700">{c3Loan} 萬</span>
+                                </div>
+                                <input 
+                                    type="range" min={10} max={500} step={10} 
+                                    value={c3Loan} 
+                                    onChange={(e) => updateField('cycle3Loan', Number(e.target.value))} 
+                                    className="w-full h-1.5 bg-purple-200 rounded-lg appearance-none cursor-pointer accent-purple-600" 
+                                />
+                            </div>
+                            <div>
+                                <div className="flex justify-between text-xs text-slate-500 mb-1">
+                                    <span>貸款利率</span>
+                                    <span className="font-bold text-purple-700">{c3Rate}%</span>
+                                </div>
+                                <input 
+                                    type="range" min={1.5} max={10} step={0.1} 
+                                    value={c3Rate} 
+                                    onChange={(e) => updateField('cycle3Rate', Number(e.target.value))} 
+                                    className="w-full h-1.5 bg-purple-200 rounded-lg appearance-none cursor-pointer accent-purple-600" 
+                                />
+                            </div>
+                        </div>
+                    </div>
+
                  </div>
-               ))}
+               )}
+
             </div>
             
             <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-100 grid grid-cols-2 gap-4">
@@ -430,9 +586,16 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-[400px] print-break-inside relative">
              <div className="flex justify-between items-center mb-4 pl-2 border-l-4 border-indigo-500">
                 <h4 className="font-bold text-slate-700">資產累積三階段 ({loanTerm * 3}年趨勢)</h4>
-                <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">
-                    目前模式：{isCompoundMode ? '複利滾存' : '現金流領息'}
-                </span>
+                <div className="flex gap-2">
+                    {showAdvanced && (
+                         <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
+                            已啟用進階設定
+                        </span>
+                    )}
+                    <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">
+                        模式：{isCompoundMode ? '複利滾存' : '現金流領息'}
+                    </span>
+                </div>
              </div>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart data={generateChartData()} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
@@ -467,6 +630,8 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                totalOut={totalCashOut_T0_T7_Wan}
                loanTerm={loanTerm}
                isCompoundMode={isCompoundMode}
+               loanAmount={loanAmount}
+               rate={loanRate}
             />
             <ResultCard 
                phase={2} 
@@ -476,6 +641,8 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                totalOut={totalCashOut_T7_T14_Wan}
                loanTerm={loanTerm}
                isCompoundMode={isCompoundMode}
+               loanAmount={c2Loan}
+               rate={c2Rate}
             />
             <ResultCard 
                phase={3} 
@@ -487,6 +654,8 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                isFinal={true}
                loanTerm={loanTerm}
                isCompoundMode={isCompoundMode}
+               loanAmount={c3Loan}
+               rate={c3Rate}
             />
          </div>
       </div>
@@ -520,7 +689,7 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                 </div>
                 <div>
                    <h4 className="font-bold text-slate-800 flex items-center gap-2">循環期 (第{loanTerm + 1}-{loanTerm * 2}年)</h4>
-                   <p className="text-sm text-slate-600 mt-1">償還第一筆後再次借出，資產規模翻倍。{isCompoundMode ? '複利效應開始顯著發威。' : '雙倍配息讓月付金大幅降低。'}</p>
+                   <p className="text-sm text-slate-600 mt-1">償還第一筆後再次借出{c2Loan}萬，資產規模翻倍。{isCompoundMode ? '複利效應開始顯著發威。' : '雙倍配息讓月付金大幅降低。'}</p>
                 </div>
              </div>
 
@@ -531,7 +700,7 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                 </div>
                 <div>
                    <h4 className="font-bold text-slate-800 flex items-center gap-2">收穫期 (第{loanTerm * 2 + 1}-{loanTerm * 3}年)</h4>
-                   <p className="text-sm text-slate-600 mt-1">第三次操作。{isCompoundMode ? '資產呈現指數級爆發，創造驚人財富。' : '三份配息通常已超過貸款月付，產生正向現金流。'}</p>
+                   <p className="text-sm text-slate-600 mt-1">第三次操作投入{c3Loan}萬。{isCompoundMode ? '資產呈現指數級爆發，創造驚人財富。' : '三份配息通常已超過貸款月付，產生正向現金流。'}</p>
                 </div>
              </div>
           </div>
