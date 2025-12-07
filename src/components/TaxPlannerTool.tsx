@@ -36,14 +36,15 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
   const safeData = {
     // 家庭成員
     spouse: Boolean(data?.spouse), // 有無配偶
-    children: Number(data?.children) || 2, // 子女人數
+    // 修正：允許輸入 0 (原本的 || 2 會把 0 變成 2)
+    children: data?.children !== undefined ? Number(data.children) : 2, 
     parents: Number(data?.parents) || 0, // 父母人數
     handicapped: Number(data?.handicapped) || 0, // 重度身障人數 (扣除額 693萬)
     
     // 資產配置 (萬)
     cash: Number(data?.cash) || 3000, // 現金存款
-    realEstateOfficial: Number(data?.realEstateOfficial) || 2000, // 不動產(公告現值) - 課稅用
-    realEstateMarket: Number(data?.realEstateMarket) || 4000, // 不動產(市價) - 財富感用
+    // realEstateOfficial 已移除，改由市價內部估算
+    realEstateMarket: Number(data?.realEstateMarket) || 4000, // 不動產(市價)
     stocks: Number(data?.stocks) || 1000, // 股票/基金
     otherAssets: Number(data?.otherAssets) || 0, // 其他資產
     
@@ -59,7 +60,7 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
 
   const { 
     spouse, children, parents, handicapped,
-    cash, realEstateOfficial, realEstateMarket, stocks, otherAssets,
+    cash, realEstateMarket, stocks, otherAssets,
     insurancePlan,
     age, healthStatus, paymentType
   } = safeData;
@@ -68,11 +69,15 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
 
   // --- 計算核心 (2025年/114年起適用新制) ---
   const calculations = useMemo(() => {
+      // 0. 不動產計稅價值估算
+      // 由於使用者只輸入市價，這裡假設公告現值約為市價的 70% 進行保守估稅 (可調整)
+      const estimatedOfficialRealEstate = Math.round(realEstateMarket * 0.7);
+
       // 1. 遺產總額 (Estate Total)
-      // 規劃前：所有資產加總
-      const totalEstateBefore = cash + realEstateOfficial + stocks + otherAssets;
+      // 規劃前：所有資產加總 (使用估算的公告現值)
+      const totalEstateBefore = cash + estimatedOfficialRealEstate + stocks + otherAssets;
       // 規劃後：現金減少，轉入保險 (保險不計入遺產總額，但需注意實質課稅)
-      const totalEstateAfter = Math.max(0, cash - insurancePlan) + realEstateOfficial + stocks + otherAssets;
+      const totalEstateAfter = Math.max(0, cash - insurancePlan) + estimatedOfficialRealEstate + stocks + otherAssets;
 
       // 2. 扣除額與免稅額 (Deductions & Exemptions) - 113/114年標準
       const exemption = 1333; // 免稅額
@@ -139,6 +144,7 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
       const riskLevel = riskScore >= 50 ? 'High' : riskScore >= 25 ? 'Medium' : 'Low';
 
       return {
+          estimatedOfficialRealEstate, // 導出的估算值
           totalEstateBefore,
           totalDeductions,
           netEstateBefore,
@@ -151,7 +157,7 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
           riskScore,
           riskLevel
       };
-  }, [spouse, children, parents, handicapped, cash, realEstateOfficial, stocks, otherAssets, insurancePlan, age, healthStatus, paymentType]);
+  }, [spouse, children, parents, handicapped, cash, realEstateMarket, stocks, otherAssets, insurancePlan, age, healthStatus, paymentType]);
 
   // --- 圖表數據 ---
   const taxCompareData = [
@@ -239,15 +245,11 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                        <label className="text-xs font-bold text-slate-500 mb-1 block">現金存款 (萬)</label>
                        <input type="number" value={cash} onChange={(e) => updateField('cash', Number(e.target.value))} className="w-full p-2 border rounded-lg font-bold text-slate-700" />
                    </div>
-                   <div className="grid grid-cols-2 gap-4">
-                       <div>
-                           <label className="text-xs font-bold text-blue-600 mb-1 block">不動產(公告現值)</label>
-                           <input type="number" value={realEstateOfficial} onChange={(e) => updateField('realEstateOfficial', Number(e.target.value))} className="w-full p-2 border border-blue-200 rounded-lg font-bold text-blue-700 bg-blue-50" placeholder="課稅用" />
-                       </div>
-                       <div>
-                           <label className="text-xs font-bold text-slate-400 mb-1 block">不動產(市價)</label>
-                           <input type="number" value={realEstateMarket} onChange={(e) => updateField('realEstateMarket', Number(e.target.value))} className="w-full p-2 border border-slate-200 rounded-lg font-bold text-slate-500 bg-slate-50" placeholder="參考用" />
-                       </div>
+                   {/* 移除公告現值輸入，僅保留市價 */}
+                   <div>
+                       <label className="text-xs font-bold text-slate-500 mb-1 block">不動產 (市價)</label>
+                       <input type="number" value={realEstateMarket} onChange={(e) => updateField('realEstateMarket', Number(e.target.value))} className="w-full p-2 border border-slate-200 rounded-lg font-bold text-slate-700" placeholder="請輸入市價" />
+                       <p className="text-[10px] text-slate-400 mt-1">* 系統將自動概抓市價 70% 作為課稅用公告現值估算</p>
                    </div>
                    <div>
                        <label className="text-xs font-bold text-slate-500 mb-1 block">股票/基金 (萬)</label>
@@ -292,7 +294,7 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                   
                   <div className="space-y-4">
                       <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-500">遺產總額</span>
+                          <span className="text-sm text-slate-500">遺產總額 <span className="text-xs opacity-60">(含不動產估值)</span></span>
                           <span className="font-mono font-bold text-slate-700">${calculations.totalEstateBefore.toLocaleString()} 萬</span>
                       </div>
                       <div className="flex justify-between items-center">
