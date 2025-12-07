@@ -75,7 +75,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   // 1. 總貸款期後累積的淨現金流 (元)
   const cumulativeNetIncomeTarget = monthlyCashFlow * (targetYear * 12);
 
-  // 2. 總貸款期後的淨獲利 (萬) - 這是純粹的淨現金流累積 (元轉萬)
+  // 2. 總貸款期後的淨獲利 (萬) - 依據使用者邏輯: 總淨獲利 = 累積淨現金流 (萬)
   const totalProfitTargetWan = Math.round(cumulativeNetIncomeTarget / 10000); 
 
   // 3. 總貸款期後的總資產價值 (萬)
@@ -173,6 +173,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
         </div>
       </div>
 
+      {/* Calculator Section */}
       <div className="grid lg:grid-cols-12 gap-8">
         {/* 左側：參數設定 */}
         <div className="lg:col-span-4 space-y-6 print-break-inside">
@@ -248,9 +249,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                </div>
             </div>
           </div>
-          
-          
-        </div> {/* 結束左側 lg:col-span-4 */}
+        </div>
 
         {/* 右側：圖表展示 */}
         <div className="lg:col-span-8 space-y-6">
@@ -333,7 +332,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
          </div>
       </div>
       
-      {/* 底部策略區 (執行三部曲 + 專案四大效益) - 這是唯一的策略區 */}
+      {/* 底部策略區 (執行三部曲 + 專案四大效益) */}
       <div className="grid md:grid-cols-2 gap-8 pt-6 border-t border-slate-200 print-break-inside">
         
         {/* 1. 執行循環 */}
@@ -377,6 +376,13 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                 </div>
              </div>
           </div>
+          
+          {/* 金句移至此處 */}
+          <div className="mt-6 p-4 bg-slate-800 rounded-xl text-center shadow-lg">
+             <p className="text-slate-300 italic text-sm">
+               「富人買資產，窮人買負債，中產階級買他們以為是資產的負債。金融房產，是真正的資產。」
+             </p>
+           </div>
         </div>
 
         {/* 2. 專案效益 */}
@@ -401,12 +407,6 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                   </div>
                 </div>
               ))}
-           </div>
-
-           <div className="mt-6 p-4 bg-slate-800 rounded-xl text-center shadow-lg">
-             <p className="text-slate-300 italic text-sm">
-               「富人買資產，窮人買負債，中產階級買他們以為是資產的負債。金融房產，是真正的資產。」
-             </p>
            </div>
         </div>
       </div>
