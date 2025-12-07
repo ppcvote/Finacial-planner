@@ -8,11 +8,12 @@ import {
   TrendingUp,
   CheckCircle2,
   RefreshCw,
-  Settings,    // 新增
-  ChevronDown, // 新增
-  ChevronUp,   // 新增
-  ArrowRightLeft, // 新增
-  PiggyBank    // 新增
+  Settings,    
+  ChevronDown, 
+  ChevronUp,   
+  ArrowRightLeft, 
+  PiggyBank,
+  Briefcase     // 新增 icon 用於資產顯示
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
@@ -88,6 +89,11 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   // 整合後新月付 = 新貸款月付 - 增貸投資收益
   // (概念：用增貸出來的獲利，去補貼整個新房貸)
   const netNewMonthlyPayment = newLoanMonthlyPayment - monthlyInvestIncomeFromCashOut;
+  
+  // 每月節省金額
+  const monthlySavings = existingMonthlyPayment - netNewMonthlyPayment;
+  // 全期總節省金額
+  const totalSavingsOverTerm = monthlySavings * 12 * loanTerm;
 
   // 3. 原始模式計算 (全額投資)
   const monthlyInvestIncomeFull = calculateMonthlyIncome(loanAmount, investReturnRate);
@@ -97,12 +103,12 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
 
   // --- 用於顯示的變數 (根據模式切換) ---
   const displayMonthlyCashFlow = isRefinanceMode 
-      ? (existingMonthlyPayment - netNewMonthlyPayment) // 轉增貸：省下的錢 (正數代表少繳)
+      ? monthlySavings // 轉增貸：省下的錢 (正數代表少繳)
       : monthlyCashFlowOriginal; // 原始：淨現金流
 
   // 總累積效益計算
   const cumulativeNetIncomeTarget = isRefinanceMode
-      ? (existingMonthlyPayment - netNewMonthlyPayment) * loanTerm * 12 // 累積省下的錢
+      ? monthlySavings * loanTerm * 12 // 累積省下的錢
       : monthlyCashFlowOriginal * loanTerm * 12;
 
   const totalWealthTargetWan = isRefinanceMode
@@ -121,7 +127,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       if (isRefinanceMode) {
           // 轉增貸模式圖表：顯示「原貸款餘額」與「新貸款餘額(扣除投資收益補貼效應)」的對比?
           // 或者顯示「累積省下的現金」
-          cumulative += (existingMonthlyPayment - netNewMonthlyPayment) * 12;
+          cumulative += monthlySavings * 12;
           
           if (year === 1 || year % step === 0 || year === loanTerm) {
             dataArr.push({ 
@@ -391,12 +397,12 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
          {isRefinanceMode ? (
             // --- 轉增貸模式的結果卡片 ---
             <>
-               <div className="md:col-span-1 bg-white rounded-2xl shadow border border-orange-200 p-6 print-break-inside">
+               <div className="md:col-span-1 bg-white rounded-2xl shadow border border-orange-200 p-6 print-break-inside flex flex-col justify-between">
                   <h3 className="text-center font-bold text-slate-700 mb-4 flex items-center justify-center gap-2">
                       <Scale size={18}/> 轉增貸前後月付金對比
                   </h3>
                   
-                  <div className="flex items-center justify-between gap-2 mb-6">
+                  <div className="flex items-center justify-between gap-2 mb-4">
                       <div className="text-center w-1/3">
                           <div className="text-xs text-slate-500 mb-1">原月付金</div>
                           <div className="text-xl font-bold text-slate-400 line-through">
@@ -414,37 +420,69 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                       </div>
                   </div>
 
-                  <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 text-center">
-                       <p className="text-sm text-emerald-800 font-bold mb-1">每月減輕負擔</p>
-                       <p className="text-4xl font-black text-emerald-600 font-mono">
-                           ${Math.round(existingMonthlyPayment - netNewMonthlyPayment).toLocaleString()}
-                       </p>
-                       <p className="text-xs text-emerald-600/70 mt-2">
-                           一年省下 ${(Math.round(existingMonthlyPayment - netNewMonthlyPayment) * 12).toLocaleString()}
-                       </p>
+                  <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 text-center space-y-3">
+                       <div>
+                            <p className="text-sm text-emerald-800 font-bold mb-1">每月減輕負擔</p>
+                            <p className="text-4xl font-black text-emerald-600 font-mono">
+                                ${Math.round(monthlySavings).toLocaleString()}
+                            </p>
+                       </div>
+                       <div className="border-t border-emerald-200/50 pt-2">
+                            <p className="text-xs text-emerald-700 font-bold mb-0.5">
+                                {loanTerm}年總計省下
+                            </p>
+                            <p className="text-xl font-black text-emerald-700 font-mono">
+                                ${Math.round(totalSavingsOverTerm / 10000).toLocaleString()} 萬
+                            </p>
+                            <p className="text-[10px] text-emerald-600/70">
+                                (每月省下 x 12個月 x {loanTerm}年)
+                            </p>
+                       </div>
                   </div>
                </div>
 
                <div className="md:col-span-1 bg-white rounded-2xl shadow border border-slate-200 p-6 print-break-inside space-y-4">
                   <h3 className="text-center font-bold text-slate-700 flex items-center justify-center gap-2">
-                      <PiggyBank size={18}/> 資金運用效益
+                      <PiggyBank size={18}/> 期滿資產效益比較
                   </h3>
-                  <div className="space-y-3">
-                      <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                          <span className="text-sm font-medium text-slate-600">手邊多出現金 (增貸)</span>
-                          <span className="font-bold text-orange-600 text-lg">{cashOutAmount} 萬</span>
+                  
+                  <div className="grid grid-cols-2 gap-4 mt-2 h-full">
+                      {/* 舊模式結局 */}
+                      <div className="bg-slate-50 p-4 rounded-xl text-center border border-slate-100 flex flex-col items-center justify-center">
+                          <div className="text-xs font-bold text-slate-500 mb-2">一般繳房貸結局</div>
+                          <div className="bg-white p-3 rounded-full shadow-sm mb-2">
+                              <Building2 className="text-slate-400" size={32} />
+                          </div>
+                          <div className="font-bold text-slate-700">一間老房子</div>
+                          <div className="text-xs text-slate-400 mt-1">資產淨值 $0 (指現金)</div>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                          <span className="text-sm font-medium text-slate-600">投資創造被動收入</span>
-                          <span className="font-bold text-blue-600 text-lg">+${Math.round(monthlyInvestIncomeFromCashOut).toLocaleString()}/月</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                          <span className="text-sm font-medium text-slate-600">新房貸月付金</span>
-                          <span className="font-bold text-slate-700 text-lg">${Math.round(newLoanMonthlyPayment).toLocaleString()}/月</span>
+
+                      {/* 轉增貸結局 */}
+                      <div className="bg-orange-50 p-4 rounded-xl text-center border border-orange-100 flex flex-col items-center justify-center relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-8 h-8 bg-orange-200 rounded-bl-xl flex items-center justify-center">
+                              <CheckCircle2 size={14} className="text-orange-700" />
+                          </div>
+                          <div className="text-xs font-bold text-orange-700 mb-2">轉增貸規劃結局</div>
+                          <div className="flex gap-1 mb-2">
+                              <div className="bg-white p-3 rounded-full shadow-sm relative z-10">
+                                  <Building2 className="text-orange-500" size={32} />
+                              </div>
+                              <div className="bg-white p-3 rounded-full shadow-sm -ml-3 relative z-0">
+                                  <Briefcase className="text-yellow-500" size={32} />
+                              </div>
+                          </div>
+                          <div className="font-bold text-orange-800">房子 + 一桶金</div>
+                          <div className="text-xl font-black text-orange-600 mt-1 font-mono">
+                              ${cashOutAmount} 萬
+                          </div>
+                          <div className="text-[10px] text-orange-600/70">
+                              (投資本金保留)
+                          </div>
                       </div>
                   </div>
-                  <div className="text-center text-xs text-slate-400 mt-2">
-                      * 計算公式：新月付金 - (增貸現金 × 報酬率 ÷ 12) = 整合後月付
+
+                  <div className="text-center text-xs text-slate-400 mt-2 bg-slate-50 p-2 rounded-lg">
+                      * 註：轉增貸將資金轉入投資，本金於期滿後依然存在，變身為您的退休金或傳承資產。
                   </div>
                </div>
             </>
