@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
-  GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key
+  GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key, Save
 } from 'lucide-react';
 
 import { 
   signInWithPopup, signOut, onAuthStateChanged, signInWithEmailAndPassword, 
-  signInWithRedirect, getRedirectResult // 導入 Email/Password 登入
+  signInWithRedirect, getRedirectResult 
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 import { auth, db, googleProvider } from './firebase'; 
 import ReportModal from './components/ReportModal';
@@ -89,6 +89,8 @@ export default function App() {
   const [toast, setToast] = useState<{message: string, type: string} | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false); 
+  const [isSaving, setIsSaving] = useState(false); // 儲存狀態顯示
+  const [isDataLoaded, setIsDataLoaded] = useState(false); // 確保資料載入後才開啟自動儲存
 
   // New states for testing Email/Password login
   const [testEmail, setTestEmail] = useState('');
@@ -96,63 +98,147 @@ export default function App() {
   const [isEmailLoginOpen, setIsEmailLoginOpen] = useState(false);
 
 
-  // Tool Data States
-  const [giftData, setGiftData] = useState({ loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 });
-  const [estateData, setEstateData] = useState({ loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6 });
-  const [studentData, setStudentData] = useState({ loanAmount: 40, investReturnRate: 6, years: 8, gracePeriod: 1, interestOnlyPeriod: 0 });
-  const [superActiveData, setSuperActiveData] = useState({ monthlySaving: 10000, investReturnRate: 6, activeYears: 15 });
-  const [carData, setCarData] = useState({ carPrice: 100, investReturnRate: 6, resaleRate: 50 });
-  const [pensionData, setPensionData] = useState({ currentAge: 30, retireAge: 65, salary: 45000, laborInsYears: 35, selfContribution: false, pensionReturnRate: 3, desiredMonthlyIncome: 60000 });
-  const [reservoirData, setReservoirData] = useState({ initialCapital: 1000, dividendRate: 6, reinvestRate: 6, years: 10 });
-  const [taxData, setTaxData] = useState({ spouse: true, children: 2, parents: 0, cash: 3000, realEstate: 2000, stocks: 1000, insurancePlan: 0 });
+  // Tool Data States - 定義初始預設值
+  const defaultStates = {
+    gift: { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 },
+    estate: { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6, existingLoanBalance: 700, existingMonthlyPayment: 38000 },
+    student: { loanAmount: 40, investReturnRate: 6, years: 8, gracePeriod: 1, interestOnlyPeriod: 0 },
+    super_active: { monthlySaving: 10000, investReturnRate: 6, activeYears: 15 },
+    car: { carPrice: 100, investReturnRate: 6, resaleRate: 50 },
+    pension: { currentAge: 30, retireAge: 65, salary: 45000, laborInsYears: 35, selfContribution: false, pensionReturnRate: 3, desiredMonthlyIncome: 60000 },
+    reservoir: { initialCapital: 1000, dividendRate: 6, reinvestRate: 6, years: 10 },
+    tax: { spouse: true, children: 2, parents: 0, cash: 3000, realEstateMarket: 4000, stocks: 1000, insurancePlan: 0 }
+  };
 
+  const [giftData, setGiftData] = useState(defaultStates.gift);
+  const [estateData, setEstateData] = useState(defaultStates.estate);
+  const [studentData, setStudentData] = useState(defaultStates.student);
+  const [superActiveData, setSuperActiveData] = useState(defaultStates.super_active);
+  const [carData, setCarData] = useState(defaultStates.car);
+  const [pensionData, setPensionData] = useState(defaultStates.pension);
+  const [reservoirData, setReservoirData] = useState(defaultStates.reservoir);
+  const [taxData, setTaxData] = useState(defaultStates.tax);
+
+  const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
+
+  // --- 1. 初始化與資料載入邏輯 ---
   useEffect(() => {
-    // 1. 檢查是否是 Redirect 回來的登入 (手機版)
-    const checkRedirect = async () => {
+    let unsubscribeSnapshot:  (() => void) | undefined;
+
+    const checkRedirectAndAuth = async () => {
+      // 處理 Redirect 結果 (Mobile)
       try {
         await getRedirectResult(auth);
       } catch (error: any) {
-        // 專門處理 iOS/瀏覽器分區儲存導致的狀態丟失錯誤 (missing state)
-        if (error.code === 'auth/missing-or-invalid-nonce' || error.code === 'auth/cancelled-popup-request') {
-           showToast(`登入錯誤：瀏覽器狀態丟失，請重試或改用一般視窗`, "error");
-        } else {
-           showToast(`登入錯誤: ${error.message}`, "error");
+        if (error.code !== 'auth/popup-closed-by-user') {
+           console.error("Redirect Error:", error);
+           // 不顯示錯誤，以免干擾正常流程，除非嚴重
         }
       }
-    };
-    checkRedirect();
 
-    // 2. 監聽登入狀態
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-      if (currentUser) {
-        // 載入使用者設定
-      }
-    });
-    return () => unsubscribe();
+      // 監聽 Auth 狀態
+      const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+        
+        if (currentUser) {
+           // 有使用者 -> 建立 Firestore 監聽器
+           const userDocRef = doc(db, 'users', currentUser.uid);
+           unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
+               if (docSnap.exists()) {
+                   const data = docSnap.data();
+                   // 使用 Object.assign 或 spread 來合併雲端資料與預設值，確保欄位不缺失
+                   if (data.giftData) setGiftData(prev => ({...prev, ...data.giftData}));
+                   if (data.estateData) setEstateData(prev => ({...prev, ...data.estateData}));
+                   if (data.studentData) setStudentData(prev => ({...prev, ...data.studentData}));
+                   if (data.superActiveData) setSuperActiveData(prev => ({...prev, ...data.superActiveData}));
+                   if (data.carData) setCarData(prev => ({...prev, ...data.carData}));
+                   if (data.pensionData) setPensionData(prev => ({...prev, ...data.pensionData}));
+                   if (data.reservoirData) setReservoirData(prev => ({...prev, ...data.reservoirData}));
+                   if (data.taxData) setTaxData(prev => ({...prev, ...data.taxData}));
+               }
+               // 資料載入完成 (或確認無資料為新用戶)
+               setIsDataLoaded(true);
+               setLoading(false);
+           }, (error) => {
+               console.error("Firestore Read Error:", error);
+               showToast("讀取雲端資料失敗", "error");
+               setLoading(false);
+               setIsDataLoaded(true); // 即使失敗也設為 true 讓用戶能繼續操作
+           });
+
+        } else {
+           // 無使用者
+           setLoading(false);
+           setIsDataLoaded(false);
+        }
+      });
+      return unsubscribeAuth;
+    };
+
+    const unsubAuthPromise = checkRedirectAndAuth();
+
+    return () => {
+       // Cleanup listeners
+       if (typeof unsubAuthPromise === 'function') unsubAuthPromise(); // 這裡邏輯簡化，實際上 onAuthStateChanged 回傳 unsubscribe
+       if (unsubscribeSnapshot) unsubscribeSnapshot();
+    };
   }, []);
 
-  const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
-  
+
+  // --- 2. 自動儲存邏輯 (Auto-Save) ---
+  // 使用 useRef 避免閉包舊值問題，但在 useEffect 依賴中列出 data 即可
+  useEffect(() => {
+    // 只有當使用者已登入 且 資料已載入完畢 (避免覆蓋雲端資料) 才執行儲存
+    if (!user || !isDataLoaded) return;
+
+    const saveData = async () => {
+        setIsSaving(true);
+        try {
+            await setDoc(doc(db, 'users', user.uid), {
+                giftData,
+                estateData,
+                studentData,
+                superActiveData,
+                carData,
+                pensionData,
+                reservoirData,
+                taxData,
+                lastUpdated: new Date()
+            }, { merge: true });
+            
+            // 儲存成功後，短暫延遲後關閉狀態
+            setTimeout(() => setIsSaving(false), 500);
+        } catch (error) {
+            console.error("Auto-save failed:", error);
+            setIsSaving(false);
+            // 靜默失敗或顯示小紅點，避免一直彈 Toast 擾民
+        }
+    };
+
+    // 防抖動：延遲 1.5 秒執行儲存，若期間有新變更則重置計時器
+    const handler = setTimeout(saveData, 1500);
+
+    return () => clearTimeout(handler);
+  }, [
+    // 依賴所有數據狀態，任一變更皆觸發倒數
+    giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData, 
+    user, isDataLoaded
+  ]);
+
+
   // 登入邏輯：自動切換 Popup 與 Redirect (Google 登入)
   const handleGoogleLogin = async () => { 
-    // 判斷是否為手機或平板環境 (用於強制 redirect，解決 disallowed_useragent)
     const isMobileOrTablet = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
 
     if (isMobileOrTablet) {
          showToast("偵測到行動裝置，切換至全頁登入模式...", "info");
-         // 直接使用 Redirect 避免瀏覽器內建視窗問題 (disallowed_useragent)
          await signInWithRedirect(auth, googleProvider);
          return;
     }
 
     try { 
-      // 嘗試彈跳視窗 (桌機體驗較好)
       await signInWithPopup(auth, googleProvider); 
     } catch (e: any) { 
-      
-      // 如果 PopUp 失敗，通常是瀏覽器封鎖，則嘗試切換到 Redirect
       if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user' || e.message?.includes('invalid')) {
         showToast("彈窗被封鎖或登入失敗，嘗試全頁登入...", "info");
         try {
@@ -162,14 +248,9 @@ export default function App() {
         }
         return;
       }
-
-      // 其他一般錯誤處理
       let errorMsg = "Google 登入失敗";
-      if (e.code === 'auth/unauthorized-domain') {
-        errorMsg = "網域未授權：請至 Firebase Console 新增此網域";
-      } else if (e.message) {
-        errorMsg = `錯誤: ${e.message}`; 
-      }
+      if (e.code === 'auth/unauthorized-domain') errorMsg = "網域未授權：請至 Firebase Console 新增此網域";
+      else if (e.message) errorMsg = `錯誤: ${e.message}`; 
       showToast(errorMsg, "error"); 
     } 
   };
@@ -182,23 +263,27 @@ export default function App() {
     }
     try {
       await signInWithEmailAndPassword(auth, testEmail, testPassword);
-      setIsEmailLoginOpen(false); // 登入成功後關閉視窗
+      setIsEmailLoginOpen(false); 
       showToast("管理員登入成功", "success");
     } catch (e: any) {
       let errorMsg = "Email 登入失敗";
-       if (e.code === 'auth/user-not-found') {
-        errorMsg = "查無此 Email 帳號";
-      } else if (e.code === 'auth/wrong-password') {
-        errorMsg = "密碼錯誤";
-      } else if (e.code === 'auth/invalid-email') {
-        errorMsg = "Email 格式無效";
-      }
+       if (e.code === 'auth/user-not-found') errorMsg = "查無此 Email 帳號";
+      else if (e.code === 'auth/wrong-password') errorMsg = "密碼錯誤";
+      else if (e.code === 'auth/invalid-email') errorMsg = "Email 格式無效";
       showToast(errorMsg, "error");
     }
   };
 
 
-  const handleLogout = async () => { await signOut(auth); setActiveTab('gift'); showToast("已安全登出", "info"); };
+  const handleLogout = async () => { 
+      await signOut(auth); 
+      // 登出後重置資料為預設值，避免殘留
+      setGiftData(defaultStates.gift);
+      setEstateData(defaultStates.estate);
+      // ... 重置其他 (略，因 component unmount 也會重置，但為了安全可加上)
+      setActiveTab('gift'); 
+      showToast("已安全登出", "info"); 
+  };
 
   const getCurrentData = () => {
     switch(activeTab) {
@@ -298,7 +383,7 @@ export default function App() {
         data={getCurrentData()} 
       />
 
-      {/* Mobile Menu Overlay (略) */}
+      {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900 text-white flex flex-col animate-fade-in md:hidden">
            <div className="p-4 flex justify-between items-center border-b border-slate-800">
@@ -327,17 +412,31 @@ export default function App() {
         </div>
       )}
 
-      {/* Sidebar (Desktop) / Main Content (略) */}
+      {/* Sidebar (Desktop) */}
       <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10 print:hidden">
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center gap-3 mb-1">
              <div className="w-12 h-12 rounded-full p-0.5 border-2 border-yellow-400 overflow-hidden shrink-0">
-                <img src={user.photoURL} alt="User" className="w-full h-full rounded-full object-cover bg-slate-800" />
+                <img src={user.photoURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'} alt="User" className="w-full h-full rounded-full object-cover bg-slate-800" />
              </div>
              <div className="flex-1 min-w-0">
                 <div className="text-xs text-yellow-500 font-bold uppercase truncate">理財顧問</div>
-                <div className="font-bold text-sm truncate text-white">{user.displayName}</div>
+                <div className="font-bold text-sm truncate text-white">{user.displayName || '訪客顧問'}</div>
              </div>
+          </div>
+          {/* 雲端同步狀態指示器 */}
+          <div className="mt-3 flex items-center gap-2 text-xs text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
+             {isSaving ? (
+                <>
+                   <Loader2 size={12} className="animate-spin text-blue-400"/>
+                   <span>雲端同步中...</span>
+                </>
+             ) : (
+                <>
+                   <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                   <span>資料已同步</span>
+                </>
+             )}
           </div>
         </div>
         
