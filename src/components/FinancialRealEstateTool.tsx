@@ -19,7 +19,7 @@ import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, Y
 import { calculateMonthlyPayment, calculateMonthlyIncome, calculateRemainingBalance } from '../utils';
 
 // ------------------------------------------------------------------
-// 核心模組: 金融房產專案 (數據同步版)
+// 核心模組: 金融房產專案 (原始穩定版 - 獨立計算)
 // ------------------------------------------------------------------
 
 export const FinancialRealEstateTool = ({ data, setData }: any) => {
@@ -52,7 +52,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   const [tempExistingMonthlyPayment, setTempExistingMonthlyPayment] = useState(existingMonthlyPayment);
   const [showAdvanced, setShowAdvanced] = useState(isRefinance);
 
-  // 初始化同步：如果 data 是空的，把預設值寫回去
+  // [關鍵修正] 初始化同步：如果 data 是空的，把預設值寫回去
   useEffect(() => {
       if (!data || Object.keys(data).length === 0) {
           setData(defaultValues);
@@ -66,7 +66,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   // 自動展開進階選單
   useEffect(() => { if(isRefinance) setShowAdvanced(true); }, [isRefinance]);
 
-  // --- 計算邏輯 (本地計算) ---
+  // --- 計算邏輯 (恢復本地計算) ---
   const newLoanMonthlyPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
 
   // 轉增貸模式
@@ -90,11 +90,10 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       ? Math.round((totalSavingsOverTerm / 10000) + cashOutAmount)
       : Math.round(loanAmount + (cumulativeNetIncomeTarget / 10000));
   
-  // --- 圖表數據生成 ---
   const generateHouseChartData = () => {
     const dataArr = [];
     let cumulative = 0; 
-    const step = Math.max(1, Math.floor(loanTerm / 15));
+    const step = loanTerm > 20 ? 3 : 1; 
     
     for (let year = 1; year <= loanTerm; year++) {
       const remainingLoan = calculateRemainingBalance(loanAmount, loanRate, loanTerm, year);
@@ -104,8 +103,8 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
           if (year === 1 || year % step === 0 || year === loanTerm) {
             dataArr.push({ 
                 year: `第${year}年`, 
-                '累積效益': Math.round(cumulative / 10000), // [同步] 使用 Report 的數據鍵名
-                '剩餘貸款': Math.round(remainingLoan / 10000) // [同步] 使用 Report 的數據鍵名
+                '累積節省金額': Math.round(cumulative / 10000),
+                '新貸款餘額': Math.round(remainingLoan / 10000) 
             });
           }
       } else {
@@ -115,8 +114,8 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
           if (year === 1 || year % step === 0 || year === loanTerm) {
              dataArr.push({ 
                 year: `第${year}年`, 
-                '總權益價值': Math.round(financialTotalWealth / 10000), // [同步] 使用 Report 的數據鍵名
-                '剩餘貸款': Math.round(remainingLoan / 10000) // [同步] 使用 Report 的數據鍵名
+                '總資產價值': Math.round(financialTotalWealth / 10000), 
+                '剩餘貸款': Math.round(remainingLoan / 10000) 
              });
           }
       }
@@ -152,11 +151,11 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       });
   };
   
-  // Input Handlers (保持不變)
+  // Input Handlers
   const handleLoanAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value === '' ? '' : Number(e.target.value);
     setTempLoanAmount(value as number);
-    updateField('loanAmount', value as number); // 即時更新
+    updateField('loanAmount', value as number);
   };
   const finalizeLoanAmount = () => {
     let finalValue = Number(tempLoanAmount) || 100;
@@ -165,15 +164,13 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   const handleExistingPaymentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value === '' ? '' : Number(e.target.value);
     setTempExistingMonthlyPayment(value as number);
-    updateField('existingMonthlyPayment', value as number); // 即時更新
+    updateField('existingMonthlyPayment', value as number);
   };
   const finalizeExistingPayment = () => {
     updateField('existingMonthlyPayment', Number(tempExistingMonthlyPayment) || 0);
   };
-  
-  // 圖表數據 (使用同步後的數據)
-  const chartData = generateHouseChartData();
 
+  const chartData = generateHouseChartData(); // 確保圖表數據在 return 前生成
 
   return (
     <div className="space-y-8 animate-fade-in font-sans text-slate-800">
