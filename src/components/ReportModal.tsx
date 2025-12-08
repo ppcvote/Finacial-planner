@@ -1,19 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom'; 
-import { FileBarChart, ArrowUpFromLine, X, CheckCircle2, User, Calendar, PenTool, Phone, Mail, ShieldCheck } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { FileBarChart, ArrowUpFromLine, X, CheckCircle2, User, Calendar, PenTool, Phone, Mail } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, ComposedChart, Line, Bar, BarChart 
 } from 'recharts';
 import { calculateMonthlyPayment, calculateMonthlyIncome, calculateRemainingBalance } from '../utils';
 
 // ------------------------------------------------------------------
-// Report Component (專業建議書引擎 V3.1 - Fix Crash)
+// Report Component (專業建議書引擎 V3.2 - Safe Mount Fix)
 // ------------------------------------------------------------------
 
 const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) => {
   const [advisorNote, setAdvisorNote] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(true);
+  const [mounted, setMounted] = useState(false); // 新增：掛載狀態
 
+  // 1. 安全掛載偵測：確保 document.body 存在後才渲染 Portal
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  // 2. 初始化內容
   useEffect(() => {
       if(isOpen) {
           setAdvisorNote('');
@@ -21,7 +29,8 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
       }
   }, [isOpen]);
   
-  if (!isOpen) return null;
+  // 若尚未掛載或未開啟，則不渲染任何東西 (防止 Error #200)
+  if (!isOpen || !mounted) return null;
 
   const dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
   
@@ -404,6 +413,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
   };
 
   // 決定 React Portal 的掛載點 (直接掛在 body 下)
+  // 重要：加入 document.body 作為第二個參數
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm overflow-y-auto no-scroll-print" id="report-modal-root">
       {/* 注入列印專用樣式 */}
@@ -488,8 +498,11 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                     <p className="text-2xl text-slate-500 font-medium">專屬資產配置戰略規劃書</p>
                 </div>
 
-                <div className="flex-1 flex items-center justify-center opacity-5 grayscale relative z-10">
-                     <ShieldCheck size={350} strokeWidth={0.5}/>
+                {/* 改用 CSS 裝飾替代死圖 SVG */}
+                <div className="flex-1 flex items-center justify-center opacity-10 relative z-10">
+                     <div className="w-64 h-64 border-[20px] border-slate-900 rounded-full flex items-center justify-center">
+                        <div className="w-32 h-32 bg-slate-900 rounded-full"></div>
+                     </div>
                 </div>
 
                 <div className="pb-24 px-12 relative z-10">
@@ -558,9 +571,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                                   <XAxis dataKey="year" tick={{fontSize: 10, fill: '#94a3b8'}} axisLine={false} tickLine={false} />
                                   <YAxis tick={{fontSize: 10, fill: '#94a3b8'}} width={35} axisLine={false} tickLine={false} />
                                   <Legend wrapperStyle={{fontSize: '10px', paddingTop: '10px'}}/>
-                                  {/* 大水庫在下 (底層) */}
                                   <Area type="monotone" dataKey="大水庫本金" stackId="1" stroke="#0891b2" fill="#0891b2" fillOpacity={0.1} isAnimationActive={false} />
-                                  {/* 小水庫在上 (獲利層) */}
                                   <Area type="monotone" dataKey="小水庫累積" stackId="1" stroke="#fbbf24" fill="#fbbf24" fillOpacity={0.6} isAnimationActive={false} />
                                </AreaChart>
                             ) : reportContent.chartType === 'composed_gift' ? (
@@ -588,10 +599,6 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                                   <YAxis dataKey="name" type="category" width={80} tick={{fontSize: 11, fontWeight: 'bold', fill:'#475569'}} axisLine={false} tickLine={false} />
                                   <Legend wrapperStyle={{fontSize: '10px', paddingTop: '10px'}}/>
                                   <Bar dataKey="value" fill="#3b82f6" barSize={30} radius={[0, 4, 4, 0]} isAnimationActive={false} label={{ position: 'right', fill: '#64748b', fontSize: 10, formatter: (val: any) => `$${val.toLocaleString()}` }}>
-                                    {/* 手動指定顏色 */}
-                                    {reportContent.chartData.map((entry: any, index: number) => (
-                                        <div key={index} style={{display:'none'}} /> // Dummy for loop
-                                    ))}
                                   </Bar>
                                </BarChart>
                             ) : (
@@ -684,8 +691,8 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
             </div>
 
         </div>
-      </div>
-    </div>
+    </div>,
+    document.body // ✅ 修正：明確指定 Portal 掛載到 body
   );
 };
 
