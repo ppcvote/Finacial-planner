@@ -30,26 +30,25 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
   // --- 計算邏輯 ---
   const generateData = () => {
     const dataArr = [];
-    let smallReservoir = 0; // 小水庫累積金額
-    let totalDividendsReceived = 0; // 總共領到的配息 (如果不投資單純領出的話)
-    let doubleYear = null; // 資產翻倍的那一年 (小水庫 >= 大水庫)
+    let smallReservoir = 0; // 小水庫累積金額 (複利池)
+    let totalDividendsReceived = 0; // 對照組：單利累積
+    let doubleYear = null; // 翻倍點
 
-    for (let year = 1; year <= years + 5; year++) { // 多算5年看趨勢
+    for (let year = 1; year <= years + 5; year++) { 
       // 1. 大水庫產生配息 (本金 * 配息率)
+      // 大水庫本金恆定不變，配息全部移出
       const annualDividend = initialCapital * (dividendRate / 100);
       
       // 2. 小水庫成長 ( (去年小水庫 + 今年配息) * 再投資回報 )
-      // 假設年初領息投入，年底結算
       if (year <= years) {
           smallReservoir = (smallReservoir + annualDividend) * (1 + reinvestRate / 100);
           totalDividendsReceived += annualDividend;
       } else {
-          // 期滿後不再投入配息，讓小水庫自己滾 (或假設停止計畫)
-          // 這裡假設持續運作模式
-          smallReservoir = (smallReservoir + annualDividend) * (1 + reinvestRate / 100);
+          // 期滿後不再投入配息，讓小水庫自己滾
+          smallReservoir = smallReservoir * (1 + reinvestRate / 100);
       }
 
-      // 檢查翻倍點
+      // 檢查翻倍點 (小水庫 >= 大水庫本金)
       if (smallReservoir >= initialCapital && doubleYear === null) {
           doubleYear = year;
       }
@@ -57,17 +56,17 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
       dataArr.push({
         year: year,
         yearLabel: `第${year}年`,
-        大水庫本金: initialCapital,
-        小水庫累積: Math.round(smallReservoir),
+        大水庫本金: initialCapital, // 恆定
+        小水庫累積: Math.round(smallReservoir), // 成長
         總資產: Math.round(initialCapital + smallReservoir),
-        單純領息累積: Math.round(totalDividendsReceived + initialCapital) // 對照組：花掉配息或放著不動
+        單純領息累積: Math.round(initialCapital + totalDividendsReceived)
       });
     }
     return { dataArr, doubleYear };
   };
   
   const { dataArr, doubleYear } = generateData();
-  const currentData = dataArr[years - 1]; // 目前設定年限的數據
+  const currentData = dataArr[Math.min(years, dataArr.length) - 1]; // 取當前設定年份的數據
   
   // 資產總值
   const totalAsset = currentData.總資產;
@@ -165,7 +164,6 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                             <span className="flex items-center gap-1"><Database size={12} className="text-cyan-500"/> 大水庫配息率 (%)</span>
                             <span className="font-bold text-cyan-700">{dividendRate}%</span>
                         </div>
-                        {/* 修正上限至 15% */}
                         <input type="range" min={2} max={15} step={0.5} value={dividendRate} onChange={(e) => updateField('dividendRate', Number(e.target.value))} className="w-full h-1.5 bg-cyan-100 rounded-lg accent-cyan-600" />
                         <p className="text-[10px] text-slate-400 mt-1">建議配置：穩健型標的 (如債券、定存股)</p>
                     </div>
@@ -174,7 +172,6 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                             <span className="flex items-center gap-1"><TrendingUp size={12} className="text-amber-500"/> 小水庫再投報率 (%)</span>
                             <span className="font-bold text-amber-700">{reinvestRate}%</span>
                         </div>
-                        {/* 修正上限至 30% */}
                         <input type="range" min={4} max={30} step={0.5} value={reinvestRate} onChange={(e) => updateField('reinvestRate', Number(e.target.value))} className="w-full h-1.5 bg-amber-100 rounded-lg accent-amber-500" />
                         <p className="text-[10px] text-slate-400 mt-1">建議配置：成長型標的 (如股票型 ETF)</p>
                     </div>
@@ -198,7 +195,7 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                           <Database size={32} className="text-white drop-shadow-md"/>
                       </div>
                       <p className="mt-2 text-sm font-bold text-cyan-300">大水庫</p>
-                      <p className="text-xs text-slate-400">本金 {initialCapital} 萬</p>
+                      <p className="text-xs text-slate-400">本金 {initialCapital} 萬 (恆定)</p>
                   </div>
 
                   {/* Flow Arrow */}
@@ -215,8 +212,11 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                   {/* Small Reservoir */}
                   <div className="flex flex-col items-center z-10 w-1/3">
                       <div className="w-16 h-20 bg-slate-700 rounded-lg border-2 border-amber-400/50 flex flex-col justify-end relative overflow-hidden">
-                          {/* 水位上升動畫模擬 */}
-                          <div className="w-full bg-gradient-to-t from-amber-500 to-yellow-300 transition-all duration-1000" style={{height: `${Math.min(100, (profit / initialCapital) * 100)}%`}}></div>
+                          {/* 水位上升動畫模擬 - 根據獲利與本金比例顯示 */}
+                          <div 
+                            className="w-full bg-gradient-to-t from-amber-500 to-yellow-300 transition-all duration-1000" 
+                            style={{height: `${Math.min(100, (profit / initialCapital) * 100)}%`}}
+                          ></div>
                           <div className="absolute inset-0 flex items-center justify-center">
                               <Coins size={32} className="text-white/90 drop-shadow-md"/>
                           </div>
@@ -247,8 +247,8 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
              <div className="flex justify-between items-center mb-4 pl-2 border-l-4 border-cyan-500">
                 <h4 className="font-bold text-slate-700">資產堆疊成長模擬</h4>
                 <div className="flex gap-3 text-xs">
-                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-amber-400 rounded-full"></div> 小水庫 (獲利)</span>
-                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-cyan-600 rounded-full"></div> 大水庫 (本金)</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-amber-400 rounded-full"></div> 小水庫 (獲利成長)</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-cyan-600 rounded-full"></div> 大水庫 (本金恆定)</span>
                 </div>
              </div>
              
