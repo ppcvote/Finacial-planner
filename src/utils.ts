@@ -27,6 +27,7 @@ export const calculateRemainingBalance = (principal: number, rate: number, total
   const r = rVal / 100 / 12;
   const n = totalY * 12;
   const p = elapsed * 12;
-  if (rVal === 0) return pVal * 10000 * (1 - p/(n || 1));
-  const balance = (pVal * 10000 * (Math.pow(1 + r, n) - Math.pow(1 + r, p))) / (Math.pow(1 + r, n) - 1);
+  if (rVal === 0) return Math.max(0, pVal * 10000 * (1 - p/(n || 1)));
+  const balance = (pVal * 10000) * (Math.pow(1 + r, n) - Math.pow(1 + r, p)) / (Math.pow(1 + r, n) - 1);
   return Math.max(0, isNaN(balance) ? 0 : balance);
+};
