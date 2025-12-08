@@ -1,4 +1,3 @@
-import SplashScreen from './components/SplashScreen';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
@@ -15,7 +14,8 @@ import { doc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { auth, db, googleProvider } from './firebase'; 
 import ReportModal from './components/ReportModal';
 import MillionDollarGiftTool from './components/MillionDollarGiftTool';
-import ClientDashboard from './components/ClientDashboard'; // 引入新元件
+import ClientDashboard from './components/ClientDashboard';
+import SplashScreen from './components/SplashScreen'; // 引入 Logo 動畫
 
 // --- 從各個獨立檔案匯入工具 ---
 import { FinancialRealEstateTool } from './components/FinancialRealEstateTool';
@@ -87,10 +87,12 @@ const NavItem = ({ icon: Icon, label, active, onClick, disabled = false }: any) 
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true); // Auth Loading
-  const [clientLoading, setClientLoading] = useState(false); // Client Data Loading
   
-  // New: Current Selected Client State
+  // --- 狀態控制區 ---
+  const [loading, setLoading] = useState(true); // 資料載入狀態
+  const [minSplashTimePassed, setMinSplashTimePassed] = useState(false); // 動畫播放狀態
+  
+  const [clientLoading, setClientLoading] = useState(false); 
   const [currentClient, setCurrentClient] = useState<any>(null);
 
   const [activeTab, setActiveTab] = useState('gift'); 
@@ -99,7 +101,6 @@ export default function App() {
   const [isReportOpen, setIsReportOpen] = useState(false); 
   const [isSaving, setIsSaving] = useState(false); 
   
-  // 資料載入鎖 (防止空資料覆蓋)
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const lastSavedDataStr = useRef<string>("");
 
@@ -108,7 +109,7 @@ export default function App() {
   const [testPassword, setTestPassword] = useState('');
   const [isEmailLoginOpen, setIsEmailLoginOpen] = useState(false);
 
-  // Tool Data States - 初始預設值
+  // Tool Data States
   const defaultStates = {
     gift: { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 },
     estate: { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6, existingLoanBalance: 700, existingMonthlyPayment: 38000 },
@@ -131,7 +132,16 @@ export default function App() {
 
   const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
 
-  // --- 1. 全局 Auth 監聽 ---
+  // --- 1. Splash Screen Timer ---
+  // 強制至少顯示 3 秒鐘動畫，避免一閃而過
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinSplashTimePassed(true);
+    }, 3000); // 3秒後才允許進入 (配合動畫長度)
+    return () => clearTimeout(timer);
+  }, []);
+
+  // --- 2. 全局 Auth 監聽 ---
   useEffect(() => {
     const checkRedirect = async () => {
       try { await getRedirectResult(auth); } catch (e) { console.error(e); }
@@ -140,8 +150,7 @@ export default function App() {
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false);
-      // 登入或登出時，重置客戶狀態
+      setLoading(false); // Auth 檢查完畢
       if (!currentUser) {
           setCurrentClient(null);
           setIsDataLoaded(false);
@@ -151,7 +160,7 @@ export default function App() {
   }, []);
 
 
-  // --- 2. 客戶資料載入 (當 currentClient 改變時) ---
+  // --- 3. 客戶資料載入 ---
   useEffect(() => {
       if (!user || !currentClient) {
           setIsDataLoaded(false);
@@ -164,9 +173,6 @@ export default function App() {
       const unsubscribeClient = onSnapshot(clientDocRef, (docSnap) => {
           if (docSnap.exists()) {
               const data = docSnap.data();
-              
-              // 智慧比對更新 (避免無限迴圈)
-              // 這裡我們直接使用從 DB 拿到的資料覆蓋 State，因為是切換客戶
               if (data.giftData) setGiftData(prev => ({...prev, ...data.giftData}));
               if (data.estateData) setEstateData(prev => ({...prev, ...data.estateData}));
               if (data.studentData) setStudentData(prev => ({...prev, ...data.studentData}));
@@ -176,12 +182,10 @@ export default function App() {
               if (data.reservoirData) setReservoirData(prev => ({...prev, ...data.reservoirData}));
               if (data.taxData) setTaxData(prev => ({...prev, ...data.taxData}));
               
-              // 更新當前客戶的 Meta 資料 (例如名字改了)
               setCurrentClient((prev: any) => ({ ...prev, name: data.name, note: data.note }));
           }
-          
           setClientLoading(false);
-          setIsDataLoaded(true); // 允許開始存檔
+          setIsDataLoaded(true); 
       }, (err) => {
           console.error("Client Load Error:", err);
           showToast("讀取客戶資料失敗", "error");
@@ -189,23 +193,15 @@ export default function App() {
       });
 
       return () => unsubscribeClient();
-  }, [currentClient?.id, user]); // 依賴 ID 變化
+  }, [currentClient?.id, user]); 
 
 
-  // --- 3. 自動儲存邏輯 (針對特定 Client) ---
+  // --- 4. 自動儲存邏輯 ---
   useEffect(() => {
-    // 必須符合：已登入 + 有選客戶 + 資料已載入完畢
     if (!user || !currentClient || !isDataLoaded) return;
 
     const dataPayload = {
-        giftData,
-        estateData,
-        studentData,
-        superActiveData,
-        carData,
-        pensionData,
-        reservoirData,
-        taxData
+        giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData
     };
 
     const currentDataStr = JSON.stringify(dataPayload);
@@ -214,12 +210,10 @@ export default function App() {
     const saveData = async () => {
         setIsSaving(true);
         try {
-            // 寫入 users/{uid}/clients/{clientId}
             await setDoc(doc(db, 'users', user.uid, 'clients', currentClient.id), {
                 ...dataPayload,
-                updatedAt: Timestamp.now() // 更新時間戳記
+                updatedAt: Timestamp.now()
             }, { merge: true });
-            
             lastSavedDataStr.current = currentDataStr;
             setTimeout(() => setIsSaving(false), 500);
         } catch (error) {
@@ -236,9 +230,8 @@ export default function App() {
   ]);
 
 
-  // 處理登入/登出
+  // Login Handlers
   const handleGoogleLogin = async () => { 
-    // ... (保持原樣)
     const isMobileOrTablet = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
     if (isMobileOrTablet) {
          showToast("偵測到行動裝置，切換至全頁登入模式...", "info");
@@ -265,8 +258,6 @@ export default function App() {
   };
 
   const handleBackToDashboard = () => {
-      // 回到列表前，強制重置工具數據為預設值，避免下一個客戶看到殘留資料
-      // 雖然 useEffect 會載入，但這樣視覺上比較乾淨
       setIsDataLoaded(false);
       setCurrentClient(null);
   };
@@ -285,15 +276,16 @@ export default function App() {
     }
   };
 
-  // --- Render ---
+  // --- Render 邏輯 ---
 
- if (loading) return <SplashScreen />;
+  // 1. 顯示 Splash Screen (只要 Auth 還在載入 OR 動畫還沒播完)
+  // 這行是解決「一閃而過」的關鍵
+  if (loading || !minSplashTimePassed) return <SplashScreen />;
 
-  // 1. 未登入狀態 -> 顯示登入頁
+  // 2. 未登入 -> 顯示登入頁
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-         {/* ... (保持原本的 Login UI) ... */}
          {isEmailLoginOpen && (
             <div className="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4">
                 <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
@@ -319,7 +311,7 @@ export default function App() {
     );
   }
 
-  // 2. 已登入，但未選客戶 -> 顯示 ClientDashboard
+  // 3. 已登入，但未選客戶 -> 顯示 ClientDashboard
   if (!currentClient) {
       return (
           <>
@@ -337,13 +329,12 @@ export default function App() {
       );
   }
 
-  // 3. 已選客戶 -> 顯示主介面 (Main Layout)
+  // 4. 已選客戶 -> 顯示主介面 (Main Layout)
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       <PrintStyles />
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       
-      {/* 載入中遮罩 */}
       {clientLoading && (
           <div className="fixed inset-0 z-[100] bg-white/80 backdrop-blur-sm flex items-center justify-center">
               <div className="text-center">
@@ -361,7 +352,6 @@ export default function App() {
         data={getCurrentData()} 
       />
 
-      {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900 text-white flex flex-col animate-fade-in md:hidden">
            <div className="p-4 flex justify-between items-center border-b border-slate-800">
@@ -376,7 +366,6 @@ export default function App() {
               <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => {setActiveTab('gift'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => {setActiveTab('estate'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => {setActiveTab('student'); setIsMobileMenuOpen(false);}} />
-              {/* ... 其他 NavItem ... */}
               <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => {setActiveTab('super_active'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => {setActiveTab('car'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => {setActiveTab('reservoir'); setIsMobileMenuOpen(false);}} />
@@ -388,10 +377,8 @@ export default function App() {
         </div>
       )}
 
-      {/* Sidebar (Desktop) */}
       <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10 print:hidden">
         <div className="p-4 border-b border-slate-800">
-           {/* 返回按鈕 */}
            <button 
              onClick={handleBackToDashboard}
              className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-lg transition-all mb-4"
@@ -409,7 +396,6 @@ export default function App() {
              </div>
           </div>
           
-          {/* 同步狀態 */}
           <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 bg-black/20 px-2 py-1 rounded">
              {isSaving ? (
                 <>
