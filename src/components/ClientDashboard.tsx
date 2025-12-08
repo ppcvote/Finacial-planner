@@ -9,10 +9,10 @@ import {
   TrendingUp,
   Clock,
   Briefcase,
-  MoreVertical,
-  Plus
+  Edit, // 新增編輯圖示
+  X
 } from 'lucide-react';
-import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
 // 預設的工具資料
@@ -36,11 +36,14 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
     const [clients, setClients] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     
-    // 新增客戶表單狀態
-    const [newClientName, setNewClientName] = useState('');
-    const [newClientNote, setNewClientNote] = useState('');
+    // Modal 狀態控制
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingClient, setEditingClient] = useState<any>(null); // 用來判斷是新增還是編輯
+    
+    // 表單狀態
+    const [clientName, setClientName] = useState('');
+    const [clientNote, setClientNote] = useState('');
 
     // 1. 監聽客戶列表
     useEffect(() => {
@@ -66,32 +69,60 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
         return () => unsubscribe();
     }, [user]);
 
-    // 2. 新增客戶邏輯
-    const handleAddClient = async (e: React.FormEvent) => {
+    // 開啟新增模式
+    const openAddModal = () => {
+        setEditingClient(null);
+        setClientName('');
+        setClientNote('');
+        setIsModalOpen(true);
+    };
+
+    // 開啟編輯模式
+    const openEditModal = (e: React.MouseEvent, client: any) => {
+        e.stopPropagation(); // 阻止冒泡，避免觸發進入客戶
+        setEditingClient(client);
+        setClientName(client.name);
+        setClientNote(client.note || '');
+        setIsModalOpen(true);
+    };
+
+    // 2. 處理表單提交 (新增或更新)
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newClientName.trim()) return;
+        if (!clientName.trim()) return;
 
         try {
-            const newClientData = {
-                name: newClientName,
-                note: newClientNote,
-                createdAt: Timestamp.now(),
-                updatedAt: Timestamp.now(),
-                ...defaultToolStates
-            };
-
-            await addDoc(collection(db, 'users', user.uid, 'clients'), newClientData);
+            if (editingClient) {
+                // --- 編輯模式 ---
+                const clientRef = doc(db, 'users', user.uid, 'clients', editingClient.id);
+                await updateDoc(clientRef, {
+                    name: clientName,
+                    note: clientNote,
+                    updatedAt: Timestamp.now() // 更新時間戳記
+                });
+            } else {
+                // --- 新增模式 ---
+                const newClientData = {
+                    name: clientName,
+                    note: clientNote,
+                    createdAt: Timestamp.now(),
+                    updatedAt: Timestamp.now(),
+                    ...defaultToolStates
+                };
+                await addDoc(collection(db, 'users', user.uid, 'clients'), newClientData);
+            }
             
-            setIsAddModalOpen(false);
-            setNewClientName('');
-            setNewClientNote('');
+            setIsModalOpen(false);
+            setClientName('');
+            setClientNote('');
+            setEditingClient(null);
         } catch (error) {
-            console.error("Error adding client:", error);
-            alert("新增客戶失敗，請檢查網路連線");
+            console.error("Error saving client:", error);
+            alert("儲存失敗，請檢查網路連線");
         }
     };
 
-    // 3. 刪除客戶邏輯
+    // 3. 刪除客戶
     const handleDeleteClient = async (e: React.MouseEvent, clientId: string) => {
         e.stopPropagation(); 
         if (window.confirm("確定要刪除這位客戶的資料嗎？此操作無法復原。")) {
@@ -138,7 +169,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
                             <p className="text-slate-400 mt-1">準備好為您的客戶創造價值了嗎？</p>
                         </div>
                         <button 
-                            onClick={() => setIsAddModalOpen(true)}
+                            onClick={openAddModal}
                             className="bg-blue-500 hover:bg-blue-400 text-white px-5 py-3 rounded-xl font-bold shadow-lg shadow-blue-900/30 flex items-center gap-2 transition-all transform hover:-translate-y-1 active:scale-95"
                         >
                             <UserPlus size={20}/> 新增客戶檔案
@@ -182,7 +213,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
                     </div>
                     <input 
                         type="text" 
-                        placeholder="輸入姓名或備註搜尋..." 
+                        placeholder="搜尋客戶姓名或備註..." 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="flex-1 bg-transparent outline-none text-slate-700 placeholder:text-slate-400 h-full py-2"
@@ -202,7 +233,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
                         </div>
                         <h3 className="text-lg font-bold text-slate-700 mb-1">尚無符合的客戶資料</h3>
                         <p className="text-slate-400 text-sm mb-6">點擊上方「新增客戶」開始建立您的第一份規劃</p>
-                        <button onClick={() => setIsAddModalOpen(true)} className="text-blue-600 font-bold hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors">
+                        <button onClick={openAddModal} className="text-blue-600 font-bold hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors">
                             + 立即新增
                         </button>
                     </div>
@@ -235,13 +266,22 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                    
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-sm p-1 rounded-lg shadow-sm">
+                                        <button 
+                                            onClick={(e) => openEditModal(e, client)}
+                                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                            title="編輯資料"
+                                        >
+                                            <Edit size={16}/>
+                                        </button>
                                         <button 
                                             onClick={(e) => handleDeleteClient(e, client.id)}
-                                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
                                             title="刪除"
                                         >
-                                            <Trash2 size={18}/>
+                                            <Trash2 size={16}/>
                                         </button>
                                     </div>
                                 </div>
@@ -269,21 +309,30 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
                 )}
             </div>
 
-            {/* Add Client Modal */}
-            {isAddModalOpen && (
+            {/* Client Form Modal (Create / Edit) */}
+            {isModalOpen && (
                 <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl space-y-6 relative overflow-hidden">
                         {/* Modal Header Decoration */}
-                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-purple-600"></div>
+                        <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${editingClient ? 'from-amber-400 to-orange-500' : 'from-blue-500 to-purple-600'}`}></div>
+                        
+                        <div className="absolute top-4 right-4">
+                            <button onClick={() => setIsModalOpen(false)} className="p-2 bg-slate-100 rounded-full text-slate-400 hover:bg-slate-200 transition-colors">
+                                <X size={20}/>
+                            </button>
+                        </div>
 
                         <div>
                             <h3 className="text-2xl font-black text-slate-800 flex items-center gap-2 mb-1">
-                                <UserPlus className="text-blue-600" size={28}/> 新增客戶
+                                {editingClient ? <Edit className="text-amber-500" size={28}/> : <UserPlus className="text-blue-600" size={28}/>}
+                                {editingClient ? '編輯客戶資料' : '新增客戶'}
                             </h3>
-                            <p className="text-slate-500 text-sm">建立新的專屬規劃檔案</p>
+                            <p className="text-slate-500 text-sm">
+                                {editingClient ? '更新客戶的基本資訊與備註' : '建立新的專屬規劃檔案'}
+                            </p>
                         </div>
 
-                        <form onSubmit={handleAddClient} className="space-y-5">
+                        <form onSubmit={handleSubmit} className="space-y-5">
                             <div>
                                 <label className="text-sm font-bold text-slate-700 block mb-1.5 ml-1">客戶姓名</label>
                                 <input 
@@ -291,8 +340,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
                                     required
                                     autoFocus
                                     placeholder="請輸入姓名"
-                                    value={newClientName}
-                                    onChange={e => setNewClientName(e.target.value)}
+                                    value={clientName}
+                                    onChange={e => setClientName(e.target.value)}
                                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-slate-800"
                                 />
                             </div>
@@ -300,24 +349,28 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
                                 <label className="text-sm font-bold text-slate-700 block mb-1.5 ml-1">備註 (選填)</label>
                                 <textarea 
                                     placeholder="例如：35歲，科技業，有兩名子女..."
-                                    value={newClientNote}
-                                    onChange={e => setNewClientNote(e.target.value)}
+                                    value={clientNote}
+                                    onChange={e => setClientNote(e.target.value)}
                                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all h-28 resize-none text-slate-600"
                                 />
                             </div>
                             <div className="flex gap-3 pt-2">
                                 <button 
                                     type="button"
-                                    onClick={() => setIsAddModalOpen(false)}
+                                    onClick={() => setIsModalOpen(false)}
                                     className="flex-1 py-3.5 text-slate-600 font-bold bg-white border-2 border-slate-100 hover:bg-slate-50 rounded-xl transition-colors"
                                 >
                                     取消
                                 </button>
                                 <button 
                                     type="submit"
-                                    className="flex-1 py-3.5 text-white font-bold bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-200 rounded-xl transition-all active:scale-95"
+                                    className={`flex-1 py-3.5 text-white font-bold shadow-lg rounded-xl transition-all active:scale-95 ${
+                                        editingClient 
+                                        ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-200' 
+                                        : 'bg-blue-600 hover:bg-blue-500 shadow-blue-200'
+                                    }`}
                                 >
-                                    建立檔案
+                                    {editingClient ? '儲存變更' : '建立檔案'}
                                 </button>
                             </div>
                         </form>
