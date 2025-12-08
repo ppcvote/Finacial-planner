@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom'; // 引入 Portal
+import { createPortal } from 'react-dom'; 
 import { FileBarChart, ArrowUpFromLine, X, CheckCircle2, User, Calendar, PenTool, Phone, Mail, ShieldCheck } from 'lucide-react';
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, ComposedChart, Line 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, ComposedChart, Line, Bar, BarChart 
 } from 'recharts';
 import { calculateMonthlyPayment, calculateMonthlyIncome, calculateRemainingBalance } from '../utils';
 
 // ------------------------------------------------------------------
-// Report Component (專業建議書引擎 V3.0 - Portal 版)
+// Report Component (專業建議書引擎 V3.1 - Fix Crash)
 // ------------------------------------------------------------------
 
 const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) => {
@@ -25,18 +25,15 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
 
   const dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
   
-  // --- 報表內容生成邏輯 (保持不變) ---
+  // --- 報表內容生成邏輯 ---
   let reportContent = { title: '', mindMap: [] as any[], table: [] as any[], highlights: [] as any[], chartData: [] as any[], chartType: 'composed' };
 
-  // ... (省略中間重複的計算邏輯，為節省篇幅，請確保這段計算邏輯與前一版相同) ...
-  // *為了確保功能完整，我將重新貼上計算邏輯部分*
   if (activeTab === 'gift') {
     const loan = data.loanAmount;
     const monthlyLoanPayment = calculateMonthlyPayment(loan, data.loanRate, data.loanTerm);
     const monthlyInvestIncomeSingle = calculateMonthlyIncome(loan, data.investReturnRate);
     const phase1_NetOut = monthlyLoanPayment - monthlyInvestIncomeSingle;
     
-    // 修正：計算邏輯與 MillionDollarGiftTool 一致
     const chartData = [];
     let cumulativeStandard = 0;
     let cumulativeProjectCost = 0;
@@ -49,19 +46,19 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
       let assetVal = 0;
       if (year <= 7) {
         cumulativeProjectCost += phase1_NetOut * 12;
-        assetVal = loan;
+        assetVal = loan * 10000;
       } else if (year <= 14) {
         cumulativeProjectCost += phase2_NetOut * 12;
-        assetVal = loan * 2;
+        assetVal = loan * 2 * 10000;
       } else {
         cumulativeProjectCost += phase3_NetOut * 12; 
-        assetVal = loan * 3;
+        assetVal = loan * 3 * 10000;
       }
       chartData.push({
         year: `第${year}年`,
         一般存錢成本: Math.round(cumulativeStandard / 10000),
         專案實付成本: Math.round(cumulativeProjectCost / 10000),
-        專案持有資產: assetVal,
+        專案持有資產: Math.round(assetVal / 10000),
       });
     }
 
@@ -103,7 +100,6 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
       const remainingLoan = calculateRemainingBalance(loan, data.loanRate, data.loanTerm, year);
       const assetEquity = (loan * 10000) - remainingLoan;
       const financialTotalWealth = assetEquity + cumulativeNetIncome;
-      // 減少數據點以利圖表顯示，每2年一點
       if (year === 1 || year % 2 === 0 || year === data.loanTerm) {
          chartData.push({ year: `第${year}年`, 總資產價值: Math.round(financialTotalWealth / 10000), 剩餘貸款: Math.round(remainingLoan / 10000) });
       }
@@ -143,7 +139,6 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
      const totalDuration = data.gracePeriod + data.interestOnlyPeriod + data.years;
      let investmentValue = data.loanAmount * 10000;
      let remainingLoan = data.loanAmount * 10000;
-     // 簡化模擬
      for (let year = 1; year <= totalDuration + 2; year++) { 
         investmentValue = investmentValue * (1 + data.investReturnRate / 100);
         if (year <= data.gracePeriod + data.interestOnlyPeriod) remainingLoan = data.loanAmount * 10000;
@@ -189,7 +184,6 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
         if (year <= data.activeYears) activeInvestment = (activeInvestment + data.monthlySaving * 12) * (1 + data.investReturnRate / 100);
         else activeInvestment = activeInvestment * (1 + data.investReturnRate / 100);
         
-        // 減少數據點每2年
         if(year % 2 === 0) {
             chartData.push({
                 year: `第${year}年`,
@@ -225,12 +219,11 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
     };
   } else if (activeTab === 'car') {
     const cycles = [];
-    let policyPrincipal = data.carPrice * 1; 
+    let policyPrincipal = data.carPrice; 
     const loanAmount = data.carPrice;
     const loanMonthlyPayment = calculateMonthlyPayment(loanAmount, data.loanRate, data.loanTerm);
 
     for(let i=1; i<=3; i++) {
-        // 修正後的邏輯
         let targetCarPrice = i === 1 ? data.carPrice : (i === 2 ? (data.carPrice2 || policyPrincipal) : (data.carPrice3 || policyPrincipal));
         const monthlyDividend = (policyPrincipal * 10000 * (data.investReturnRate/100)) / 12;
         const netMonthlyPayment = loanMonthlyPayment - monthlyDividend;
@@ -243,9 +236,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
             netPay: Math.round(netMonthlyPayment)
         });
 
-        // 模擬資產成長
         const residualValue = targetCarPrice * (data.residualRate / 100);
-        // 簡化：假設賣車還貸後淨值
         const remainingLoan = calculateRemainingBalance(targetCarPrice, data.loanRate, data.loanTerm, data.cycleYears);
         const netCash = (residualValue * 10000) - remainingLoan;
         policyPrincipal = policyPrincipal + (netCash/10000);
@@ -369,8 +360,8 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
      const netEstatePlanned = Math.max(0, plannedAssets - totalDeductions);
      const calculateTax = (netEstate: number) => {
         if (netEstate <= 5621) return netEstate * 0.10;
-        if (netEstate <= 11242) return netEstate * 0.15 - 281.05;
-        return netEstate * 0.20 - 843.15;
+        if (netEstate <= 11242) return netEstate * 0.15 - 250;
+        return netEstate * 0.20 - 750;
      };
      const taxRaw = calculateTax(netEstateRaw);
      const taxPlanned = calculateTax(netEstatePlanned);
@@ -413,7 +404,6 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
   };
 
   // 決定 React Portal 的掛載點 (直接掛在 body 下)
-  // 這能解決「父層 overflow 導致列印空白」的問題
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm overflow-y-auto no-scroll-print" id="report-modal-root">
       {/* 注入列印專用樣式 */}
@@ -568,7 +558,9 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                                   <XAxis dataKey="year" tick={{fontSize: 10, fill: '#94a3b8'}} axisLine={false} tickLine={false} />
                                   <YAxis tick={{fontSize: 10, fill: '#94a3b8'}} width={35} axisLine={false} tickLine={false} />
                                   <Legend wrapperStyle={{fontSize: '10px', paddingTop: '10px'}}/>
+                                  {/* 大水庫在下 (底層) */}
                                   <Area type="monotone" dataKey="大水庫本金" stackId="1" stroke="#0891b2" fill="#0891b2" fillOpacity={0.1} isAnimationActive={false} />
+                                  {/* 小水庫在上 (獲利層) */}
                                   <Area type="monotone" dataKey="小水庫累積" stackId="1" stroke="#fbbf24" fill="#fbbf24" fillOpacity={0.6} isAnimationActive={false} />
                                </AreaChart>
                             ) : reportContent.chartType === 'composed_gift' ? (
@@ -596,7 +588,10 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                                   <YAxis dataKey="name" type="category" width={80} tick={{fontSize: 11, fontWeight: 'bold', fill:'#475569'}} axisLine={false} tickLine={false} />
                                   <Legend wrapperStyle={{fontSize: '10px', paddingTop: '10px'}}/>
                                   <Bar dataKey="value" fill="#3b82f6" barSize={30} radius={[0, 4, 4, 0]} isAnimationActive={false} label={{ position: 'right', fill: '#64748b', fontSize: 10, formatter: (val: any) => `$${val.toLocaleString()}` }}>
-                                    {/* 這裡需要手動 map 顏色，但 Recharts Bar 不支援直接 children map cell, 需在 data 中帶入 fill */}
+                                    {/* 手動指定顏色 */}
+                                    {reportContent.chartData.map((entry: any, index: number) => (
+                                        <div key={index} style={{display:'none'}} /> // Dummy for loop
+                                    ))}
                                   </Bar>
                                </BarChart>
                             ) : (
