@@ -56,7 +56,7 @@ export const CarReplacementTool = ({ data, setData }: any) => {
     loanRate: Number(data?.loanRate) || 3.5, // %
     loanTerm: Number(data?.loanTerm) || 7, // 年
     residualRate: Number(data?.residualRate) || 50, // % (換車時殘值)
-    cycleYears: Number(data?.cycleYears) || 5, // 換車週期 (年) - 新增
+    cycleYears: Number(data?.cycleYears) || 5, // 換車週期 (年)
     // 第2、3台車的目標價格 (若為 0 則自動計算)
     carPrice2: Number(data?.carPrice2) || 0, 
     carPrice3: Number(data?.carPrice3) || 0,
@@ -388,18 +388,20 @@ export const CarReplacementTool = ({ data, setData }: any) => {
              </div>
           </div>
 
-          {/* 資產殘值對比圖 */}
+          {/* 資產殘值對比圖 - 修正版面與標籤 */}
           <div className="grid md:grid-cols-2 gap-6">
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-[300px] flex flex-col">
                   <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
                       <Wallet size={18} className="text-orange-500"/> {totalProjectYears}年後資產保留狀況
                   </h4>
                   <div className="flex-1 w-full">
+                    {/* 更新：增加 margin.right 以容納標籤，減少 margin.left 去除空白 */}
                     <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={comparisonData} layout="vertical" margin={{top: 20, right: 30, left: 40, bottom: 20}}>
+                        <ComposedChart data={comparisonData} layout="vertical" margin={{top: 20, right: 80, left: 10, bottom: 20}}>
                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9"/>
                             <XAxis type="number" hide />
-                            <YAxis dataKey="name" type="category" tick={{fontSize: 14, fontWeight: 'bold'}} width={80} axisLine={false} tickLine={false} />
+                            {/* 更新：縮小 Y 軸寬度，讓文字更靠左 */}
+                            <YAxis dataKey="name" type="category" tick={{fontSize: 14, fontWeight: 'bold'}} width={70} axisLine={false} tickLine={false} />
                             <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '12px'}} />
                             <Bar dataKey="value" barSize={40} radius={[0, 8, 8, 0]} label={{ position: 'right', fill: '#64748b', fontWeight: 'bold', formatter: (val) => `$${val}萬` }}>
                                 {comparisonData.map((entry, index) => (
@@ -496,7 +498,7 @@ export const CarReplacementTool = ({ data, setData }: any) => {
            
            <div className="grid grid-cols-1 gap-3">
               {[
-                { title: "永遠開新車", desc: `每${cycleYears}年更換新車，享受最新科技與安全配備，同時避免老車高昂的維修費用。` },
+                { title: "永遠開新車", desc: "每五年更換新車，享受最新科技與安全配備，同時避免老車高昂的維修費用。" },
                 { title: "資產不歸零", desc: "打破買車就是負資產的宿命，讓您的購車本金透過投資持續增值，錢不再花掉就沒了。" },
                 { title: "現金流友善", desc: "透過配息補貼，每月實際從口袋拿出的錢大幅減少，維持生活品質。" },
                 { title: "越換越輕鬆", desc: "隨著每一次換車的殘值回流，您的投資本金越來越大，配息越來越多，最終實現免費開車。" }
