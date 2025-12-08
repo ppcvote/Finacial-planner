@@ -268,12 +268,13 @@ const EstateReport = ({ data }: { data: any }) => {
                       
                       {isRefinance ? (
                           <>
+                            {/* 轉增貸模式圖表：累積節省金額 (Area) + 剩餘貸款 (Line) */}
                             <Area yAxisId="left" type="monotone" name="累積節省金額" dataKey="累積效益" stroke="#f97316" fill="#f97316" fillOpacity={0.1} strokeWidth={2} isAnimationActive={false}/>
                             <Line yAxisId="left" type="monotone" name="新貸款餘額" dataKey="剩餘貸款" stroke="#94a3b8" strokeWidth={2} dot={false} strokeDasharray="5 5" isAnimationActive={false}/>
                           </>
                       ) : (
                           <>
-                            {/* [關鍵修正 2]: 一般模式圖表只繪製權益價值(總權益)與剩餘貸款，移除 Bar */}
+                            {/* 一般模式圖表：總權益 (Area) + 剩餘貸款 (Line) */}
                             <Area yAxisId="left" type="monotone" name="總權益價值" dataKey="總權益" stroke="#10b981" fill="#ecfdf5" strokeWidth={2} isAnimationActive={false}/>
                             <Line yAxisId="left" type="monotone" name="剩餘貸款" dataKey="剩餘貸款" stroke="#ef4444" strokeWidth={2} dot={false} strokeDasharray="5 5" isAnimationActive={false}/>
                           </>
