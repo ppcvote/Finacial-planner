@@ -19,7 +19,7 @@ import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, Y
 import { calculateMonthlyPayment, calculateMonthlyIncome, calculateRemainingBalance } from '../utils';
 
 // ------------------------------------------------------------------
-// 核心模組: 金融房產專案 (原始穩定版 - 獨立計算)
+// 核心模組: 金融房產專案 (最終穩定版 - 獨立計算)
 // ------------------------------------------------------------------
 
 export const FinancialRealEstateTool = ({ data, setData }: any) => {
@@ -52,7 +52,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   const [tempExistingMonthlyPayment, setTempExistingMonthlyPayment] = useState(existingMonthlyPayment);
   const [showAdvanced, setShowAdvanced] = useState(isRefinance);
 
-  // [關鍵修正] 初始化同步：如果 data 是空的，把預設值寫回去
+  // 初始化同步：如果 data 是空的，把預設值寫回去
   useEffect(() => {
       if (!data || Object.keys(data).length === 0) {
           setData(defaultValues);
@@ -66,7 +66,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   // 自動展開進階選單
   useEffect(() => { if(isRefinance) setShowAdvanced(true); }, [isRefinance]);
 
-  // --- 計算邏輯 (恢復本地計算) ---
+  // --- 4. 計算邏輯 (本地計算，確保所有變數在 return 前被定義) ---
   const newLoanMonthlyPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
 
   // 轉增貸模式
@@ -77,7 +77,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   const totalSavingsOverTerm = monthlySavings * 12 * loanTerm;
 
   // 原始模式
-  const monthlyInvestIncomeFull = calculateMonthlyIncome(loanAmount, investReturnRate);
+  const monthlyInvestIncomeFull = calculateMonthlyIncome(loanAmount, investReturnRate); // <--- USED IN JSX
   const monthlyCashFlowOriginal = monthlyInvestIncomeFull - newLoanMonthlyPayment;
   const isNegativeCashFlowOriginal = monthlyCashFlowOriginal < 0; 
   const totalOutOfPocketOriginal = isNegativeCashFlowOriginal ? Math.abs(monthlyCashFlowOriginal) * 12 * loanTerm : 0;
@@ -93,7 +93,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   const generateHouseChartData = () => {
     const dataArr = [];
     let cumulative = 0; 
-    const step = loanTerm > 20 ? 3 : 1; 
+    const step = Math.max(1, Math.floor(loanTerm / 15));
     
     for (let year = 1; year <= loanTerm; year++) {
       const remainingLoan = calculateRemainingBalance(loanAmount, loanRate, loanTerm, year);
@@ -103,8 +103,8 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
           if (year === 1 || year % step === 0 || year === loanTerm) {
             dataArr.push({ 
                 year: `第${year}年`, 
-                '累積節省金額': Math.round(cumulative / 10000),
-                '新貸款餘額': Math.round(remainingLoan / 10000) 
+                '累積效益': Math.round(cumulative / 10000), 
+                '剩餘貸款': Math.round(remainingLoan / 10000) 
             });
           }
       } else {
@@ -299,7 +299,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                 <div className="md:col-span-1 bg-white rounded-2xl shadow border border-slate-200 p-6 print-break-inside">
                     <h3 className="text-center font-bold text-slate-700 mb-4 flex items-center justify-center gap-2"><Scale size={18}/> 每月現金流試算</h3>
                     <div className="space-y-4 bg-slate-50 p-5 rounded-xl border border-slate-100">
-                        <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">1. 每月配息收入</span><span className="font-mono text-emerald-600 font-bold">+${Math.round(monthlyIncomeFull).toLocaleString()}</span></div>
+                        <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">1. 每月配息收入</span><span className="font-mono text-emerald-600 font-bold">+${Math.round(monthlyInvestIncomeFull).toLocaleString()}</span></div>
                         <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">2. 扣除貸款支出</span><span className="font-mono text-red-500 font-bold">-${Math.round(newLoanMonthlyPayment).toLocaleString()}</span></div>
                         <div className="border-t border-slate-200 my-2"></div>
                         
