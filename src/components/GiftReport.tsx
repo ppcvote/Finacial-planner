@@ -1,29 +1,12 @@
 import React from 'react';
 import { 
-  Gift, 
-  TrendingUp, 
-  PiggyBank, 
-  Clock, 
-  ArrowRight,
-  Target,
-  Quote,
-  ShieldAlert,
-  Banknote,
-  Percent,
-  Coins // 新增 Coins icon 作為浮水印預設圖
+  Gift, TrendingUp, PiggyBank, Clock, ArrowRight, Target, Quote, ShieldAlert, Banknote, Percent
 } from 'lucide-react';
 import { 
-  ComposedChart, 
-  Area, 
-  Line, 
-  CartesianGrid, 
-  XAxis, 
-  YAxis, 
-  Legend, 
-  ResponsiveContainer 
+  ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Legend, ResponsiveContainer 
 } from 'recharts';
 
-// --- 重用計算邏輯 ---
+// ... (計算邏輯 calculateMonthlyPayment, calculateMonthlyIncome 保持不變) ...
 const calculateMonthlyPayment = (principal: number, rate: number, years: number) => {
   const p = Number(principal) || 0;
   const rVal = Number(rate) || 0;
@@ -41,25 +24,19 @@ const calculateMonthlyIncome = (principal: number, rate: number) => {
   return (p * 10000 * (r / 100)) / 12; 
 };
 
-// ------------------------------------------------------------------
-// 子元件: ResultCard (三循環關鍵指標卡片)
-// ------------------------------------------------------------------
+// ... (ResultCard 元件保持不變) ...
 const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmount, isLast = false }: any) => {
     const colorClass = phase === 1 ? 'text-blue-600' : phase === 2 ? 'text-indigo-600' : 'text-purple-600';
     const bgClass = phase === 1 ? 'bg-blue-50 border-blue-200' : phase === 2 ? 'bg-indigo-50 border-indigo-200' : 'bg-purple-50 border-purple-200';
     const badgeClass = phase === 1 ? 'bg-blue-100 text-blue-700' : phase === 2 ? 'bg-indigo-100 text-indigo-700' : 'bg-purple-100 text-purple-700';
 
     return (
-        // 修改：print:p-5 加大內距 (原本 p-3)，增加高度
         <div className={`flex-1 p-4 print:p-5 rounded-xl border ${bgClass} relative flex flex-col justify-between`}>
-            {/* 連接箭頭 */}
             {!isLast && (
                 <div className="hidden md:flex print:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 bg-white border border-slate-200 rounded-full items-center justify-center text-slate-400 print:w-6 print:h-6">
                     <ArrowRight size={14} className="print:w-4 print:h-4"/>
                 </div>
             )}
-            
-            {/* Header: print:mb-3 增加標題與內容的距離 */}
             <div className="flex justify-between items-start mb-3 print:mb-3">
                 <div>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass} mb-1 inline-block print:px-2 print:py-0.5 print:text-[10px]`}>
@@ -73,8 +50,6 @@ const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmoun
                     <p className="font-bold text-slate-700 print:text-sm">{loanAmount} 萬</p>
                 </div>
             </div>
-
-            {/* Body: print:space-y-2 增加行距 */}
             <div className="space-y-2 print:space-y-2 border-t border-slate-200/50 pt-3 print:pt-3">
                 <div className="flex justify-between items-center text-xs print:text-[11px]">
                     <span className="text-slate-500">每月實質負擔</span>
@@ -88,7 +63,6 @@ const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmoun
                         {Math.round(totalOut).toLocaleString()} 萬
                     </span>
                 </div>
-                {/* Footer */}
                 <div className="flex justify-between items-center pt-2 mt-1 border-t border-dashed border-slate-300 print:mt-2 print:pt-2">
                     <span className="text-slate-600 font-bold print:text-[11px]">期末資產規模</span>
                     <span className={`text-xl font-black ${colorClass} print:text-lg`}>
@@ -100,10 +74,8 @@ const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmoun
     );
 };
 
-// ------------------------------------------------------------------
-// 主元件: GiftReport
-// ------------------------------------------------------------------
 const GiftReport = ({ data }: { data: any }) => {
+  // ... (資料與計算邏輯保持不變) ...
   const loanAmount = Number(data?.loanAmount) || 100;
   const loanTerm = Number(data?.loanTerm) || 7;
   const loanRate = Number(data?.loanRate) || 2.8;
@@ -148,13 +120,13 @@ const GiftReport = ({ data }: { data: any }) => {
   const totalYears = loanTerm * 3;
   const totalCashOut_T0_T7_Wan = Math.round(phase1_NetOut * totalMonthsPerCycle / 10000);
   const totalCashOut_T7_T14_Wan = Math.round(phase2_NetOut * totalMonthsPerCycle / 10000);
-  
+  const totalCashOut_T14_T21_Wan = Math.round(phase3_NetOut * totalMonthsPerCycle / 10000);
+
   const totalCostRaw = (phase1_NetOut + phase2_NetOut + phase3_NetOut) * totalMonthsPerCycle;
   const totalProjectCost_Wan = Math.round(totalCostRaw / 10000);
   const finalAssetValue_Wan = phase3_Asset;
   const netProfit_Wan = finalAssetValue_Wan - totalProjectCost_Wan;
   const avgMonthlyCost = Math.round((phase1_NetOut + phase2_NetOut + phase3_NetOut) / 3);
-  
   const monthlyStandardSaving = Math.round((finalAssetValue_Wan * 10000) / (totalYears * 12));
 
   const generateChartData = () => {
@@ -165,7 +137,6 @@ const GiftReport = ({ data }: { data: any }) => {
 
     for (let year = 1; year <= totalYears; year++) {
       cumulativeStandard += standardSavingPerMonth * 12;
-      
       let currentYearNetOut = 0;
       let currentAssetValue = 0;
 
@@ -193,9 +164,7 @@ const GiftReport = ({ data }: { data: any }) => {
             currentAssetValue = (loanAmount + c2Loan + c3Loan) * 10000;
         }
       }
-
       cumulativeProjectCost += currentYearNetOut * 12;
-      
       dataArr.push({
         year: `${year}`,
         一般存錢: Math.round(cumulativeStandard / 10000),
@@ -209,22 +178,24 @@ const GiftReport = ({ data }: { data: any }) => {
   const chartData = generateChartData();
 
   return (
-    // 修改：print:space-y-6 (從 4 改回 6)，增加區塊間距，填補下方空白
     <div className="font-sans text-slate-800 space-y-8 print:space-y-6 relative">
       
-      {/* --- 全域浮水印 (Watermark) --- */}
-      {/* pointer-events-none 確保不影響操作，z-0 放在最底層 */}
+      {/* --- Logo 浮水印 (背景) --- */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden print:fixed print:top-1/2 print:left-1/2 print:-translate-x-1/2 print:-translate-y-1/2">
-          <div className="opacity-[0.03] transform -rotate-45">
-              {/* 若您有 Logo 圖片，請取消註解並替換下方 src */}
-              {/* <img src="YOUR_LOGO_URL.png" alt="Watermark" className="w-[600px] h-auto grayscale" /> */}
-              
-              {/* 預設 SVG 浮水印 (錢幣圖案) */}
-              <Coins size={600} strokeWidth={1} />
+          <div className="opacity-[0.05] transform -rotate-12">
+              <img 
+                src="https://thunderous-cat-56a4a9.netlify.app/logo.png" 
+                alt="Logo Watermark" 
+                className="w-[500px] h-auto grayscale object-contain"
+                onError={(e) => {
+                    // 如果圖片載入失敗，隱藏它或顯示替代文字
+                    (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
           </div>
       </div>
 
-      {/* 1. Header (Cover Page 已有大標題，這裡作為內容頁 Header) */}
+      {/* 1. Header */}
       <div className="relative z-10 flex items-center justify-between border-b-2 border-indigo-100 pb-6 print:pb-3 print-break-inside bg-white/50 backdrop-blur-sm">
          <div>
              <div className="flex items-center gap-2 mb-2">
@@ -240,16 +211,14 @@ const GiftReport = ({ data }: { data: any }) => {
          </div>
       </div>
 
-      {/* 2. 核心比較 (The Hook) */}
-      {/* 修改：print:p-6 (加大內距) */}
+      {/* 2. 效益成本分析 */}
       <div className="relative z-10 bg-slate-50 rounded-3xl p-8 border border-slate-200 print-break-inside print:p-6">
           <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2 print:text-lg print:mb-4">
               <Target size={24} className="text-rose-500 print:w-5 print:h-5"/>
               效益成本分析
           </h2>
-          
           <div className="grid grid-cols-2 gap-12 print:gap-6">
-              {/* 左邊：一般存錢 */}
+              {/* 一般存錢 */}
               <div className="relative p-6 rounded-2xl border-2 border-dashed border-slate-300 bg-white opacity-80 print:p-4">
                   <div className="absolute -top-3 left-6 bg-slate-500 text-white px-3 py-1 rounded-full text-xs font-bold print:border print:border-slate-300 print:text-[11px] print:py-0.5">
                       傳統模式
@@ -272,8 +241,7 @@ const GiftReport = ({ data }: { data: any }) => {
                       </div>
                   </div>
               </div>
-
-              {/* 右邊：百萬禮物專案 */}
+              {/* 專案模式 */}
               <div className="relative p-6 rounded-2xl border-2 border-indigo-500 bg-white shadow-xl transform scale-105 print:scale-100 print:shadow-none print:p-4 print:border-2">
                   <div className="absolute -top-3 left-6 bg-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md print:shadow-none print:text-[11px] print:py-0.5">
                       專案模式
@@ -301,13 +269,12 @@ const GiftReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 3. 三循環成果關鍵指標 (The Roadmap) */}
+      {/* 3. 執行藍圖 */}
       <div className="relative z-10 print-break-inside">
           <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2 print:text-lg print:mb-4">
               <ArrowRight size={24} className="text-indigo-600 print:w-5 print:h-5"/>
               執行藍圖 (三階段演進)
           </h2>
-          {/* print:gap-4 (加大卡片間距) */}
           <div className="flex flex-col md:flex-row gap-4 print:flex-row print:gap-4">
               <ResultCard 
                   phase={1} title="累積期" subTitle={`Year 1 - ${loanTerm}`}
@@ -328,13 +295,12 @@ const GiftReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 4. 視覺化圖表 */}
+      {/* 4. 資產模擬圖表 */}
       <div className="relative z-10 space-y-4 print-break-inside">
           <h2 className="text-xl font-bold text-slate-700 flex items-center gap-2 print:text-lg print:mb-3">
               <TrendingUp size={24} className="text-indigo-600 print:w-5 print:h-5"/>
               資產成長模擬 ({totalYears}年趨勢)
           </h2>
-          {/* 修改：高度增加至 320px (原 280px) */}
           <div className="h-[320px] w-full border border-slate-100 rounded-2xl p-4 bg-white shadow-sm print:h-[320px] print:p-4">
               <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
@@ -350,10 +316,10 @@ const GiftReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 強制分頁點 */}
+      {/* 強制分頁：第三頁開始 */}
       <div className="hidden print:block break-before-page"></div>
 
-      {/* 5. 資金防護機制 (Risk & Defense) - 第三頁內容 */}
+      {/* 5. 資金防護 */}
       <div className="relative z-10 bg-emerald-50 rounded-2xl p-6 border border-emerald-100 print-break-inside print:mt-8 print:p-6">
           <h3 className="font-bold text-emerald-800 text-lg mb-3 flex items-center gap-2 print:text-lg">
               <ShieldAlert size={20}/> 資金流動性與安心防護
