@@ -244,7 +244,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
             </h4>
             <div className="space-y-6">
                
-               {/* 1. 資產/貸款總額 */}
+               {/* 1. 資產/貸款總額 (級距調整為 1) */}
                <div>
                    <div className="flex justify-between items-center mb-2">
                        <label className="text-sm font-medium text-slate-600">
@@ -255,7 +255,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                                type="number" 
                                min={100} 
                                max={5000} 
-                               step={10} 
+                               step={1} 
                                value={tempLoanAmount} 
                                onChange={handleLoanAmountInput}
                                onBlur={finalizeLoanAmount}
@@ -266,7 +266,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                        </div>
                    </div>
                    <input 
-                       type="range" min={100} max={5000} step={10} 
+                       type="range" min={100} max={5000} step={1} 
                        value={loanAmount} 
                        onChange={(e) => updateField('loanAmount', Number(e.target.value))} 
                        className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-600 hover:accent-emerald-700 transition-all`} 
@@ -346,15 +346,16 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                                     <span>現有房貸餘額 (萬)</span>
                                     <span className="font-bold text-orange-700">{existingLoanBalance} 萬</span>
                                 </div>
+                                {/* 級距調整為 1 */}
                                 <input 
-                                    type="range" min={0} max={loanAmount} step={10} 
+                                    type="range" min={0} max={loanAmount} step={1} 
                                     value={existingLoanBalance} 
                                     onChange={(e) => updateField('existingLoanBalance', Number(e.target.value))} 
                                     className="w-full h-1.5 bg-orange-200 rounded-lg appearance-none cursor-pointer accent-orange-500" 
                                 />
                             </div>
                             
-                            {/* 更新：現有月付金 (新增輸入框 & 調整級距為 1) */}
+                            {/* 現有月付金 */}
                             <div>
                                 <div className="flex justify-between items-center mb-1">
                                     <span className="text-xs text-slate-500">現有月付金 (元)</span>
