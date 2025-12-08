@@ -37,7 +37,7 @@ const ChartSection = ({ reportContent }: { reportContent: any }) => {
       </ComposedChart>
     );
   }
-  
+   
   if (chartType === 'composed_car') {
     return (
       <ComposedChart data={chartData}>
@@ -103,15 +103,15 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
           setShowNoteInput(true);
       }
   }, [isOpen]);
-  
+   
   if (!isOpen || !mounted) return null;
 
   const dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
-  
+   
   // --- Report Data Logic ---
   let reportContent = { title: '', mindMap: [] as any[], table: [] as any[], highlights: [] as any[], chartData: [] as any[], chartType: 'composed' };
 
-  // ... (Data Generation Logic - Same as before)
+  // ... (Data Generation Logic - Preserved)
   if (activeTab === 'gift') {
     const loan = data.loanAmount;
     const monthlyLoanPayment = calculateMonthlyPayment(loan, data.loanRate, data.loanTerm);
@@ -280,9 +280,9 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
      const plannedAssets = Math.max(0, totalAssets - data.insurancePlan);
      const netEstatePlanned = Math.max(0, plannedAssets - totalDeductions);
      const calculateTax = (netEstate: number) => {
-        if (netEstate <= 5621) return netEstate * 0.10;
-        if (netEstate <= 11242) return netEstate * 0.15 - 250;
-        return netEstate * 0.20 - 750;
+       if (netEstate <= 5621) return netEstate * 0.10;
+       if (netEstate <= 11242) return netEstate * 0.15 - 250;
+       return netEstate * 0.20 - 750;
      };
      const taxRaw = calculateTax(netEstateRaw);
      const taxPlanned = calculateTax(netEstatePlanned);
@@ -311,49 +311,69 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
       {/* 注入列印專用樣式 */}
       <style>{`
         @media print {
-          @page { size: A4; margin: 0; }
-          body { 
-             margin: 0; 
-             padding: 0; 
-             -webkit-print-color-adjust: exact !important; 
-             print-color-adjust: exact !important; 
-             background: white !important;
-             overflow: visible !important;
-          }
-          
-          /* 隱藏 App 的所有內容 */
-          #root, .toast-container { display: none !important; }
-          
-          /* 顯示 Report Portal */
-          #report-modal-root { 
-            position: absolute !important; 
-            top: 0 !important; 
-            left: 0 !important; 
-            width: 100% !important; 
-            height: auto !important; 
-            background: white !important; 
-            padding: 0 !important; 
-            overflow: visible !important;
-            display: block !important;
-            z-index: 99999 !important;
-          }
-          
-          .no-print { display: none !important; }
-          
-          /* 報表頁面設定 */
-          .print-page { 
-             width: 210mm; 
-             min-height: 297mm; 
-             padding: 10mm; 
-             margin: 0 auto; 
-             background: white; 
-             box-shadow: none;
-             position: relative;
-             page-break-after: always; /* 強制分頁 */
-          }
-          
-          .print-page:last-child { page-break-after: auto; }
-          .print-break-inside { break-inside: avoid; }
+            @page { 
+                size: A4 portrait; 
+                margin: 0; 
+            }
+            body { 
+                margin: 0; 
+                padding: 0; 
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important; 
+                background: white !important;
+            }
+            #root, .toast-container, .no-print { display: none !important; }
+            
+            /* 核心修正：解除 Portal 固定定位，讓文件流正常運作 */
+            #report-modal-root { 
+                position: static !important; 
+                width: 100% !important; 
+                height: auto !important; 
+                background: white !important; 
+                padding: 0 !important; 
+                display: block !important;
+                overflow: visible !important;
+                z-index: 99999 !important;
+            }
+            
+            .print-content {
+                width: 100% !important;
+            }
+
+            .print-page { 
+                width: 100% !important;
+                margin: 0 !important;
+                background: white; 
+                box-shadow: none !important;
+                page-break-after: always;
+                position: relative;
+            }
+
+            /* 封面：強制 A4 高度 */
+            .cover-page {
+                height: 297mm !important; 
+                overflow: hidden;
+            }
+
+            /* 內容頁：自動高度，加上適當內距 */
+            .content-page {
+                min-height: auto !important; 
+                height: auto !important;
+                padding: 15mm !important; 
+                page-break-after: auto !important;
+            }
+
+            .print-break-inside { 
+                break-inside: avoid !important; 
+                page-break-inside: avoid !important;
+            }
+
+            /* 圖表高度修復：給予明確高度讓 Recharts 渲染 */
+            .print-chart-fix {
+                height: 350px !important;
+                width: 100% !important;
+                break-inside: avoid;
+            }
         }
       `}</style>
 
@@ -389,7 +409,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
         <div className="print-content">
 
             {/* === 第一頁：封面 (Cover Page) === */}
-            <div className="print-page cover-page flex flex-col justify-between bg-white relative overflow-hidden" style={{minHeight: '297mm'}}>
+            <div className="print-page cover-page flex flex-col justify-between bg-white relative overflow-hidden">
                 {/* 裝飾背景 */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-bl-[100%] z-0"></div>
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-slate-50 rounded-tr-[100%] z-0"></div>
@@ -401,7 +421,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                     <p className="text-2xl text-slate-500 font-medium">專屬資產配置戰略規劃書</p>
                 </div>
 
-                {/* 改用 CSS 裝飾替代死圖 SVG */}
+                {/* 圓環裝飾 */}
                 <div className="flex-1 flex items-center justify-center opacity-10 relative z-10">
                      <div className="w-64 h-64 border-[20px] border-slate-900 rounded-full flex items-center justify-center">
                         <div className="w-32 h-32 bg-slate-900 rounded-full"></div>
@@ -422,7 +442,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                         <div>
                             <p className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider">Financial Advisor</p>
                             <h2 className="text-2xl font-bold text-slate-800">{user?.displayName || '專業理財顧問'}</h2>
-                            
+                             
                             {/* 聯絡資訊控制 */}
                             {showContact && (
                                 <>
@@ -442,16 +462,16 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
             </div>
 
             {/* === 第二頁：內容分析 (Content Page) === */}
-            <div className="print-page" style={{minHeight: 'auto'}}>
+            <div className="print-page content-page flex flex-col">
                 
-                {/* Header */}
+                {/* Header (標示這是在內容頁) */}
                 <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-8">
                     <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Ultra Advisor System</span>
-                    <span className="text-[10px] font-bold text-slate-400">Page 2</span>
+                    <span className="text-[10px] font-bold text-slate-400">Content Analysis</span>
                 </div>
 
                 {/* 1. 核心數據 (Cards) */}
-                <div className="mb-8">
+                <div className="mb-8 print-break-inside">
                     <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
                         <div className="w-1 h-6 bg-blue-600 rounded-full"></div>
                         核心戰略指標
@@ -466,13 +486,13 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                     </div>
                 </div>
 
-                {/* 2. 圖表區域 (Chart) - Animation Disabled */}
+                {/* 2. 圖表區域 (Chart) - 加入 print-chart-fix */}
                 <div className="mb-8 print-break-inside">
                     <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
                         <div className="w-1 h-6 bg-emerald-500 rounded-full"></div>
                         資產趨勢模擬
                     </h3>
-                    <div className="h-[300px] w-full border border-slate-100 rounded-2xl p-4 bg-white shadow-sm">
+                    <div className="h-[300px] w-full border border-slate-100 rounded-2xl p-4 bg-white shadow-sm print-chart-fix">
                         <ResponsiveContainer width="100%" height="100%">
                             <ChartSection reportContent={reportContent} />
                         </ResponsiveContainer>
@@ -507,7 +527,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                             </table>
                         </div>
                     </div>
-                    
+                     
                     <div>
                         <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
                            <div className="w-1 h-6 bg-purple-500 rounded-full"></div>
