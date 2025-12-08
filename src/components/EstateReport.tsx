@@ -15,7 +15,8 @@ import {
   Lock,
   Coins,
   PiggyBank,
-  Wallet
+  Wallet,
+  Clock // [修正] 補上這裡原本缺少的 Clock
 } from 'lucide-react';
 import { 
   ComposedChart, 
@@ -298,7 +299,7 @@ const EstateReport = ({ data }: { data: any }) => {
               </ResponsiveContainer>
           </div>
 
-          {/* 4.5 專案總結 (Project Summary) - 新增區塊 */}
+          {/* 4.5 專案總結 (Project Summary) */}
           <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 print:p-2 print:border-slate-200">
               <h4 className="text-sm font-bold text-emerald-800 mb-3 flex items-center gap-2 print:text-xs print:mb-2">
                   <Banknote size={16} className="print:w-3 print:h-3"/>
@@ -306,7 +307,6 @@ const EstateReport = ({ data }: { data: any }) => {
               </h4>
               <div className="flex items-center justify-between gap-4">
                   {isRefinance ? (
-                      // 轉增貸模式總結
                       <>
                           <div className="flex-1 text-center border-r border-emerald-200 print:border-slate-300">
                               <p className="text-xs text-slate-500 mb-1 print:text-[10px]">累積節省利息</p>
@@ -322,7 +322,6 @@ const EstateReport = ({ data }: { data: any }) => {
                           </div>
                       </>
                   ) : (
-                      // 一般模式總結
                       <>
                           <div className="flex-1 text-center border-r border-emerald-200 print:border-slate-300">
                               <p className="text-xs text-slate-500 mb-1 print:text-[10px]">累積淨領現金流</p>
@@ -347,78 +346,81 @@ const EstateReport = ({ data }: { data: any }) => {
       {/* 強制分頁：第三頁開始 */}
       <div className="hidden print:block break-before-page"></div>
 
-      {/* 5. 升息防禦與資金安全 (The Defense) - 第三頁 */}
-      <div className="relative z-10 space-y-6 print:space-y-4 print:mt-8 print:break-inside">
-          
-          {/* 資金流動性防護 (保單貸款) */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm print:shadow-none print:p-4 print:border">
-              <h3 className="font-bold text-slate-800 text-lg mb-3 flex items-center gap-2 print:text-base">
-                  <Lock size={20} className="text-blue-600 print:w-4 print:h-4"/> 資金流動性與安心防護
-              </h3>
-              <div className="flex flex-col md:flex-row gap-6 print:gap-4">
-                  <div className="flex-1 space-y-3 print:space-y-2">
-                      <p className="text-sm text-slate-600 leading-relaxed print:text-xs">
-                          本計畫運用「投資型保單」進行資產配置，兼顧了資金的流動性需求。若在計畫期間有臨時急用（如購屋頭期款、醫療週轉），無需解約即可調度資金。
-                      </p>
-                      <div className="flex gap-2">
-                          <span className="text-xs font-bold text-white bg-blue-500 px-2 py-1 rounded print:py-0.5 print:px-1.5 print:text-[10px]">保單貸款</span>
-                          <span className="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded border border-blue-200 print:py-0.5 print:px-1.5 print:text-[10px]">緊急預備金功能</span>
-                      </div>
-                  </div>
-                  <div className="flex-1 bg-slate-50 rounded-xl p-4 border border-slate-100 text-sm space-y-2 print:p-3 print:space-y-1">
-                      <div className="flex justify-between items-center">
-                          <span className="text-slate-500 flex items-center gap-1 print:text-[10px]"><Banknote size={14} className="print:w-3 print:h-3"/> 最高借貸成數</span>
-                          <span className="font-bold text-slate-700 print:text-xs">保單價值 50%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                          <span className="text-slate-500 flex items-center gap-1 print:text-[10px]"><Percent size={14} className="print:w-3 print:h-3"/> 借貸利率</span>
-                          <span className="font-bold text-slate-700 print:text-xs">約 4% (浮動)</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                          <span className="text-slate-500 flex items-center gap-1 print:text-[10px]"><Clock size={14} className="print:w-3 print:h-3"/> 還款方式</span>
-                          <span className="font-bold text-slate-700 print:text-xs">彈性 (可只繳息)</span>
-                      </div>
+      {/* 5. 資金防護機制 (Risk & Defense) - 第三頁 */}
+      <div className="relative z-10 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm print:shadow-none print:p-4 print:border print:mt-8">
+          <h3 className="font-bold text-slate-800 text-lg mb-3 flex items-center gap-2 print:text-base">
+              <Lock size={20} className="text-blue-600 print:w-4 print:h-4"/> 資金流動性與安心防護
+          </h3>
+          <div className="flex flex-col md:flex-row gap-6 print:gap-4">
+              <div className="flex-1 space-y-3 print:space-y-2">
+                  <p className="text-sm text-slate-600 leading-relaxed print:text-xs">
+                      本計畫運用「投資型保單」進行資產配置，兼顧了資金的流動性需求。若在計畫期間有臨時急用（如購屋頭期款、醫療週轉），無需解約即可調度資金。
+                  </p>
+                  <div className="flex gap-2">
+                      <span className="text-xs font-bold text-white bg-blue-500 px-2 py-1 rounded print:py-0.5 print:px-1.5 print:text-[10px]">保單貸款</span>
+                      <span className="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded border border-blue-200 print:py-0.5 print:px-1.5 print:text-[10px]">緊急預備金功能</span>
                   </div>
               </div>
-              <p className="text-xs text-slate-400 mt-3 pt-3 border-t border-slate-100 print:text-[10px] print:mt-2 print:pt-2">
-                  * 顧問叮嚀：從銀行借貸出來的資金在期滿前屬於槓桿部位，建議保單貸款功能僅作為「緊急預備金」使用，確保計畫完整執行。
-              </p>
+              <div className="flex-1 bg-slate-50 rounded-xl p-4 border border-slate-100 text-sm space-y-2 print:p-3 print:space-y-1">
+                  <div className="flex justify-between items-center">
+                      <span className="text-slate-500 flex items-center gap-1 print:text-[10px]"><Banknote size={14} className="print:w-3 print:h-3"/> 最高借貸成數</span>
+                      <span className="font-bold text-slate-700 print:text-xs">保單價值 50%</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                      <span className="text-slate-500 flex items-center gap-1 print:text-[10px]"><Percent size={14} className="print:w-3 print:h-3"/> 借貸利率</span>
+                      <span className="font-bold text-slate-700 print:text-xs">約 4% (浮動)</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                      <span className="text-slate-500 flex items-center gap-1 print:text-[10px]"><Clock size={14} className="print:w-3 print:h-3"/> 還款方式</span>
+                      <span className="font-bold text-slate-700 print:text-xs">彈性 (可只繳息)</span>
+                  </div>
+              </div>
           </div>
+          <p className="text-xs text-slate-400 mt-3 pt-3 border-t border-slate-100 print:text-[10px] print:mt-2 print:pt-2">
+              * 顧問叮嚀：從銀行借貸出來的資金在期滿前屬於槓桿部位，建議保單貸款功能僅作為「緊急預備金」使用，確保計畫完整執行。
+          </p>
+      </div>
 
-          {/* 升息防禦力分析 */}
-          <div className="bg-emerald-50 rounded-2xl p-6 border border-emerald-100 print:p-4">
-              <h3 className="font-bold text-emerald-800 text-lg mb-4 flex items-center gap-2 print:text-base print:mb-2">
-                  <ShieldCheck size={20} className="text-emerald-600 print:w-4 print:h-4"/> 升息防禦力壓力測試
-              </h3>
-              
-              <div className="flex items-end gap-2 mb-2">
-                  <div className="flex-1">
-                      <div className="flex justify-between text-xs text-slate-500 mb-1 print:text-[10px]">
-                          <span>目前貸款利率 {loanRate}%</span>
-                          <span>損益兩平點 {breakEvenRate}%</span>
-                      </div>
-                      <div className="w-full bg-white h-4 rounded-full overflow-hidden flex relative border border-emerald-200">
-                          <div className="h-full bg-emerald-500" style={{ width: `${(loanRate / breakEvenRate) * 100}%` }}></div>
-                          <div className="h-full bg-emerald-300/50" style={{ width: `${(spread / breakEvenRate) * 100}%` }}></div>
-                          <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10" style={{ left: `${((loanRate + 1) / breakEvenRate) * 100}%` }}></div>
-                      </div>
-                      <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                          <span>0%</span>
-                          <span className="text-red-500 font-bold">▲ 升息1% 仍在安全範圍</span>
-                          <span>{breakEvenRate}%</span>
-                      </div>
+      {/* 6. 升息防禦力分析 */}
+      <div className="bg-emerald-50 rounded-2xl p-6 border border-emerald-100 print:p-4">
+          <h3 className="font-bold text-emerald-800 text-lg mb-4 flex items-center gap-2 print:text-base print:mb-2">
+              <ShieldCheck size={20} className="text-emerald-600 print:w-4 print:h-4"/> 升息防禦力壓力測試
+          </h3>
+          
+          <div className="flex items-end gap-2 mb-2">
+              <div className="flex-1">
+                  <div className="flex justify-between text-xs text-slate-500 mb-1 print:text-[10px]">
+                      <span>目前貸款利率 {loanRate}%</span>
+                      <span>損益兩平點 {breakEvenRate}%</span>
                   </div>
-                  <div className="text-right pl-4">
-                      <span className="block text-xs text-slate-500 print:text-[10px]">利差安全氣囊</span>
-                      <span className="font-bold text-2xl text-emerald-600 font-mono print:text-lg">{spread.toFixed(1)}%</span>
+                  <div className="w-full bg-white h-4 rounded-full overflow-hidden flex relative border border-emerald-200">
+                      <div className="h-full bg-emerald-500" style={{ width: `${(loanRate / breakEvenRate) * 100}%` }}></div>
+                      <div className="h-full bg-emerald-300/50" style={{ width: `${(spread / breakEvenRate) * 100}%` }}></div>
+                      <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10" style={{ left: `${((loanRate + 1) / breakEvenRate) * 100}%` }}></div>
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                      <span>0%</span>
+                      <span className="text-red-500 font-bold">▲ 升息1% 仍在安全範圍</span>
+                      <span>{breakEvenRate}%</span>
                   </div>
               </div>
+              <div className="text-right pl-4">
+                  <span className="block text-xs text-slate-500 print:text-[10px]">利差安全氣囊</span>
+                  <span className="font-bold text-2xl text-emerald-600 font-mono print:text-lg">{spread.toFixed(1)}%</span>
+              </div>
+          </div>
+          <div className="bg-emerald-100/50 rounded-lg p-3 text-xs text-emerald-800 leading-relaxed border border-emerald-100 mt-3 print:mt-2">
+              <p>
+                  <strong>壓力測試結論：</strong> 
+                  即使央行升息 1% (相當劇烈的幅度)，您的利差緩衝仍有 {(spread - 1).toFixed(1)}%，系統依然能維持正向運作。
+                  此外，本金隨時間還款而減少，利息壓力會逐年降低，安全性將逐年提高。
+              </p>
           </div>
       </div>
 
-      {/* 6. 顧問總結 */}
+      {/* 7. 顧問總結 */}
       <div className="relative z-10 bg-slate-50 p-6 rounded-2xl border-l-4 border-emerald-500 print-break-inside print:p-4">
-          <div className="flex gap-4">
+          <div className="flex gap-4 mb-6">
                <Quote className="text-emerald-300 shrink-0" size={32} />
                <div>
                    <h3 className="font-bold text-slate-800 text-lg mb-2 print:text-base">顧問觀點</h3>
