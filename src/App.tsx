@@ -132,12 +132,12 @@ export default function App() {
 
   const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
 
-  // --- 1. Splash Screen Timer ---
-  // 強制至少顯示 3 秒鐘動畫，避免一閃而過
+  // --- 1. Splash Screen Timer (已更新) ---
+  // 設定為 4000ms (4秒)，讓動畫跑完(約2.8秒)後，還能停留約 1.2 秒
   useEffect(() => {
     const timer = setTimeout(() => {
       setMinSplashTimePassed(true);
-    }, 3000); // 3秒後才允許進入 (配合動畫長度)
+    }, 4000); 
     return () => clearTimeout(timer);
   }, []);
 
@@ -278,8 +278,7 @@ export default function App() {
 
   // --- Render 邏輯 ---
 
-  // 1. 顯示 Splash Screen (只要 Auth 還在載入 OR 動畫還沒播完)
-  // 這行是解決「一閃而過」的關鍵
+  // 1. 顯示 Splash Screen
   if (loading || !minSplashTimePassed) return <SplashScreen />;
 
   // 2. 未登入 -> 顯示登入頁
@@ -366,6 +365,7 @@ export default function App() {
               <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => {setActiveTab('gift'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => {setActiveTab('estate'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => {setActiveTab('student'); setIsMobileMenuOpen(false);}} />
+              {/* ... 其他 NavItem ... */}
               <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => {setActiveTab('super_active'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => {setActiveTab('car'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => {setActiveTab('reservoir'); setIsMobileMenuOpen(false);}} />
@@ -377,8 +377,10 @@ export default function App() {
         </div>
       )}
 
+      {/* Sidebar (Desktop) */}
       <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10 print:hidden">
         <div className="p-4 border-b border-slate-800">
+           {/* 返回按鈕 */}
            <button 
              onClick={handleBackToDashboard}
              className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-lg transition-all mb-4"
@@ -396,6 +398,7 @@ export default function App() {
              </div>
           </div>
           
+          {/* 同步狀態 */}
           <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 bg-black/20 px-2 py-1 rounded">
              {isSaving ? (
                 <>
