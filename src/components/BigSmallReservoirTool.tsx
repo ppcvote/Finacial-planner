@@ -165,7 +165,8 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                             <span className="flex items-center gap-1"><Database size={12} className="text-cyan-500"/> 大水庫配息率 (%)</span>
                             <span className="font-bold text-cyan-700">{dividendRate}%</span>
                         </div>
-                        <input type="range" min={2} max={8} step={0.5} value={dividendRate} onChange={(e) => updateField('dividendRate', Number(e.target.value))} className="w-full h-1.5 bg-cyan-100 rounded-lg accent-cyan-600" />
+                        {/* 修正上限至 15% */}
+                        <input type="range" min={2} max={15} step={0.5} value={dividendRate} onChange={(e) => updateField('dividendRate', Number(e.target.value))} className="w-full h-1.5 bg-cyan-100 rounded-lg accent-cyan-600" />
                         <p className="text-[10px] text-slate-400 mt-1">建議配置：穩健型標的 (如債券、定存股)</p>
                     </div>
                     <div>
@@ -173,7 +174,8 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                             <span className="flex items-center gap-1"><TrendingUp size={12} className="text-amber-500"/> 小水庫再投報率 (%)</span>
                             <span className="font-bold text-amber-700">{reinvestRate}%</span>
                         </div>
-                        <input type="range" min={4} max={15} step={0.5} value={reinvestRate} onChange={(e) => updateField('reinvestRate', Number(e.target.value))} className="w-full h-1.5 bg-amber-100 rounded-lg accent-amber-500" />
+                        {/* 修正上限至 30% */}
+                        <input type="range" min={4} max={30} step={0.5} value={reinvestRate} onChange={(e) => updateField('reinvestRate', Number(e.target.value))} className="w-full h-1.5 bg-amber-100 rounded-lg accent-amber-500" />
                         <p className="text-[10px] text-slate-400 mt-1">建議配置：成長型標的 (如股票型 ETF)</p>
                     </div>
                  </div>
