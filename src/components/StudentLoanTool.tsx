@@ -16,7 +16,8 @@ import {
   ChevronUp,
   AlertTriangle,
   Zap,
-  ArrowRightLeft
+  ArrowRightLeft,
+  PiggyBank // 新增 PiggyBank icon
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceArea } from 'recharts';
 
@@ -69,7 +70,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
   const monthlyInterest = Math.round(loanAmount * 10000 * (loanRate / 100 / 12));
   const monthlyPMT = Math.round(calculateMonthlyPayment(loanAmount, loanRate, years));
 
-  // --- 核心計算引擎 (支援 策略 vs 基準 對比) ---
+  // --- 核心計算引擎 ---
   const runSimulation = (simGrace: number, simInterestOnly: number) => {
       const simGraceEnd = studyYears + simGrace;
       const simInterestOnlyEnd = simGraceEnd + simInterestOnly;
@@ -152,13 +153,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
   // 1. 執行目前設定的模擬
   const { finalAsset: currentFinalAsset, chartData: dataArr } = runSimulation(gracePeriod, interestOnlyPeriod);
   
-  // 2. 執行基準模擬 (Old School: 1年寬限 + 0年只繳息) 用於計算政策紅利
-  const { finalAsset: baselineFinalAsset } = runSimulation(1, 0);
-  
-  // 3. 計算關鍵指標
-  const policyBonus = currentFinalAsset - baselineFinalAsset; // 政策紅利
-  
-  // 抓取「本息攤還期」第一年的數據來計算防禦率
+  // 2. 抓取「本息攤還期」第一年的數據來計算防禦率
   const repaymentStartYearIdx = dataArr.findIndex(d => d.year === interestOnlyEndYear + 1);
   const repaymentData = repaymentStartYearIdx !== -1 ? dataArr[repaymentStartYearIdx] : null;
   
@@ -492,24 +487,34 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                  </div>
              </div>
 
-             {/* 卡片 2: 新制政策紅利 */}
-             <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl shadow-sm border border-indigo-100 p-4 relative overflow-hidden">
+             {/* 卡片 2: 學費套利成效 (取代新制政策紅利) */}
+             <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl shadow-sm border border-emerald-100 p-4 relative overflow-hidden">
                  <div className="absolute top-0 right-0 p-2 opacity-10">
-                     <Zap size={60} className="text-indigo-600"/>
+                     <PiggyBank size={60} className="text-emerald-600"/>
                  </div>
-                 <div className="flex items-center gap-2 mb-2">
-                     <RefreshCw size={18} className="text-indigo-600"/>
-                     <span className="text-sm font-bold text-indigo-900">新制政策紅利</span>
+                 <div className="flex items-center gap-2 mb-3">
+                     <CheckCircle2 size={18} className="text-emerald-600"/>
+                     <span className="text-sm font-bold text-emerald-900">學費套利成效</span>
                  </div>
-                 <div className="flex items-end gap-2">
-                     <span className="text-3xl font-black font-mono text-indigo-700">
-                         +${policyBonus.toLocaleString()}
-                     </span>
-                     <span className="text-sm font-bold text-indigo-500 mb-1">萬</span>
+                 
+                 <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-500">原本應付學費</span>
+                        <span className="font-mono font-bold text-slate-400 line-through decoration-red-400">
+                            ${loanAmount} 萬
+                        </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-emerald-700">不僅免付，還倒賺</span>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-3xl font-black font-mono text-emerald-600">
+                                +${currentFinalAsset.toLocaleString()}
+                            </span>
+                            <span className="text-sm font-bold text-emerald-500">萬</span>
+                        </div>
+                    </div>
                  </div>
-                 <p className="text-xs text-indigo-600/80 mt-2 leading-relaxed">
-                     相比傳統還款 (1年寬限+0年只繳息)，善用拖延戰術多賺的複利。
-                 </p>
              </div>
 
              {/* 卡片 3: 人生起跑點 (結局對比) */}
@@ -535,46 +540,33 @@ export const StudentLoanTool = ({ data, setData }: any) => {
         </div>
       </div>
       
-      {/* 底部策略區 (執行三部曲 + 專案四大效益) */}
+      {/* 底部策略區 */}
       <div className="grid md:grid-cols-2 gap-8 pt-6 border-t border-slate-200 print-break-inside">
-        
-        {/* 1. 執行三部曲 */}
-        <div className="space-y-4 lg:col-span-1">
+        <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2">
              <RefreshCw className="text-blue-600" size={24} />
              <h3 className="text-xl font-bold text-slate-800">執行三部曲</h3>
           </div>
           
           <div className="space-y-3">
-             <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-blue-200 transition-colors">
-                <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-blue-50 text-blue-600 flex flex-col items-center justify-center font-bold text-xs">
-                   <span className="text-lg">01</span>
-                   <span>本金</span>
-                </div>
+             <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm">
+                <div className="mt-1 min-w-[2.5rem] h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold">01</div>
                 <div>
-                   <h4 className="font-bold text-slate-800 flex items-center gap-2">保留本金</h4>
+                   <h4 className="font-bold text-slate-800 flex items-center gap-2">保留本金 <Wallet size={16} className="text-slate-400"/></h4>
                    <p className="text-sm text-slate-600 mt-1">辦理學貸，將「原本要繳的學費」作為種子基金，按學期投入穩定投資，開始累積資產。</p>
                 </div>
              </div>
-
-             <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-cyan-200 transition-colors">
-                <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-cyan-50 text-cyan-600 flex flex-col items-center justify-center font-bold text-xs">
-                   <span className="text-lg">02</span>
-                   <span>套利</span>
-                </div>
+             <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm">
+                <div className="mt-1 min-w-[2.5rem] h-10 rounded-full bg-cyan-50 text-cyan-600 flex items-center justify-center font-bold">02</div>
                 <div>
-                   <h4 className="font-bold text-slate-800 flex items-center gap-2">以息繳息</h4>
+                   <h4 className="font-bold text-slate-800 flex items-center gap-2">以息繳息 <TrendingUp size={16} className="text-slate-400"/></h4>
                    <p className="text-sm text-slate-600 mt-1">申請緩繳與只繳息，利用配息支付利息，若配息不足則由本金自動扣除，生活零負擔。</p>
                 </div>
              </div>
-
-             <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-indigo-200 transition-colors">
-                <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-indigo-50 text-indigo-600 flex flex-col items-center justify-center font-bold text-xs">
-                   <span className="text-lg">03</span>
-                   <span>攤還</span>
-                </div>
+             <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm">
+                <div className="mt-1 min-w-[2.5rem] h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">03</div>
                 <div>
-                   <h4 className="font-bold text-slate-800 flex items-center gap-2">資產攤還</h4>
+                   <h4 className="font-bold text-slate-800 flex items-center gap-2">資產攤還 <ShieldCheck size={16} className="text-slate-400"/></h4>
                    <p className="text-sm text-slate-600 mt-1">進入本息攤還期後，讓資產池自動扣繳學貸。期滿後，您將驚喜地發現帳戶裡還有一筆可觀的財富。</p>
                 </div>
              </div>
@@ -587,13 +579,11 @@ export const StudentLoanTool = ({ data, setData }: any) => {
            </div>
         </div>
 
-        {/* 2. 專案效益 */}
-        <div className="space-y-4 lg:col-span-1">
+        <div className="space-y-4">
            <div className="flex items-center gap-2 mb-2">
              <Landmark className="text-emerald-600" size={24} />
              <h3 className="text-xl font-bold text-slate-800">專案四大效益</h3>
            </div>
-           
            <div className="grid grid-cols-1 gap-3">
               {[
                 { title: "低成本融資", desc: "學貸利率極低，使您有機會利用利差創造正向收益，解決學費資金壓力。" },
