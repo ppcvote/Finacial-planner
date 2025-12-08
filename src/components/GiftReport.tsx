@@ -4,7 +4,6 @@ import {
   TrendingUp, 
   PiggyBank, 
   Clock, 
-  ShieldCheck, 
   ArrowRight,
   Target,
   Quote
@@ -13,7 +12,6 @@ import {
   ComposedChart, 
   Area, 
   Line, 
-  Bar, 
   CartesianGrid, 
   XAxis, 
   YAxis, 
@@ -40,7 +38,7 @@ const calculateMonthlyIncome = (principal: number, rate: number) => {
 };
 
 // ------------------------------------------------------------------
-// 專屬元件: GiftReport
+// 專屬元件: GiftReport (列印優化版)
 // ------------------------------------------------------------------
 const GiftReport = ({ data }: { data: any }) => {
   // 1. 資料解構與預設值
@@ -48,15 +46,14 @@ const GiftReport = ({ data }: { data: any }) => {
   const loanTerm = Number(data?.loanTerm) || 7;
   const loanRate = Number(data?.loanRate) || 2.8;
   const investReturnRate = Number(data?.investReturnRate) || 6;
-  const isCompoundMode = data?.isCompoundMode || false; // 接收外部傳入的模式
+  const isCompoundMode = data?.isCompoundMode || false; 
 
-  // 進階參數
   const c2Loan = data?.cycle2Loan !== undefined ? Number(data.cycle2Loan) : loanAmount;
   const c2Rate = data?.cycle2Rate !== undefined ? Number(data.cycle2Rate) : loanRate;
   const c3Loan = data?.cycle3Loan !== undefined ? Number(data.cycle3Loan) : loanAmount;
   const c3Rate = data?.cycle3Rate !== undefined ? Number(data.cycle3Rate) : loanRate;
 
-  // 2. 核心計算 (與原工具邏輯一致)
+  // 2. 核心計算 
   const payment1 = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
   const payment2 = calculateMonthlyPayment(c2Loan, c2Rate, loanTerm);
   const payment3 = calculateMonthlyPayment(c3Loan, c3Rate, loanTerm);
@@ -87,7 +84,6 @@ const GiftReport = ({ data }: { data: any }) => {
       phase3_NetOut = payment3 - (income1 + income2 + income3);
   }
 
-  // 總結數據
   const totalYears = loanTerm * 3;
   const monthsPerCycle = loanTerm * 12;
   
@@ -97,7 +93,6 @@ const GiftReport = ({ data }: { data: any }) => {
   const netProfit_Wan = finalAssetValue_Wan - totalProjectCost_Wan;
   const avgMonthlyCost = Math.round((phase1_NetOut + phase2_NetOut + phase3_NetOut) / 3);
   
-  // 一般存錢比較
   const monthlyStandardSaving = Math.round((finalAssetValue_Wan * 10000) / (totalYears * 12));
 
   // 3. 圖表數據生成
@@ -140,8 +135,6 @@ const GiftReport = ({ data }: { data: any }) => {
 
       cumulativeProjectCost += currentYearNetOut * 12;
       
-      // 減少取樣點以優化圖表顯示 (每2年或重要節點)
-      // 但為了Recharts平滑，這裡還是每年推入
       dataArr.push({
         year: `${year}`,
         一般存錢: Math.round(cumulativeStandard / 10000),
@@ -156,17 +149,18 @@ const GiftReport = ({ data }: { data: any }) => {
 
   // --- UI Render ---
   return (
-    <div className="font-sans text-slate-800 space-y-8">
+    // 修改：加入 print:space-y-6 縮小列印時的垂直間距
+    <div className="font-sans text-slate-800 space-y-8 print:space-y-6">
       
       {/* 1. Header: 願景與標題 */}
-      <div className="flex items-center justify-between border-b-2 border-indigo-100 pb-6">
+      <div className="flex items-center justify-between border-b-2 border-indigo-100 pb-6 print:pb-4 print-break-inside">
          <div>
              <div className="flex items-center gap-2 mb-2">
                  <Gift className="text-indigo-600" size={28} />
                  <span className="text-sm font-bold text-indigo-600 tracking-widest uppercase">Wealth Legacy Project</span>
              </div>
-             <h1 className="text-4xl font-black text-slate-900 mb-2">百萬禮物專案</h1>
-             <p className="text-lg text-slate-500 font-medium">給未來的自己與孩子，一份增值 300% 的成年禮</p>
+             <h1 className="text-4xl font-black text-slate-900 mb-2 print:text-3xl">百萬禮物專案</h1>
+             <p className="text-lg text-slate-500 font-medium print:text-base">給未來的自己與孩子，一份增值 300% 的成年禮</p>
          </div>
          <div className="text-right hidden print:block">
              <p className="text-sm text-slate-400">專案代碼</p>
@@ -174,17 +168,17 @@ const GiftReport = ({ data }: { data: any }) => {
          </div>
       </div>
 
-      {/* 2. 核心比較 (The Hook): 做與不做的差別 */}
-      <div className="bg-slate-50 rounded-3xl p-8 border border-slate-200">
+      {/* 2. 核心比較 (The Hook) - 加入 print-break-inside 防止被切斷 */}
+      <div className="bg-slate-50 rounded-3xl p-8 border border-slate-200 print-break-inside print:p-6">
           <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2">
               <Target size={24} className="text-rose-500"/>
-              為何選擇這個專案？ (效益與成本分析)
+              效益成本分析
           </h2>
           
-          <div className="grid grid-cols-2 gap-12">
+          <div className="grid grid-cols-2 gap-12 print:gap-6">
               {/* 左邊：一般存錢 */}
-              <div className="relative p-6 rounded-2xl border-2 border-dashed border-slate-300 bg-white opacity-80">
-                  <div className="absolute -top-3 left-6 bg-slate-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+              <div className="relative p-6 rounded-2xl border-2 border-dashed border-slate-300 bg-white opacity-80 print:p-4">
+                  <div className="absolute -top-3 left-6 bg-slate-500 text-white px-3 py-1 rounded-full text-xs font-bold print:border print:border-slate-300">
                       傳統模式
                   </div>
                   <div className="flex justify-between items-end mb-4">
@@ -207,8 +201,8 @@ const GiftReport = ({ data }: { data: any }) => {
               </div>
 
               {/* 右邊：百萬禮物專案 */}
-              <div className="relative p-6 rounded-2xl border-2 border-indigo-500 bg-white shadow-xl transform scale-105 print:scale-100 print:shadow-none">
-                  <div className="absolute -top-3 left-6 bg-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md">
+              <div className="relative p-6 rounded-2xl border-2 border-indigo-500 bg-white shadow-xl transform scale-105 print:scale-100 print:shadow-none print:p-4 print:border-2">
+                  <div className="absolute -top-3 left-6 bg-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md print:shadow-none">
                       專案模式
                   </div>
                   <div className="flex justify-between items-end mb-4">
@@ -234,8 +228,8 @@ const GiftReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 3. 視覺化圖表: 財富剪刀差 */}
-      <div className="space-y-4">
+      {/* 3. 視覺化圖表 - 加入 print-break-inside */}
+      <div className="space-y-4 print-break-inside">
           <h2 className="text-xl font-bold text-slate-700 flex items-center gap-2">
               <TrendingUp size={24} className="text-indigo-600"/>
               資產成長模擬 ({totalYears}年趨勢)
@@ -258,8 +252,8 @@ const GiftReport = ({ data }: { data: any }) => {
           </p>
       </div>
 
-      {/* 4. 執行路徑 (Roadmap) */}
-      <div>
+      {/* 4. 執行路徑 (Roadmap) - 加入 print-break-inside */}
+      <div className="print-break-inside">
           <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2">
               <ArrowRight size={24} className="text-indigo-600"/>
               執行三部曲
@@ -296,7 +290,7 @@ const GiftReport = ({ data }: { data: any }) => {
               </div>
 
               {/* Phase 3 */}
-              <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-5 rounded-xl text-white relative overflow-hidden shadow-lg">
+              <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-5 rounded-xl text-white relative overflow-hidden shadow-lg print:border print:border-slate-300 print:shadow-none">
                   <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/10 rounded-full flex items-center justify-center">
                       <span className="text-3xl font-black text-white/20 mr-2 mt-2">3</span>
                   </div>
@@ -312,8 +306,8 @@ const GiftReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 5. 顧問總結與行動呼籲 */}
-      <div className="bg-slate-50 p-6 rounded-2xl border-l-4 border-indigo-500 mt-8">
+      {/* 5. 顧問總結 - 加入 print-break-inside */}
+      <div className="bg-slate-50 p-6 rounded-2xl border-l-4 border-indigo-500 mt-8 print-break-inside">
           <div className="flex gap-4">
                <Quote className="text-indigo-300 shrink-0" size={32} />
                <div>
