@@ -6,7 +6,10 @@ import {
   Clock, 
   ArrowRight,
   Target,
-  Quote
+  Quote,
+  ShieldAlert,
+  Banknote,
+  Percent
 } from 'lucide-react';
 import { 
   ComposedChart, 
@@ -38,7 +41,62 @@ const calculateMonthlyIncome = (principal: number, rate: number) => {
 };
 
 // ------------------------------------------------------------------
-// 專屬元件: GiftReport (列印優化版)
+// 子元件: ResultCard (三循環關鍵指標卡片)
+// ------------------------------------------------------------------
+const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmount, isLast = false }: any) => {
+    const colorClass = phase === 1 ? 'text-blue-600' : phase === 2 ? 'text-indigo-600' : 'text-purple-600';
+    const bgClass = phase === 1 ? 'bg-blue-50 border-blue-200' : phase === 2 ? 'bg-indigo-50 border-indigo-200' : 'bg-purple-50 border-purple-200';
+    const badgeClass = phase === 1 ? 'bg-blue-100 text-blue-700' : phase === 2 ? 'bg-indigo-100 text-indigo-700' : 'bg-purple-100 text-purple-700';
+
+    return (
+        <div className={`flex-1 p-4 rounded-xl border ${bgClass} relative`}>
+            {/* 連接箭頭 (非最後一張卡片顯示) */}
+            {!isLast && (
+                <div className="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 bg-white border border-slate-200 rounded-full items-center justify-center text-slate-400">
+                    <ArrowRight size={14} />
+                </div>
+            )}
+            
+            <div className="flex justify-between items-start mb-3">
+                <div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass} mb-1 inline-block`}>
+                        Step 0{phase}
+                    </span>
+                    <h4 className={`font-bold text-lg ${colorClass}`}>{title}</h4>
+                    <p className="text-xs text-slate-500">{subTitle}</p>
+                </div>
+                <div className="text-right">
+                    <p className="text-[10px] text-slate-400">本階段投入</p>
+                    <p className="font-bold text-slate-700">{loanAmount} 萬</p>
+                </div>
+            </div>
+
+            <div className="space-y-2 border-t border-slate-200/50 pt-3">
+                <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500">每月實質負擔</span>
+                    <span className={`font-bold ${netOut > 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
+                        ${Math.round(netOut).toLocaleString()}
+                    </span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500">累積實付成本</span>
+                    <span className="font-bold text-slate-600">
+                        {Math.round(totalOut).toLocaleString()} 萬
+                    </span>
+                </div>
+                <div className="flex justify-between items-center pt-2 mt-1 border-t border-dashed border-slate-300">
+                    <span className="text-slate-600 font-bold">期末資產規模</span>
+                    <span className={`text-xl font-black ${colorClass}`}>
+                        {Math.round(asset).toLocaleString()} <span className="text-xs">萬</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ------------------------------------------------------------------
+// 主元件: GiftReport
 // ------------------------------------------------------------------
 const GiftReport = ({ data }: { data: any }) => {
   // 1. 資料解構與預設值
@@ -85,9 +143,13 @@ const GiftReport = ({ data }: { data: any }) => {
   }
 
   const totalYears = loanTerm * 3;
-  const monthsPerCycle = loanTerm * 12;
   
-  const totalCostRaw = (phase1_NetOut + phase2_NetOut + phase3_NetOut) * monthsPerCycle;
+  // 計算各階段總成本 (萬)
+  const totalCashOut_T0_T7_Wan = Math.round(phase1_NetOut * totalMonthsPerCycle / 10000);
+  const totalCashOut_T7_T14_Wan = Math.round(phase2_NetOut * totalMonthsPerCycle / 10000);
+  const totalCashOut_T14_T21_Wan = Math.round(phase3_NetOut * totalMonthsPerCycle / 10000);
+
+  const totalCostRaw = (phase1_NetOut + phase2_NetOut + phase3_NetOut) * totalMonthsPerCycle;
   const totalProjectCost_Wan = Math.round(totalCostRaw / 10000);
   const finalAssetValue_Wan = phase3_Asset;
   const netProfit_Wan = finalAssetValue_Wan - totalProjectCost_Wan;
@@ -149,7 +211,6 @@ const GiftReport = ({ data }: { data: any }) => {
 
   // --- UI Render ---
   return (
-    // 修改：加入 print:space-y-6 縮小列印時的垂直間距
     <div className="font-sans text-slate-800 space-y-8 print:space-y-6">
       
       {/* 1. Header: 願景與標題 */}
@@ -168,7 +229,7 @@ const GiftReport = ({ data }: { data: any }) => {
          </div>
       </div>
 
-      {/* 2. 核心比較 (The Hook) - 加入 print-break-inside 防止被切斷 */}
+      {/* 2. 核心比較 (The Hook) */}
       <div className="bg-slate-50 rounded-3xl p-8 border border-slate-200 print-break-inside print:p-6">
           <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2">
               <Target size={24} className="text-rose-500"/>
@@ -228,13 +289,39 @@ const GiftReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 3. 視覺化圖表 - 加入 print-break-inside */}
+      {/* 3. 三循環成果關鍵指標 (The Roadmap) - 新增區塊 */}
+      <div className="print-break-inside">
+          <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2">
+              <ArrowRight size={24} className="text-indigo-600"/>
+              執行藍圖 (三階段演進)
+          </h2>
+          <div className="flex flex-col md:flex-row gap-4">
+              <ResultCard 
+                  phase={1} title="累積期" subTitle={`Year 1 - ${loanTerm}`}
+                  loanAmount={loanAmount} netOut={phase1_NetOut}
+                  totalOut={totalCashOut_T0_T7_Wan} asset={phase1_Asset}
+              />
+              <ResultCard 
+                  phase={2} title="成長期" subTitle={`Year ${loanTerm+1} - ${loanTerm*2}`}
+                  loanAmount={c2Loan} netOut={phase2_NetOut}
+                  totalOut={totalCashOut_T0_T7_Wan + totalCashOut_T7_T14_Wan} asset={phase2_Asset}
+              />
+              <ResultCard 
+                  phase={3} title="收割期" subTitle={`Year ${loanTerm*2+1} - ${loanTerm*3}`}
+                  loanAmount={c3Loan} netOut={phase3_NetOut}
+                  totalOut={totalProjectCost_Wan} asset={phase3_Asset}
+                  isLast={true}
+              />
+          </div>
+      </div>
+
+      {/* 4. 視覺化圖表 */}
       <div className="space-y-4 print-break-inside">
           <h2 className="text-xl font-bold text-slate-700 flex items-center gap-2">
               <TrendingUp size={24} className="text-indigo-600"/>
               資產成長模擬 ({totalYears}年趨勢)
           </h2>
-          <div className="h-[320px] w-full border border-slate-100 rounded-2xl p-4 bg-white shadow-sm print:h-[280px]">
+          <div className="h-[300px] w-full border border-slate-100 rounded-2xl p-4 bg-white shadow-sm print:h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -252,62 +339,43 @@ const GiftReport = ({ data }: { data: any }) => {
           </p>
       </div>
 
-      {/* 4. 執行路徑 (Roadmap) - 加入 print-break-inside */}
-      <div className="print-break-inside">
-          <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2">
-              <ArrowRight size={24} className="text-indigo-600"/>
-              執行三部曲
-          </h2>
-          <div className="grid grid-cols-3 gap-4">
-              {/* Phase 1 */}
-              <div className="bg-white p-5 rounded-xl border border-slate-200 relative overflow-hidden">
-                  <div className="absolute -right-4 -top-4 w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center">
-                      <span className="text-3xl font-black text-blue-100 mr-2 mt-2">1</span>
-                  </div>
-                  <div className="relative z-10">
-                      <h3 className="text-blue-600 font-bold text-lg mb-1">累積期</h3>
-                      <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-3">Year 1 - {loanTerm}</p>
-                      <div className="text-sm text-slate-600 space-y-2">
-                          <p>借入第一筆資金 {loanAmount} 萬</p>
-                          <p className="font-medium text-slate-800">資產從 0 變 {phase1_Asset} 萬</p>
-                      </div>
+      {/* 5. 資金防護機制 (Risk & Defense) - 新增區塊 */}
+      <div className="bg-emerald-50 rounded-2xl p-6 border border-emerald-100 print-break-inside">
+          <h3 className="font-bold text-emerald-800 text-lg mb-3 flex items-center gap-2">
+              <ShieldAlert size={20}/> 資金流動性與安心防護
+          </h3>
+          <div className="flex flex-col md:flex-row gap-6">
+              <div className="flex-1 space-y-3">
+                  <p className="text-sm text-emerald-700 leading-relaxed">
+                      本計畫運用「投資型保單」進行資產配置。除了追求資產增值外，也兼顧了資金的流動性需求。若在計畫期間有臨時急用（如購屋頭期款、醫療週轉），無需解約即可調度資金。
+                  </p>
+                  <div className="flex gap-2">
+                      <span className="text-xs font-bold text-white bg-emerald-500 px-2 py-1 rounded">保單貸款</span>
+                      <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-1 rounded border border-emerald-200">緊急預備金功能</span>
                   </div>
               </div>
-
-              {/* Phase 2 */}
-              <div className="bg-white p-5 rounded-xl border border-indigo-200 relative overflow-hidden shadow-sm">
-                  <div className="absolute -right-4 -top-4 w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center">
-                      <span className="text-3xl font-black text-indigo-100 mr-2 mt-2">2</span>
+              <div className="flex-1 bg-white/60 rounded-xl p-4 border border-emerald-100 text-sm space-y-2">
+                  <div className="flex justify-between items-center">
+                      <span className="text-slate-600 flex items-center gap-1"><Banknote size={14}/> 最高借貸成數</span>
+                      <span className="font-bold text-slate-700">保單價值 50%</span>
                   </div>
-                  <div className="relative z-10">
-                      <h3 className="text-indigo-600 font-bold text-lg mb-1">成長期</h3>
-                      <p className="text-xs text-indigo-300 font-bold uppercase tracking-wider mb-3">Year {loanTerm+1} - {loanTerm*2}</p>
-                      <div className="text-sm text-slate-600 space-y-2">
-                          <p>償還後再借 {c2Loan} 萬</p>
-                          <p className="font-medium text-slate-800">資產翻倍至 {phase2_Asset} 萬</p>
-                      </div>
+                  <div className="flex justify-between items-center">
+                      <span className="text-slate-600 flex items-center gap-1"><Percent size={14}/> 借貸利率</span>
+                      <span className="font-bold text-slate-700">約 4% (浮動)</span>
                   </div>
-              </div>
-
-              {/* Phase 3 */}
-              <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-5 rounded-xl text-white relative overflow-hidden shadow-lg print:border print:border-slate-300 print:shadow-none">
-                  <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/10 rounded-full flex items-center justify-center">
-                      <span className="text-3xl font-black text-white/20 mr-2 mt-2">3</span>
-                  </div>
-                  <div className="relative z-10">
-                      <h3 className="text-white font-bold text-lg mb-1">收割期</h3>
-                      <p className="text-xs text-indigo-200 font-bold uppercase tracking-wider mb-3">Year {loanTerm*2+1} - {loanTerm*3}</p>
-                      <div className="text-sm text-indigo-100 space-y-2">
-                          <p>第三筆資金注入</p>
-                          <p className="font-bold text-white text-lg">擁有 {phase3_Asset} 萬資產</p>
-                      </div>
+                  <div className="flex justify-between items-center">
+                      <span className="text-slate-600 flex items-center gap-1"><Clock size={14}/> 還款方式</span>
+                      <span className="font-bold text-slate-700">彈性 (可只繳息)</span>
                   </div>
               </div>
           </div>
+          <p className="text-xs text-emerald-600/70 mt-3 pt-3 border-t border-emerald-200">
+              * 顧問叮嚀：從銀行借貸出來的資金在期滿前屬於槓桿部位，建議保單貸款功能僅作為「緊急預備金」使用，確保計畫完整執行。
+          </p>
       </div>
 
-      {/* 5. 顧問總結 - 加入 print-break-inside */}
-      <div className="bg-slate-50 p-6 rounded-2xl border-l-4 border-indigo-500 mt-8 print-break-inside">
+      {/* 6. 顧問總結 */}
+      <div className="bg-slate-50 p-6 rounded-2xl border-l-4 border-indigo-500 print-break-inside">
           <div className="flex gap-4">
                <Quote className="text-indigo-300 shrink-0" size={32} />
                <div>
