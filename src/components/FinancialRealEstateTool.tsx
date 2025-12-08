@@ -16,8 +16,6 @@ import { 
   ArrowDown
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
-// 假設您已在 '../utils' 中定義了這些計算函數
-// import { calculateMonthlyPayment, calculateMonthlyIncome, calculateRemainingBalance } from '../utils';
 
 // --- 臨時/模擬計算函式 (如果您的 utils 文件丟失，請使用此部分) ---
 const calculateMonthlyPayment = (principal: number, rate: number, years: number) => {
@@ -52,7 +50,7 @@ const calculateRemainingBalance = (principal: number, rate: number, totalYears: 
 // --- 臨時/模擬計算函式 結束 ---
 
 // ------------------------------------------------------------------
-// 核心模組: 金融房產專案 (原始穩定版)
+// 核心模組: 金融房產專案
 // ------------------------------------------------------------------
 
 export const FinancialRealEstateTool = ({ data, setData }: any) => {
@@ -99,7 +97,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   // 原始模式
   const monthlyInvestIncomeFull = calculateMonthlyIncome(loanAmount, investReturnRate);
   const monthlyCashFlowOriginal = monthlyInvestIncomeFull - newLoanMonthlyPayment;
-  const isNegativeCashFlowOriginal = monthlyCashFlowOriginal < 0; // <-- 正確定義
+  const isNegativeCashFlowOriginal = monthlyCashFlowOriginal < 0; 
 
   const totalOutOfPocketOriginal = isNegativeCashFlowOriginal ? Math.abs(monthlyCashFlowOriginal) * 12 * loanTerm : 0;
 
@@ -253,7 +251,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                                             type="number"
                                             min={0}
                                             max={loanAmount}
-                                            step={1}
+                                            step={1} 
                                             value={tempExistingLoanBalance}
                                             onChange={handleExistingBalanceInput}
                                             onBlur={finalizeExistingBalance}
@@ -286,7 +284,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                                             onChange={handleExistingPaymentInput} 
                                             onBlur={finalizeExistingPayment} 
                                             onKeyDown={(e) => e.key === 'Enter' && finalizeExistingPayment()} 
-                                            className="w-24 text-right bg-transparent border-none p-0 font-bold text-orange-700 text-sm focus:ring-0 focus:border-orange-500 focus:bg-orange-50/50 rounded"
+                                            className="w-24 text-right bg-transparent border-none p-0 font-bold text-orange-700 text-sm focus:ring-0 focus:border-orange-500 focus:bg-orange-50/70 rounded"
                                         />
                                     </div>
                                 </div>
@@ -370,7 +368,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                         <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">2. 扣除貸款支出</span><span className="font-mono text-red-500 font-bold">-${Math.round(newLoanMonthlyPayment).toLocaleString()}</span></div>
                         <div className="border-t border-slate-200 my-2"></div>
                         
-                        {isNegativeCashFlowOriginal ? ( // <-- 修正: 判斷是否為負現金流
+                        {isNegativeCashFlowOriginal ? (
                         <div className="text-center animate-pulse-soft">
                             <div className="text-xs text-slate-400 mb-1">每月需自行負擔</div>
                             <div className="text-4xl font-black text-red-500 font-mono">-${Math.abs(Math.round(monthlyCashFlowOriginal)).toLocaleString()}</div>
@@ -398,7 +396,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                             <TrendingUp size={24} /> {isNegativeCashFlowOriginal ? "槓桿置產效益分析" : `總貸款期 (${loanTerm}年) 累積總效益`}
                         </h3>
                         
-                        {isNegativeCashFlowOriginal ? ( // <-- 修正: 判斷是否為負現金流
+                        {isNegativeCashFlowOriginal ? (
                              <div className="text-center h-full flex flex-col justify-center space-y-4">
                                  <div>
                                     <p className="text-slate-500 text-sm font-medium mb-1">
@@ -445,7 +443,9 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
          )}
       </div>
 
+      {/* 底部策略區 (執行三部曲 + 專案四大效益) */}
       <div className="grid md:grid-cols-2 gap-8 pt-6 border-t border-slate-200 print-break-inside">
+        {/* 1. 執行循環 (左側欄) */}
         <div className="space-y-4 lg:col-span-1">
           <div className="flex items-center gap-2 mb-2"><RefreshCw className="text-emerald-600" size={24} /><h3 className="text-xl font-bold text-slate-800">{isRefinanceMode ? "轉增貸致富三步" : "執行三部曲"}</h3></div>
           <div className="space-y-3">
@@ -462,7 +462,18 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                 <div><h4 className="font-bold text-slate-800 flex items-center gap-2">{isRefinanceMode ? "配息減壓" : "自由期 (期滿)"}</h4><p className="text-sm text-slate-600 mt-1">{isRefinanceMode ? "將增貸資金投入穩健標的，利用產生的配息來支付房貸，實現月付金大瘦身。" : "貸款完全清償。此刻起，這筆千萬資產與每月的配息收入完全屬於您，成為真正的被動收入。"}</p></div>
              </div>
           </div>
+          
+         {/* 名言區塊 - 確保在左側欄的 div 內部 */}
+          <div className="mt-6 p-4 bg-slate-800 rounded-xl text-center shadow-lg">
+             <p className="text-slate-300 italic text-sm">
+               {isRefinanceMode 
+                 ? "「房子不只是拿來住的，更是您的提款機。別讓您的資產在牆壁裡睡覺。」"
+                 : "「富人買資產，窮人買負債，中產階級買他們以為是資產的負債。金融房產，是真正的資產。」"}
+             </p>
+          </div>
         </div>
+        
+        {/* 2. 專案效益 */}
         <div className="space-y-4 lg:col-span-1">
            <div className="flex items-center gap-2 mb-2"><Landmark className="text-emerald-600" size={24} /><h3 className="text-xl font-bold text-slate-800">專案四大效益</h3></div>
            <div className="grid grid-cols-1 gap-3">
