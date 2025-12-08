@@ -18,10 +18,6 @@ import {
 import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { calculateMonthlyPayment, calculateMonthlyIncome, calculateRemainingBalance } from '../utils';
 
-// ------------------------------------------------------------------
-// 核心模組: 金融房產專案 (恢復獨立計算版)
-// ------------------------------------------------------------------
-
 export const FinancialRealEstateTool = ({ data, setData }: any) => {
   const safeData = {
     loanAmount: Number(data?.loanAmount) || 1000,
@@ -254,6 +250,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                         <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">1. 每月配息收入</span><span className="font-mono text-emerald-600 font-bold">+${Math.round(monthlyInvestIncomeFull).toLocaleString()}</span></div>
                         <div className="flex justify-between items-center text-sm"><span className="text-slate-600 font-medium">2. 扣除貸款支出</span><span className="font-mono text-red-500 font-bold">-${Math.round(newLoanMonthlyPayment).toLocaleString()}</span></div>
                         <div className="border-t border-slate-200 my-2"></div>
+                        
                         {isNegativeCashFlowOriginal ? (
                         <div className="text-center animate-pulse-soft">
                             <div className="text-xs text-slate-400 mb-1">每月需自行負擔</div>
