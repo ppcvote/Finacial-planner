@@ -1,3 +1,4 @@
+import SplashScreen from './components/SplashScreen';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
@@ -286,7 +287,7 @@ export default function App() {
 
   // --- Render ---
 
-  if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500" size={48} /></div>;
+ if (loading) return <SplashScreen />;
 
   // 1. 未登入狀態 -> 顯示登入頁
   if (!user) {
