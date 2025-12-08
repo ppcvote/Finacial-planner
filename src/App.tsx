@@ -347,6 +347,7 @@ export default function App() {
         isOpen={isReportOpen} 
         onClose={() => setIsReportOpen(false)} 
         user={user} 
+        client={currentClient}
         activeTab={activeTab} 
         data={getCurrentData()} 
       />
