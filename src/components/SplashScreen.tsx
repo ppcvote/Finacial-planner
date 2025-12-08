@@ -1,15 +1,61 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const SplashScreen = () => {
-  const [startAnim, setStartAnim] = useState(false);
+  const blueLineRef = useRef<SVGPathElement>(null);
+  const redLineRef = useRef<SVGPathElement>(null);
+  const purpleLineRef = useRef<SVGPathElement>(null);
+  
+  // 控制各個元素的動畫狀態
+  const [showBlue, setShowBlue] = useState(false);
+  const [showRed, setShowRed] = useState(false);
+  const [showPurple, setShowPurple] = useState(false);
+  const [showText, setShowText] = useState(false);
 
   useEffect(() => {
-    // 啟動動畫
-    setStartAnim(true);
+    // 1. 初始化：設定所有線條的 strokeDasharray 和 strokeDashoffset
+    const paths = [blueLineRef.current, redLineRef.current, purpleLineRef.current];
+    
+    paths.forEach(path => {
+      if (path) {
+        const len = path.getTotalLength();
+        path.style.strokeDasharray = `${len}`;
+        path.style.strokeDashoffset = `${len}`;
+        // 強制瀏覽器重繪 (Reflow)，確保初始狀態被套用
+        path.getBoundingClientRect(); 
+      }
+    });
+
+    // 2. 依照時間軸觸發動畫 (與您的原始 Script 一致)
+    const t1 = setTimeout(() => setShowBlue(true), 200);
+    const t2 = setTimeout(() => setShowRed(true), 800);
+    const t3 = setTimeout(() => setShowPurple(true), 1400);
+    const t4 = setTimeout(() => setShowText(true), 1800);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+    };
   }, []);
 
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#050b14] overflow-hidden font-sans">
+      
+      {/* 定義 CSS 動畫 (scoped styles) */}
+      <style>{`
+        .logo-path {
+          opacity: 0;
+          transition: stroke-dashoffset 1s cubic-bezier(0.25, 1, 0.5, 1), opacity 1s ease-in;
+        }
+        .anim-draw {
+          stroke-dashoffset: 0 !important;
+          opacity: 1 !important;
+        }
+        .glow-blue { filter: drop-shadow(0 0 12px rgba(46, 107, 255, 0.7)); }
+        .glow-red { filter: drop-shadow(0 0 12px rgba(255, 58, 58, 0.7)); }
+      `}</style>
+
       {/* Background Grid */}
       <div 
         className="absolute inset-0 opacity-20 pointer-events-none"
@@ -59,56 +105,41 @@ const SplashScreen = () => {
 
           {/* Blue Curve */}
           <path 
+            ref={blueLineRef}
             d="M 90,40 C 90,160 130,220 242,380" 
             fill="none" 
             stroke="url(#gradBlue)" 
             strokeWidth="14" 
             strokeLinecap="round"
-            className={`transition-all duration-1000 ease-out ${startAnim ? 'opacity-100 stroke-draw' : 'opacity-0'}`}
-            style={{ 
-                strokeDasharray: 450, 
-                strokeDashoffset: startAnim ? 0 : 450,
-                filter: 'drop-shadow(0 0 12px rgba(46, 107, 255, 0.7))',
-                transitionDelay: '200ms'
-            }}
+            className={`logo-path glow-blue ${showBlue ? 'anim-draw' : ''}`}
           />
 
           {/* Red Curve */}
           <path 
+            ref={redLineRef}
             d="M 230,40 C 230,160 190,220 78,380" 
             fill="none" 
             stroke="url(#gradRed)" 
             strokeWidth="14" 
             strokeLinecap="round"
-            className={`transition-all duration-1000 ease-out ${startAnim ? 'opacity-100 stroke-draw' : 'opacity-0'}`}
-            style={{ 
-                strokeDasharray: 450, 
-                strokeDashoffset: startAnim ? 0 : 450,
-                filter: 'drop-shadow(0 0 12px rgba(255, 58, 58, 0.7))',
-                transitionDelay: '800ms'
-            }}
+            className={`logo-path glow-red ${showRed ? 'anim-draw' : ''}`}
           />
 
           {/* Purple Line */}
           <path 
+            ref={purpleLineRef}
             d="M 91.5,314 L 228.5,314" 
             fill="none" 
             stroke="url(#gradPurpleNode)" 
             strokeWidth="10.2" 
             strokeLinecap="round"
-            className={`transition-all duration-800 ease-out ${startAnim ? 'opacity-100 stroke-draw' : 'opacity-0'}`}
-            style={{ 
-                strokeDasharray: 140, 
-                strokeDashoffset: startAnim ? 0 : 140,
-                filter: 'url(#stretched-glow)',
-                transitionDelay: '1400ms'
-            }}
+            className={`logo-path ${showPurple ? 'anim-draw' : ''}`}
+            style={{ filter: 'url(#stretched-glow)', transitionDuration: '0.8s' }}
           />
         </svg>
 
         <div 
-            className={`mt-4 text-center transition-all duration-1000 transform ${startAnim ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-            style={{ transitionDelay: '1800ms' }}
+            className={`mt-4 text-center transition-all duration-1000 transform ${showText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
         >
             <h1 className="text-3xl font-bold text-white tracking-widest m-0 leading-tight font-[system-ui]">
                 ULTRA ADVISOR
