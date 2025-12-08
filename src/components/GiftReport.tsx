@@ -22,7 +22,7 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 
-// --- 重用計算邏輯 (Pure Functions) ---
+// --- 重用計算邏輯 ---
 const calculateMonthlyPayment = (principal: number, rate: number, years: number) => {
   const p = Number(principal) || 0;
   const rVal = Number(rate) || 0;
@@ -41,7 +41,7 @@ const calculateMonthlyIncome = (principal: number, rate: number) => {
 };
 
 // ------------------------------------------------------------------
-// 子元件: ResultCard (三循環關鍵指標卡片) - 列印緊湊版
+// 子元件: ResultCard (三循環關鍵指標卡片)
 // ------------------------------------------------------------------
 const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmount, isLast = false }: any) => {
     const colorClass = phase === 1 ? 'text-blue-600' : phase === 2 ? 'text-indigo-600' : 'text-purple-600';
@@ -49,24 +49,23 @@ const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmoun
     const badgeClass = phase === 1 ? 'bg-blue-100 text-blue-700' : phase === 2 ? 'bg-indigo-100 text-indigo-700' : 'bg-purple-100 text-purple-700';
 
     return (
-        // 修改：print:p-2 縮小內距，print:border 縮小邊框視覺
-        <div className={`flex-1 p-4 print:p-2 rounded-xl border ${bgClass} relative`}>
-            {/* 連接箭頭 (非最後一張卡片顯示) */}
+        // 修改：print:p-3 適度縮小內距，但保持足夠呼吸空間
+        <div className={`flex-1 p-4 print:p-3 rounded-xl border ${bgClass} relative`}>
+            {/* 連接箭頭：print:flex 確保列印時顯示箭頭，增加連貫感 */}
             {!isLast && (
-                <div className="hidden md:flex print:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 print:w-4 print:h-4 bg-white border border-slate-200 rounded-full items-center justify-center text-slate-400">
-                    <ArrowRight size={14} className="print:w-3 print:h-3" />
+                <div className="hidden md:flex print:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 bg-white border border-slate-200 rounded-full items-center justify-center text-slate-400 print:w-5 print:h-5">
+                    <ArrowRight size={14} className="print:w-3 print:h-3"/>
                 </div>
             )}
             
-            {/* 標題區塊：print:mb-1 縮小下方間距 */}
-            <div className="flex justify-between items-start mb-3 print:mb-1">
+            {/* Header */}
+            <div className="flex justify-between items-start mb-3 print:mb-2">
                 <div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass} mb-1 inline-block print:px-1 print:py-0`}>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass} mb-1 inline-block`}>
                         Step 0{phase}
                     </span>
-                    {/* 修改：print:text-sm 縮小標題字級 */}
-                    <h4 className={`font-bold text-lg print:text-sm ${colorClass}`}>{title}</h4>
-                    <p className="text-xs text-slate-500 print:text-[10px]">{subTitle}</p>
+                    <h4 className={`font-bold text-lg print:text-base ${colorClass}`}>{title}</h4>
+                    <p className="text-xs text-slate-500">{subTitle}</p>
                 </div>
                 <div className="text-right">
                     <p className="text-[10px] text-slate-400">本階段投入</p>
@@ -74,24 +73,24 @@ const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmoun
                 </div>
             </div>
 
-            {/* 數據區塊：print:pt-1 縮小上方間距 */}
-            <div className="space-y-2 print:space-y-1 border-t border-slate-200/50 pt-3 print:pt-1">
-                <div className="flex justify-between items-center text-xs print:text-[10px]">
+            {/* Body */}
+            <div className="space-y-2 border-t border-slate-200/50 pt-3 print:pt-2">
+                <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-500">每月實質負擔</span>
                     <span className={`font-bold ${netOut > 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
                         ${Math.round(netOut).toLocaleString()}
                     </span>
                 </div>
-                <div className="flex justify-between items-center text-xs print:text-[10px]">
+                <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-500">累積實付成本</span>
                     <span className="font-bold text-slate-600">
                         {Math.round(totalOut).toLocaleString()} 萬
                     </span>
                 </div>
-                {/* 總結區塊：print:mt-1 縮小間距 */}
-                <div className="flex justify-between items-center pt-2 mt-1 print:pt-1 print:mt-0 border-t border-dashed border-slate-300">
+                {/* Footer */}
+                <div className="flex justify-between items-center pt-2 mt-1 border-t border-dashed border-slate-300">
                     <span className="text-slate-600 font-bold print:text-[10px]">期末資產規模</span>
-                    <span className={`text-xl font-black ${colorClass} print:text-sm`}>
+                    <span className={`text-xl font-black ${colorClass} print:text-base`}>
                         {Math.round(asset).toLocaleString()} <span className="text-xs">萬</span>
                     </span>
                 </div>
@@ -104,7 +103,6 @@ const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmoun
 // 主元件: GiftReport
 // ------------------------------------------------------------------
 const GiftReport = ({ data }: { data: any }) => {
-  // 1. 資料解構與預設值
   const loanAmount = Number(data?.loanAmount) || 100;
   const loanTerm = Number(data?.loanTerm) || 7;
   const loanRate = Number(data?.loanRate) || 2.8;
@@ -116,7 +114,6 @@ const GiftReport = ({ data }: { data: any }) => {
   const c3Loan = data?.cycle3Loan !== undefined ? Number(data.cycle3Loan) : loanAmount;
   const c3Rate = data?.cycle3Rate !== undefined ? Number(data.cycle3Rate) : loanRate;
 
-  // 2. 核心計算 
   const payment1 = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
   const payment2 = calculateMonthlyPayment(c2Loan, c2Rate, loanTerm);
   const payment3 = calculateMonthlyPayment(c3Loan, c3Rate, loanTerm);
@@ -148,11 +145,9 @@ const GiftReport = ({ data }: { data: any }) => {
   }
 
   const totalYears = loanTerm * 3;
-  
   const totalCashOut_T0_T7_Wan = Math.round(phase1_NetOut * totalMonthsPerCycle / 10000);
   const totalCashOut_T7_T14_Wan = Math.round(phase2_NetOut * totalMonthsPerCycle / 10000);
-  const totalCashOut_T14_T21_Wan = Math.round(phase3_NetOut * totalMonthsPerCycle / 10000);
-
+  
   const totalCostRaw = (phase1_NetOut + phase2_NetOut + phase3_NetOut) * totalMonthsPerCycle;
   const totalProjectCost_Wan = Math.round(totalCostRaw / 10000);
   const finalAssetValue_Wan = phase3_Asset;
@@ -161,7 +156,6 @@ const GiftReport = ({ data }: { data: any }) => {
   
   const monthlyStandardSaving = Math.round((finalAssetValue_Wan * 10000) / (totalYears * 12));
 
-  // 3. 圖表數據生成
   const generateChartData = () => {
     const dataArr = [];
     let cumulativeStandard = 0;
@@ -213,13 +207,11 @@ const GiftReport = ({ data }: { data: any }) => {
 
   const chartData = generateChartData();
 
-  // --- UI Render ---
   return (
-    // 修改：print:space-y-4 讓區塊間距更緊密
-    <div className="font-sans text-slate-800 space-y-8 print:space-y-4">
+    <div className="font-sans text-slate-800 space-y-8 print:space-y-6">
       
-      {/* 1. Header (Cover Page 已經有大標題，這裡可以縮小或隱藏，視需求而定，目前保留但縮小間距) */}
-      <div className="flex items-center justify-between border-b-2 border-indigo-100 pb-6 print:pb-2 print-break-inside">
+      {/* 1. Header (Cover Page 已有大標題，這裡作為內容頁 Header) */}
+      <div className="flex items-center justify-between border-b-2 border-indigo-100 pb-6 print:pb-3 print-break-inside">
          <div>
              <div className="flex items-center gap-2 mb-2">
                  <Gift className="text-indigo-600" size={28} />
@@ -234,7 +226,7 @@ const GiftReport = ({ data }: { data: any }) => {
          </div>
       </div>
 
-      {/* 2. 核心比較 (The Hook) - print:p-4 縮小內距 */}
+      {/* 2. 核心比較 (The Hook) */}
       <div className="bg-slate-50 rounded-3xl p-8 border border-slate-200 print-break-inside print:p-4">
           <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2 print:text-base print:mb-3">
               <Target size={24} className="text-rose-500 print:w-5 print:h-5"/>
@@ -251,7 +243,7 @@ const GiftReport = ({ data }: { data: any }) => {
                       <div className="text-slate-500 font-bold print:text-xs">目標累積</div>
                       <div className="text-2xl font-black text-slate-600 print:text-lg">{finalAssetValue_Wan} 萬</div>
                   </div>
-                  <div className="space-y-4 print:space-y-2">
+                  <div className="space-y-4 print:space-y-1">
                       <div className="flex justify-between items-center text-sm print:text-xs">
                            <span>準備本金</span>
                            <span className="font-bold text-slate-700">{finalAssetValue_Wan} 萬</span>
@@ -260,7 +252,7 @@ const GiftReport = ({ data }: { data: any }) => {
                            <span>每月負擔</span>
                            <span className="font-bold text-slate-700">${monthlyStandardSaving.toLocaleString()}</span>
                       </div>
-                      <div className="pt-4 border-t border-slate-100 mt-2 print:mt-1 print:pt-2">
+                      <div className="pt-4 border-t border-slate-100 mt-2 print:mt-1 print:pt-1">
                            <div className="text-center text-slate-400 text-sm font-medium print:text-[10px]">完全依靠勞力存錢</div>
                       </div>
                   </div>
@@ -275,7 +267,7 @@ const GiftReport = ({ data }: { data: any }) => {
                       <div className="text-indigo-600 font-bold print:text-xs">目標累積</div>
                       <div className="text-3xl font-black text-indigo-700 print:text-lg">{finalAssetValue_Wan} 萬</div>
                   </div>
-                  <div className="space-y-4 print:space-y-2">
+                  <div className="space-y-4 print:space-y-1">
                       <div className="flex justify-between items-center text-sm print:text-xs">
                            <span className="text-slate-600">實付成本</span>
                            <span className="font-bold text-indigo-700">{totalProjectCost_Wan} 萬 <span className="text-xs text-rose-500 ml-1">(-{finalAssetValue_Wan - totalProjectCost_Wan}萬)</span></span>
@@ -284,7 +276,7 @@ const GiftReport = ({ data }: { data: any }) => {
                            <span className="text-slate-600">每月負擔</span>
                            <span className="font-bold text-indigo-700">${avgMonthlyCost.toLocaleString()} <span className="text-xs text-green-600 ml-1">(省 {Math.round(monthlyStandardSaving - avgMonthlyCost).toLocaleString()})</span></span>
                       </div>
-                      <div className="pt-4 border-t border-indigo-50 mt-2 print:mt-1 print:pt-2">
+                      <div className="pt-4 border-t border-indigo-50 mt-2 print:mt-1 print:pt-1">
                            <div className="text-center text-indigo-600 text-sm font-bold flex items-center justify-center gap-2 print:text-[10px]">
                                <TrendingUp size={16} className="print:w-3 print:h-3"/> 獲利空間 {Math.round((netProfit_Wan / totalProjectCost_Wan) * 100)}%
                            </div>
@@ -300,8 +292,9 @@ const GiftReport = ({ data }: { data: any }) => {
               <ArrowRight size={24} className="text-indigo-600 print:w-5 print:h-5"/>
               執行藍圖 (三階段演進)
           </h2>
-          {/* print:gap-2 讓卡片更緊密 */}
-          <div className="flex flex-col md:flex-row gap-4 print:gap-2">
+          
+          {/* 修改重點：print:flex-row 強制水平排列 */}
+          <div className="flex flex-col md:flex-row gap-4 print:flex-row print:gap-3">
               <ResultCard 
                   phase={1} title="累積期" subTitle={`Year 1 - ${loanTerm}`}
                   loanAmount={loanAmount} netOut={phase1_NetOut}
@@ -321,14 +314,14 @@ const GiftReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 4. 視覺化圖表 - 放在卡片下方 */}
+      {/* 4. 視覺化圖表 */}
       <div className="space-y-4 print-break-inside">
           <h2 className="text-xl font-bold text-slate-700 flex items-center gap-2 print:text-base print:mb-2">
               <TrendingUp size={24} className="text-indigo-600 print:w-5 print:h-5"/>
               資產成長模擬 ({totalYears}年趨勢)
           </h2>
-          {/* print:h-[200px] 縮小圖表高度，確保擠進第二頁 */}
-          <div className="h-[300px] w-full border border-slate-100 rounded-2xl p-4 bg-white shadow-sm print:h-[200px] print:p-2">
+          {/* 修改：高度設為 280px，不需太小，因為卡片已經並排省下很多空間 */}
+          <div className="h-[320px] w-full border border-slate-100 rounded-2xl p-4 bg-white shadow-sm print:h-[280px] print:p-2">
               <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -343,10 +336,10 @@ const GiftReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 強制分頁點：確保之後的內容（風險與結語）從第三頁開始 */}
-      <div style={{ pageBreakBefore: 'always' }} className="print:block hidden h-0"></div>
+      {/* 強制分頁點：確保第三頁從這裡開始 */}
+      <div className="hidden print:block break-before-page"></div>
 
-      {/* 5. 資金防護機制 (Risk & Defense) - 放在第三頁 */}
+      {/* 5. 資金防護機制 (Risk & Defense) - 第三頁內容 */}
       <div className="bg-emerald-50 rounded-2xl p-6 border border-emerald-100 print-break-inside print:mt-8">
           <h3 className="font-bold text-emerald-800 text-lg mb-3 flex items-center gap-2">
               <ShieldAlert size={20}/> 資金流動性與安心防護
