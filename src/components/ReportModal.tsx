@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { FileBarChart, ArrowUpFromLine, X, CheckCircle2, User, Calendar, PenTool, Phone, Mail, ShieldAlert } from 'lucide-react';
+import { createPortal } from 'react-dom'; // 引入 Portal
+import { FileBarChart, ArrowUpFromLine, X, CheckCircle2, User, Calendar, PenTool, Phone, Mail, ShieldCheck } from 'lucide-react';
 import { 
-  BarChart, AreaChart, Bar, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, ComposedChart, Area, Line 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, ComposedChart, Line 
 } from 'recharts';
 import { calculateMonthlyPayment, calculateMonthlyIncome, calculateRemainingBalance } from '../utils';
 
 // ------------------------------------------------------------------
-// Report Component (專業建議書引擎 V2.0)
+// Report Component (專業建議書引擎 V3.0 - Portal 版)
 // ------------------------------------------------------------------
 
 const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) => {
@@ -27,38 +28,40 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
   // --- 報表內容生成邏輯 (保持不變) ---
   let reportContent = { title: '', mindMap: [] as any[], table: [] as any[], highlights: [] as any[], chartData: [] as any[], chartType: 'composed' };
 
+  // ... (省略中間重複的計算邏輯，為節省篇幅，請確保這段計算邏輯與前一版相同) ...
+  // *為了確保功能完整，我將重新貼上計算邏輯部分*
   if (activeTab === 'gift') {
     const loan = data.loanAmount;
     const monthlyLoanPayment = calculateMonthlyPayment(loan, data.loanRate, data.loanTerm);
     const monthlyInvestIncomeSingle = calculateMonthlyIncome(loan, data.investReturnRate);
     const phase1_NetOut = monthlyLoanPayment - monthlyInvestIncomeSingle;
-    const standardTotalCost = 3000000; 
-    const standardMonthlySaving = standardTotalCost / (15 * 12); 
-
+    
+    // 修正：計算邏輯與 MillionDollarGiftTool 一致
     const chartData = [];
     let cumulativeStandard = 0;
     let cumulativeProjectCost = 0;
-    let projectAssetValue = 0;
+    const standardMonthlySaving = (loan * 3 * 10000) / (15 * 12); 
     const phase2_NetOut = monthlyLoanPayment - (monthlyInvestIncomeSingle * 2);
     const phase3_NetOut = monthlyLoanPayment - (monthlyInvestIncomeSingle * 3);
 
     for (let year = 1; year <= 15; year++) {
       cumulativeStandard += standardMonthlySaving * 12;
+      let assetVal = 0;
       if (year <= 7) {
         cumulativeProjectCost += phase1_NetOut * 12;
-        projectAssetValue = loan * 10000;
+        assetVal = loan;
       } else if (year <= 14) {
         cumulativeProjectCost += phase2_NetOut * 12;
-        projectAssetValue = loan * 2 * 10000;
+        assetVal = loan * 2;
       } else {
         cumulativeProjectCost += phase3_NetOut * 12; 
-        projectAssetValue = loan * 3 * 10000;
+        assetVal = loan * 3;
       }
       chartData.push({
         year: `第${year}年`,
         一般存錢成本: Math.round(cumulativeStandard / 10000),
         專案實付成本: Math.round(cumulativeProjectCost / 10000),
-        專案持有資產: Math.round(projectAssetValue / 10000),
+        專案持有資產: assetVal,
       });
     }
 
@@ -68,13 +71,13 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
         { label: '核心策略', value: '以息養貸' },
         { label: '投入資源', value: `信貸 ${loan} 萬` },
         { label: '時間槓桿', value: `15 年循環` },
-        { label: '預期成果', value: `資產 300 萬` },
+        { label: '預期成果', value: `資產 ${loan*3} 萬` },
         { label: '人生意義', value: '第一桶金' }
       ],
       table: [
-        { label: '第 1-7 年', col1: '啟動期 (100萬)', col2: '建立信用與資產' },
-        { label: '第 8-14 年', col1: '循環期 (200萬)', col2: '資產翻倍' },
-        { label: '第 15 年', col1: '收割期 (300萬)', col2: '配息完全覆蓋' },
+        { label: '第 1-7 年', col1: '啟動期', col2: `資產 ${loan} 萬` },
+        { label: '第 8-14 年', col1: '循環期', col2: `資產 ${loan*2} 萬` },
+        { label: '第 15 年', col1: '收割期', col2: `資產 ${loan*3} 萬` },
       ],
       highlights: [
         `每月僅需負擔約 $${Math.round(phase1_NetOut).toLocaleString()}，比一般存錢更輕鬆。`,
@@ -100,8 +103,8 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
       const remainingLoan = calculateRemainingBalance(loan, data.loanRate, data.loanTerm, year);
       const assetEquity = (loan * 10000) - remainingLoan;
       const financialTotalWealth = assetEquity + cumulativeNetIncome;
-      const step = data.loanTerm > 20 ? 3 : 1; 
-      if (year === 1 || year % step === 0 || year === data.loanTerm) {
+      // 減少數據點以利圖表顯示，每2年一點
+      if (year === 1 || year % 2 === 0 || year === data.loanTerm) {
          chartData.push({ year: `第${year}年`, 總資產價值: Math.round(financialTotalWealth / 10000), 剩餘貸款: Math.round(remainingLoan / 10000) });
       }
     }
@@ -140,6 +143,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
      const totalDuration = data.gracePeriod + data.interestOnlyPeriod + data.years;
      let investmentValue = data.loanAmount * 10000;
      let remainingLoan = data.loanAmount * 10000;
+     // 簡化模擬
      for (let year = 1; year <= totalDuration + 2; year++) { 
         investmentValue = investmentValue * (1 + data.investReturnRate / 100);
         if (year <= data.gracePeriod + data.interestOnlyPeriod) remainingLoan = data.loanAmount * 10000;
@@ -185,14 +189,17 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
         if (year <= data.activeYears) activeInvestment = (activeInvestment + data.monthlySaving * 12) * (1 + data.investReturnRate / 100);
         else activeInvestment = activeInvestment * (1 + data.investReturnRate / 100);
         
-        chartData.push({
-            year: `第${year}年`,
-            消極存錢: Math.round(passiveAccumulation / 10000),
-            積極存錢: Math.round(activeInvestment / 10000),
-        });
+        // 減少數據點每2年
+        if(year % 2 === 0) {
+            chartData.push({
+                year: `第${year}年`,
+                消極存錢: Math.round(passiveAccumulation / 10000),
+                積極存錢: Math.round(activeInvestment / 10000),
+            });
+        }
     }
 
-    const finalAsset = Math.round(chartData[39].積極存錢);
+    const finalAsset = Math.round(activeInvestment / 10000);
     reportContent = {
       title: '超積極存錢法',
       mindMap: [
@@ -219,11 +226,15 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
   } else if (activeTab === 'car') {
     const cycles = [];
     let policyPrincipal = data.carPrice * 1; 
-    const loanAmount = data.carPrice - 20;
-    const loanMonthlyPayment = loanAmount * (14500/80); 
+    const loanAmount = data.carPrice;
+    const loanMonthlyPayment = calculateMonthlyPayment(loanAmount, data.loanRate, data.loanTerm);
+
     for(let i=1; i<=3; i++) {
+        // 修正後的邏輯
+        let targetCarPrice = i === 1 ? data.carPrice : (i === 2 ? (data.carPrice2 || policyPrincipal) : (data.carPrice3 || policyPrincipal));
         const monthlyDividend = (policyPrincipal * 10000 * (data.investReturnRate/100)) / 12;
         const netMonthlyPayment = loanMonthlyPayment - monthlyDividend;
+        
         cycles.push({
             cycle: `第 ${i} 台車`,
             principal: Math.round(policyPrincipal),
@@ -231,9 +242,13 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
             originalPay: Math.round(loanMonthlyPayment),
             netPay: Math.round(netMonthlyPayment)
         });
-        const resaleValue = data.carPrice * (data.resaleRate/100);
-        const surplus = resaleValue - 20;
-        policyPrincipal += surplus;
+
+        // 模擬資產成長
+        const residualValue = targetCarPrice * (data.residualRate / 100);
+        // 簡化：假設賣車還貸後淨值
+        const remainingLoan = calculateRemainingBalance(targetCarPrice, data.loanRate, data.loanTerm, data.cycleYears);
+        const netCash = (residualValue * 10000) - remainingLoan;
+        policyPrincipal = policyPrincipal + (netCash/10000);
     }
 
     reportContent = {
@@ -260,12 +275,10 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
       chartType: 'composed_car'
     };
   } else if (activeTab === 'reservoir') {
-    // 數據生成與 BigSmallReservoirTool.tsx 保持一致
     const chartData = [];
-    let smallReservoir = 0; 
-    let totalDividendsReceived = 0;
-
-    // 加入起始點 0
+    const annualDividend = data.initialCapital * (data.dividendRate / 100);
+    let reinvestedTotal = 0; 
+    
     chartData.push({
         year: 0,
         大水庫本金: data.initialCapital,
@@ -273,17 +286,13 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
     });
 
     for (let year = 1; year <= data.years + 5; year++) {
-      const annualDividend = data.initialCapital * (data.dividendRate / 100);
-      if (year <= data.years) {
-          smallReservoir = (smallReservoir + annualDividend) * (1 + data.reinvestRate / 100);
-          totalDividendsReceived += annualDividend;
-      } else {
-          smallReservoir = smallReservoir * (1 + data.reinvestRate / 100);
-      }
+      if (year <= data.years) reinvestedTotal = (reinvestedTotal + annualDividend) * (1 + data.reinvestRate / 100);
+      else reinvestedTotal = reinvestedTotal * (1 + data.reinvestRate / 100);
+      
       chartData.push({
         year: `第${year}年`,
         大水庫本金: data.initialCapital,
-        小水庫累積: Math.round(smallReservoir),
+        小水庫累積: Math.round(reinvestedTotal),
       });
     }
 
@@ -318,7 +327,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
      const monthlyRate = data.pensionReturnRate / 100 / 12;
      const pensionTotal = monthlyContribution * ((Math.pow(1 + monthlyRate, monthsToRetire) - 1) / monthlyRate);
      const pensionMonthly = pensionTotal / 240; 
-     const gap = data.desiredMonthlyIncome - (laborInsMonthly + pensionMonthly);
+     const gap = Math.max(0, data.desiredMonthlyIncome - (laborInsMonthly + pensionMonthly));
 
      reportContent = {
       title: '退休缺口試算',
@@ -350,7 +359,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
   } else if (activeTab === 'tax') {
      const exemption = 1333; 
      const deductionSpouse = data.spouse ? 553 : 0;
-     const deductionChildren = (data.children * 56) + (data.minorYearsTotal * 56); // 修正子女扣除額
+     const deductionChildren = (data.children * 56) + (data.minorYearsTotal * 56);
      const deductionParents = data.parents * 138;
      const deductionFuneral = 138; 
      const totalDeductions = exemption + deductionSpouse + deductionChildren + deductionParents + deductionFuneral;
@@ -359,9 +368,9 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
      const plannedAssets = Math.max(0, totalAssets - data.insurancePlan);
      const netEstatePlanned = Math.max(0, plannedAssets - totalDeductions);
      const calculateTax = (netEstate: number) => {
-        if (netEstate <= 5000) return netEstate * 0.10;
-        if (netEstate <= 10000) return netEstate * 0.15 - 250;
-        return netEstate * 0.20 - 750;
+        if (netEstate <= 5621) return netEstate * 0.10;
+        if (netEstate <= 11242) return netEstate * 0.15 - 281.05;
+        return netEstate * 0.20 - 843.15;
      };
      const taxRaw = calculateTax(netEstateRaw);
      const taxPlanned = calculateTax(netEstatePlanned);
@@ -400,18 +409,31 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
       setTimeout(() => {
           window.print();
           setShowNoteInput(true);
-      }, 500); // 增加延遲確保渲染完成
+      }, 500);
   };
 
-  return (
-    <div className="fixed inset-0 z-[60] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" id="report-modal-overlay">
+  // 決定 React Portal 的掛載點 (直接掛在 body 下)
+  // 這能解決「父層 overflow 導致列印空白」的問題
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm overflow-y-auto no-scroll-print" id="report-modal-root">
+      {/* 注入列印專用樣式 */}
       <style>{`
         @media print {
           @page { size: A4; margin: 0; }
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          /* 隱藏所有非報表內容 */
-          body > *:not(#report-modal-overlay) { display: none !important; }
-          #report-modal-overlay { 
+          body { 
+             margin: 0; 
+             padding: 0; 
+             -webkit-print-color-adjust: exact !important; 
+             print-color-adjust: exact !important; 
+             background: white !important;
+             overflow: visible !important;
+          }
+          
+          /* 隱藏 App 的所有內容 */
+          #root, .toast-container { display: none !important; }
+          
+          /* 顯示 Report Portal */
+          #report-modal-root { 
             position: absolute !important; 
             top: 0 !important; 
             left: 0 !important; 
@@ -421,7 +443,9 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
             padding: 0 !important; 
             overflow: visible !important;
             display: block !important;
+            z-index: 99999 !important;
           }
+          
           .no-print { display: none !important; }
           
           /* 報表頁面設定 */
@@ -433,25 +457,23 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
              background: white; 
              box-shadow: none;
              position: relative;
+             page-break-after: always; /* 強制分頁 */
           }
           
-          /* 強制分頁：封面頁後 */
-          .cover-page { page-break-after: always; }
-          
-          /* 避免內容被切斷 */
+          .print-page:last-child { page-break-after: auto; }
           .print-break-inside { break-inside: avoid; }
         }
       `}</style>
 
-      <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col relative print:w-full print:max-w-none print:max-h-none print:shadow-none print:rounded-none print:overflow-visible">
+      <div className="bg-white rounded-xl w-full max-w-4xl shadow-2xl flex flex-col relative print:w-full print:max-w-none print:shadow-none print:rounded-none">
         
         {/* Controls (No Print) */}
-        <div className="sticky top-0 z-50 bg-white border-b border-slate-200 p-4 flex justify-between items-center no-print">
+        <div className="sticky top-0 z-50 bg-white border-b border-slate-200 p-4 flex justify-between items-center no-print rounded-t-xl">
            <h3 className="font-bold text-slate-700 flex items-center gap-2">
                <FileBarChart size={20} className="text-blue-600"/> 策略建議書預覽
            </h3>
            <div className="flex gap-2">
-               <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-colors">
+               <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-colors shadow-sm">
                    <ArrowUpFromLine size={18}/> 列印建議書
                </button>
                <button onClick={onClose} className="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-lg transition-colors">
@@ -464,37 +486,42 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
         <div className="print-content">
 
             {/* === 第一頁：封面 (Cover Page) === */}
-            <div className="print-page cover-page flex flex-col justify-between bg-gradient-to-br from-slate-50 to-white">
-                <div className="pt-20 px-10">
-                    <p className="text-blue-600 font-bold tracking-widest text-sm mb-4">WEALTH MANAGEMENT PROPOSAL</p>
-                    <h1 className="text-6xl font-black text-slate-900 leading-tight mb-6">{reportContent.title}</h1>
-                    <div className="h-2 w-32 bg-blue-600 mb-10"></div>
-                    <p className="text-2xl text-slate-600 font-medium">專屬資產配置戰略規劃書</p>
+            <div className="print-page cover-page flex flex-col justify-between bg-white relative overflow-hidden">
+                {/* 裝飾背景 */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-bl-[100%] z-0"></div>
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-slate-50 rounded-tr-[100%] z-0"></div>
+
+                <div className="pt-24 px-12 relative z-10">
+                    <p className="text-blue-600 font-bold tracking-[0.2em] text-sm mb-6 uppercase">Exclusive Financial Proposal</p>
+                    <h1 className="text-5xl font-black text-slate-900 leading-tight mb-8 tracking-tight">{reportContent.title}</h1>
+                    <div className="h-1.5 w-24 bg-blue-600 mb-8 rounded-full"></div>
+                    <p className="text-2xl text-slate-500 font-medium">專屬資產配置戰略規劃書</p>
                 </div>
 
-                <div className="flex-1 flex items-center justify-center opacity-10">
-                     {/* 背景裝飾圖示 */}
-                     <FileBarChart size={300} className="text-slate-900"/>
+                <div className="flex-1 flex items-center justify-center opacity-5 grayscale relative z-10">
+                     <ShieldCheck size={350} strokeWidth={0.5}/>
                 </div>
 
-                <div className="pb-20 px-10">
-                    <div className="grid grid-cols-2 gap-10 border-t-2 border-slate-200 pt-10">
+                <div className="pb-24 px-12 relative z-10">
+                    <div className="grid grid-cols-2 gap-12 border-t border-slate-200 pt-12">
                         <div>
-                            <p className="text-sm text-slate-400 font-bold mb-2 uppercase">Prepared For</p>
-                            <h2 className="text-3xl font-bold text-slate-800 flex items-center gap-2">
-                                <User className="text-blue-600"/> {client?.name || '尊榮貴賓'}
+                            <p className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider">Prepared For</p>
+                            <h2 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
+                                <User className="text-blue-600" size={28}/> {client?.name || '尊榮貴賓'}
                             </h2>
-                            <p className="text-slate-500 mt-1">{dateStr}</p>
+                            <p className="text-slate-500 mt-2 flex items-center gap-2">
+                                <Calendar size={14}/> {dateStr}
+                            </p>
                         </div>
                         <div>
-                            <p className="text-sm text-slate-400 font-bold mb-2 uppercase">Advisor</p>
+                            <p className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider">Financial Advisor</p>
                             <h2 className="text-2xl font-bold text-slate-800">{user?.displayName || '專業理財顧問'}</h2>
                             {user?.email && (
-                                <p className="text-slate-500 mt-1 flex items-center gap-2">
+                                <p className="text-slate-500 mt-2 flex items-center gap-2 text-sm">
                                     <Mail size={14}/> {user.email}
                                 </p>
                             )}
-                            <p className="text-slate-500 mt-1 flex items-center gap-2">
+                            <p className="text-slate-500 mt-1 flex items-center gap-2 text-sm">
                                 <Phone size={14}/> 09xx-xxx-xxx
                             </p>
                         </div>
@@ -505,61 +532,82 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
             {/* === 第二頁：內容分析 (Content Page) === */}
             <div className="print-page">
                 
-                {/* Header (每頁重複) */}
-                <div className="flex justify-between items-center border-b border-slate-200 pb-4 mb-8">
-                    <span className="text-xs font-bold text-slate-400">ULTRA ADVISOR • {reportContent.title}</span>
-                    <span className="text-xs font-bold text-slate-400">Page 2</span>
+                {/* Header */}
+                <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-10">
+                    <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Ultra Advisor System</span>
+                    <span className="text-[10px] font-bold text-slate-400">Page 2</span>
                 </div>
 
-                {/* 1. 核心數據 Mind Map */}
+                {/* 1. 核心數據 (Cards) */}
                 <div className="mb-10">
-                    <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                        <CheckCircle2 className="text-blue-600" size={20}/> 核心戰略指標
+                    <h3 className="text-lg font-bold text-slate-800 mb-5 flex items-center gap-2">
+                        <div className="w-1 h-6 bg-blue-600 rounded-full"></div>
+                        核心戰略指標
                     </h3>
                     <div className="grid grid-cols-5 gap-3">
                         {reportContent.mindMap.map((item, idx) => (
-                            <div key={idx} className="bg-slate-50 p-3 rounded-lg border border-slate-100 text-center">
-                                <span className="text-[10px] font-bold text-slate-400 block mb-1">{item.label}</span>
+                            <div key={idx} className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+                                <span className="text-[10px] font-bold text-slate-400 block mb-2 uppercase tracking-wide">{item.label}</span>
                                 <span className="font-bold text-slate-800 text-sm block truncate">{item.value}</span>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                {/* 2. 圖表區域 (Chart) - 關閉動畫以利列印 */}
+                {/* 2. 圖表區域 (Chart) - Animation Disabled */}
                 <div className="mb-10 print-break-inside">
-                    <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                        <CheckCircle2 className="text-emerald-500" size={20}/> 資產趨勢模擬
+                    <h3 className="text-lg font-bold text-slate-800 mb-5 flex items-center gap-2">
+                        <div className="w-1 h-6 bg-emerald-500 rounded-full"></div>
+                        資產趨勢模擬
                     </h3>
-                    <div className="h-[300px] w-full border border-slate-200 rounded-xl p-4 bg-white">
+                    <div className="h-[320px] w-full border border-slate-100 rounded-2xl p-6 bg-white shadow-sm">
                         <ResponsiveContainer width="100%" height="100%">
                             {reportContent.chartType === 'area_reservoir' ? (
                                <AreaChart data={reportContent.chartData}>
-                                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                  <XAxis dataKey="year" tick={{fontSize: 10}} />
-                                  <YAxis tick={{fontSize: 10}} width={40} />
-                                  <Legend wrapperStyle={{fontSize: '10px'}}/>
-                                  <Area type="monotone" dataKey="大水庫本金" stackId="1" stroke="#0891b2" fill="#0891b2" fillOpacity={0.6} isAnimationActive={false} />
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9"/>
+                                  <XAxis dataKey="year" tick={{fontSize: 10, fill: '#94a3b8'}} axisLine={false} tickLine={false} />
+                                  <YAxis tick={{fontSize: 10, fill: '#94a3b8'}} width={35} axisLine={false} tickLine={false} />
+                                  <Legend wrapperStyle={{fontSize: '10px', paddingTop: '10px'}}/>
+                                  <Area type="monotone" dataKey="大水庫本金" stackId="1" stroke="#0891b2" fill="#0891b2" fillOpacity={0.1} isAnimationActive={false} />
                                   <Area type="monotone" dataKey="小水庫累積" stackId="1" stroke="#fbbf24" fill="#fbbf24" fillOpacity={0.6} isAnimationActive={false} />
                                </AreaChart>
                             ) : reportContent.chartType === 'composed_gift' ? (
                                <ComposedChart data={reportContent.chartData}>
-                                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                  <XAxis dataKey="year" tick={{fontSize: 10}} />
-                                  <YAxis tick={{fontSize: 10}} width={40} />
-                                  <Legend wrapperStyle={{fontSize: '10px'}}/>
-                                  <Area type="monotone" dataKey="專案持有資產" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} isAnimationActive={false}/>
-                                  <Line type="monotone" dataKey="專案實付成本" stroke="#f59e0b" strokeWidth={2} isAnimationActive={false}/>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9"/>
+                                  <XAxis dataKey="year" tick={{fontSize: 10, fill: '#94a3b8'}} axisLine={false} tickLine={false} />
+                                  <YAxis tick={{fontSize: 10, fill: '#94a3b8'}} width={35} axisLine={false} tickLine={false} />
+                                  <Legend wrapperStyle={{fontSize: '10px', paddingTop: '10px'}}/>
+                                  <Area type="monotone" dataKey="專案持有資產" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} isAnimationActive={false}/>
+                                  <Line type="monotone" dataKey="專案實付成本" stroke="#f59e0b" strokeWidth={2} isAnimationActive={false} dot={false}/>
                                </ComposedChart>
+                            ) : reportContent.chartType === 'composed_car' ? (
+                               <ComposedChart data={reportContent.chartData}>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9"/>
+                                  <XAxis dataKey="cycle" tick={{fontSize: 10, fill: '#94a3b8'}} axisLine={false} tickLine={false} />
+                                  <YAxis tick={{fontSize: 10, fill: '#94a3b8'}} width={35} axisLine={false} tickLine={false} />
+                                  <Legend wrapperStyle={{fontSize: '10px', paddingTop: '10px'}}/>
+                                  <Bar dataKey="netPay" name="實際月付金" fill="#f97316" barSize={40} isAnimationActive={false} />
+                                  <Line type="monotone" dataKey="originalPay" name="原車貸月付" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" isAnimationActive={false} dot={false}/>
+                               </ComposedChart>
+                            ) : reportContent.chartType === 'bar_pension' || reportContent.chartType === 'bar_tax' ? (
+                               <BarChart data={reportContent.chartData} layout="vertical">
+                                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9"/>
+                                  <XAxis type="number" hide />
+                                  <YAxis dataKey="name" type="category" width={80} tick={{fontSize: 11, fontWeight: 'bold', fill:'#475569'}} axisLine={false} tickLine={false} />
+                                  <Legend wrapperStyle={{fontSize: '10px', paddingTop: '10px'}}/>
+                                  <Bar dataKey="value" fill="#3b82f6" barSize={30} radius={[0, 4, 4, 0]} isAnimationActive={false} label={{ position: 'right', fill: '#64748b', fontSize: 10, formatter: (val: any) => `$${val.toLocaleString()}` }}>
+                                    {/* 這裡需要手動 map 顏色，但 Recharts Bar 不支援直接 children map cell, 需在 data 中帶入 fill */}
+                                  </Bar>
+                               </BarChart>
                             ) : (
-                                // 通用圖表Fallback
+                                // 通用圖表
                                 <ComposedChart data={reportContent.chartData}>
-                                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                  <XAxis dataKey="year" tick={{fontSize: 10}} />
-                                  <YAxis tick={{fontSize: 10}} width={40} />
-                                  <Legend wrapperStyle={{fontSize: '10px'}}/>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9"/>
+                                  <XAxis dataKey="year" tick={{fontSize: 10, fill: '#94a3b8'}} axisLine={false} tickLine={false} />
+                                  <YAxis tick={{fontSize: 10, fill: '#94a3b8'}} width={35} axisLine={false} tickLine={false} />
+                                  <Legend wrapperStyle={{fontSize: '10px', paddingTop: '10px'}}/>
                                   {Object.keys(reportContent.chartData[0] || {}).slice(1).map((key, i) => (
-                                      <Area key={i} type="monotone" dataKey={key} fill={['#8884d8', '#82ca9d', '#ffc658'][i % 3]} stroke="none" fillOpacity={0.5} isAnimationActive={false}/>
+                                      <Area key={i} type="monotone" dataKey={key} fill={['#8884d8', '#82ca9d', '#ffc658'][i % 3]} stroke="none" fillOpacity={0.2} isAnimationActive={false}/>
                                   ))}
                                 </ComposedChart>
                             )}
@@ -570,31 +618,39 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                 {/* 3. 表格與亮點 */}
                 <div className="grid grid-cols-2 gap-8 mb-8 print-break-inside">
                     <div>
-                        <h3 className="text-lg font-bold text-slate-900 mb-3 border-l-4 border-orange-500 pl-3">執行階段</h3>
-                        <table className="w-full text-xs text-left border-collapse border border-slate-200 rounded-lg">
-                            <thead className="bg-slate-100 text-slate-600">
-                                <tr>
-                                    <th className="p-2 border-b">時間</th>
-                                    <th className="p-2 border-b">階段</th>
-                                    <th className="p-2 border-b">目標</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {reportContent.table.map((row, idx) => (
-                                    <tr key={idx} className="border-b border-slate-100">
-                                        <td className="p-2 font-bold">{row.label}</td>
-                                        <td className="p-2">{row.col1}</td>
-                                        <td className="p-2 font-bold text-blue-600">{row.col2}</td>
+                        <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                           <div className="w-1 h-6 bg-orange-500 rounded-full"></div>
+                           執行階段
+                        </h3>
+                        <div className="rounded-xl border border-slate-200 overflow-hidden">
+                            <table className="w-full text-xs text-left">
+                                <thead className="bg-slate-50 text-slate-500 font-bold">
+                                    <tr>
+                                        <th className="p-3 border-b border-slate-200">時間</th>
+                                        <th className="p-3 border-b border-slate-200">階段</th>
+                                        <th className="p-3 border-b border-slate-200">目標</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {reportContent.table.map((row, idx) => (
+                                        <tr key={idx} className="border-b border-slate-100 last:border-0">
+                                            <td className="p-3 font-bold text-slate-700">{row.label}</td>
+                                            <td className="p-3 text-slate-500">{row.col1}</td>
+                                            <td className="p-3 font-bold text-blue-600">{row.col2}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     
                     <div>
-                        <h3 className="text-lg font-bold text-slate-900 mb-3 border-l-4 border-purple-500 pl-3">專案亮點</h3>
-                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 h-full">
-                            <ul className="space-y-2">
+                        <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                           <div className="w-1 h-6 bg-purple-500 rounded-full"></div>
+                           專案亮點
+                        </h3>
+                        <div className="bg-slate-50 p-5 rounded-xl border border-slate-100 h-full">
+                            <ul className="space-y-3">
                                 {reportContent.highlights.map((item, idx) => (
                                     <li key={idx} className="flex gap-2 items-start text-xs text-slate-700 leading-relaxed">
                                         <CheckCircle2 size={14} className="text-purple-600 shrink-0 mt-0.5"/>
@@ -607,27 +663,27 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                 </div>
 
                 {/* 4. 顧問結語區 */}
-                <div className="mt-auto border-t-2 border-slate-100 pt-6 print-break-inside">
-                    <h3 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
-                        <PenTool size={18}/> 顧問建議
+                <div className="mt-auto border-t-2 border-slate-100 pt-8 print-break-inside">
+                    <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                        <PenTool size={18} className="text-slate-400"/> 顧問建議
                     </h3>
                     {showNoteInput ? (
                         <textarea 
-                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 min-h-[100px] no-print"
-                            placeholder="請在此輸入給客戶的專屬建議..."
+                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 min-h-[120px] outline-none focus:ring-2 focus:ring-blue-500 no-print"
+                            placeholder="請在此輸入給客戶的專屬建議，例如：建議優先處理退休規劃..."
                             value={advisorNote}
                             onChange={(e) => setAdvisorNote(e.target.value)}
                         />
                     ) : (
-                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap min-h-[100px]">
+                        <div className="p-6 bg-slate-50/50 rounded-xl border border-slate-100 text-sm text-slate-700 leading-loose whitespace-pre-wrap min-h-[100px]">
                             {advisorNote || "（本計畫建議內容僅供參考，實際執行細節請諮詢您的專屬顧問）"}
                         </div>
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="mt-8 text-center text-[10px] text-slate-400 border-t border-slate-100 pt-2">
-                    <p>免責聲明：本報告所載資料僅供參考，不構成任何投資建議。投資有風險，請謹慎評估。</p>
+                <div className="mt-12 text-center text-[10px] text-slate-300 border-t border-slate-50 pt-4">
+                    <p>免責聲明：本報告所載資料僅供財務規劃參考，不構成任何投資建議。投資有風險，請謹慎評估。</p>
                     <p>© {new Date().getFullYear()} Ultra Advisor System • Generated for {client?.name}</p>
                 </div>
             </div>
