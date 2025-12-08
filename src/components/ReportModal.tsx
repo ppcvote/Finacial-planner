@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { FileBarChart, ArrowUpFromLine, X, CheckCircle2, User, Calendar, PenTool } from 'lucide-react';
+import { FileBarChart, ArrowUpFromLine, X, CheckCircle2, User, Calendar, PenTool, Phone, Mail, ShieldAlert } from 'lucide-react';
 import { 
   BarChart, AreaChart, Bar, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, ComposedChart, Area, Line 
 } from 'recharts';
 import { calculateMonthlyPayment, calculateMonthlyIncome, calculateRemainingBalance } from '../utils';
 
 // ------------------------------------------------------------------
-// Report Component (報表元件 - PDF 建議書引擎)
+// Report Component (專業建議書引擎 V2.0)
 // ------------------------------------------------------------------
 
 const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) => {
   const [advisorNote, setAdvisorNote] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(true);
 
-  // 當開啟時，自動帶入客戶備註(如果有的話)或清空
   useEffect(() => {
       if(isOpen) {
           setAdvisorNote('');
@@ -25,7 +24,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
 
   const dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
   
-  // --- 報表內容生成邏輯 (維持原有的計算，這部分不變) ---
+  // --- 報表內容生成邏輯 (保持不變) ---
   let reportContent = { title: '', mindMap: [] as any[], table: [] as any[], highlights: [] as any[], chartData: [] as any[], chartType: 'composed' };
 
   if (activeTab === 'gift') {
@@ -261,16 +260,30 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
       chartType: 'composed_car'
     };
   } else if (activeTab === 'reservoir') {
+    // 數據生成與 BigSmallReservoirTool.tsx 保持一致
     const chartData = [];
-    const annualDividend = data.initialCapital * (data.dividendRate / 100);
-    let reinvestedTotal = 0; 
+    let smallReservoir = 0; 
+    let totalDividendsReceived = 0;
+
+    // 加入起始點 0
+    chartData.push({
+        year: 0,
+        大水庫本金: data.initialCapital,
+        小水庫累積: 0
+    });
+
     for (let year = 1; year <= data.years + 5; year++) {
-      if (year <= data.years) reinvestedTotal = (reinvestedTotal + annualDividend) * (1 + data.reinvestRate / 100);
-      else reinvestedTotal = reinvestedTotal * (1 + data.reinvestRate / 100);
+      const annualDividend = data.initialCapital * (data.dividendRate / 100);
+      if (year <= data.years) {
+          smallReservoir = (smallReservoir + annualDividend) * (1 + data.reinvestRate / 100);
+          totalDividendsReceived += annualDividend;
+      } else {
+          smallReservoir = smallReservoir * (1 + data.reinvestRate / 100);
+      }
       chartData.push({
         year: `第${year}年`,
         大水庫本金: data.initialCapital,
-        小水庫累積: Math.round(reinvestedTotal),
+        小水庫累積: Math.round(smallReservoir),
       });
     }
 
@@ -337,7 +350,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
   } else if (activeTab === 'tax') {
      const exemption = 1333; 
      const deductionSpouse = data.spouse ? 553 : 0;
-     const deductionChildren = data.children * 56;
+     const deductionChildren = (data.children * 56) + (data.minorYearsTotal * 56); // 修正子女扣除額
      const deductionParents = data.parents * 138;
      const deductionFuneral = 138; 
      const totalDeductions = exemption + deductionSpouse + deductionChildren + deductionParents + deductionFuneral;
@@ -383,11 +396,11 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
 
   // 自動列印邏輯
   const handlePrint = () => {
-      setShowNoteInput(false); // 隱藏輸入框，只顯示文字
+      setShowNoteInput(false); 
       setTimeout(() => {
           window.print();
-          setShowNoteInput(true); // 列印後恢復輸入框
-      }, 300);
+          setShowNoteInput(true);
+      }, 500); // 增加延遲確保渲染完成
   };
 
   return (
@@ -396,8 +409,22 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
         @media print {
           @page { size: A4; margin: 0; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          #report-modal-overlay { position: static; background: white; padding: 0; display: block; }
+          /* 隱藏所有非報表內容 */
+          body > *:not(#report-modal-overlay) { display: none !important; }
+          #report-modal-overlay { 
+            position: absolute !important; 
+            top: 0 !important; 
+            left: 0 !important; 
+            width: 100% !important; 
+            height: auto !important; 
+            background: white !important; 
+            padding: 0 !important; 
+            overflow: visible !important;
+            display: block !important;
+          }
           .no-print { display: none !important; }
+          
+          /* 報表頁面設定 */
           .print-page { 
              width: 210mm; 
              min-height: 297mm; 
@@ -405,23 +432,27 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
              margin: 0 auto; 
              background: white; 
              box-shadow: none;
-             page-break-after: always;
              position: relative;
           }
+          
+          /* 強制分頁：封面頁後 */
+          .cover-page { page-break-after: always; }
+          
+          /* 避免內容被切斷 */
           .print-break-inside { break-inside: avoid; }
         }
       `}</style>
 
-      <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col relative print:w-full print:max-w-none print:max-h-none print:shadow-none print:rounded-none">
+      <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col relative print:w-full print:max-w-none print:max-h-none print:shadow-none print:rounded-none print:overflow-visible">
         
         {/* Controls (No Print) */}
-        <div className="sticky top-0 z-10 bg-white border-b border-slate-200 p-4 flex justify-between items-center no-print">
+        <div className="sticky top-0 z-50 bg-white border-b border-slate-200 p-4 flex justify-between items-center no-print">
            <h3 className="font-bold text-slate-700 flex items-center gap-2">
-               <FileBarChart size={20} className="text-blue-600"/> 報表預覽
+               <FileBarChart size={20} className="text-blue-600"/> 策略建議書預覽
            </h3>
            <div className="flex gap-2">
                <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-colors">
-                   <ArrowUpFromLine size={18}/> 列印 / 下載 PDF
+                   <ArrowUpFromLine size={18}/> 列印建議書
                </button>
                <button onClick={onClose} className="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-lg transition-colors">
                    <X size={20}/>
@@ -429,126 +460,175 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
            </div>
         </div>
 
-        {/* --- A4 頁面內容 --- */}
-        <div className="print-page p-12 bg-white text-slate-800">
-            
-            {/* 1. 封面頁頭 (Header) */}
-            <div className="flex justify-between items-start border-b-4 border-slate-800 pb-6 mb-8">
-                <div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">{reportContent.title}</h1>
-                    <p className="text-xl text-slate-500 font-bold">資產配置戰略規劃書</p>
+        {/* --- 報表內容容器 --- */}
+        <div className="print-content">
+
+            {/* === 第一頁：封面 (Cover Page) === */}
+            <div className="print-page cover-page flex flex-col justify-between bg-gradient-to-br from-slate-50 to-white">
+                <div className="pt-20 px-10">
+                    <p className="text-blue-600 font-bold tracking-widest text-sm mb-4">WEALTH MANAGEMENT PROPOSAL</p>
+                    <h1 className="text-6xl font-black text-slate-900 leading-tight mb-6">{reportContent.title}</h1>
+                    <div className="h-2 w-32 bg-blue-600 mb-10"></div>
+                    <p className="text-2xl text-slate-600 font-medium">專屬資產配置戰略規劃書</p>
                 </div>
-                <div className="text-right">
-                    <div className="bg-slate-100 px-4 py-2 rounded-lg mb-2 inline-block">
-                        <span className="text-xs text-slate-400 block text-left">尊榮貴賓</span>
-                        <span className="text-lg font-bold text-slate-800 flex items-center gap-2 justify-end">
-                            <User size={16}/> {client?.name || '貴賓'}
-                        </span>
+
+                <div className="flex-1 flex items-center justify-center opacity-10">
+                     {/* 背景裝飾圖示 */}
+                     <FileBarChart size={300} className="text-slate-900"/>
+                </div>
+
+                <div className="pb-20 px-10">
+                    <div className="grid grid-cols-2 gap-10 border-t-2 border-slate-200 pt-10">
+                        <div>
+                            <p className="text-sm text-slate-400 font-bold mb-2 uppercase">Prepared For</p>
+                            <h2 className="text-3xl font-bold text-slate-800 flex items-center gap-2">
+                                <User className="text-blue-600"/> {client?.name || '尊榮貴賓'}
+                            </h2>
+                            <p className="text-slate-500 mt-1">{dateStr}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-slate-400 font-bold mb-2 uppercase">Advisor</p>
+                            <h2 className="text-2xl font-bold text-slate-800">{user?.displayName || '專業理財顧問'}</h2>
+                            {user?.email && (
+                                <p className="text-slate-500 mt-1 flex items-center gap-2">
+                                    <Mail size={14}/> {user.email}
+                                </p>
+                            )}
+                            <p className="text-slate-500 mt-1 flex items-center gap-2">
+                                <Phone size={14}/> 09xx-xxx-xxx
+                            </p>
+                        </div>
                     </div>
-                    <p className="text-sm text-slate-500 flex items-center justify-end gap-1">
-                        <Calendar size={14}/> {dateStr}
-                    </p>
                 </div>
             </div>
 
-            {/* 2. 關鍵數據總覽 (Mind Map) */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
-                {reportContent.mindMap.map((item, idx) => (
-                    <div key={idx} className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                        <span className="text-xs font-bold text-slate-400 block mb-1">{item.label}</span>
-                        <span className="font-bold text-slate-800 text-lg block truncate">{item.value}</span>
-                    </div>
-                ))}
-            </div>
-
-            {/* 3. 圖表區域 (Chart) */}
-            <div className="mb-8 print-break-inside">
-                <h2 className="text-lg font-bold text-slate-800 border-l-4 border-blue-600 pl-3 mb-4">資產趨勢分析</h2>
-                <div className="h-[350px] w-full border border-slate-200 rounded-xl p-4 bg-white">
-                    <ResponsiveContainer width="100%" height="100%">
-                        {/* 根據 chartType 渲染不同圖表 (簡化版，邏輯同前) */}
-                        <ComposedChart data={reportContent.chartData}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                            <XAxis dataKey="year" tick={{fontSize: 12}} />
-                            <YAxis unit="萬" tick={{fontSize: 12}} />
-                            <Legend />
-                            {/* 通用渲染邏輯：依賴 reportContent 的結構，這裡簡化處理 */}
-                            <Area type="monotone" dataKey={Object.keys(reportContent.chartData[0] || {})[2]} stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
-                            <Line type="monotone" dataKey={Object.keys(reportContent.chartData[0] || {})[1]} stroke="#f59e0b" strokeWidth={2} />
-                        </ComposedChart>
-                    </ResponsiveContainer>
-                </div>
-            </div>
-
-            {/* 4. 數據表格與亮點 (Table & Highlights) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                <div className="print-break-inside">
-                    <h2 className="text-lg font-bold text-slate-800 border-l-4 border-emerald-500 pl-3 mb-4">執行階段</h2>
-                    <table className="w-full text-sm text-left border-collapse border border-slate-200 rounded-lg overflow-hidden">
-                        <thead className="bg-slate-100 text-slate-600">
-                            <tr>
-                                <th className="p-3 border-b">時間點</th>
-                                <th className="p-3 border-b">階段</th>
-                                <th className="p-3 border-b">目標</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {reportContent.table.map((row, idx) => (
-                                <tr key={idx} className="border-b border-slate-100 last:border-0">
-                                    <td className="p-3 font-bold">{row.label}</td>
-                                    <td className="p-3 text-slate-600">{row.col1}</td>
-                                    <td className="p-3 font-bold text-emerald-600">{row.col2}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+            {/* === 第二頁：內容分析 (Content Page) === */}
+            <div className="print-page">
                 
-                <div className="print-break-inside">
-                    <h2 className="text-lg font-bold text-slate-800 border-l-4 border-amber-500 pl-3 mb-4">專案亮點</h2>
-                    <div className="bg-amber-50 p-5 rounded-xl border border-amber-100">
-                        <ul className="space-y-3">
-                            {reportContent.highlights.map((item, idx) => (
-                                <li key={idx} className="flex gap-2 items-start text-sm text-slate-700">
-                                    <CheckCircle2 size={16} className="text-amber-600 shrink-0 mt-0.5"/>
-                                    <span>{item}</span>
-                                </li>
-                            ))}
-                        </ul>
+                {/* Header (每頁重複) */}
+                <div className="flex justify-between items-center border-b border-slate-200 pb-4 mb-8">
+                    <span className="text-xs font-bold text-slate-400">ULTRA ADVISOR • {reportContent.title}</span>
+                    <span className="text-xs font-bold text-slate-400">Page 2</span>
+                </div>
+
+                {/* 1. 核心數據 Mind Map */}
+                <div className="mb-10">
+                    <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <CheckCircle2 className="text-blue-600" size={20}/> 核心戰略指標
+                    </h3>
+                    <div className="grid grid-cols-5 gap-3">
+                        {reportContent.mindMap.map((item, idx) => (
+                            <div key={idx} className="bg-slate-50 p-3 rounded-lg border border-slate-100 text-center">
+                                <span className="text-[10px] font-bold text-slate-400 block mb-1">{item.label}</span>
+                                <span className="font-bold text-slate-800 text-sm block truncate">{item.value}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
-            </div>
 
-            {/* 5. 顧問結語區 (Advisor Note) */}
-            <div className="mt-auto pt-6 border-t-2 border-slate-100 print-break-inside">
-                <h2 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
-                    <PenTool size={18} className="text-slate-400"/> 顧問建議與結語
-                </h2>
-                {showNoteInput ? (
-                    <textarea 
-                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px] text-slate-700 leading-relaxed no-print placeholder:text-slate-400"
-                        placeholder="請輸入給客戶的專屬建議與總結..."
-                        value={advisorNote}
-                        onChange={(e) => setAdvisorNote(e.target.value)}
-                    />
-                ) : (
-                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-slate-700 leading-relaxed min-h-[100px] whitespace-pre-wrap">
-                        {advisorNote || "（顧問未填寫結語）"}
+                {/* 2. 圖表區域 (Chart) - 關閉動畫以利列印 */}
+                <div className="mb-10 print-break-inside">
+                    <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <CheckCircle2 className="text-emerald-500" size={20}/> 資產趨勢模擬
+                    </h3>
+                    <div className="h-[300px] w-full border border-slate-200 rounded-xl p-4 bg-white">
+                        <ResponsiveContainer width="100%" height="100%">
+                            {reportContent.chartType === 'area_reservoir' ? (
+                               <AreaChart data={reportContent.chartData}>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                  <XAxis dataKey="year" tick={{fontSize: 10}} />
+                                  <YAxis tick={{fontSize: 10}} width={40} />
+                                  <Legend wrapperStyle={{fontSize: '10px'}}/>
+                                  <Area type="monotone" dataKey="大水庫本金" stackId="1" stroke="#0891b2" fill="#0891b2" fillOpacity={0.6} isAnimationActive={false} />
+                                  <Area type="monotone" dataKey="小水庫累積" stackId="1" stroke="#fbbf24" fill="#fbbf24" fillOpacity={0.6} isAnimationActive={false} />
+                               </AreaChart>
+                            ) : reportContent.chartType === 'composed_gift' ? (
+                               <ComposedChart data={reportContent.chartData}>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                  <XAxis dataKey="year" tick={{fontSize: 10}} />
+                                  <YAxis tick={{fontSize: 10}} width={40} />
+                                  <Legend wrapperStyle={{fontSize: '10px'}}/>
+                                  <Area type="monotone" dataKey="專案持有資產" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} isAnimationActive={false}/>
+                                  <Line type="monotone" dataKey="專案實付成本" stroke="#f59e0b" strokeWidth={2} isAnimationActive={false}/>
+                               </ComposedChart>
+                            ) : (
+                                // 通用圖表Fallback
+                                <ComposedChart data={reportContent.chartData}>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                  <XAxis dataKey="year" tick={{fontSize: 10}} />
+                                  <YAxis tick={{fontSize: 10}} width={40} />
+                                  <Legend wrapperStyle={{fontSize: '10px'}}/>
+                                  {Object.keys(reportContent.chartData[0] || {}).slice(1).map((key, i) => (
+                                      <Area key={i} type="monotone" dataKey={key} fill={['#8884d8', '#82ca9d', '#ffc658'][i % 3]} stroke="none" fillOpacity={0.5} isAnimationActive={false}/>
+                                  ))}
+                                </ComposedChart>
+                            )}
+                        </ResponsiveContainer>
                     </div>
-                )}
-            </div>
-
-            {/* 6. Footer (顧問簽名) */}
-            <div className="mt-8 flex justify-between items-end text-xs text-slate-400">
-                <div>
-                    <p>本報告僅供財務規劃參考，實際投資效益請詳閱公開說明書。</p>
-                    <p>Ultra Advisor 系統自動生成 • {new Date().getFullYear()}</p>
                 </div>
-                <div className="text-right">
-                    <p className="mb-1">規劃顧問</p>
-                    <p className="text-lg font-bold text-slate-800">{user?.displayName || '專業理財顧問'}</p>
-                    {/* 若有 Email 也可顯示 */}
-                    {user?.email && <p>{user.email}</p>}
+
+                {/* 3. 表格與亮點 */}
+                <div className="grid grid-cols-2 gap-8 mb-8 print-break-inside">
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-900 mb-3 border-l-4 border-orange-500 pl-3">執行階段</h3>
+                        <table className="w-full text-xs text-left border-collapse border border-slate-200 rounded-lg">
+                            <thead className="bg-slate-100 text-slate-600">
+                                <tr>
+                                    <th className="p-2 border-b">時間</th>
+                                    <th className="p-2 border-b">階段</th>
+                                    <th className="p-2 border-b">目標</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {reportContent.table.map((row, idx) => (
+                                    <tr key={idx} className="border-b border-slate-100">
+                                        <td className="p-2 font-bold">{row.label}</td>
+                                        <td className="p-2">{row.col1}</td>
+                                        <td className="p-2 font-bold text-blue-600">{row.col2}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-900 mb-3 border-l-4 border-purple-500 pl-3">專案亮點</h3>
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 h-full">
+                            <ul className="space-y-2">
+                                {reportContent.highlights.map((item, idx) => (
+                                    <li key={idx} className="flex gap-2 items-start text-xs text-slate-700 leading-relaxed">
+                                        <CheckCircle2 size={14} className="text-purple-600 shrink-0 mt-0.5"/>
+                                        <span>{item}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 4. 顧問結語區 */}
+                <div className="mt-auto border-t-2 border-slate-100 pt-6 print-break-inside">
+                    <h3 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+                        <PenTool size={18}/> 顧問建議
+                    </h3>
+                    {showNoteInput ? (
+                        <textarea 
+                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 min-h-[100px] no-print"
+                            placeholder="請在此輸入給客戶的專屬建議..."
+                            value={advisorNote}
+                            onChange={(e) => setAdvisorNote(e.target.value)}
+                        />
+                    ) : (
+                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap min-h-[100px]">
+                            {advisorNote || "（本計畫建議內容僅供參考，實際執行細節請諮詢您的專屬顧問）"}
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="mt-8 text-center text-[10px] text-slate-400 border-t border-slate-100 pt-2">
+                    <p>免責聲明：本報告所載資料僅供參考，不構成任何投資建議。投資有風險，請謹慎評估。</p>
+                    <p>© {new Date().getFullYear()} Ultra Advisor System • Generated for {client?.name}</p>
                 </div>
             </div>
 
