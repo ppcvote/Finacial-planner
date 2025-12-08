@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
-  GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key
+  GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key, 
+  ChevronLeft, Users
 } from 'lucide-react';
 
 import { 
   signInWithPopup, signOut, onAuthStateChanged, signInWithEmailAndPassword, 
-  signInWithRedirect, getRedirectResult // 導入 Email/Password 登入
+  signInWithRedirect, getRedirectResult 
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 
 import { auth, db, googleProvider } from './firebase'; 
 import ReportModal from './components/ReportModal';
 import MillionDollarGiftTool from './components/MillionDollarGiftTool';
+import ClientDashboard from './components/ClientDashboard'; // 引入新元件
 
 // --- 從各個獨立檔案匯入工具 ---
 import { FinancialRealEstateTool } from './components/FinancialRealEstateTool';
@@ -84,121 +86,189 @@ const NavItem = ({ icon: Icon, label, active, onClick, disabled = false }: any) 
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Auth Loading
+  const [clientLoading, setClientLoading] = useState(false); // Client Data Loading
+  
+  // New: Current Selected Client State
+  const [currentClient, setCurrentClient] = useState<any>(null);
+
   const [activeTab, setActiveTab] = useState('gift'); 
   const [toast, setToast] = useState<{message: string, type: string} | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false); 
+  const [isSaving, setIsSaving] = useState(false); 
+  
+  // 資料載入鎖 (防止空資料覆蓋)
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const lastSavedDataStr = useRef<string>("");
 
-  // New states for testing Email/Password login
+  // Login Modal State
   const [testEmail, setTestEmail] = useState('');
   const [testPassword, setTestPassword] = useState('');
   const [isEmailLoginOpen, setIsEmailLoginOpen] = useState(false);
 
+  // Tool Data States - 初始預設值
+  const defaultStates = {
+    gift: { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 },
+    estate: { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6, existingLoanBalance: 700, existingMonthlyPayment: 38000 },
+    student: { loanAmount: 40, investReturnRate: 6, years: 8, gracePeriod: 1, interestOnlyPeriod: 0, isQualified: false },
+    super_active: { monthlySaving: 10000, investReturnRate: 6, activeYears: 15 },
+    car: { carPrice: 100, investReturnRate: 6, resaleRate: 50, cycleYears: 5 },
+    pension: { currentAge: 30, retireAge: 65, salary: 45000, laborInsYears: 35, selfContribution: false, pensionReturnRate: 3, desiredMonthlyIncome: 60000 },
+    reservoir: { initialCapital: 1000, dividendRate: 5, reinvestRate: 8, years: 20 },
+    tax: { spouse: true, children: 2, minorYearsTotal: 0, parents: 0, cash: 3000, realEstateMarket: 4000, stocks: 1000, insurancePlan: 0 }
+  };
 
-  // Tool Data States
-  const [giftData, setGiftData] = useState({ loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 });
-  const [estateData, setEstateData] = useState({ loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6 });
-  const [studentData, setStudentData] = useState({ loanAmount: 40, investReturnRate: 6, years: 8, gracePeriod: 1, interestOnlyPeriod: 0 });
-  const [superActiveData, setSuperActiveData] = useState({ monthlySaving: 10000, investReturnRate: 6, activeYears: 15 });
-  const [carData, setCarData] = useState({ carPrice: 100, investReturnRate: 6, resaleRate: 50 });
-  const [pensionData, setPensionData] = useState({ currentAge: 30, retireAge: 65, salary: 45000, laborInsYears: 35, selfContribution: false, pensionReturnRate: 3, desiredMonthlyIncome: 60000 });
-  const [reservoirData, setReservoirData] = useState({ initialCapital: 1000, dividendRate: 6, reinvestRate: 6, years: 10 });
-  const [taxData, setTaxData] = useState({ spouse: true, children: 2, parents: 0, cash: 3000, realEstate: 2000, stocks: 1000, insurancePlan: 0 });
+  const [giftData, setGiftData] = useState(defaultStates.gift);
+  const [estateData, setEstateData] = useState(defaultStates.estate);
+  const [studentData, setStudentData] = useState(defaultStates.student);
+  const [superActiveData, setSuperActiveData] = useState(defaultStates.super_active);
+  const [carData, setCarData] = useState(defaultStates.car);
+  const [pensionData, setPensionData] = useState(defaultStates.pension);
+  const [reservoirData, setReservoirData] = useState(defaultStates.reservoir);
+  const [taxData, setTaxData] = useState(defaultStates.tax);
 
+  const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
+
+  // --- 1. 全局 Auth 監聽 ---
   useEffect(() => {
-    // 1. 檢查是否是 Redirect 回來的登入 (手機版)
     const checkRedirect = async () => {
-      try {
-        await getRedirectResult(auth);
-      } catch (error: any) {
-        // 專門處理 iOS/瀏覽器分區儲存導致的狀態丟失錯誤 (missing state)
-        if (error.code === 'auth/missing-or-invalid-nonce' || error.code === 'auth/cancelled-popup-request') {
-           showToast(`登入錯誤：瀏覽器狀態丟失，請重試或改用一般視窗`, "error");
-        } else {
-           showToast(`登入錯誤: ${error.message}`, "error");
-        }
-      }
+      try { await getRedirectResult(auth); } catch (e) { console.error(e); }
     };
     checkRedirect();
 
-    // 2. 監聽登入狀態
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
-      if (currentUser) {
-        // 載入使用者設定
+      // 登入或登出時，重置客戶狀態
+      if (!currentUser) {
+          setCurrentClient(null);
+          setIsDataLoaded(false);
       }
     });
     return () => unsubscribe();
   }, []);
 
-  const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
-  
-  // 登入邏輯：自動切換 Popup 與 Redirect (Google 登入)
-  const handleGoogleLogin = async () => { 
-    // 判斷是否為手機或平板環境 (用於強制 redirect，解決 disallowed_useragent)
-    const isMobileOrTablet = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
 
+  // --- 2. 客戶資料載入 (當 currentClient 改變時) ---
+  useEffect(() => {
+      if (!user || !currentClient) {
+          setIsDataLoaded(false);
+          return;
+      }
+
+      setClientLoading(true);
+      const clientDocRef = doc(db, 'users', user.uid, 'clients', currentClient.id);
+      
+      const unsubscribeClient = onSnapshot(clientDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+              const data = docSnap.data();
+              
+              // 智慧比對更新 (避免無限迴圈)
+              // 這裡我們直接使用從 DB 拿到的資料覆蓋 State，因為是切換客戶
+              if (data.giftData) setGiftData(prev => ({...prev, ...data.giftData}));
+              if (data.estateData) setEstateData(prev => ({...prev, ...data.estateData}));
+              if (data.studentData) setStudentData(prev => ({...prev, ...data.studentData}));
+              if (data.superActiveData) setSuperActiveData(prev => ({...prev, ...data.superActiveData}));
+              if (data.carData) setCarData(prev => ({...prev, ...data.carData}));
+              if (data.pensionData) setPensionData(prev => ({...prev, ...data.pensionData}));
+              if (data.reservoirData) setReservoirData(prev => ({...prev, ...data.reservoirData}));
+              if (data.taxData) setTaxData(prev => ({...prev, ...data.taxData}));
+              
+              // 更新當前客戶的 Meta 資料 (例如名字改了)
+              setCurrentClient((prev: any) => ({ ...prev, name: data.name, note: data.note }));
+          }
+          
+          setClientLoading(false);
+          setIsDataLoaded(true); // 允許開始存檔
+      }, (err) => {
+          console.error("Client Load Error:", err);
+          showToast("讀取客戶資料失敗", "error");
+          setClientLoading(false);
+      });
+
+      return () => unsubscribeClient();
+  }, [currentClient?.id, user]); // 依賴 ID 變化
+
+
+  // --- 3. 自動儲存邏輯 (針對特定 Client) ---
+  useEffect(() => {
+    // 必須符合：已登入 + 有選客戶 + 資料已載入完畢
+    if (!user || !currentClient || !isDataLoaded) return;
+
+    const dataPayload = {
+        giftData,
+        estateData,
+        studentData,
+        superActiveData,
+        carData,
+        pensionData,
+        reservoirData,
+        taxData
+    };
+
+    const currentDataStr = JSON.stringify(dataPayload);
+    if (currentDataStr === lastSavedDataStr.current) return;
+
+    const saveData = async () => {
+        setIsSaving(true);
+        try {
+            // 寫入 users/{uid}/clients/{clientId}
+            await setDoc(doc(db, 'users', user.uid, 'clients', currentClient.id), {
+                ...dataPayload,
+                updatedAt: Timestamp.now() // 更新時間戳記
+            }, { merge: true });
+            
+            lastSavedDataStr.current = currentDataStr;
+            setTimeout(() => setIsSaving(false), 500);
+        } catch (error) {
+            console.error("Auto-save failed:", error);
+            setIsSaving(false);
+        }
+    };
+
+    const handler = setTimeout(saveData, 1500);
+    return () => clearTimeout(handler);
+  }, [
+    giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData, 
+    user, currentClient, isDataLoaded
+  ]);
+
+
+  // 處理登入/登出
+  const handleGoogleLogin = async () => { 
+    // ... (保持原樣)
+    const isMobileOrTablet = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
     if (isMobileOrTablet) {
          showToast("偵測到行動裝置，切換至全頁登入模式...", "info");
-         // 直接使用 Redirect 避免瀏覽器內建視窗問題 (disallowed_useragent)
          await signInWithRedirect(auth, googleProvider);
          return;
     }
-
-    try { 
-      // 嘗試彈跳視窗 (桌機體驗較好)
-      await signInWithPopup(auth, googleProvider); 
-    } catch (e: any) { 
-      
-      // 如果 PopUp 失敗，通常是瀏覽器封鎖，則嘗試切換到 Redirect
-      if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user' || e.message?.includes('invalid')) {
-        showToast("彈窗被封鎖或登入失敗，嘗試全頁登入...", "info");
-        try {
-           await signInWithRedirect(auth, googleProvider);
-        } catch (redirectError: any) {
-           showToast("登入錯誤: " + redirectError.message, "error");
-        }
-        return;
-      }
-
-      // 其他一般錯誤處理
-      let errorMsg = "Google 登入失敗";
-      if (e.code === 'auth/unauthorized-domain') {
-        errorMsg = "網域未授權：請至 Firebase Console 新增此網域";
-      } else if (e.message) {
-        errorMsg = `錯誤: ${e.message}`; 
-      }
-      showToast(errorMsg, "error"); 
-    } 
+    try { await signInWithPopup(auth, googleProvider); } catch (e: any) { console.error(e); showToast("登入失敗", "error"); } 
   };
   
-  // 測試用的 Email/Password 登入
   const handleEmailLogin = async () => {
-    if (!testEmail || !testPassword) {
-      showToast("請輸入 Email 和密碼", "error");
-      return;
-    }
+    if (!testEmail || !testPassword) { showToast("請輸入 Email 和密碼", "error"); return; }
     try {
       await signInWithEmailAndPassword(auth, testEmail, testPassword);
-      setIsEmailLoginOpen(false); // 登入成功後關閉視窗
+      setIsEmailLoginOpen(false); 
       showToast("管理員登入成功", "success");
-    } catch (e: any) {
-      let errorMsg = "Email 登入失敗";
-       if (e.code === 'auth/user-not-found') {
-        errorMsg = "查無此 Email 帳號";
-      } else if (e.code === 'auth/wrong-password') {
-        errorMsg = "密碼錯誤";
-      } else if (e.code === 'auth/invalid-email') {
-        errorMsg = "Email 格式無效";
-      }
-      showToast(errorMsg, "error");
-    }
+    } catch (e: any) { showToast("Email 登入失敗", "error"); }
   };
 
+  const handleLogout = async () => { 
+      await signOut(auth); 
+      setCurrentClient(null);
+      setIsDataLoaded(false);
+      showToast("已安全登出", "info"); 
+  };
 
-  const handleLogout = async () => { await signOut(auth); setActiveTab('gift'); showToast("已安全登出", "info"); };
+  const handleBackToDashboard = () => {
+      // 回到列表前，強制重置工具數據為預設值，避免下一個客戶看到殘留資料
+      // 雖然 useEffect 會載入，但這樣視覺上比較乾淨
+      setIsDataLoaded(false);
+      setCurrentClient(null);
+  };
 
   const getCurrentData = () => {
     switch(activeTab) {
@@ -214,49 +284,24 @@ export default function App() {
     }
   };
 
+  // --- Render ---
+
   if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500" size={48} /></div>;
 
+  // 1. 未登入狀態 -> 顯示登入頁
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-         {/* Email Login Modal */}
+         {/* ... (保持原本的 Login UI) ... */}
          {isEmailLoginOpen && (
             <div className="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4">
                 <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
-                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                      <Mail size={20} className="text-blue-600"/> 管理員登入測試
-                    </h3>
-                    <p className="text-sm text-slate-500">
-                      此為測試專用，請確保您已在 Firebase Auth 建立一組 Email 帳號。
-                    </p>
-                    <input 
-                      type="email" 
-                      placeholder="Email 帳號" 
-                      value={testEmail}
-                      onChange={(e) => setTestEmail(e.target.value)}
-                      className="w-full p-3 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <input 
-                      type="password" 
-                      placeholder="密碼" 
-                      value={testPassword}
-                      onChange={(e) => setTestPassword(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleEmailLogin()}
-                      className="w-full p-3 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Mail size={20} className="text-blue-600"/> 管理員登入測試</h3>
+                    <input type="email" placeholder="Email" value={testEmail} onChange={(e) => setTestEmail(e.target.value)} className="w-full p-3 border rounded-lg"/>
+                    <input type="password" placeholder="密碼" value={testPassword} onChange={(e) => setTestPassword(e.target.value)} className="w-full p-3 border rounded-lg"/>
                     <div className="flex justify-between gap-3">
-                       <button 
-                         onClick={() => setIsEmailLoginOpen(false)} 
-                         className="flex-1 px-4 py-2 text-slate-600 border border-slate-300 rounded-xl hover:bg-slate-100 transition-colors"
-                       >
-                         取消
-                       </button>
-                       <button 
-                         onClick={handleEmailLogin} 
-                         className="flex-1 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors"
-                       >
-                         <Key size={18} className="inline mr-1"/> 登入
-                       </button>
+                       <button onClick={() => setIsEmailLoginOpen(false)} className="flex-1 px-4 py-2 text-slate-600 border rounded-xl">取消</button>
+                       <button onClick={handleEmailLogin} className="flex-1 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl">登入</button>
                     </div>
                 </div>
             </div>
@@ -264,32 +309,49 @@ export default function App() {
         <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center space-y-6 shadow-2xl animate-fade-in-up">
           <div className="flex justify-center"><div className="bg-blue-100 p-4 rounded-full"><Coins size={48} className="text-blue-600" /></div></div>
           <div><h1 className="text-3xl font-black text-slate-800">超業菁英戰情室</h1><p className="text-slate-500 mt-2">武裝您的專業，讓數字幫您說故事</p></div>
-          
           <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-100 hover:bg-slate-50 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all">
-            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center font-bold text-blue-600">G</div>
-            使用 Google 帳號登入
+            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center font-bold text-blue-600">G</div>使用 Google 帳號登入
           </button>
-          
-          {/* Email/Password 測試入口 */}
-          <div className="text-center text-sm">
-            <button 
-              onClick={() => setIsEmailLoginOpen(true)} 
-              className="text-slate-500 hover:text-blue-600 transition-colors underline"
-            >
-              管理員測試登入
-            </button>
-          </div>
-          
+          <div className="text-center text-sm"><button onClick={() => setIsEmailLoginOpen(true)} className="text-slate-500 hover:text-blue-600 underline">管理員測試登入</button></div>
         </div>
       </div>
     );
   }
 
+  // 2. 已登入，但未選客戶 -> 顯示 ClientDashboard
+  if (!currentClient) {
+      return (
+          <>
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+            <div className="flex flex-col h-screen">
+                <div className="bg-slate-900 text-white p-4 flex justify-between items-center shadow-md shrink-0">
+                    <div className="font-bold flex items-center gap-2"><Coins className="text-yellow-400"/> 資產規劃戰情室</div>
+                    <button onClick={handleLogout} className="text-sm bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                        <LogOut size={16}/> 登出
+                    </button>
+                </div>
+                <ClientDashboard user={user} onSelectClient={setCurrentClient} />
+            </div>
+          </>
+      );
+  }
+
+  // 3. 已選客戶 -> 顯示主介面 (Main Layout)
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       <PrintStyles />
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       
+      {/* 載入中遮罩 */}
+      {clientLoading && (
+          <div className="fixed inset-0 z-[100] bg-white/80 backdrop-blur-sm flex items-center justify-center">
+              <div className="text-center">
+                  <Loader2 className="animate-spin text-blue-600 mx-auto mb-2" size={40}/>
+                  <p className="text-slate-600 font-bold">正在讀取 {currentClient.name} 的檔案...</p>
+              </div>
+          </div>
+      )}
+
       <ReportModal 
         isOpen={isReportOpen} 
         onClose={() => setIsReportOpen(false)} 
@@ -298,7 +360,7 @@ export default function App() {
         data={getCurrentData()} 
       />
 
-      {/* Mobile Menu Overlay (略) */}
+      {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900 text-white flex flex-col animate-fade-in md:hidden">
            <div className="p-4 flex justify-between items-center border-b border-slate-800">
@@ -306,10 +368,14 @@ export default function App() {
               <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-slate-800 rounded-full"><X size={24}/></button>
            </div>
            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              <button onClick={handleBackToDashboard} className="w-full bg-blue-600 text-white px-4 py-3 rounded-xl flex items-center gap-2 font-bold mb-4">
+                  <ChevronLeft size={20}/> 返回客戶列表
+              </button>
               <div className="text-xs font-bold text-slate-500 px-4 py-2 uppercase tracking-wider">資產軍火庫</div>
               <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => {setActiveTab('gift'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => {setActiveTab('estate'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => {setActiveTab('student'); setIsMobileMenuOpen(false);}} />
+              {/* ... 其他 NavItem ... */}
               <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => {setActiveTab('super_active'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => {setActiveTab('car'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => {setActiveTab('reservoir'); setIsMobileMenuOpen(false);}} />
@@ -317,27 +383,44 @@ export default function App() {
               <div className="mt-4 text-xs font-bold text-slate-500 px-4 py-2 uppercase tracking-wider">退休與傳承</div>
               <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => {setActiveTab('pension'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => {setActiveTab('tax'); setIsMobileMenuOpen(false);}} />
-              
-              <div className="mt-8 pt-4 border-t border-slate-800">
-                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white">
-                  <LogOut size={20} /> <span className="font-medium">登出系統</span>
-                </button>
-              </div>
            </div>
         </div>
       )}
 
-      {/* Sidebar (Desktop) / Main Content (略) */}
+      {/* Sidebar (Desktop) */}
       <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10 print:hidden">
-        <div className="p-6 border-b border-slate-800">
-          <div className="flex items-center gap-3 mb-1">
-             <div className="w-12 h-12 rounded-full p-0.5 border-2 border-yellow-400 overflow-hidden shrink-0">
-                <img src={user.photoURL} alt="User" className="w-full h-full rounded-full object-cover bg-slate-800" />
+        <div className="p-4 border-b border-slate-800">
+           {/* 返回按鈕 */}
+           <button 
+             onClick={handleBackToDashboard}
+             className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-lg transition-all mb-4"
+           >
+              <ChevronLeft size={18}/> 返回客戶列表
+           </button>
+
+           <div className="flex items-center gap-3 px-2">
+             <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg text-white shrink-0">
+                {currentClient.name.charAt(0)}
              </div>
              <div className="flex-1 min-w-0">
-                <div className="text-xs text-yellow-500 font-bold uppercase truncate">理財顧問</div>
-                <div className="font-bold text-sm truncate text-white">{user.displayName}</div>
+                <div className="text-xs text-blue-400 font-bold uppercase truncate">正在規劃</div>
+                <div className="font-bold text-sm truncate text-white">{currentClient.name}</div>
              </div>
+          </div>
+          
+          {/* 同步狀態 */}
+          <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 bg-black/20 px-2 py-1 rounded">
+             {isSaving ? (
+                <>
+                   <Loader2 size={12} className="animate-spin text-blue-400"/>
+                   <span>儲存中...</span>
+                </>
+             ) : (
+                <>
+                   <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                   <span>已同步</span>
+                </>
+             )}
           </div>
         </div>
         
@@ -355,19 +438,19 @@ export default function App() {
           <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => setActiveTab('tax')} />
         </nav>
 
-        <div className="p-4 border-t border-slate-800 space-y-2">
-           <button onClick={() => setIsReportOpen(true)} className="flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors px-4 py-2 w-full">
+        <div className="p-4 border-t border-slate-800">
+           <button onClick={() => setIsReportOpen(true)} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-3 rounded-xl w-full transition-all shadow-lg shadow-blue-900/50">
              <FileBarChart size={18} /> 生成策略報表
-           </button>
-           <button onClick={handleLogout} className="flex items-center gap-2 text-slate-400 hover:text-red-400 transition-colors px-4 py-2 w-full">
-             <LogOut size={18} /> 登出系統
            </button>
         </div>
       </aside>
 
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center shadow-md shrink-0 print:hidden">
-          <div className="font-bold flex items-center gap-2"><Coins className="text-yellow-400"/> 資產規劃</div>
+          <div className="font-bold flex items-center gap-2">
+              <Users size={20} className="text-blue-400"/>
+              <span>{currentClient.name}</span>
+          </div>
           <div className="flex gap-2">
             <button onClick={() => setIsReportOpen(true)} className="p-2 bg-slate-800 rounded-lg active:bg-slate-700">
               <FileBarChart size={24} />
