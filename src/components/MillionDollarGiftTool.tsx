@@ -12,9 +12,9 @@ import {
   Settings,    
   ChevronDown, 
   ChevronUp,
-  PieChart, // 新增圖標
-  Activity, // 新增圖標
-  Scale     // 新增圖標
+  PieChart,
+  Activity,
+  Scale
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Area, Line, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
@@ -433,7 +433,7 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                                     type="number" 
                                     min={10} 
                                     max={1000} 
-                                    step={10}
+                                    step={1}
                                     value={loanAmount} 
                                     onChange={(e) => updateField('loanAmount', Number(e.target.value))} 
                                     className="w-16 text-right bg-transparent border-none p-0 font-mono font-bold text-blue-600 text-lg focus:ring-0 focus:border-blue-500 focus:bg-blue-50/50 rounded"
@@ -445,7 +445,7 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                             type="range" 
                             min={10} 
                             max={500} 
-                            step={10}
+                            step={1}
                             value={loanAmount} 
                             onChange={(e) => updateField('loanAmount', Number(e.target.value))} 
                             className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600" 
@@ -512,7 +512,7 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                                     <span className="font-bold text-indigo-700">{c2Loan} 萬</span>
                                 </div>
                                 <input 
-                                    type="range" min={10} max={500} step={10} 
+                                    type="range" min={10} max={500} step={1} 
                                     value={c2Loan} 
                                     onChange={(e) => updateField('cycle2Loan', Number(e.target.value))} 
                                     className="w-full h-1.5 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" 
@@ -546,7 +546,7 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                                     <span className="font-bold text-purple-700">{c3Loan} 萬</span>
                                 </div>
                                 <input 
-                                    type="range" min={10} max={500} step={10} 
+                                    type="range" min={10} max={500} step={1} 
                                     value={c3Loan} 
                                     onChange={(e) => updateField('cycle3Loan', Number(e.target.value))} 
                                     className="w-full h-1.5 bg-purple-200 rounded-lg appearance-none cursor-pointer accent-purple-600" 
