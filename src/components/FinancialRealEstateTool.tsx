@@ -167,6 +167,10 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
           // 確保數值在合理範圍並更新
           const clampedValue = Math.max(5000, Math.min(150000, newValue));
           setData({ ...safeData, [field]: Math.round(clampedValue) });
+      } else if (field === 'existingLoanBalance') {
+          // 確保數值在合理範圍並更新
+          const clampedValue = Math.max(0, Math.min(loanAmount, newValue));
+          setData({ ...safeData, [field]: Math.round(clampedValue) });
       } else {
           setData({ ...safeData, [field]: newValue }); 
       }
@@ -314,36 +318,53 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
 
                     {isRefinanceMode && (
                         <div className="space-y-4 bg-orange-50/50 p-4 rounded-xl border border-orange-100">
+                            
+                            {/* 現有房貸餘額 (萬) - 步驟和數字輸入框已修改 */}
                             <div>
                                 <div className="flex justify-between text-xs text-slate-500 mb-1">
                                     <span>現有房貸餘額 (萬)</span>
                                     <span className="font-bold text-orange-700">{existingLoanBalance} 萬</span>
                                 </div>
                                 <input 
-                                    type="range" min={0} max={loanAmount} step={10} 
+                                    type="range" min={0} max={loanAmount} step={1} // 步驟改為 1 萬
                                     value={existingLoanBalance} 
                                     onChange={(e) => updateField('existingLoanBalance', Number(e.target.value))} 
                                     className="w-full h-1.5 bg-orange-200 rounded-lg appearance-none cursor-pointer accent-orange-500" 
                                 />
+                                {/* 新增數字輸入框 for existingLoanBalance */}
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={loanAmount}
+                                    step={1}
+                                    value={existingLoanBalance}
+                                    onChange={(e) => {
+                                        const val = e.target.value === '' ? 0 : Number(e.target.value);
+                                        updateField('existingLoanBalance', val);
+                                    }}
+                                    className="w-full mt-2 text-right bg-white border border-slate-300 p-2 rounded-lg font-mono text-base focus:ring-orange-500 focus:border-orange-500"
+                                    placeholder="輸入現有房貸餘額 (萬)"
+                                />
                             </div>
-                            {/* --- 修改後的現有月付金輸入區塊 --- */}
+                            
+                            {/* 現有月付金 (元) - 步驟和數字輸入框已修改 */}
                             <div>
                                 <div className="flex justify-between text-xs text-slate-500 mb-1">
                                     <span>現有月付金 (元)</span>
                                     <span className="font-bold text-orange-700">${existingMonthlyPayment.toLocaleString()}</span>
                                 </div>
                                 <input 
-                                    type="range" min={5000} max={150000} **step={1}** 
+                                    type="range" min={5000} max={150000} step={1} 
                                     value={existingMonthlyPayment} 
                                     onChange={(e) => updateField('existingMonthlyPayment', Number(e.target.value))} 
                                     className="w-full h-1.5 bg-orange-200 rounded-lg appearance-none cursor-pointer accent-orange-500" 
                                 />
-                                {/* 新增數字輸入框 */}
+                                {/* 新增數字輸入框 for existingMonthlyPayment */}
                                 <input
                                     type="number"
                                     min={5000}
                                     max={150000}
-                                    **step={1}**
+                                    step={1}
                                     value={existingMonthlyPayment}
                                     onChange={(e) => {
                                         const val = e.target.value === '' ? 0 : Number(e.target.value);
@@ -628,7 +649,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                  ? "「房子不只是拿來住的，更是您的提款機。別讓您的資產在牆壁裡睡覺。」"
                  : "「富人買資產，窮人買負債，中產階級買他們以為是資產的負債。金融房產，是真正的資產。」"}
              </p>
-           </div>
+        </div>
         </div>
 
         {/* 2. 專案效益 */}
