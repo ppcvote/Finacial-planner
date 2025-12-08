@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Car, 
   Calculator, 
@@ -55,35 +55,33 @@ export const CarReplacementTool = ({ data, setData }: any) => {
     investReturnRate: Number(data?.investReturnRate) || 6, // %
     loanRate: Number(data?.loanRate) || 3.5, // %
     loanTerm: Number(data?.loanTerm) || 7, // 年
-    residualRate: Number(data?.residualRate) || 50, // % (5年後殘值)
-    // 新增：第2、3台車的目標價格 (若為 0 則自動計算)
+    residualRate: Number(data?.residualRate) || 50, // % (換車時殘值)
+    cycleYears: Number(data?.cycleYears) || 5, // 換車週期 (年) - 新增
+    // 第2、3台車的目標價格 (若為 0 則自動計算)
     carPrice2: Number(data?.carPrice2) || 0, 
     carPrice3: Number(data?.carPrice3) || 0,
   };
-  const { carPrice, investReturnRate, loanRate, loanTerm, residualRate, carPrice2, carPrice3 } = safeData;
+  const { carPrice, investReturnRate, loanRate, loanTerm, residualRate, cycleYears, carPrice2, carPrice3 } = safeData;
 
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // --- 核心計算邏輯 (三階段演進) ---
   const cycles = [];
-  const cycleYears = 5; // 固定 5 年換車
+  
+  // 總計畫年限
+  const totalProjectYears = cycleYears * 3;
   
   // 初始資本 = 第一台車原本要花的錢
   let currentPrincipal = carPrice; 
   
   for(let i = 1; i <= 3; i++) {
       // 1. 決定該輪的「目標車價」與「投入本金」
-      // 投入本金 (Invested Amount)：永遠是手上累積的資本 (currentPrincipal)
-      // 貸款金額 (Loan Amount)：
-      //    第一輪：等於 carPrice
-      //    第二/三輪：若使用者有指定 carPrice2/3 則用指定的，否則預設買一台「等同於目前本金」的車
-      
       let targetCarPrice = 0;
       if (i === 1) targetCarPrice = carPrice;
       else if (i === 2) targetCarPrice = carPrice2 > 0 ? carPrice2 : currentPrincipal;
       else if (i === 3) targetCarPrice = carPrice3 > 0 ? carPrice3 : currentPrincipal;
 
-      // 投資金額 = 目前手上的本金 (錢不拿去買車，全拿去投資)
+      // 投資金額 = 目前手上的本金
       const investedAmount = currentPrincipal;
       
       // 2. 計算月流
@@ -91,43 +89,40 @@ export const CarReplacementTool = ({ data, setData }: any) => {
       const monthlyIncome = calculateMonthlyIncome(investedAmount, investReturnRate);
       const netMonthlyPayment = monthlyPayment - monthlyIncome;
       
-      // 3. 5年後結算 (期末)
-      // 殘值回流 (以當初買的車價計算)
+      // 3. 期末結算 (根據 cycleYears)
+      // 殘值回流
       const residualValueWan = targetCarPrice * (residualRate / 100); 
       
-      // 剩餘貸款 (萬一貸款年限 > 5年，賣車時需清償)
+      // 剩餘貸款 (若 cycleYears < loanTerm，則需清償)
       const remainingLoanYuan = calculateRemainingBalance(targetCarPrice, loanRate, loanTerm, cycleYears);
       
       // 賣車淨拿現金 (元) = 殘值 - 剩餘貸款
-      // 注意：這裡不使用 Math.max(0, ...)，因為如果殘值 < 餘額，代表要補錢(負值)，這會減少下一輪的本金
       const netCashFromCarYuan = (residualValueWan * 10000) - remainingLoanYuan; 
       
-      // 下一輪本金 (萬) = 原本投資本金 (不動) + 賣車淨拿現金 (可能是負的)
+      // 下一輪本金 (萬)
       const nextPrincipalRaw = (investedAmount * 10000) + netCashFromCarYuan;
       const nextPrincipalWan = Math.round(nextPrincipalRaw / 10000);
 
       cycles.push({
           cycle: i,
-          carBudget: Math.round(targetCarPrice), // 該輪買的車價
-          investedCapital: Math.round(investedAmount), // 該輪實際在運作的本金
+          carBudget: Math.round(targetCarPrice),
+          investedCapital: Math.round(investedAmount),
           monthlyPay: Math.round(monthlyPayment),
           monthlyIncome: Math.round(monthlyIncome),
           netPay: Math.round(netMonthlyPayment),
           residualValue: Math.round(residualValueWan * 10000),
           remainingLoan: Math.round(remainingLoanYuan),
-          netCashBack: Math.round(netCashFromCarYuan / 10000), // 賣車後拿回(或補貼)的錢
-          totalAssetEnd: nextPrincipalWan // 期末總資產
+          netCashBack: Math.round(netCashFromCarYuan / 10000),
+          totalAssetEnd: nextPrincipalWan
       });
 
       // 更新下一輪本金
       currentPrincipal = nextPrincipalWan;
   }
 
-  // --- 圖表數據: 資產保留對比 ---
-  // 傳統買車：15年後，車子變廢鐵(或極低殘值)，錢都花光了。資產 ~= 0 (或最後一台車的殘值)
-  // 專案換車：15年後，手上持有 第三輪本金 (包含歷次殘值回流)。
-  // 修正傳統買車邏輯：假設每一輪都是現金買斷或全額繳清，15年後只剩最後一台車的殘值
-  const lastCarResidual = cycles[2].carBudget * (residualRate/100) * 0.5; // 假設傳統最後一台車也折舊了
+  // --- 圖表數據 ---
+  // 傳統買車：假設最後一台車也折舊了
+  const lastCarResidual = cycles[2].carBudget * (residualRate/100) * 0.5; 
   
   const comparisonData = [
       {
@@ -137,7 +132,7 @@ export const CarReplacementTool = ({ data, setData }: any) => {
       },
       {
           name: '專案換車',
-          value: cycles[2].totalAssetEnd, // 第三循環結束後的總資產
+          value: cycles[2].totalAssetEnd, 
           desc: '本金全保留'
       }
   ];
@@ -146,7 +141,6 @@ export const CarReplacementTool = ({ data, setData }: any) => {
   const updateField = (field: string, value: number) => { 
       let newValue = Number(value);
       if (field.includes('Price')) {
-          // 車價上限 500
           newValue = Math.min(500, newValue);
       }
       setData({ ...safeData, [field]: newValue }); 
@@ -170,10 +164,10 @@ export const CarReplacementTool = ({ data, setData }: any) => {
             </span>
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold mb-2 tracking-tight flex items-center gap-3">
-            五年換車專案
+            {cycleYears}年換車專案
           </h1>
           <p className="text-orange-100 text-lg opacity-90 max-w-2xl">
-            打破「買車即負債」的魔咒。透過本金投資與殘值回收機制，讓您每五年輕鬆換新車，資產卻不減反增。
+            打破「買車即負債」的魔咒。每 {cycleYears} 年輕鬆換新車，利用時間與複利，讓資產不減反增。
           </p>
         </div>
       </div>
@@ -204,7 +198,7 @@ export const CarReplacementTool = ({ data, setData }: any) => {
                    <input type="range" min={50} max={500} step={10} value={carPrice} onChange={(e) => updateField('carPrice', Number(e.target.value))} className="w-full h-2 bg-slate-100 rounded-lg accent-orange-600" />
                </div>
 
-               {/* 投資報酬率 (級距修正為 0.1) */}
+               {/* 投資報酬率 */}
                <div>
                  <div className="flex justify-between mb-1">
                      <label className="text-sm font-medium text-slate-600">投資年化報酬 (%)</label>
@@ -224,7 +218,7 @@ export const CarReplacementTool = ({ data, setData }: any) => {
                >
                   <div className="flex items-center gap-2 font-bold text-sm">
                     <Settings size={16} />
-                    進階設定 (貸款、殘值、後續車價)
+                    進階設定 (週期、貸款、殘值)
                   </div>
                   {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                </button>
@@ -232,6 +226,20 @@ export const CarReplacementTool = ({ data, setData }: any) => {
                {/* 進階設定 Panel */}
                {showAdvanced && (
                  <div className="space-y-4 animate-in slide-in-from-top-2 duration-300 pt-2 border-t border-orange-100">
+                    
+                    {/* 新增：換車週期 */}
+                    <div className="bg-orange-100/50 p-3 rounded-xl border border-orange-200">
+                        <div className="flex justify-between text-xs text-orange-800 mb-1">
+                            <span className="font-bold flex items-center gap-1"><RefreshCw size={12}/> 換車週期 (年)</span>
+                            <span className="font-bold text-lg">{cycleYears} 年</span>
+                        </div>
+                        <input type="range" min={2} max={10} step={1} value={cycleYears} onChange={(e) => updateField('cycleYears', Number(e.target.value))} className="w-full h-2 bg-orange-200 rounded-lg accent-orange-600" />
+                        <div className="flex justify-between text-[10px] text-orange-600/70 mt-1">
+                            <span>頻繁換車</span>
+                            <span>長期持有</span>
+                        </div>
+                    </div>
+
                     <div>
                         <div className="flex justify-between text-xs text-slate-500 mb-1">
                             <span>車貸利率 (%)</span>
@@ -248,10 +256,10 @@ export const CarReplacementTool = ({ data, setData }: any) => {
                     </div>
                     <div>
                         <div className="flex justify-between text-xs text-slate-500 mb-1">
-                            <span>5年後殘值率 (%)</span>
+                            <span>換車時殘值率 (%)</span>
                             <span className="font-bold text-slate-700">{residualRate}%</span>
                         </div>
-                        <input type="range" min={30} max={70} step={5} value={residualRate} onChange={(e) => updateField('residualRate', Number(e.target.value))} className="w-full h-1.5 bg-slate-200 rounded-lg accent-slate-600" />
+                        <input type="range" min={10} max={80} step={5} value={residualRate} onChange={(e) => updateField('residualRate', Number(e.target.value))} className="w-full h-1.5 bg-slate-200 rounded-lg accent-slate-600" />
                     </div>
 
                     <div className="pt-2 border-t border-orange-200">
@@ -321,7 +329,7 @@ export const CarReplacementTool = ({ data, setData }: any) => {
           {/* 三階段演進卡片 - 版面修正 (文字不被吃掉) */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 print-break-inside">
              <div className="flex justify-between items-center mb-6 pl-2 border-l-4 border-orange-500">
-                <h4 className="font-bold text-slate-700">三階段換車演進圖</h4>
+                <h4 className="font-bold text-slate-700">三階段換車演進圖 ({totalProjectYears}年計畫)</h4>
                 <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">資金自動滾雪球</span>
              </div>
              
@@ -360,7 +368,7 @@ export const CarReplacementTool = ({ data, setData }: any) => {
                                  </span>
                              </div>
                              <div className="flex justify-between items-center w-full">
-                                 <span className="text-slate-500 text-xs">5年後資產</span>
+                                 <span className="text-slate-500 text-xs">{cycleYears}年後資產</span>
                                  <span className="font-bold font-mono text-slate-700">{cycle.totalAssetEnd} 萬</span>
                              </div>
                          </div>
@@ -384,7 +392,7 @@ export const CarReplacementTool = ({ data, setData }: any) => {
           <div className="grid md:grid-cols-2 gap-6">
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-[300px] flex flex-col">
                   <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                      <Wallet size={18} className="text-orange-500"/> 15年後資產保留狀況
+                      <Wallet size={18} className="text-orange-500"/> {totalProjectYears}年後資產保留狀況
                   </h4>
                   <div className="flex-1 w-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -410,7 +418,7 @@ export const CarReplacementTool = ({ data, setData }: any) => {
                       <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center shrink-0 text-red-400 font-bold">X</div>
                       <div>
                           <p className="font-bold text-slate-200">傳統買車</p>
-                          <p className="text-sm text-slate-400">15 年花了 300 萬以上換 3 台車，最後手上只剩一堆維修單據與一台老舊的中古車。</p>
+                          <p className="text-sm text-slate-400">{totalProjectYears} 年花了 300 萬以上換 3 台車，最後手上只剩一堆維修單據與一台老舊的中古車。</p>
                       </div>
                   </div>
                   <div className="w-full h-px bg-slate-700"></div>
@@ -418,7 +426,7 @@ export const CarReplacementTool = ({ data, setData }: any) => {
                       <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center shrink-0 text-green-400 font-bold">O</div>
                       <div>
                           <p className="font-bold text-white">專案換車</p>
-                          <p className="text-sm text-slate-300">15 年同樣換 3 台車，但您的本金毫髮無傷，甚至滾出 <span className="text-yellow-400 font-bold">${cycles[2].totalAssetEnd}萬</span> 的現金資產。</p>
+                          <p className="text-sm text-slate-300">{totalProjectYears} 年同樣換 3 台車，但您的本金毫髮無傷，甚至滾出 <span className="text-yellow-400 font-bold">${cycles[2].totalAssetEnd}萬</span> 的現金資產。</p>
                       </div>
                   </div>
               </div>
@@ -455,7 +463,7 @@ export const CarReplacementTool = ({ data, setData }: any) => {
                    <span>套利</span>
                 </div>
                 <div>
-                   <h4 className="font-bold text-slate-800 flex items-center gap-2">以息養車 (第1-5年)</h4>
+                   <h4 className="font-bold text-slate-800 flex items-center gap-2">以息養車 (第1-{cycleYears}年)</h4>
                    <p className="text-sm text-slate-600 mt-1">利用投資產生的配息來支付車貸月付金，大幅降低每月的養車現金流壓力。</p>
                 </div>
              </div>
@@ -466,7 +474,7 @@ export const CarReplacementTool = ({ data, setData }: any) => {
                    <span>升級</span>
                 </div>
                 <div>
-                   <h4 className="font-bold text-slate-800 flex items-center gap-2">殘值回流 (第5年)</h4>
+                   <h4 className="font-bold text-slate-800 flex items-center gap-2">殘值回流 (第{cycleYears}年)</h4>
                    <p className="text-sm text-slate-600 mt-1">賣掉舊車拿回殘值，加上原本的投資本金，雪球越滾越大，下一台車可以換得更好。</p>
                 </div>
              </div>
@@ -488,7 +496,7 @@ export const CarReplacementTool = ({ data, setData }: any) => {
            
            <div className="grid grid-cols-1 gap-3">
               {[
-                { title: "永遠開新車", desc: "每五年更換新車，享受最新科技與安全配備，同時避免老車高昂的維修費用。" },
+                { title: "永遠開新車", desc: `每${cycleYears}年更換新車，享受最新科技與安全配備，同時避免老車高昂的維修費用。` },
                 { title: "資產不歸零", desc: "打破買車就是負資產的宿命，讓您的購車本金透過投資持續增值，錢不再花掉就沒了。" },
                 { title: "現金流友善", desc: "透過配息補貼，每月實際從口袋拿出的錢大幅減少，維持生活品質。" },
                 { title: "越換越輕鬆", desc: "隨著每一次換車的殘值回流，您的投資本金越來越大，配息越來越多，最終實現免費開車。" }
