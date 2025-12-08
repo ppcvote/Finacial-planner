@@ -164,6 +164,7 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                             <span className="flex items-center gap-1"><Database size={12} className="text-cyan-500"/> 大水庫配息率 (%)</span>
                             <span className="font-bold text-cyan-700">{dividendRate}%</span>
                         </div>
+                        {/* 修正上限至 15% */}
                         <input type="range" min={2} max={15} step={0.5} value={dividendRate} onChange={(e) => updateField('dividendRate', Number(e.target.value))} className="w-full h-1.5 bg-cyan-100 rounded-lg accent-cyan-600" />
                         <p className="text-[10px] text-slate-400 mt-1">建議配置：穩健型標的 (如債券、定存股)</p>
                     </div>
@@ -172,6 +173,7 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                             <span className="flex items-center gap-1"><TrendingUp size={12} className="text-amber-500"/> 小水庫再投報率 (%)</span>
                             <span className="font-bold text-amber-700">{reinvestRate}%</span>
                         </div>
+                        {/* 修正上限至 30% */}
                         <input type="range" min={4} max={30} step={0.5} value={reinvestRate} onChange={(e) => updateField('reinvestRate', Number(e.target.value))} className="w-full h-1.5 bg-amber-100 rounded-lg accent-amber-500" />
                         <p className="text-[10px] text-slate-400 mt-1">建議配置：成長型標的 (如股票型 ETF)</p>
                     </div>
@@ -195,7 +197,7 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                           <Database size={32} className="text-white drop-shadow-md"/>
                       </div>
                       <p className="mt-2 text-sm font-bold text-cyan-300">大水庫</p>
-                      <p className="text-xs text-slate-400">本金 {initialCapital} 萬 (恆定)</p>
+                      <p className="text-xs text-slate-400">本金 {initialCapital} 萬</p>
                   </div>
 
                   {/* Flow Arrow */}
@@ -247,8 +249,8 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
              <div className="flex justify-between items-center mb-4 pl-2 border-l-4 border-cyan-500">
                 <h4 className="font-bold text-slate-700">資產堆疊成長模擬</h4>
                 <div className="flex gap-3 text-xs">
-                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-amber-400 rounded-full"></div> 小水庫 (獲利成長)</span>
-                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-cyan-600 rounded-full"></div> 大水庫 (本金恆定)</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-amber-400 rounded-full"></div> 小水庫 (獲利)</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-cyan-600 rounded-full"></div> 大水庫 (本金)</span>
                 </div>
              </div>
              
@@ -273,8 +275,9 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                       <ReferenceLine x={doubleYear} stroke="#fbbf24" strokeDasharray="3 3" label={{ position: 'top', value: '資產翻倍點', fill: '#d97706', fontSize: 12, fontWeight: 'bold' }} />
                   )}
 
-                  <Area type="monotone" dataKey="小水庫累積" stackId="1" stroke="#f59e0b" fill="url(#colorSmall)" />
+                  {/* 修正：先畫大水庫(底層)，再畫小水庫(上層) */}
                   <Area type="monotone" dataKey="大水庫本金" stackId="1" stroke="#0e7490" fill="url(#colorBig)" />
+                  <Area type="monotone" dataKey="小水庫累積" stackId="1" stroke="#f59e0b" fill="url(#colorSmall)" />
                 </AreaChart>
              </ResponsiveContainer>
           </div>
