@@ -90,7 +90,6 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       ? Math.round((totalSavingsOverTerm / 10000) + cashOutAmount)
       : Math.round(loanAmount + (cumulativeNetIncomeTarget / 10000));
   
-  // --- 圖表數據 ---
   const generateHouseChartData = () => {
     const dataArr = [];
     let cumulative = 0; 
@@ -124,7 +123,8 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
     return dataArr;
   };
 
-  // 更新欄位 (寫入 data)
+  // --- Input Handlers (統一使用 handle*Change 並寫入 data) ---
+
   const updateField = (field: string, value: number) => { 
       let newValue = Number(value);
       if (field === 'loanAmount') {
@@ -140,31 +140,43 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
           setData({ ...safeData, [field]: newValue }); 
       }
   };
+  
+  // [關鍵修復] 處理 Loan Amount input (數字輸入框)
+  const handleLoanAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value === '' ? '' : Number(e.target.value);
+    setTempLoanAmount(value as number);
+    // 立即更新到 data，以便報表能即時獲取
+    updateField('loanAmount', value as number);
+  };
 
-  // [關鍵修正] 切換模式時，同步寫入 data
+  const finalizeLoanAmount = () => {
+    let finalValue = Number(tempLoanAmount) || 100;
+    finalValue = Math.max(100, Math.min(5000, finalValue));
+    updateField('loanAmount', finalValue);
+  };
+
+  // [關鍵修復] 處理 Existing Payment input (數字輸入框)
+  const handleExistingPaymentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value === '' ? '' : Number(e.target.value);
+    setTempExistingMonthlyPayment(value as number);
+    updateField('existingMonthlyPayment', value as number); // 即時更新
+  };
+
+  const finalizeExistingPayment = () => {
+    let finalValue = Number(tempExistingMonthlyPayment) || 0;
+    updateField('existingMonthlyPayment', finalValue);
+  };
+
+  // [關鍵修復] 切換模式時，同步寫入 data
   const toggleRefinance = () => {
       const newMode = !isRefinance;
       setData({
           ...safeData,
-          isRefinance: newMode, // 寫入模式旗標
-          existingLoanBalance: newMode ? 700 : 0, // 寫入預設餘額
-          existingMonthlyPayment: newMode ? 38000 : 0 // 寫入預設月付金
+          isRefinance: newMode, 
+          // 切換時給予預設值，避免數據異常
+          existingLoanBalance: newMode ? 700 : 0, 
+          existingMonthlyPayment: newMode ? 38000 : 0 
       });
-  };
-  
-  // Input Handlers (省略部分，保持原樣)
-  const handleLoanAmountInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTempLoanAmount(e.target.value === '' ? '' : Number(e.target.value));
-  };
-  const finalizeLoanAmount = () => {
-    let finalValue = Number(tempLoanAmount) || 100;
-    updateField('loanAmount', finalValue);
-  };
-  const handleExistingPaymentInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTempExistingMonthlyPayment(e.target.value === '' ? '' : Number(e.target.value));
-  };
-  const finalizeExistingPayment = () => {
-    updateField('existingMonthlyPayment', Number(tempExistingMonthlyPayment) || 0);
   };
 
   return (
@@ -193,7 +205,16 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
             <div className="space-y-6">
                
                {/* 1. 資產/貸款總額 */}
-               <div><div className="flex justify-between items-center mb-2"><label className="text-sm font-medium text-slate-600">{isRefinance ? "轉增貸後總額 (萬)" : "資產/貸款總額 (萬)"}</label><div className="flex items-center"><input type="number" min={100} max={5000} step={1} value={tempLoanAmount} onChange={handleLoanAmountChange} onBlur={finalizeLoanAmount} onKeyDown={(e) => { if (e.key === 'Enter') { finalizeLoanAmount(); e.currentTarget.blur(); } }} className="w-20 text-right bg-transparent border-none p-0 font-mono font-bold text-emerald-600 text-lg focus:ring-0 focus:border-emerald-500 focus:bg-emerald-50/50 rounded"/><span className="font-mono font-bold text-emerald-600 text-lg ml-1">萬</span></div></div><input type="range" min={100} max={5000} step={1} value={loanAmount} onChange={(e) => updateField('loanAmount', Number(e.target.value))} className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-600 hover:accent-emerald-700 transition-all" /></div>
+               <div>
+                   <div className="flex justify-between items-center mb-2">
+                       <label className="text-sm font-medium text-slate-600">{isRefinance ? "轉增貸後總額 (萬)" : "資產/貸款總額 (萬)"}</label>
+                       <div className="flex items-center">
+                           <input type="number" min={100} max={5000} step={1} value={tempLoanAmount} onChange={handleLoanAmountChange} onBlur={finalizeLoanAmount} className="w-20 text-right bg-transparent border-none p-0 font-mono font-bold text-emerald-600 text-lg focus:ring-0 focus:border-emerald-500 focus:bg-emerald-50/50 rounded"/>
+                           <span className="font-mono font-bold text-emerald-600 text-lg ml-1">萬</span>
+                       </div>
+                   </div>
+                   <input type="range" min={100} max={5000} step={1} value={loanAmount} onChange={(e) => updateField('loanAmount', Number(e.target.value))} className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-600 hover:accent-emerald-700 transition-all" />
+               </div>
                {/* 2. 貸款年期 */}
                <div><div className="flex justify-between mb-2"><label className="text-sm font-medium text-slate-600">貸款年期 (年)</label><span className="font-mono font-bold text-teal-600 text-lg">{loanTerm}</span></div><input type="range" min={10} max={40} step={1} value={loanTerm} onChange={(e) => updateField('loanTerm', Number(e.target.value))} className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-teal-600 hover:accent-teal-700 transition-all" /></div>
                {/* 3. 貸款利率 */}
@@ -219,7 +240,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                     {isRefinance && (
                         <div className="space-y-4 bg-orange-50/50 p-4 rounded-xl border border-orange-100">
                             <div><div className="flex justify-between text-xs text-slate-500 mb-1"><span>現有房貸餘額 (萬)</span><span className="font-bold text-orange-700">{existingLoanBalance} 萬</span></div><input type="range" min={0} max={loanAmount} step={1} value={existingLoanBalance} onChange={(e) => updateField('existingLoanBalance', Number(e.target.value))} className="w-full h-1.5 bg-orange-200 rounded-lg appearance-none cursor-pointer accent-orange-500" /></div>
-                            <div><div className="flex justify-between items-center mb-1"><span className="text-xs text-slate-500">現有月付金 (元)</span><div className="flex items-center"><span className="font-bold text-orange-700 mr-1 text-sm">$</span><input type="number" min={0} max={300000} step={1} value={tempExistingMonthlyPayment} onChange={handleExistingPaymentChange} onBlur={finalizeExistingPayment} onKeyDown={(e) => e.key === 'Enter' && finalizeExistingPayment()} className="w-24 text-right bg-transparent border-none p-0 font-bold text-orange-700 text-sm focus:ring-0 focus:border-orange-500 focus:bg-orange-50/50 rounded"/></div></div><input type="range" min={0} max={150000} step={1} value={existingMonthlyPayment} onChange={(e) => updateField('existingMonthlyPayment', Number(e.target.value))} className="w-full h-1.5 bg-orange-200 rounded-lg appearance-none cursor-pointer accent-orange-500" /></div>
+                            <div><div className="flex justify-between items-center mb-1"><span className="text-xs text-slate-500">現有月付金 (元)</span><div className="flex items-center"><span className="font-bold text-orange-700 mr-1 text-sm">$</span><input type="number" min={0} max={300000} step={1} value={tempExistingMonthlyPayment} onChange={handleExistingPaymentChange} onBlur={finalizeExistingPayment} className="w-24 text-right bg-transparent border-none p-0 font-bold text-orange-700 text-sm focus:ring-0 focus:border-orange-500 focus:bg-orange-50/50 rounded"/></div></div><input type="range" min={0} max={150000} step={1} value={existingMonthlyPayment} onChange={(e) => updateField('existingMonthlyPayment', Number(e.target.value))} className="w-full h-1.5 bg-orange-200 rounded-lg appearance-none cursor-pointer accent-orange-500" /></div>
                             <div className="pt-2 border-t border-orange-200 text-xs text-orange-800 space-y-1">
                                 <div className="flex justify-between"><span>增貸現金 (新貸-舊貸):</span><span className="font-bold">{cashOutAmount} 萬</span></div>
                                 <div className="flex justify-between"><span>增貸產生配息:</span><span className="font-bold">+${Math.round(monthlyInvestIncomeFromCashOut).toLocaleString()}/月</span></div>
@@ -278,7 +299,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                   </div>
                   <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 text-center space-y-3">
                        <div><p className="text-sm text-emerald-800 font-bold mb-1">每月減輕負擔</p><p className="text-4xl font-black text-emerald-600 font-mono">${Math.round(monthlySavings).toLocaleString()}</p></div>
-                       <div className="border-t border-emerald-200/50 pt-2"><p className="text-xs text-emerald-700 font-bold mb-0.5">{loanTerm}年總計省下</p><p className="text-xl font-black text-emerald-700 font-mono">${Math.round(totalSavingsOverTerm / 10000).toLocaleString()} 萬</p></div>
+                       <div className="border-t border-emerald-200/50 pt-2"><p className="text-xs text-emerald-700 font-bold mb-0.5">{loanTerm}年總計省下</p><p className className="text-xl font-black text-emerald-700 font-mono">${Math.round(totalSavingsOverTerm / 10000).toLocaleString()} 萬</p></div>
                   </div>
                </div>
                <div className="md:col-span-1 bg-white rounded-2xl shadow border border-slate-200 p-6 print-break-inside space-y-4">
