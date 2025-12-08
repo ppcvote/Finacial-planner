@@ -60,16 +60,16 @@ const calculateRemainingBalance = (principal: number, rate: number, totalYears: 
 };
 
 // ------------------------------------------------------------------
-// 子元件: 超級比一比 (Comparison Card) - 極致緊湊版
+// 子元件: 超級比一比 (Comparison Card) - 緊湊版
 // ------------------------------------------------------------------
 const ComparisonRow = ({ title, physical, financial, isBetter }: any) => (
-    // 修改：print:py-0.5 極限壓縮行距，print:text-[10px] 縮小字體
-    <div className="grid grid-cols-3 gap-2 py-3 print:py-0.5 border-b border-slate-100 last:border-0 text-sm print:text-[10px] items-center">
+    // 修改：print:py-1 縮小行距，print:text-xs 縮小字體
+    <div className="grid grid-cols-3 gap-2 py-3 print:py-1 border-b border-slate-100 last:border-0 text-sm print:text-xs items-center">
         <div className="font-bold text-slate-600 flex items-center">{title}</div>
         <div className="text-center text-slate-500 flex items-center justify-center gap-1">
              {physical}
         </div>
-        <div className="text-center font-bold text-emerald-600 flex items-center justify-center gap-1 bg-emerald-50 rounded-lg py-1 print:py-0">
+        <div className="text-center font-bold text-emerald-600 flex items-center justify-center gap-1 bg-emerald-50 rounded-lg py-1 print:py-0.5">
              {financial} {isBetter && <CheckCircle2 size={14} className="print:w-3 print:h-3" />}
         </div>
     </div>
@@ -128,7 +128,7 @@ const EstateReport = ({ data }: { data: any }) => {
 
   return (
     // 修改：print:space-y-4 讓整體更緊湊
-    <div className="font-sans text-slate-800 space-y-8 print:space-y-3 relative">
+    <div className="font-sans text-slate-800 space-y-8 print:space-y-4 relative">
       
       {/* 浮水印 */}
       <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[50] overflow-hidden mix-blend-multiply print:fixed print:top-1/2 print:left-1/2 print:-translate-x-1/2 print:-translate-y-1/2">
@@ -162,9 +162,9 @@ const EstateReport = ({ data }: { data: any }) => {
       </div>
 
       {/* 2. 核心戰略：超級比一比 (The Anchor) */}
-      {/* 修改：print:p-2 極致縮小內距 */}
-      <div className="relative z-10 bg-slate-50 rounded-3xl p-8 border border-slate-200 print-break-inside print:p-2">
-          <div className="flex items-center justify-between mb-6 print:mb-1">
+      {/* 修改：print:p-3 縮小內距 */}
+      <div className="relative z-10 bg-slate-50 rounded-3xl p-8 border border-slate-200 print-break-inside print:p-3">
+          <div className="flex items-center justify-between mb-6 print:mb-2">
               <h2 className="text-xl font-bold text-slate-700 flex items-center gap-2 print:text-base">
                   <Scale size={24} className="text-emerald-500 print:w-4 print:h-4"/>
                   投資模式超級比一比
@@ -174,11 +174,12 @@ const EstateReport = ({ data }: { data: any }) => {
               </span>
           </div>
 
-          {/* 關鍵修改：print:grid-cols-2 強制在列印時並排顯示！ */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:gap-2 print:grid-cols-2">
+          {/* 修改：print:gap-3 縮小左右卡片間距 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:gap-3">
               {/* 左側：傳統房東 */}
+              {/* 修改：print:p-2 縮小卡片內距 */}
               <div className="bg-white p-5 rounded-2xl border border-slate-200 print:p-2 opacity-80 grayscale-[0.3]">
-                  <div className="flex items-center gap-2 mb-4 print:mb-1 border-b border-slate-100 pb-2">
+                  <div className="flex items-center gap-2 mb-4 print:mb-2 border-b border-slate-100 pb-2">
                       <Building2 className="text-slate-400 print:w-4 print:h-4" size={20}/>
                       <h3 className="font-bold text-slate-600 print:text-sm">傳統實體房產</h3>
                   </div>
@@ -195,9 +196,10 @@ const EstateReport = ({ data }: { data: any }) => {
               </div>
 
               {/* 右側：數位包租公 */}
+              {/* 修改：print:p-2 縮小卡片內距 */}
               <div className="bg-white p-5 rounded-2xl border-2 border-emerald-500 shadow-xl print:shadow-none print:p-2 relative overflow-hidden print:border">
                    <div className="absolute top-0 right-0 bg-emerald-500 text-white text-[10px] px-2 py-1 rounded-bl-lg font-bold print:py-0 print:px-1">Recommended</div>
-                  <div className="flex items-center gap-2 mb-4 print:mb-1 border-b border-emerald-100 pb-2">
+                  <div className="flex items-center gap-2 mb-4 print:mb-2 border-b border-emerald-100 pb-2">
                       <Landmark className="text-emerald-600 print:w-4 print:h-4" size={20}/>
                       <h3 className="font-bold text-emerald-700 print:text-sm">金融房產 (本專案)</h3>
                   </div>
@@ -217,8 +219,8 @@ const EstateReport = ({ data }: { data: any }) => {
 
       {/* 3. 執行三部曲 (The Roadmap) */}
       <div className="relative z-10 print-break-inside">
-          <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2 print:text-base print:mb-2">
-              <ArrowRight size={24} className="text-emerald-600 print:w-4 print:h-4"/>
+          <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2 print:text-lg print:mb-2">
+              <ArrowRight size={24} className="text-emerald-600 print:w-5 print:h-5"/>
               執行藍圖 (SOP)
           </h2>
           <div className="flex flex-col md:flex-row gap-4 print:flex-row print:gap-2">
@@ -242,8 +244,8 @@ const EstateReport = ({ data }: { data: any }) => {
       {/* 4. 資產成長趨勢 (The Vision) */}
       <div className="relative z-10 space-y-4 print-break-inside">
           <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-bold text-slate-700 flex items-center gap-2 print:text-base">
-                  <TrendingUp size={24} className="text-emerald-600 print:w-4 print:h-4"/>
+              <h2 className="text-xl font-bold text-slate-700 flex items-center gap-2 print:text-lg">
+                  <TrendingUp size={24} className="text-emerald-600 print:w-5 print:h-5"/>
                   資產淨值成長模擬
               </h2>
               <div className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded print:text-[10px]">
@@ -251,7 +253,7 @@ const EstateReport = ({ data }: { data: any }) => {
               </div>
           </div>
           
-          {/* 修改：高度壓縮至 220px，確保能擠進第二頁 */}
+          {/* 修改：高度設為 220px 確保擠進第二頁 */}
           <div className="h-[300px] w-full border border-slate-100 rounded-2xl p-4 bg-white shadow-sm print:h-[220px] print:p-2">
               <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
@@ -269,99 +271,7 @@ const EstateReport = ({ data }: { data: any }) => {
           </div>
           
           {/* 現金流提示 */}
-          <div className="flex gap-4 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100 print:mt-1 print:p-2 print:text-[10px]">
+          <div className="flex gap-4 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100 print:mt-2 print:p-2 print:text-[10px]">
               <div className="flex-1 text-center border-r border-slate-200">
                   <span className="block text-slate-400 mb-1">每月房貸支出</span>
                   <span className="font-bold text-red-500 text-lg print:text-sm">-${Math.round(monthlyPayment).toLocaleString()}</span>
-              </div>
-              <div className="flex-1 text-center border-r border-slate-200">
-                  <span className="block text-slate-400 mb-1">預估每月配息</span>
-                  <span className="font-bold text-emerald-600 text-lg print:text-sm">+${Math.round(monthlyIncome).toLocaleString()}</span>
-              </div>
-              <div className="flex-1 text-center">
-                  <span className="block text-slate-400 mb-1">每月淨現金流</span>
-                  <span className={`font-bold text-lg print:text-sm ${isPositiveFlow ? 'text-emerald-600' : 'text-orange-500'}`}>
-                      {isPositiveFlow ? '+' : ''}{Math.round(netCashFlow).toLocaleString()}
-                  </span>
-              </div>
-          </div>
-      </div>
-
-      {/* 強制分頁：第三頁開始 */}
-      <div className="hidden print:block break-before-page"></div>
-
-      {/* 5. 升息防禦力分析 (The Defense) */}
-      <div className="relative z-10 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm print:mt-8 print:shadow-none print:p-6">
-          <h3 className="font-bold text-slate-800 text-lg mb-4 flex items-center gap-2 print:text-lg">
-              <ShieldCheck size={20} className="text-emerald-600"/> 升息防禦力壓力測試
-          </h3>
-          
-          <div className="flex items-end gap-2 mb-2">
-              <div className="flex-1">
-                  <div className="flex justify-between text-xs text-slate-500 mb-1">
-                      <span>目前貸款利率 {loanRate}%</span>
-                      <span>損益兩平點 {breakEvenRate}%</span>
-                  </div>
-                  <div className="w-full bg-slate-100 h-4 rounded-full overflow-hidden flex relative">
-                      <div className="h-full bg-emerald-500" style={{ width: `${(loanRate / breakEvenRate) * 100}%` }}></div>
-                      <div className="h-full bg-emerald-200" style={{ width: `${(spread / breakEvenRate) * 100}%` }}></div>
-                      <div className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10" style={{ left: `${((loanRate + 1) / breakEvenRate) * 100}%` }}></div>
-                  </div>
-                  <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                      <span>0%</span>
-                      <span className="text-red-500 font-bold">▲ 升息1% 仍在安全範圍</span>
-                      <span>{breakEvenRate}%</span>
-                  </div>
-              </div>
-              <div className="text-right pl-4">
-                  <span className="block text-xs text-slate-500">利差安全氣囊</span>
-                  <span className="font-bold text-2xl text-emerald-600 font-mono">{spread.toFixed(1)}%</span>
-              </div>
-          </div>
-          
-          <div className="bg-emerald-50 rounded-lg p-3 text-xs text-emerald-800 leading-relaxed border border-emerald-100 mt-3">
-              <p>
-                  <strong>壓力測試結論：</strong> 
-                  即使央行升息 1% (相當劇烈的幅度)，您的利差緩衝仍有 {(spread - 1).toFixed(1)}%，系統依然能維持正向運作。
-                  此外，本金隨時間還款而減少，利息壓力會逐年降低，安全性將逐年提高。
-              </p>
-          </div>
-      </div>
-
-      {/* 6. 顧問總結與下一步 */}
-      <div className="relative z-10 bg-slate-50 p-6 rounded-2xl border-l-4 border-emerald-500 print-break-inside print:p-6">
-          <div className="flex gap-4 mb-6">
-               <Quote className="text-emerald-300 shrink-0" size={32} />
-               <div>
-                   <h3 className="font-bold text-slate-800 text-lg mb-2 print:text-lg">顧問觀點</h3>
-                   <p className="text-slate-600 text-sm leading-relaxed mb-1 print:text-sm">
-                       「富人買資產，窮人買負債，中產階級買他們以為是資產的負債。金融房產專案，讓您用銀行的錢，買進真正的資產。」
-                   </p>
-               </div>
-          </div>
-          
-          <div className="border-t border-slate-200 pt-4 mt-4">
-              <h4 className="font-bold text-slate-700 text-sm mb-3">下一步行動</h4>
-              <div className="flex justify-between items-center gap-8">
-                  <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <div className="w-4 h-4 border-2 border-slate-300 rounded"></div>
-                          <span>確認個人信用狀況與可貸額度</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <div className="w-4 h-4 border-2 border-slate-300 rounded"></div>
-                          <span>挑選適合的穩健配息標的</span>
-                      </div>
-                  </div>
-                  <div className="w-1/3 border-b border-slate-400 pb-1">
-                      <p className="text-[10px] text-slate-400 mb-6">客戶簽名 (已充分了解風險與效益)</p>
-                  </div>
-              </div>
-          </div>
-      </div>
-
-    </div>
-  );
-};
-
-export default EstateReport;
