@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   Calculator, 
@@ -11,7 +11,6 @@ import {
   Settings,    
   ChevronDown, 
   ChevronUp,   
-  ArrowRightLeft, 
   PiggyBank,
   Briefcase     
 } from 'lucide-react';
@@ -67,12 +66,23 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   };
   const { loanAmount, loanTerm, loanRate, investReturnRate, existingLoanBalance, existingMonthlyPayment } = safeData;
 
-  // 使用 state 來儲存正在輸入的 loanAmount，避免 onChange 時立即更新計算
+  // 使用 state 來儲存正在輸入的數值，避免 onChange 時立即更新計算造成卡頓或跳動
   const [tempLoanAmount, setTempLoanAmount] = useState(loanAmount);
+  const [tempExistingMonthlyPayment, setTempExistingMonthlyPayment] = useState(existingMonthlyPayment);
+  
   // 新增狀態：是否顯示進階設定 (轉增貸)
   const [showAdvanced, setShowAdvanced] = useState(false);
   // 新增狀態：是否啟用轉增貸模式
   const [isRefinanceMode, setIsRefinanceMode] = useState(false);
+
+  // 當外部 props 更新時 (例如滑桿拖動或雲端資料載入)，同步更新內部 temp state
+  useEffect(() => {
+    setTempLoanAmount(loanAmount);
+  }, [loanAmount]);
+
+  useEffect(() => {
+    setTempExistingMonthlyPayment(existingMonthlyPayment);
+  }, [existingMonthlyPayment]);
 
   // --- 計算邏輯 ---
   
@@ -101,11 +111,6 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
   const isNegativeCashFlowOriginal = monthlyCashFlowOriginal < 0; 
   const totalOutOfPocketOriginal = isNegativeCashFlowOriginal ? Math.abs(monthlyCashFlowOriginal) * 12 * loanTerm : 0;
 
-  // --- 用於顯示的變數 (根據模式切換) ---
-  const displayMonthlyCashFlow = isRefinanceMode 
-      ? monthlySavings // 轉增貸：省下的錢 (正數代表少繳)
-      : monthlyCashFlowOriginal; // 原始：淨現金流
-
   // 總累積效益計算
   const cumulativeNetIncomeTarget = isRefinanceMode
       ? monthlySavings * loanTerm * 12 // 累積省下的錢
@@ -125,8 +130,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       const remainingLoan = calculateRemainingBalance(loanAmount, loanRate, loanTerm, year);
       
       if (isRefinanceMode) {
-          // 轉增貸模式圖表：顯示「原貸款餘額」與「新貸款餘額(扣除投資收益補貼效應)」的對比?
-          // 或者顯示「累積省下的現金」
+          // 轉增貸模式圖表
           cumulative += monthlySavings * 12;
           
           if (year === 1 || year % step === 0 || year === loanTerm) {
@@ -161,6 +165,10 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
           const clampedValue = Math.max(100, Math.min(5000, newValue));
           setTempLoanAmount(Math.round(clampedValue));
           setData({ ...safeData, [field]: Math.round(clampedValue) });
+      } else if (field === 'existingMonthlyPayment') {
+          // 當滑桿移動時，同步更新 temp state 以確保輸入框數字跟著跳動
+          setTempExistingMonthlyPayment(newValue);
+          setData({ ...safeData, [field]: newValue });
       } else if (field === 'investReturnRate' || field === 'loanRate') {
           setData({ ...safeData, [field]: Number(newValue.toFixed(1)) });
       } else {
@@ -168,17 +176,32 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       }
   };
   
+  // --- Input Handlers (Loan Amount) ---
   const handleLoanAmountInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value === '' ? '' : Number(e.target.value);
     setTempLoanAmount(value as number);
   };
 
   const finalizeLoanAmount = () => {
-    let finalValue = isNaN(tempLoanAmount) || tempLoanAmount === 0 ? 100 : tempLoanAmount;
+    let finalValue = isNaN(tempLoanAmount as number) || tempLoanAmount === 0 ? 100 : (tempLoanAmount as number);
     finalValue = Math.max(100, Math.min(5000, finalValue));
     finalValue = Math.round(finalValue);
     setData({ ...safeData, loanAmount: finalValue });
     setTempLoanAmount(finalValue); 
+  };
+
+  // --- Input Handlers (Existing Monthly Payment) ---
+  const handleExistingPaymentInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value === '' ? '' : Number(e.target.value);
+    setTempExistingMonthlyPayment(value as number);
+  };
+
+  const finalizeExistingPayment = () => {
+    let finalValue = Number(tempExistingMonthlyPayment);
+    if (isNaN(finalValue)) finalValue = 38000;
+    finalValue = Math.max(0, finalValue); // 允許最小值為 0
+    setData({ ...safeData, existingMonthlyPayment: finalValue });
+    setTempExistingMonthlyPayment(finalValue);
   };
 
 
@@ -250,13 +273,21 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                    />
                </div>
                
-               {/* 2. 貸款年期 */}
+               {/* 2. 貸款年期 (範圍調整：10-40年) */}
                <div>
                  <div className="flex justify-between mb-2">
                      <label className="text-sm font-medium text-slate-600">貸款年期 (年)</label>
                      <span className={`font-mono font-bold text-teal-600 text-lg`}>{loanTerm}</span>
                    </div>
-                   <input type="range" min={20} max={40} step={1} value={loanTerm} onChange={(e) => updateField('loanTerm', Number(e.target.value))} className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-teal-600 hover:accent-teal-700 transition-all`} />
+                   <input 
+                      type="range" 
+                      min={10} 
+                      max={40} 
+                      step={1} 
+                      value={loanTerm} 
+                      onChange={(e) => updateField('loanTerm', Number(e.target.value))} 
+                      className={`w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-teal-600 hover:accent-teal-700 transition-all`} 
+                   />
                </div>
 
                {/* 3. 貸款利率 */}
@@ -322,13 +353,28 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                                     className="w-full h-1.5 bg-orange-200 rounded-lg appearance-none cursor-pointer accent-orange-500" 
                                 />
                             </div>
+                            
+                            {/* 更新：現有月付金 (新增輸入框 & 調整級距為 1) */}
                             <div>
-                                <div className="flex justify-between text-xs text-slate-500 mb-1">
-                                    <span>現有月付金 (元)</span>
-                                    <span className="font-bold text-orange-700">${existingMonthlyPayment.toLocaleString()}</span>
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-xs text-slate-500">現有月付金 (元)</span>
+                                    <div className="flex items-center">
+                                         <span className="font-bold text-orange-700 mr-1 text-sm">$</span>
+                                         <input 
+                                             type="number"
+                                             min={0}
+                                             max={300000}
+                                             step={1}
+                                             value={tempExistingMonthlyPayment}
+                                             onChange={handleExistingPaymentInput}
+                                             onBlur={finalizeExistingPayment}
+                                             onKeyDown={(e) => { if (e.key === 'Enter') { finalizeExistingPayment(); e.currentTarget.blur(); } }}
+                                             className="w-24 text-right bg-transparent border-none p-0 font-bold text-orange-700 text-sm focus:ring-0 focus:border-orange-500 focus:bg-orange-50/50 rounded"
+                                         />
+                                    </div>
                                 </div>
                                 <input 
-                                    type="range" min={5000} max={150000} step={100} 
+                                    type="range" min={0} max={150000} step={1} 
                                     value={existingMonthlyPayment} 
                                     onChange={(e) => updateField('existingMonthlyPayment', Number(e.target.value))} 
                                     className="w-full h-1.5 bg-orange-200 rounded-lg appearance-none cursor-pointer accent-orange-500" 
