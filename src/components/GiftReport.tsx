@@ -33,14 +33,15 @@ const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmoun
     const badgeClass = phase === 1 ? 'bg-blue-100 text-blue-700' : phase === 2 ? 'bg-indigo-100 text-indigo-700' : 'bg-purple-100 text-purple-700';
 
     return (
-        <div className={`flex-1 p-4 print:p-5 rounded-xl border ${bgClass} relative flex flex-col justify-between`}>
+        // 修改：print:p-4 (從 p-5 微調回 p-4，避免過度撐開)
+        <div className={`flex-1 p-4 print:p-4 rounded-xl border ${bgClass} relative flex flex-col justify-between`}>
             {!isLast && (
-                <div className="hidden md:flex print:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 bg-white border border-slate-200 rounded-full items-center justify-center text-slate-400 print:w-6 print:h-6">
-                    <ArrowRight size={14} className="print:w-4 print:h-4"/>
+                <div className="hidden md:flex print:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 bg-white border border-slate-200 rounded-full items-center justify-center text-slate-400 print:w-5 print:h-5">
+                    <ArrowRight size={14} className="print:w-3 print:h-3"/>
                 </div>
             )}
             
-            <div className="flex justify-between items-start mb-3 print:mb-3">
+            <div className="flex justify-between items-start mb-3 print:mb-2">
                 <div>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass} mb-1 inline-block print:px-2 print:py-0.5 print:text-[10px]`}>
                         Step 0{phase}
@@ -54,7 +55,7 @@ const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmoun
                 </div>
             </div>
 
-            <div className="space-y-2 print:space-y-2 border-t border-slate-200/50 pt-3 print:pt-3">
+            <div className="space-y-2 print:space-y-2 border-t border-slate-200/50 pt-3 print:pt-2">
                 <div className="flex justify-between items-center text-xs print:text-[11px]">
                     <span className="text-slate-500">每月實質負擔</span>
                     <span className={`font-bold ${netOut > 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
@@ -133,6 +134,7 @@ const GiftReport = ({ data }: { data: any }) => {
   const finalAssetValue_Wan = phase3_Asset;
   const netProfit_Wan = finalAssetValue_Wan - totalProjectCost_Wan;
   const avgMonthlyCost = Math.round((phase1_NetOut + phase2_NetOut + phase3_NetOut) / 3);
+  
   const monthlyStandardSaving = Math.round((finalAssetValue_Wan * 10000) / (totalYears * 12));
 
   const generateChartData = () => {
@@ -143,6 +145,7 @@ const GiftReport = ({ data }: { data: any }) => {
 
     for (let year = 1; year <= totalYears; year++) {
       cumulativeStandard += standardSavingPerMonth * 12;
+      
       let currentYearNetOut = 0;
       let currentAssetValue = 0;
 
@@ -186,17 +189,22 @@ const GiftReport = ({ data }: { data: any }) => {
   const chartData = generateChartData();
 
   return (
-    <div className="font-sans text-slate-800 space-y-8 print:space-y-6 relative">
+    // 修改：print:space-y-5 (從 6 改為 5，稍微緊湊一點以防跑版)
+    <div className="font-sans text-slate-800 space-y-8 print:space-y-5 relative">
       
-      {/* --- Logo 浮水印 (背景) --- */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden print:fixed print:top-1/2 print:left-1/2 print:-translate-x-1/2 print:-translate-y-1/2">
+      {/* --- 全域浮水印 (Watermark) --- */}
+      {/* 關鍵修正：
+          1. z-[50]: 確保浮水印在最上層，不被背景色蓋住
+          2. pointer-events-none: 讓滑鼠可以穿透點擊下方內容
+          3. mix-blend-multiply: 讓圖片白色部分透明，與內容融合
+      */}
+      <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[50] overflow-hidden mix-blend-multiply print:fixed print:top-1/2 print:left-1/2 print:-translate-x-1/2 print:-translate-y-1/2">
           <div className="opacity-[0.08] transform -rotate-12">
               <img 
                 src="/logo.png" 
                 alt="Logo Watermark" 
                 className="w-[500px] h-auto grayscale object-contain"
                 onError={(e) => {
-                    // 如果圖片載入失敗，隱藏它或顯示替代文字
                     (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />
@@ -216,12 +224,10 @@ const GiftReport = ({ data }: { data: any }) => {
                         (e.target as HTMLImageElement).style.display = 'none';
                         const iconContainer = (e.target as HTMLImageElement).parentElement!;
                         iconContainer.classList.add('bg-indigo-50');
-                        // 移除 hidden class 讓備用 icon 顯示
                         const fallbackIcon = iconContainer.querySelector('svg'); 
                         if(fallbackIcon) fallbackIcon.classList.remove('hidden');
                     }}
                  />
-                 {/* 備用 Icon: 當圖片載入失敗時顯示 */}
                  <Gift className="text-indigo-600 hidden" size={32} /> 
              </div>
 
@@ -330,7 +336,8 @@ const GiftReport = ({ data }: { data: any }) => {
               <TrendingUp size={24} className="text-indigo-600 print:w-5 print:h-5"/>
               資產成長模擬 ({totalYears}年趨勢)
           </h2>
-          <div className="h-[320px] w-full border border-slate-100 rounded-2xl p-4 bg-white shadow-sm print:h-[320px] print:p-4">
+          {/* 修改：print:h-[300px] (回縮至 300px，避免第二頁溢出) */}
+          <div className="h-[320px] w-full border border-slate-100 rounded-2xl p-4 bg-white shadow-sm print:h-[300px] print:p-4">
               <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
