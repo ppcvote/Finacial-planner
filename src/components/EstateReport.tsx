@@ -1,42 +1,12 @@
 import React from 'react';
 import { 
   Building2, Landmark, Scale, ShieldCheck, TrendingUp, ArrowRight, Quote, CheckCircle2,
-  XCircle, AlertTriangle, Percent, Banknote, Lock, Clock
+  XCircle, AlertTriangle, Percent, Banknote, Lock, Coins, PiggyBank, Wallet, Clock
 } from 'lucide-react';
 import { 
   ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Legend, ResponsiveContainer, Bar
 } from 'recharts';
-
-// --- 計算邏輯 (本地獨立計算，確保與介面一致) ---
-const calculateMonthlyPayment = (principal: number, rate: number, years: number) => {
-  const p = Number(principal) || 0;
-  const rVal = Number(rate) || 0;
-  const y = Number(years) || 0;
-  const r = rVal / 100 / 12;
-  const n = y * 12;
-  if (rVal === 0) return (p * 10000) / (n || 1);
-  const result = (p * 10000 * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
-  return isNaN(result) ? 0 : result;
-};
-
-const calculateMonthlyIncome = (principal: number, rate: number) => {
-  const p = Number(principal) || 0;
-  const r = Number(rate) || 0;
-  return (p * 10000 * (r / 100)) / 12;
-};
-
-const calculateRemainingBalance = (principal: number, rate: number, totalYears: number, yearsElapsed: number) => {
-  const pVal = Number(principal) || 0;
-  const rVal = Number(rate) || 0;
-  const totalY = Number(totalYears) || 0;
-  const elapsed = Number(yearsElapsed) || 0;
-  const r = rVal / 100 / 12;
-  const n = totalY * 12;
-  const p = elapsed * 12;
-  if (rVal === 0) return Math.max(0, pVal * 10000 * (1 - p / (n || 1)));
-  const balance = (pVal * 10000) * (Math.pow(1 + r, n) - Math.pow(1 + r, p)) / (Math.pow(1 + r, n) - 1);
-  return Math.max(0, isNaN(balance) ? 0 : balance);
-};
+import { calculateMonthlyPayment, calculateMonthlyIncome, calculateRemainingBalance } from '../utils';
 
 // ------------------------------------------------------------------
 // 子元件: 超級比一比 (Comparison Card) - 極致緊湊版
@@ -65,12 +35,12 @@ const EstateReport = ({ data }: { data: any }) => {
   const existingLoanBalance = Number(data?.existingLoanBalance) || 0;
   const existingMonthlyPayment = Number(data?.existingMonthlyPayment) || 0;
   
-  // 判斷模式 (若無傳入，預設為 false)
-  const isRefinance = data?.isRefinance || false;
+  // [關鍵修正 1]: 優先讀取 data.isRefinance，確保模式同步
+  const isRefinance = data?.isRefinance ?? false;
+  const cashOutAmount = isRefinance ? Math.max(0, loanAmount - existingLoanBalance) : 0;
 
   // 2. 核心計算
   const monthlyPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
-  const cashOutAmount = isRefinance ? Math.max(0, loanAmount - existingLoanBalance) : 0;
   
   // 轉增貸模式計算
   const monthlyInvestIncomeFromCashOut = calculateMonthlyIncome(cashOutAmount, investReturnRate);
@@ -84,7 +54,7 @@ const EstateReport = ({ data }: { data: any }) => {
   const netCashFlow = monthlyIncomeFull - monthlyPayment;
   const isPositiveFlow = netCashFlow >= 0;
   const totalNetCashFlow = netCashFlow * 12 * loanTerm;
-  const totalAssetValue = loanAmount * 10000;
+  const totalAssetValue = loanAmount * 10000; // 假設本金不變
   const totalBenefitStandard = totalAssetValue + totalNetCashFlow;
 
   // 3. 圖表數據
@@ -97,16 +67,14 @@ const EstateReport = ({ data }: { data: any }) => {
         const remainingLoan = calculateRemainingBalance(loanAmount, loanRate, loanTerm, year);
         
         if (isRefinance) {
-            // 轉增貸模式：顯示累積省下的錢
             const cumulativeSavings = monthlySavings * 12 * year;
             dataArr.push({
                 year: `${year}`,
-                累積效益: Math.round(cumulativeSavings / 10000), // 省下的錢
+                累積節省金額: Math.round(cumulativeSavings / 10000), // 省下的錢
                 轉貸現金: Math.round(cashOutAmount), // 增貸出來的錢
                 剩餘貸款: Math.round(remainingLoan / 10000)
             });
         } else {
-            // 一般模式：顯示資產與淨值
             const equity = (loanAmount * 10000) - remainingLoan;
             const cumulativeFlow = netCashFlow * 12 * year;
             dataArr.push({
@@ -268,9 +236,9 @@ const EstateReport = ({ data }: { data: any }) => {
                           </>
                       ) : (
                           <>
+                            {/* [關鍵修正 2]: 移除 Bar，只保留 Area (資產) 和 Line (貸款) */}
                             <Area yAxisId="left" type="monotone" name="總資產" dataKey="總資產" stroke="#10b981" fill="#ecfdf5" strokeWidth={2} isAnimationActive={false}/>
                             <Line yAxisId="left" type="monotone" name="剩餘貸款" dataKey="剩餘貸款" stroke="#ef4444" strokeWidth={2} dot={false} strokeDasharray="5 5" isAnimationActive={false}/>
-                            <Bar yAxisId="left" dataKey="淨值" fill="#3b82f6" barSize={10} radius={[2,2,0,0]} isAnimationActive={false}/>
                           </>
                       )}
                   </ComposedChart>
