@@ -12,7 +12,8 @@ import {
   ChevronDown, 
   ChevronUp,   
   PiggyBank,
-  Briefcase     
+  Briefcase,
+  ArrowDown
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
@@ -569,16 +570,51 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                 <div className="md:col-span-1 print-break-inside space-y-6">
                     <div className="bg-white rounded-2xl shadow-lg border border-teal-200 p-6 h-full">
                         <h3 className="text-xl font-bold text-teal-700 mb-2 flex items-center gap-2">
-                            <TrendingUp size={24} /> 總貸款期 ({loanTerm}年) 累積總效益
+                            <TrendingUp size={24} /> {isNegativeCashFlowOriginal ? "槓桿置產效益分析" : `總貸款期 (${loanTerm}年) 累積總效益`}
                         </h3>
-                        <div className="text-center h-full flex flex-col justify-center">
-                            <p className="text-slate-500 text-sm font-medium mb-1">
-                                期滿後總累積效益 (淨現金流總和 + 初始貸款總額)
-                            </p>
-                            <p className={`text-5xl font-black font-mono ${totalWealthTargetWan >= loanAmount ? 'text-green-600' : 'text-red-500'}`}>
-                                ${totalWealthTargetWan.toLocaleString()} 萬
-                            </p>
-                        </div>
+                        
+                        {isNegativeCashFlowOriginal ? (
+                             <div className="text-center h-full flex flex-col justify-center space-y-4">
+                                 <div>
+                                    <p className="text-slate-500 text-sm font-medium mb-1">
+                                        {loanTerm}年總實付成本
+                                    </p>
+                                    <p className="text-3xl font-black text-red-500 font-mono">
+                                        ${Math.round(totalOutOfPocketOriginal/10000).toLocaleString()} 萬
+                                    </p>
+                                 </div>
+                                 
+                                 <div className="relative">
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="w-full border-t border-slate-200"></div>
+                                    </div>
+                                    <div className="relative bg-white px-2 flex justify-center">
+                                         <span className="text-xs text-slate-400 bg-slate-100 px-3 py-1 rounded-full flex items-center gap-1">
+                                            <ArrowDown size={12}/> 交換 <ArrowDown size={12}/>
+                                         </span>
+                                    </div>
+                                 </div>
+
+                                 <div>
+                                    <p className="text-slate-500 text-sm font-medium mb-1">
+                                        期滿擁有一棟房 (資產)
+                                    </p>
+                                    <p className="text-4xl font-black text-emerald-600 font-mono">
+                                        ${loanAmount.toLocaleString()} 萬
+                                    </p>
+                                 </div>
+                             </div>
+                        ) : (
+                             <div className="text-center h-full flex flex-col justify-center">
+                                <p className="text-slate-500 text-sm font-medium mb-1">
+                                    期滿後總累積效益 (淨現金流總和 + 初始貸款總額)
+                                </p>
+                                <p className={`text-5xl font-black font-mono ${totalWealthTargetWan >= loanAmount ? 'text-green-600' : 'text-red-500'}`}>
+                                    ${totalWealthTargetWan.toLocaleString()} 萬
+                                </p>
+                            </div>
+                        )}
+                       
                     </div>
                 </div>
             </>
