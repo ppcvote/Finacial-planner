@@ -1,65 +1,12 @@
 import React from 'react';
 import { 
-  Building2, 
-  Landmark, 
-  Scale, 
-  ShieldCheck, 
-  TrendingUp, 
-  ArrowRight, 
-  Quote, 
-  CheckCircle2, 
-  XCircle,
-  AlertTriangle,
-  Percent,
-  Banknote,
-  Lock,
-  Coins,
-  PiggyBank,
-  Wallet,
-  Clock // [修正] 補上 Clock 避免白屏
+  Building2, Landmark, Scale, ShieldCheck, TrendingUp, ArrowRight, Quote, CheckCircle2,
+  XCircle, Percent, Banknote, Lock, Clock
 } from 'lucide-react';
 import { 
-  ComposedChart, 
-  Area, 
-  Line, 
-  CartesianGrid, 
-  XAxis, 
-  YAxis, 
-  Legend, 
-  ResponsiveContainer,
-  Bar,
+  ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Legend, ResponsiveContainer, Bar
 } from 'recharts';
-
-// --- 計算邏輯 (恢復檔案內計算) ---
-const calculateMonthlyPayment = (principal: number, rate: number, years: number) => {
-  const p = Number(principal) || 0;
-  const rVal = Number(rate) || 0;
-  const y = Number(years) || 0;
-  const r = rVal / 100 / 12;
-  const n = y * 12;
-  if (rVal === 0) return (p * 10000) / (n || 1);
-  const result = (p * 10000 * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
-  return isNaN(result) ? 0 : result;
-};
-
-const calculateMonthlyIncome = (principal: number, rate: number) => {
-  const p = Number(principal) || 0;
-  const r = Number(rate) || 0;
-  return (p * 10000 * (r / 100)) / 12;
-};
-
-const calculateRemainingBalance = (principal: number, rate: number, totalYears: number, yearsElapsed: number) => {
-  const pVal = Number(principal) || 0;
-  const rVal = Number(rate) || 0;
-  const totalY = Number(totalYears) || 0;
-  const elapsed = Number(yearsElapsed) || 0;
-  const r = rVal / 100 / 12;
-  const n = totalY * 12;
-  const p = elapsed * 12;
-  if (rVal === 0) return Math.max(0, pVal * 10000 * (1 - p / (n || 1)));
-  const balance = (pVal * 10000) * (Math.pow(1 + r, n) - Math.pow(1 + r, p)) / (Math.pow(1 + r, n) - 1);
-  return Math.max(0, isNaN(balance) ? 0 : balance);
-};
+import { calculateMonthlyPayment, calculateMonthlyIncome, calculateRemainingBalance } from '../utils';
 
 // ------------------------------------------------------------------
 // 子元件: 超級比一比 (Comparison Card) - 極致緊湊版
@@ -77,7 +24,7 @@ const ComparisonRow = ({ title, physical, financial, isBetter }: any) => (
 );
 
 // ------------------------------------------------------------------
-// 主元件: EstateReport
+// 主元件: EstateReport (獨立計算版)
 // ------------------------------------------------------------------
 const EstateReport = ({ data }: { data: any }) => {
   // 1. 資料解構
@@ -91,7 +38,7 @@ const EstateReport = ({ data }: { data: any }) => {
   const isRefinance = existingLoanBalance > 0 && existingLoanBalance < loanAmount;
   const cashOutAmount = isRefinance ? loanAmount - existingLoanBalance : 0;
 
-  // 2. 核心計算
+  // 2. 核心計算 (本地獨立計算，不依賴外部)
   const monthlyPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
   
   // 轉增貸模式計算
@@ -104,7 +51,6 @@ const EstateReport = ({ data }: { data: any }) => {
   // 一般模式計算
   const monthlyIncomeFull = calculateMonthlyIncome(loanAmount, investReturnRate);
   const netCashFlow = monthlyIncomeFull - monthlyPayment;
-  const isPositiveFlow = netCashFlow >= 0;
   const totalNetCashFlow = netCashFlow * 12 * loanTerm;
   const totalAssetValue = loanAmount * 10000; // 假設本金不變
   const totalBenefitStandard = totalAssetValue + totalNetCashFlow;
