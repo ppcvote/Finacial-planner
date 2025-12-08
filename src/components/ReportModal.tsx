@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { FileBarChart, ArrowUpFromLine, X, CheckCircle2, User, Calendar, PenTool, Phone, Mail, ShieldCheck } from 'lucide-react';
+import { 
+  FileBarChart, ArrowUpFromLine, X, CheckCircle2, User, Calendar, PenTool, 
+  Phone, Mail, ShieldCheck, Eye, EyeOff 
+} from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, ComposedChart, Line, Bar, BarChart 
 } from 'recharts';
 import { calculateMonthlyPayment, calculateMonthlyIncome, calculateRemainingBalance } from '../utils';
 
 // ------------------------------------------------------------------
-// Report Component (專業建議書引擎 V3.3 - Syntax Fix)
+// Report Component (專業建議書引擎 V4.0 - Layout Optimized)
 // ------------------------------------------------------------------
 
 const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) => {
   const [advisorNote, setAdvisorNote] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(true);
+  const [showContact, setShowContact] = useState(true); // 新增：控制是否顯示聯絡資訊
   const [mounted, setMounted] = useState(false); 
 
   useEffect(() => {
@@ -366,8 +370,8 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
      const netEstatePlanned = Math.max(0, plannedAssets - totalDeductions);
      const calculateTax = (netEstate: number) => {
         if (netEstate <= 5621) return netEstate * 0.10;
-        if (netEstate <= 11242) return netEstate * 0.15 - 281.05;
-        return netEstate * 0.20 - 843.15;
+        if (netEstate <= 11242) return netEstate * 0.15 - 250;
+        return netEstate * 0.20 - 750;
      };
      const taxRaw = calculateTax(netEstateRaw);
      const taxPlanned = calculateTax(netEstatePlanned);
@@ -400,7 +404,6 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
     };
   }
 
-  // 自動列印邏輯
   const handlePrint = () => {
       setShowNoteInput(false); 
       setTimeout(() => {
@@ -447,8 +450,9 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
           /* 報表頁面設定 */
           .print-page { 
              width: 210mm; 
-             min-height: 297mm; 
-             padding: 20mm; 
+             /* 移除固定高度，改由內容撐開，解決空白頁問題 */
+             /* min-height: 297mm; */ 
+             padding: 10mm; /* 邊界縮小為 10mm */
              margin: 0 auto; 
              background: white; 
              box-shadow: none;
@@ -468,7 +472,18 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
            <h3 className="font-bold text-slate-700 flex items-center gap-2">
                <FileBarChart size={20} className="text-blue-600"/> 策略建議書預覽
            </h3>
-           <div className="flex gap-2">
+           <div className="flex gap-3 items-center">
+               <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none bg-slate-50 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                   <input 
+                     type="checkbox" 
+                     checked={showContact} 
+                     onChange={(e) => setShowContact(e.target.checked)} 
+                     className="w-4 h-4 accent-blue-600 rounded"
+                   />
+                   {showContact ? <Eye size={16}/> : <EyeOff size={16}/>}
+                   顯示聯絡資訊
+               </label>
+               <div className="w-px h-6 bg-slate-200"></div>
                <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-colors shadow-sm">
                    <ArrowUpFromLine size={18}/> 列印建議書
                </button>
@@ -482,12 +497,12 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
         <div className="print-content">
 
             {/* === 第一頁：封面 (Cover Page) === */}
-            <div className="print-page cover-page flex flex-col justify-between bg-white relative overflow-hidden">
+            <div className="print-page cover-page flex flex-col justify-between bg-white relative overflow-hidden" style={{minHeight: '297mm'}}>
                 {/* 裝飾背景 */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-bl-[100%] z-0"></div>
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-slate-50 rounded-tr-[100%] z-0"></div>
 
-                <div className="pt-24 px-12 relative z-10">
+                <div className="pt-24 px-8 relative z-10">
                     <p className="text-blue-600 font-bold tracking-[0.2em] text-sm mb-6 uppercase">Exclusive Financial Proposal</p>
                     <h1 className="text-5xl font-black text-slate-900 leading-tight mb-8 tracking-tight">{reportContent.title}</h1>
                     <div className="h-1.5 w-24 bg-blue-600 mb-8 rounded-full"></div>
@@ -501,7 +516,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                      </div>
                 </div>
 
-                <div className="pb-24 px-12 relative z-10">
+                <div className="pb-24 px-8 relative z-10">
                     <div className="grid grid-cols-2 gap-12 border-t border-slate-200 pt-12">
                         <div>
                             <p className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider">Prepared For</p>
@@ -515,38 +530,44 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                         <div>
                             <p className="text-xs text-slate-400 font-bold mb-2 uppercase tracking-wider">Financial Advisor</p>
                             <h2 className="text-2xl font-bold text-slate-800">{user?.displayName || '專業理財顧問'}</h2>
-                            {user?.email && (
-                                <p className="text-slate-500 mt-2 flex items-center gap-2 text-sm">
-                                    <Mail size={14}/> {user.email}
-                                </p>
+                            
+                            {/* 聯絡資訊控制 */}
+                            {showContact && (
+                                <>
+                                    {user?.email && (
+                                        <p className="text-slate-500 mt-2 flex items-center gap-2 text-sm">
+                                            <Mail size={14}/> {user.email}
+                                        </p>
+                                    )}
+                                    <p className="text-slate-500 mt-1 flex items-center gap-2 text-sm">
+                                        <Phone size={14}/> 09xx-xxx-xxx
+                                    </p>
+                                </>
                             )}
-                            <p className="text-slate-500 mt-1 flex items-center gap-2 text-sm">
-                                <Phone size={14}/> 09xx-xxx-xxx
-                            </p>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* === 第二頁：內容分析 (Content Page) === */}
-            <div className="print-page">
+            <div className="print-page" style={{minHeight: 'auto'}}>
                 
                 {/* Header */}
-                <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-10">
+                <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-8">
                     <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Ultra Advisor System</span>
                     <span className="text-[10px] font-bold text-slate-400">Page 2</span>
                 </div>
 
                 {/* 1. 核心數據 (Cards) */}
-                <div className="mb-10">
-                    <h3 className="text-lg font-bold text-slate-800 mb-5 flex items-center gap-2">
+                <div className="mb-8">
+                    <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
                         <div className="w-1 h-6 bg-blue-600 rounded-full"></div>
                         核心戰略指標
                     </h3>
                     <div className="grid grid-cols-5 gap-3">
                         {reportContent.mindMap.map((item, idx) => (
-                            <div key={idx} className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
-                                <span className="text-[10px] font-bold text-slate-400 block mb-2 uppercase tracking-wide">{item.label}</span>
+                            <div key={idx} className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
+                                <span className="text-[10px] font-bold text-slate-400 block mb-1 uppercase tracking-wide">{item.label}</span>
                                 <span className="font-bold text-slate-800 text-sm block truncate">{item.value}</span>
                             </div>
                         ))}
@@ -554,12 +575,12 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                 </div>
 
                 {/* 2. 圖表區域 (Chart) - Animation Disabled */}
-                <div className="mb-10 print-break-inside">
-                    <h3 className="text-lg font-bold text-slate-800 mb-5 flex items-center gap-2">
+                <div className="mb-8 print-break-inside">
+                    <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
                         <div className="w-1 h-6 bg-emerald-500 rounded-full"></div>
                         資產趨勢模擬
                     </h3>
-                    <div className="h-[320px] w-full border border-slate-100 rounded-2xl p-6 bg-white shadow-sm">
+                    <div className="h-[300px] w-full border border-slate-100 rounded-2xl p-4 bg-white shadow-sm">
                         <ResponsiveContainer width="100%" height="100%">
                             {reportContent.chartType === 'area_reservoir' ? (
                                <AreaChart data={reportContent.chartData}>
@@ -614,7 +635,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                 </div>
 
                 {/* 3. 表格與亮點 */}
-                <div className="grid grid-cols-2 gap-8 mb-8 print-break-inside">
+                <div className="grid grid-cols-2 gap-6 mb-8 print-break-inside">
                     <div>
                         <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
                            <div className="w-1 h-6 bg-orange-500 rounded-full"></div>
@@ -647,8 +668,8 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                            <div className="w-1 h-6 bg-purple-500 rounded-full"></div>
                            專案亮點
                         </h3>
-                        <div className="bg-slate-50 p-5 rounded-xl border border-slate-100 h-full">
-                            <ul className="space-y-3">
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 h-full">
+                            <ul className="space-y-2">
                                 {reportContent.highlights.map((item, idx) => (
                                     <li key={idx} className="flex gap-2 items-start text-xs text-slate-700 leading-relaxed">
                                         <CheckCircle2 size={14} className="text-purple-600 shrink-0 mt-0.5"/>
@@ -661,35 +682,34 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                 </div>
 
                 {/* 4. 顧問結語區 */}
-                <div className="mt-auto border-t-2 border-slate-100 pt-8 print-break-inside">
-                    <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <div className="mt-auto border-t-2 border-slate-100 pt-6 print-break-inside">
+                    <h3 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
                         <PenTool size={18} className="text-slate-400"/> 顧問建議
                     </h3>
                     {showNoteInput ? (
                         <textarea 
-                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 min-h-[120px] outline-none focus:ring-2 focus:ring-blue-500 no-print"
-                            placeholder="請在此輸入給客戶的專屬建議，例如：建議優先處理退休規劃..."
+                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 min-h-[100px] outline-none focus:ring-2 focus:ring-blue-500 no-print"
+                            placeholder="請在此輸入給客戶的專屬建議..."
                             value={advisorNote}
                             onChange={(e) => setAdvisorNote(e.target.value)}
                         />
                     ) : (
-                        <div className="p-6 bg-slate-50/50 rounded-xl border border-slate-100 text-sm text-slate-700 leading-loose whitespace-pre-wrap min-h-[100px]">
+                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-700 leading-loose whitespace-pre-wrap min-h-[100px]">
                             {advisorNote || "（本計畫建議內容僅供參考，實際執行細節請諮詢您的專屬顧問）"}
                         </div>
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="mt-12 text-center text-[10px] text-slate-300 border-t border-slate-50 pt-4">
+                <div className="mt-8 text-center text-[10px] text-slate-300 border-t border-slate-50 pt-2">
                     <p>免責聲明：本報告所載資料僅供財務規劃參考，不構成任何投資建議。投資有風險，請謹慎評估。</p>
                     <p>© {new Date().getFullYear()} Ultra Advisor System • Generated for {client?.name}</p>
                 </div>
             </div>
 
         </div>
-      </div>
     </div>,
-    document.body // ✅ 修正：明確指定 Portal 掛載到 body
+    document.body
   );
 };
 
