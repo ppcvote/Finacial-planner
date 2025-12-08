@@ -1,65 +1,61 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Landmark, 
   Calculator, 
-  ShieldAlert, 
   Scale, 
   AlertTriangle, 
   FileText, 
-  Users, 
-  Coins, 
   Siren, 
   CheckCircle2, 
-  XCircle,
-  PieChart,
   ShieldCheck,
-  Activity
+  Activity,
+  Info
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
-  BarChart, 
-  Bar, 
-  CartesianGrid, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  Legend, 
   RadarChart, 
   PolarGrid, 
   PolarAngleAxis, 
   PolarRadiusAxis, 
-  Radar,
-  Cell
+  Radar
 } from 'recharts';
+
+// --- 輔助函式：金額格式化 (萬 -> 億) ---
+const formatMoney = (val: number) => {
+  if (val >= 10000) {
+    const yi = Math.floor(val / 10000);
+    const wan = Math.round(val % 10000);
+    return wan > 0 ? `${yi}億${wan}萬` : `${yi}億`;
+  }
+  return `${Math.round(val).toLocaleString()}萬`;
+};
 
 export const TaxPlannerTool = ({ data, setData }: any) => {
   const safeData = {
     // 家庭成員
     spouse: Boolean(data?.spouse), // 有無配偶
-    // 修正：允許輸入 0 (原本的 || 2 會把 0 變成 2)
     children: data?.children !== undefined ? Number(data.children) : 2, 
+    minorYearsTotal: Number(data?.minorYearsTotal) || 0, // 新增：所有未成年子女距離18歲的年數總和
     parents: Number(data?.parents) || 0, // 父母人數
     handicapped: Number(data?.handicapped) || 0, // 重度身障人數 (扣除額 693萬)
     
     // 資產配置 (萬)
-    cash: Number(data?.cash) || 3000, // 現金存款
-    // realEstateOfficial 已移除，改由市價內部估算
-    realEstateMarket: Number(data?.realEstateMarket) || 4000, // 不動產(市價)
-    stocks: Number(data?.stocks) || 1000, // 股票/基金
-    otherAssets: Number(data?.otherAssets) || 0, // 其他資產
+    cash: Number(data?.cash) || 3000, 
+    realEstateMarket: Number(data?.realEstateMarket) || 4000, 
+    stocks: Number(data?.stocks) || 1000, 
+    otherAssets: Number(data?.otherAssets) || 0, 
     
     // 規劃參數
-    insurancePlan: Number(data?.insurancePlan) || 0, // 規劃移轉至保險的金額
+    insurancePlan: Number(data?.insurancePlan) || 0, 
     
-    // 風險評估參數 (實質課稅原則)
-    age: Number(data?.age) || 60, // 投保年齡
-    healthStatus: data?.healthStatus || 'normal', // normal, ill, critical
-    paymentType: data?.paymentType || 'installment', // installment(分期), lumpSum(躉繳)
-    insurancePurpose: data?.insurancePurpose || 'estate', // estate(資產傳承), tax(純節稅)
+    // 風險評估參數
+    age: Number(data?.age) || 60, 
+    healthStatus: data?.healthStatus || 'normal', 
+    paymentType: data?.paymentType || 'installment', 
   };
 
   const { 
-    spouse, children, parents, handicapped,
+    spouse, children, minorYearsTotal, parents, handicapped,
     cash, realEstateMarket, stocks, otherAssets,
     insurancePlan,
     age, healthStatus, paymentType
@@ -67,37 +63,48 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
 
   const [showRiskDetail, setShowRiskDetail] = useState(false);
 
+  // --- Local State for Inputs (解決輸入卡頓問題) ---
+  const [tempCash, setTempCash] = useState(cash);
+  const [tempRealEstate, setTempRealEstate] = useState(realEstateMarket);
+  const [tempStocks, setTempStocks] = useState(stocks);
+  const [tempInsurance, setTempInsurance] = useState(insurancePlan);
+  const [tempAge, setTempAge] = useState(age);
+  const [tempMinorYears, setTempMinorYears] = useState(minorYearsTotal);
+
+  // 同步外部數據
+  useEffect(() => { setTempCash(cash); }, [cash]);
+  useEffect(() => { setTempRealEstate(realEstateMarket); }, [realEstateMarket]);
+  useEffect(() => { setTempStocks(stocks); }, [stocks]);
+  useEffect(() => { setTempInsurance(insurancePlan); }, [insurancePlan]);
+  useEffect(() => { setTempAge(age); }, [age]);
+  useEffect(() => { setTempMinorYears(minorYearsTotal); }, [minorYearsTotal]);
+
   // --- 計算核心 (2025年/114年起適用新制) ---
   const calculations = useMemo(() => {
-      // 0. 不動產計稅價值估算
-      // 由於使用者只輸入市價，這裡假設公告現值約為市價的 70% 進行保守估稅 (可調整)
+      // 0. 不動產計稅價值估算 (市價 70%)
       const estimatedOfficialRealEstate = Math.round(realEstateMarket * 0.7);
 
-      // 1. 遺產總額 (Estate Total)
-      // 規劃前：所有資產加總 (使用估算的公告現值)
+      // 1. 遺產總額
       const totalEstateBefore = cash + estimatedOfficialRealEstate + stocks + otherAssets;
-      // 規劃後：現金減少，轉入保險 (保險不計入遺產總額，但需注意實質課稅)
       const totalEstateAfter = Math.max(0, cash - insurancePlan) + estimatedOfficialRealEstate + stocks + otherAssets;
 
-      // 2. 扣除額與免稅額 (Deductions & Exemptions) - 113/114年標準
+      // 2. 扣除額與免稅額 (單位：萬)
       const exemption = 1333; // 免稅額
-      const deductSpouse = spouse ? 553 : 0; // 配偶扣除額
-      const deductChildren = children * 56; // 直系卑親屬 (未成年加扣暫不計)
+      const deductSpouse = spouse ? 553 : 0; // 配偶
       const deductParents = parents * 138; // 父母
       const deductHandicapped = handicapped * 693; // 重度身障
       const deductFuneral = 138; // 喪葬費
       
+      // 子女扣除額：每人 56 萬 + 未成年加扣 (距離 18 歲每年加扣 56 萬)
+      const deductChildren = (children * 56) + (minorYearsTotal * 56); 
+      
       const totalDeductions = exemption + deductSpouse + deductChildren + deductParents + deductHandicapped + deductFuneral;
 
-      // 3. 課稅遺產淨額 (Net Taxable Estate)
+      // 3. 課稅遺產淨額
       const netEstateBefore = Math.max(0, totalEstateBefore - totalDeductions);
       const netEstateAfter = Math.max(0, totalEstateAfter - totalDeductions);
 
-      // 4. 遺產稅計算 (Tax Calculation) - 2025新級距
-      // 5621萬以下 10%
-      // 5621萬 ~ 1億1242萬 15% (累進差額 281.05萬) -> 公式: (Net * 0.15) - 281.05
-      // 1億1242萬以上 20% (累進差額 843.15萬) -> 公式: (Net * 0.20) - 843.15
-      
+      // 4. 遺產稅計算 (2025新級距)
       const calculateTax = (net: number) => {
           if (net <= 5621) return net * 0.10;
           if (net <= 11242) return (net * 0.15) - 281.05;
@@ -108,43 +115,27 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
       const taxAfter = calculateTax(netEstateAfter);
       const taxSaved = taxBefore - taxAfter;
 
-      // 5. 最低稅負制檢核 (AMT Check)
-      // 死亡給付每一申報戶全年合計數在 3740 萬元以下免予計入 (113年起)
-      const amtThreshold = 3740;
-      const isAmtRisk = insurancePlan > amtThreshold;
-      const amtExcess = Math.max(0, insurancePlan - amtThreshold);
-
-      // 6. 流動性風險分析 (Liquidity Analysis)
-      // 需繳稅金 vs 手邊現金 (規劃前)
+      // 5. 流動性風險
       const liquidityGapBefore = taxBefore - cash; 
-      // 需繳稅金 vs 手邊現金 + 保險理賠現金 (規劃後)
-      // 假設身故後，保險理賠金可快速下來救急 (雖需完稅證明，但部分保單可申請墊繳或快速理賠)
-      const liquidityAvailableAfter = Math.max(0, cash - insurancePlan) + insurancePlan; // 其實總現金量不變，但保險指定受益人可不經遺產分割直接領取
+      const liquidityAvailableAfter = Math.max(0, cash - insurancePlan) + insurancePlan; 
       const liquidityGapAfter = taxAfter - liquidityAvailableAfter;
 
-      // 7. 實質課稅風險評分 (Risk Radar Data)
-      // 滿分100，越高越危險
+      // 6. 最低稅負制
+      const isAmtRisk = insurancePlan > 3740;
+
+      // 7. 風險評分
       let riskScore = 0;
-      
-      // A. 高齡投保
       if (age > 80) riskScore += 40;
       else if (age > 70) riskScore += 25;
       else if (age > 65) riskScore += 10;
-
-      // B. 帶病/重病投保
-      if (healthStatus === 'critical') riskScore += 50; // 重病幾乎必中
+      if (healthStatus === 'critical') riskScore += 50;
       else if (healthStatus === 'ill') riskScore += 30;
-
-      // C. 躉繳/密集
       if (paymentType === 'lumpSum') riskScore += 20;
-
-      // D. 保費 > 保額 (簡易判斷：若純儲蓄險可能會有此狀況，這裡假設如果是為了傳承，通常有槓桿)
-      // 這裡暫以輸入金額作為判斷基礎
-
+      
       const riskLevel = riskScore >= 50 ? 'High' : riskScore >= 25 ? 'Medium' : 'Low';
 
       return {
-          estimatedOfficialRealEstate, // 導出的估算值
+          estimatedOfficialRealEstate,
           totalEstateBefore,
           totalDeductions,
           netEstateBefore,
@@ -152,30 +143,29 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
           taxAfter,
           taxSaved,
           isAmtRisk,
-          amtExcess,
           liquidityGapBefore,
           riskScore,
           riskLevel
       };
-  }, [spouse, children, parents, handicapped, cash, realEstateMarket, stocks, otherAssets, insurancePlan, age, healthStatus, paymentType]);
-
-  // --- 圖表數據 ---
-  const taxCompareData = [
-      { name: '規劃前', 遺產稅: Math.round(calculations.taxBefore), 剩餘資產: Math.round(safeData.realEstateMarket + safeData.cash + safeData.stocks + safeData.otherAssets - calculations.taxBefore) },
-      { name: '規劃後', 遺產稅: Math.round(calculations.taxAfter), 剩餘資產: Math.round(safeData.realEstateMarket + safeData.cash + safeData.stocks + safeData.otherAssets - calculations.taxAfter) } // 注意：剩餘資產用市價算比較有感
-  ];
+  }, [spouse, children, minorYearsTotal, parents, handicapped, cash, realEstateMarket, stocks, otherAssets, insurancePlan, age, healthStatus, paymentType]);
 
   const riskData = [
     { subject: '高齡投保', A: Math.min(100, (age - 50) * 2), fullMark: 100 },
     { subject: '健康狀況', A: healthStatus === 'critical' ? 100 : healthStatus === 'ill' ? 60 : 10, fullMark: 100 },
     { subject: '繳費型態', A: paymentType === 'lumpSum' ? 90 : 20, fullMark: 100 },
-    { subject: '鉅額投保', A: Math.min(100, (insurancePlan / 1000) * 20), fullMark: 100 }, // 假設1000萬以上開始有風險
-    { subject: '密集投保', A: 10, fullMark: 100 }, // 需更多參數，暫定低
+    { subject: '鉅額投保', A: Math.min(100, (insurancePlan / 1000) * 20), fullMark: 100 },
+    { subject: '密集投保', A: 10, fullMark: 100 },
   ];
 
-  // --- UI 更新 ---
-  const updateField = (field: string, value: any) => { 
-      setData({ ...safeData, [field]: value }); 
+  // --- UI Handlers ---
+  const updateField = (field: string, value: any) => { setData({ ...safeData, [field]: value }); };
+  
+  // 通用數字輸入處理
+  const handleNumInput = (setter: React.Dispatch<React.SetStateAction<number>>, val: string) => {
+      setter(val === '' ? 0 : Number(val));
+  };
+  const commitNumInput = (field: string, val: number) => {
+      updateField(field, Number(val));
   };
 
   return (
@@ -214,13 +204,15 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
             </h4>
             <div className="space-y-6">
                
-               {/* 1. 家庭成員 (影響扣除額) */}
+               {/* 1. 家庭成員 */}
                <div className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                   <h5 className="text-xs font-bold text-slate-500 uppercase">繼承人結構</h5>
+                   <h5 className="text-xs font-bold text-slate-500 uppercase">繼承人結構 (扣除額)</h5>
+                   
                    <div className="flex items-center justify-between">
                        <span className="text-sm font-medium text-slate-600">配偶健在 (扣553萬)</span>
                        <input type="checkbox" checked={spouse} onChange={(e) => updateField('spouse', e.target.checked)} className="w-5 h-5 accent-blue-600 rounded" />
                    </div>
+                   
                    <div className="flex items-center justify-between">
                        <span className="text-sm font-medium text-slate-600">子女人數 (扣56萬/人)</span>
                        <div className="flex items-center gap-2">
@@ -229,6 +221,29 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                            <button onClick={() => updateField('children', children+1)} className="w-6 h-6 rounded bg-slate-200 text-slate-600 flex items-center justify-center font-bold">+</button>
                        </div>
                    </div>
+
+                   {/* 未成年子女加扣 */}
+                   {children > 0 && (
+                       <div className="bg-blue-50/50 p-2 rounded-lg border border-blue-100">
+                           <div className="flex justify-between items-center mb-1">
+                               <span className="text-xs font-bold text-blue-700 flex items-center gap-1">
+                                   <Info size={12}/> 未成年加扣 (56萬/年)
+                               </span>
+                           </div>
+                           <div className="flex items-center gap-2">
+                               <input 
+                                   type="number" 
+                                   value={tempMinorYears} 
+                                   onChange={(e) => handleNumInput(setTempMinorYears, e.target.value)}
+                                   onBlur={() => commitNumInput('minorYearsTotal', tempMinorYears)}
+                                   className="w-16 p-1 text-center border border-blue-200 rounded text-sm font-bold text-blue-600"
+                               />
+                               <span className="text-xs text-blue-500">距18歲總年數</span>
+                           </div>
+                           <p className="text-[10px] text-blue-400 mt-1">例如：10歲子女還有8年，填8</p>
+                       </div>
+                   )}
+
                    <div className="flex items-center justify-between">
                        <span className="text-sm font-medium text-slate-600">父母人數 (扣138萬/人)</span>
                        <div className="flex items-center gap-2">
@@ -241,27 +256,31 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
 
                {/* 2. 資產輸入 */}
                <div className="space-y-4">
-                   <div>
-                       <label className="text-xs font-bold text-slate-500 mb-1 block">現金存款 (萬)</label>
-                       <input type="number" value={cash} onChange={(e) => updateField('cash', Number(e.target.value))} className="w-full p-2 border rounded-lg font-bold text-slate-700" />
-                   </div>
-                   {/* 移除公告現值輸入，僅保留市價 */}
-                   <div>
-                       <label className="text-xs font-bold text-slate-500 mb-1 block">不動產 (市價)</label>
-                       <input type="number" value={realEstateMarket} onChange={(e) => updateField('realEstateMarket', Number(e.target.value))} className="w-full p-2 border border-slate-200 rounded-lg font-bold text-slate-700" placeholder="請輸入市價" />
-                       <p className="text-[10px] text-slate-400 mt-1">* 系統將自動概抓市價 70% 作為課稅用公告現值估算</p>
-                   </div>
-                   <div>
-                       <label className="text-xs font-bold text-slate-500 mb-1 block">股票/基金 (萬)</label>
-                       <input type="number" value={stocks} onChange={(e) => updateField('stocks', Number(e.target.value))} className="w-full p-2 border rounded-lg font-bold text-slate-700" />
-                   </div>
+                   {[
+                       { label: '現金存款 (萬)', val: tempCash, set: setTempCash, field: 'cash' },
+                       { label: '不動產 (市價)', val: tempRealEstate, set: setTempRealEstate, field: 'realEstateMarket', hint: '* 自動以70%估算公告現值' },
+                       { label: '股票/基金 (萬)', val: tempStocks, set: setTempStocks, field: 'stocks' },
+                   ].map((item, idx) => (
+                       <div key={idx}>
+                           <label className="text-xs font-bold text-slate-500 mb-1 block">{item.label}</label>
+                           <input 
+                               type="number" 
+                               value={item.val} 
+                               onChange={(e) => handleNumInput(item.set, e.target.value)}
+                               onBlur={() => commitNumInput(item.field, item.val)}
+                               onKeyDown={(e) => e.key === 'Enter' && commitNumInput(item.field, item.val)}
+                               className="w-full p-2 border rounded-lg font-bold text-slate-700 bg-slate-50 border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" 
+                           />
+                           {item.hint && <p className="text-[10px] text-slate-400 mt-1">{item.hint}</p>}
+                       </div>
+                   ))}
                </div>
 
                {/* 3. 保險規劃 */}
                <div className="pt-4 border-t border-slate-100">
                    <div className="flex justify-between items-center mb-2">
                        <label className="text-sm font-bold text-emerald-600 flex items-center gap-1"><ShieldCheck size={16}/> 保險規劃 (挪移現金)</label>
-                       <span className="font-mono font-bold text-emerald-600 text-lg">${insurancePlan}萬</span>
+                       <span className="font-mono font-bold text-emerald-600 text-lg">{formatMoney(insurancePlan)}</span>
                    </div>
                    <input 
                       type="range" 
@@ -272,7 +291,18 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                       onChange={(e) => updateField('insurancePlan', Number(e.target.value))} 
                       className="w-full h-2 bg-emerald-100 rounded-lg appearance-none cursor-pointer accent-emerald-500" 
                    />
-                   <p className="text-xs text-slate-400 mt-1">將應稅現金轉為免稅保險給付</p>
+                   
+                   {/* 保險金額輸入框 */}
+                   <div className="mt-2 relative">
+                        <input 
+                            type="number"
+                            value={tempInsurance}
+                            onChange={(e) => handleNumInput(setTempInsurance, e.target.value)}
+                            onBlur={() => commitNumInput('insurancePlan', tempInsurance)}
+                            className="w-full p-2 border border-emerald-200 rounded-lg font-bold text-emerald-700 text-right pr-8"
+                        />
+                        <span className="absolute right-3 top-2.5 text-emerald-500 font-bold text-sm">萬</span>
+                   </div>
                </div>
 
             </div>
@@ -295,25 +325,35 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                   <div className="space-y-4">
                       <div className="flex justify-between items-center">
                           <span className="text-sm text-slate-500">遺產總額 <span className="text-xs opacity-60">(含不動產估值)</span></span>
-                          <span className="font-mono font-bold text-slate-700">${calculations.totalEstateBefore.toLocaleString()} 萬</span>
+                          <span className="font-mono font-bold text-slate-700">{formatMoney(calculations.totalEstateBefore)}</span>
                       </div>
                       <div className="flex justify-between items-center">
                           <span className="text-sm text-slate-500">免稅+扣除額</span>
-                          <span className="font-mono font-bold text-green-600">-${calculations.totalDeductions.toLocaleString()} 萬</span>
+                          <span className="font-mono font-bold text-green-600">-{formatMoney(calculations.totalDeductions)}</span>
                       </div>
                       <div className="h-px bg-slate-100 my-2"></div>
                       
-                      <div className="bg-slate-50 rounded-xl p-3 text-center">
-                          <p className="text-xs text-slate-500 mb-1">未規劃 預估稅金</p>
-                          <p className="text-2xl font-black text-slate-700 font-mono">${Math.round(calculations.taxBefore).toLocaleString()} 萬</p>
+                      {/* 未規劃稅金警示區塊 */}
+                      <div className={`rounded-xl p-4 text-center border-2 transition-all ${calculations.taxBefore > 0 ? 'bg-red-50 border-red-200 animate-pulse-soft' : 'bg-slate-50 border-slate-100'}`}>
+                          <p className={`text-xs font-bold mb-1 ${calculations.taxBefore > 0 ? 'text-red-500' : 'text-slate-500'}`}>
+                              {calculations.taxBefore > 0 ? '⚠️ 未規劃需繳稅金 (警訊)' : '未規劃需繳稅金'}
+                          </p>
+                          <p className={`text-3xl font-black font-mono ${calculations.taxBefore > 0 ? 'text-red-600' : 'text-slate-700'}`}>
+                              {formatMoney(calculations.taxBefore)}
+                          </p>
+                          {calculations.taxBefore > 0 && (
+                              <div className="mt-2 text-xs text-red-500 bg-white/60 py-1 px-2 rounded inline-block font-bold">
+                                  別讓家人變賣資產繳稅！
+                              </div>
+                          )}
                       </div>
 
                       {insurancePlan > 0 && (
                           <div className="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100 animate-in fade-in slide-in-from-bottom-2">
                               <p className="text-xs text-emerald-800 mb-1">規劃後 預估稅金</p>
                               <div className="flex justify-center items-baseline gap-2">
-                                  <p className="text-2xl font-black text-emerald-600 font-mono">${Math.round(calculations.taxAfter).toLocaleString()} 萬</p>
-                                  <span className="text-xs text-emerald-500 font-bold bg-white px-1.5 rounded">省 ${Math.round(calculations.taxSaved).toLocaleString()}</span>
+                                  <p className="text-2xl font-black text-emerald-600 font-mono">{formatMoney(calculations.taxAfter)}</p>
+                                  <span className="text-xs text-emerald-500 font-bold bg-white px-1.5 rounded">省 {formatMoney(calculations.taxSaved)}</span>
                               </div>
                           </div>
                       )}
@@ -327,11 +367,16 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                           {calculations.liquidityGapBefore > 0 ? <AlertTriangle size={20}/> : <CheckCircle2 size={20}/>}
                           流動性風險檢測
                       </h4>
-                      <p className={`text-sm mb-4 ${calculations.liquidityGapBefore > 0 ? 'text-rose-600' : 'text-blue-600'}`}>
+                      <p className={`text-sm mb-4 font-medium leading-relaxed ${calculations.liquidityGapBefore > 0 ? 'text-rose-600' : 'text-blue-600'}`}>
                           {calculations.liquidityGapBefore > 0 
-                            ? "警訊：現金不足以繳納遺產稅，恐需變賣家產！" 
+                            ? "警訊：現金不足以繳納遺產稅！" 
                             : "安全：預留現金充裕，可順利完稅。"}
                       </p>
+                      {calculations.liquidityGapBefore > 0 && (
+                          <p className="text-xs text-rose-500 bg-white/50 p-2 rounded border border-rose-100">
+                              目的：不用自己的錢繳稅，用保險理賠金繳。
+                          </p>
+                      )}
                   </div>
 
                   <div className="space-y-3">
@@ -356,7 +401,7 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                               <div className="flex items-center gap-2">
                                   <ShieldCheck size={16} className="text-emerald-600"/>
                                   <span className="text-lg font-black font-mono text-emerald-700">
-                                      +${insurancePlan} 萬
+                                      +{formatMoney(insurancePlan)}
                                   </span>
                                   <span className="text-xs text-emerald-600">(指定受益人現金)</span>
                               </div>
@@ -409,7 +454,13 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                               <div className="grid grid-cols-2 gap-4">
                                   <div>
                                       <label className="text-xs font-bold text-slate-500 mb-1">投保年齡</label>
-                                      <input type="number" value={age} onChange={(e) => updateField('age', Number(e.target.value))} className="w-full p-2 border rounded text-sm"/>
+                                      <input 
+                                          type="number" 
+                                          value={tempAge} 
+                                          onChange={(e) => handleNumInput(setTempAge, e.target.value)}
+                                          onBlur={() => commitNumInput('age', tempAge)}
+                                          className="w-full p-2 border rounded text-sm font-bold"
+                                      />
                                   </div>
                                   <div>
                                       <label className="text-xs font-bold text-slate-500 mb-1">健康狀況</label>
