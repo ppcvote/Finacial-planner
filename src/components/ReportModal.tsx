@@ -1,27 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { FileBarChart, ArrowUpFromLine, X, CheckCircle2, User, Calendar, PenTool, Phone, Mail } from 'lucide-react';
+import { FileBarChart, ArrowUpFromLine, X, CheckCircle2, User, Calendar, PenTool, Phone, Mail, ShieldCheck } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, ComposedChart, Line, Bar, BarChart 
 } from 'recharts';
 import { calculateMonthlyPayment, calculateMonthlyIncome, calculateRemainingBalance } from '../utils';
 
 // ------------------------------------------------------------------
-// Report Component (專業建議書引擎 V3.2 - Safe Mount Fix)
+// Report Component (專業建議書引擎 V3.3 - Syntax Fix)
 // ------------------------------------------------------------------
 
 const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) => {
   const [advisorNote, setAdvisorNote] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(true);
-  const [mounted, setMounted] = useState(false); // 新增：掛載狀態
+  const [mounted, setMounted] = useState(false); 
 
-  // 1. 安全掛載偵測：確保 document.body 存在後才渲染 Portal
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
 
-  // 2. 初始化內容
   useEffect(() => {
       if(isOpen) {
           setAdvisorNote('');
@@ -29,7 +27,6 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
       }
   }, [isOpen]);
   
-  // 若尚未掛載或未開啟，則不渲染任何東西 (防止 Error #200)
   if (!isOpen || !mounted) return null;
 
   const dateStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -369,8 +366,8 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
      const netEstatePlanned = Math.max(0, plannedAssets - totalDeductions);
      const calculateTax = (netEstate: number) => {
         if (netEstate <= 5621) return netEstate * 0.10;
-        if (netEstate <= 11242) return netEstate * 0.15 - 250;
-        return netEstate * 0.20 - 750;
+        if (netEstate <= 11242) return netEstate * 0.15 - 281.05;
+        return netEstate * 0.20 - 843.15;
      };
      const taxRaw = calculateTax(netEstateRaw);
      const taxPlanned = calculateTax(netEstatePlanned);
@@ -413,7 +410,6 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
   };
 
   // 決定 React Portal 的掛載點 (直接掛在 body 下)
-  // 重要：加入 document.body 作為第二個參數
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm overflow-y-auto no-scroll-print" id="report-modal-root">
       {/* 注入列印專用樣式 */}
@@ -691,6 +687,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
             </div>
 
         </div>
+      </div>
     </div>,
     document.body // ✅ 修正：明確指定 Portal 掛載到 body
   );
