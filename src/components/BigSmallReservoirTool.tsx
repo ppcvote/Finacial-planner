@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { 
   Waves, 
   Calculator, 
+  ArrowRight, 
   Database, 
   TrendingUp, 
   Droplets, 
@@ -13,7 +14,8 @@ import {
   Landmark,
   Coins
 } from 'lucide-react';
-import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceLine } from 'recharts';
+// 改用 ComposedChart 並引入 Line
+import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceLine } from 'recharts';
 
 export const BigSmallReservoirTool = ({ data, setData }: any) => {
   const safeData = {
@@ -254,18 +256,19 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
         {/* 右側：圖表與分析 */}
         <div className="lg:col-span-8 space-y-6">
           
-          {/* 堆疊面積圖 */}
+          {/* 複合圖表：背景本金 + 前景獲利 + 總資產線 */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-[450px] print-break-inside relative">
              <div className="flex justify-between items-center mb-4 pl-2 border-l-4 border-cyan-500">
-                <h4 className="font-bold text-slate-700">資產堆疊成長模擬</h4>
+                <h4 className="font-bold text-slate-700">資產成長模擬 (本金 vs 獲利)</h4>
                 <div className="flex gap-3 text-xs">
-                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-amber-400 rounded-full"></div> 小水庫 (獲利成長)</span>
-                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-cyan-600 rounded-full"></div> 大水庫 (本金恆定)</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-amber-400 rounded-full"></div> 小水庫 (獲利)</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-cyan-600/40 rounded-full"></div> 大水庫 (本金)</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-1 bg-emerald-500 rounded-full"></div> 總資產</span>
                 </div>
              </div>
              
             <ResponsiveContainer width="100%" height="90%">
-                <AreaChart data={dataArr} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                <ComposedChart data={dataArr} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                   <defs>
                     <linearGradient id="colorBig" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0891b2" stopOpacity={0.8}/><stop offset="95%" stopColor="#0891b2" stopOpacity={0.6}/></linearGradient>
                     <linearGradient id="colorSmall" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#fbbf24" stopOpacity={0.9}/><stop offset="95%" stopColor="#fbbf24" stopOpacity={0.6}/></linearGradient>
@@ -291,10 +294,16 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                       <ReferenceLine x={doubleYear} stroke="#fbbf24" strokeDasharray="3 3" label={{ position: 'top', value: '資產翻倍點', fill: '#d97706', fontSize: 12, fontWeight: 'bold' }} />
                   )}
 
-                  {/* 關鍵修正：大水庫(本金)在下，小水庫(獲利)在上 */}
-                  <Area type="monotone" dataKey="大水庫本金" stackId="1" stroke="#0e7490" fill="url(#colorBig)" />
-                  <Area type="monotone" dataKey="小水庫累積" stackId="1" stroke="#f59e0b" fill="url(#colorSmall)" />
-                </AreaChart>
+                  {/* 1. 大水庫 (本金) - 平穩基底 (不堆疊) */}
+                  <Area type="monotone" dataKey="大水庫本金" stroke="none" fill="#0891b2" fillOpacity={0.15} />
+
+                  {/* 2. 小水庫 (獲利) - 從 0 開始成長 (不堆疊) */}
+                  <Area type="monotone" dataKey="小水庫累積" stroke="#f59e0b" fill="url(#colorSmall)" fillOpacity={0.6} />
+
+                  {/* 3. 總資產 - 線條 (呈現加總趨勢) */}
+                  <Line type="monotone" dataKey="總資產" stroke="#10b981" strokeWidth={3} dot={false} />
+
+                </ComposedChart>
              </ResponsiveContainer>
           </div>
 
