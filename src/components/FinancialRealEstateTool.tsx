@@ -190,7 +190,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                <div>
                    <div className="flex justify-between items-center mb-2">
                        <label className="text-sm font-medium text-slate-600">
-                          {isRefinanceMode ? "轉增貸後總額 (萬)" : "資產/貸款總額 (萬)"}
+                          {isRefinanceMode ? "房貸總額 (萬)" : "資產/貸款總額 (萬)"}
                        </label>
                        <div className="flex items-center">
                            <input 
