@@ -1,12 +1,42 @@
 import React from 'react';
 import { 
   Building2, Landmark, Scale, ShieldCheck, TrendingUp, ArrowRight, Quote, CheckCircle2,
-  XCircle, Percent, Banknote, Lock, Clock
+  XCircle, AlertTriangle, Percent, Banknote, Lock, Clock
 } from 'lucide-react';
 import { 
   ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Legend, ResponsiveContainer, Bar
 } from 'recharts';
-import { calculateMonthlyPayment, calculateMonthlyIncome, calculateRemainingBalance } from '../utils';
+
+// --- 計算邏輯 (本地獨立計算，確保與介面一致) ---
+const calculateMonthlyPayment = (principal: number, rate: number, years: number) => {
+  const p = Number(principal) || 0;
+  const rVal = Number(rate) || 0;
+  const y = Number(years) || 0;
+  const r = rVal / 100 / 12;
+  const n = y * 12;
+  if (rVal === 0) return (p * 10000) / (n || 1);
+  const result = (p * 10000 * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  return isNaN(result) ? 0 : result;
+};
+
+const calculateMonthlyIncome = (principal: number, rate: number) => {
+  const p = Number(principal) || 0;
+  const r = Number(rate) || 0;
+  return (p * 10000 * (r / 100)) / 12;
+};
+
+const calculateRemainingBalance = (principal: number, rate: number, totalYears: number, yearsElapsed: number) => {
+  const pVal = Number(principal) || 0;
+  const rVal = Number(rate) || 0;
+  const totalY = Number(totalYears) || 0;
+  const elapsed = Number(yearsElapsed) || 0;
+  const r = rVal / 100 / 12;
+  const n = totalY * 12;
+  const p = elapsed * 12;
+  if (rVal === 0) return Math.max(0, pVal * 10000 * (1 - p / (n || 1)));
+  const balance = (pVal * 10000) * (Math.pow(1 + r, n) - Math.pow(1 + r, p)) / (Math.pow(1 + r, n) - 1);
+  return Math.max(0, isNaN(balance) ? 0 : balance);
+};
 
 // ------------------------------------------------------------------
 // 子元件: 超級比一比 (Comparison Card) - 極致緊湊版
@@ -24,10 +54,10 @@ const ComparisonRow = ({ title, physical, financial, isBetter }: any) => (
 );
 
 // ------------------------------------------------------------------
-// 主元件: EstateReport (獨立計算版)
+// 主元件: EstateReport
 // ------------------------------------------------------------------
 const EstateReport = ({ data }: { data: any }) => {
-  // 1. 資料解構
+  // 1. 資料解構 (若無資料則使用預設值)
   const loanAmount = Number(data?.loanAmount) || 1000;
   const loanTerm = Number(data?.loanTerm) || 30;
   const loanRate = Number(data?.loanRate) || 2.2;
@@ -35,11 +65,12 @@ const EstateReport = ({ data }: { data: any }) => {
   const existingLoanBalance = Number(data?.existingLoanBalance) || 0;
   const existingMonthlyPayment = Number(data?.existingMonthlyPayment) || 0;
   
-  const isRefinance = existingLoanBalance > 0 && existingLoanBalance < loanAmount;
-  const cashOutAmount = isRefinance ? loanAmount - existingLoanBalance : 0;
+  // 判斷模式 (若無傳入，預設為 false)
+  const isRefinance = data?.isRefinance || false;
 
-  // 2. 核心計算 (本地獨立計算，不依賴外部)
+  // 2. 核心計算
   const monthlyPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
+  const cashOutAmount = isRefinance ? Math.max(0, loanAmount - existingLoanBalance) : 0;
   
   // 轉增貸模式計算
   const monthlyInvestIncomeFromCashOut = calculateMonthlyIncome(cashOutAmount, investReturnRate);
@@ -51,8 +82,9 @@ const EstateReport = ({ data }: { data: any }) => {
   // 一般模式計算
   const monthlyIncomeFull = calculateMonthlyIncome(loanAmount, investReturnRate);
   const netCashFlow = monthlyIncomeFull - monthlyPayment;
+  const isPositiveFlow = netCashFlow >= 0;
   const totalNetCashFlow = netCashFlow * 12 * loanTerm;
-  const totalAssetValue = loanAmount * 10000; // 假設本金不變
+  const totalAssetValue = loanAmount * 10000;
   const totalBenefitStandard = totalAssetValue + totalNetCashFlow;
 
   // 3. 圖表數據
@@ -70,7 +102,7 @@ const EstateReport = ({ data }: { data: any }) => {
             dataArr.push({
                 year: `${year}`,
                 累積效益: Math.round(cumulativeSavings / 10000), // 省下的錢
-                轉貸現金: Math.round(cashOutAmount), // 增貸出來的錢(定值)
+                轉貸現金: Math.round(cashOutAmount), // 增貸出來的錢
                 剩餘貸款: Math.round(remainingLoan / 10000)
             });
         } else {
