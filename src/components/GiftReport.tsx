@@ -9,7 +9,8 @@ import {
   Quote,
   ShieldAlert,
   Banknote,
-  Percent
+  Percent,
+  Coins // 新增 Coins icon 作為浮水印預設圖
 } from 'lucide-react';
 import { 
   ComposedChart, 
@@ -49,23 +50,23 @@ const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmoun
     const badgeClass = phase === 1 ? 'bg-blue-100 text-blue-700' : phase === 2 ? 'bg-indigo-100 text-indigo-700' : 'bg-purple-100 text-purple-700';
 
     return (
-        // 修改：print:p-3 適度縮小內距，但保持足夠呼吸空間
-        <div className={`flex-1 p-4 print:p-3 rounded-xl border ${bgClass} relative`}>
-            {/* 連接箭頭：print:flex 確保列印時顯示箭頭，增加連貫感 */}
+        // 修改：print:p-5 加大內距 (原本 p-3)，增加高度
+        <div className={`flex-1 p-4 print:p-5 rounded-xl border ${bgClass} relative flex flex-col justify-between`}>
+            {/* 連接箭頭 */}
             {!isLast && (
-                <div className="hidden md:flex print:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 bg-white border border-slate-200 rounded-full items-center justify-center text-slate-400 print:w-5 print:h-5">
-                    <ArrowRight size={14} className="print:w-3 print:h-3"/>
+                <div className="hidden md:flex print:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 bg-white border border-slate-200 rounded-full items-center justify-center text-slate-400 print:w-6 print:h-6">
+                    <ArrowRight size={14} className="print:w-4 print:h-4"/>
                 </div>
             )}
             
-            {/* Header */}
-            <div className="flex justify-between items-start mb-3 print:mb-2">
+            {/* Header: print:mb-3 增加標題與內容的距離 */}
+            <div className="flex justify-between items-start mb-3 print:mb-3">
                 <div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass} mb-1 inline-block`}>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass} mb-1 inline-block print:px-2 print:py-0.5 print:text-[10px]`}>
                         Step 0{phase}
                     </span>
                     <h4 className={`font-bold text-lg print:text-base ${colorClass}`}>{title}</h4>
-                    <p className="text-xs text-slate-500">{subTitle}</p>
+                    <p className="text-xs text-slate-500 print:text-[10px]">{subTitle}</p>
                 </div>
                 <div className="text-right">
                     <p className="text-[10px] text-slate-400">本階段投入</p>
@@ -73,24 +74,24 @@ const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmoun
                 </div>
             </div>
 
-            {/* Body */}
-            <div className="space-y-2 border-t border-slate-200/50 pt-3 print:pt-2">
-                <div className="flex justify-between items-center text-xs">
+            {/* Body: print:space-y-2 增加行距 */}
+            <div className="space-y-2 print:space-y-2 border-t border-slate-200/50 pt-3 print:pt-3">
+                <div className="flex justify-between items-center text-xs print:text-[11px]">
                     <span className="text-slate-500">每月實質負擔</span>
                     <span className={`font-bold ${netOut > 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
                         ${Math.round(netOut).toLocaleString()}
                     </span>
                 </div>
-                <div className="flex justify-between items-center text-xs">
+                <div className="flex justify-between items-center text-xs print:text-[11px]">
                     <span className="text-slate-500">累積實付成本</span>
                     <span className="font-bold text-slate-600">
                         {Math.round(totalOut).toLocaleString()} 萬
                     </span>
                 </div>
                 {/* Footer */}
-                <div className="flex justify-between items-center pt-2 mt-1 border-t border-dashed border-slate-300">
-                    <span className="text-slate-600 font-bold print:text-[10px]">期末資產規模</span>
-                    <span className={`text-xl font-black ${colorClass} print:text-base`}>
+                <div className="flex justify-between items-center pt-2 mt-1 border-t border-dashed border-slate-300 print:mt-2 print:pt-2">
+                    <span className="text-slate-600 font-bold print:text-[11px]">期末資產規模</span>
+                    <span className={`text-xl font-black ${colorClass} print:text-lg`}>
                         {Math.round(asset).toLocaleString()} <span className="text-xs">萬</span>
                     </span>
                 </div>
@@ -208,10 +209,23 @@ const GiftReport = ({ data }: { data: any }) => {
   const chartData = generateChartData();
 
   return (
-    <div className="font-sans text-slate-800 space-y-8 print:space-y-6">
+    // 修改：print:space-y-6 (從 4 改回 6)，增加區塊間距，填補下方空白
+    <div className="font-sans text-slate-800 space-y-8 print:space-y-6 relative">
       
+      {/* --- 全域浮水印 (Watermark) --- */}
+      {/* pointer-events-none 確保不影響操作，z-0 放在最底層 */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden print:fixed print:top-1/2 print:left-1/2 print:-translate-x-1/2 print:-translate-y-1/2">
+          <div className="opacity-[0.03] transform -rotate-45">
+              {/* 若您有 Logo 圖片，請取消註解並替換下方 src */}
+              {/* <img src="YOUR_LOGO_URL.png" alt="Watermark" className="w-[600px] h-auto grayscale" /> */}
+              
+              {/* 預設 SVG 浮水印 (錢幣圖案) */}
+              <Coins size={600} strokeWidth={1} />
+          </div>
+      </div>
+
       {/* 1. Header (Cover Page 已有大標題，這裡作為內容頁 Header) */}
-      <div className="flex items-center justify-between border-b-2 border-indigo-100 pb-6 print:pb-3 print-break-inside">
+      <div className="relative z-10 flex items-center justify-between border-b-2 border-indigo-100 pb-6 print:pb-3 print-break-inside bg-white/50 backdrop-blur-sm">
          <div>
              <div className="flex items-center gap-2 mb-2">
                  <Gift className="text-indigo-600" size={28} />
@@ -227,23 +241,24 @@ const GiftReport = ({ data }: { data: any }) => {
       </div>
 
       {/* 2. 核心比較 (The Hook) */}
-      <div className="bg-slate-50 rounded-3xl p-8 border border-slate-200 print-break-inside print:p-4">
-          <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2 print:text-base print:mb-3">
+      {/* 修改：print:p-6 (加大內距) */}
+      <div className="relative z-10 bg-slate-50 rounded-3xl p-8 border border-slate-200 print-break-inside print:p-6">
+          <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2 print:text-lg print:mb-4">
               <Target size={24} className="text-rose-500 print:w-5 print:h-5"/>
               效益成本分析
           </h2>
           
-          <div className="grid grid-cols-2 gap-12 print:gap-4">
+          <div className="grid grid-cols-2 gap-12 print:gap-6">
               {/* 左邊：一般存錢 */}
-              <div className="relative p-6 rounded-2xl border-2 border-dashed border-slate-300 bg-white opacity-80 print:p-3">
-                  <div className="absolute -top-3 left-6 bg-slate-500 text-white px-3 py-1 rounded-full text-xs font-bold print:border print:border-slate-300 print:text-[10px] print:py-0.5">
+              <div className="relative p-6 rounded-2xl border-2 border-dashed border-slate-300 bg-white opacity-80 print:p-4">
+                  <div className="absolute -top-3 left-6 bg-slate-500 text-white px-3 py-1 rounded-full text-xs font-bold print:border print:border-slate-300 print:text-[11px] print:py-0.5">
                       傳統模式
                   </div>
-                  <div className="flex justify-between items-end mb-4 print:mb-2">
-                      <div className="text-slate-500 font-bold print:text-xs">目標累積</div>
-                      <div className="text-2xl font-black text-slate-600 print:text-lg">{finalAssetValue_Wan} 萬</div>
+                  <div className="flex justify-between items-end mb-4 print:mb-3">
+                      <div className="text-slate-500 font-bold print:text-sm">目標累積</div>
+                      <div className="text-2xl font-black text-slate-600 print:text-xl">{finalAssetValue_Wan} 萬</div>
                   </div>
-                  <div className="space-y-4 print:space-y-1">
+                  <div className="space-y-4 print:space-y-3">
                       <div className="flex justify-between items-center text-sm print:text-xs">
                            <span>準備本金</span>
                            <span className="font-bold text-slate-700">{finalAssetValue_Wan} 萬</span>
@@ -252,22 +267,22 @@ const GiftReport = ({ data }: { data: any }) => {
                            <span>每月負擔</span>
                            <span className="font-bold text-slate-700">${monthlyStandardSaving.toLocaleString()}</span>
                       </div>
-                      <div className="pt-4 border-t border-slate-100 mt-2 print:mt-1 print:pt-1">
-                           <div className="text-center text-slate-400 text-sm font-medium print:text-[10px]">完全依靠勞力存錢</div>
+                      <div className="pt-4 border-t border-slate-100 mt-2 print:mt-2 print:pt-2">
+                           <div className="text-center text-slate-400 text-sm font-medium print:text-[11px]">完全依靠勞力存錢</div>
                       </div>
                   </div>
               </div>
 
               {/* 右邊：百萬禮物專案 */}
-              <div className="relative p-6 rounded-2xl border-2 border-indigo-500 bg-white shadow-xl transform scale-105 print:scale-100 print:shadow-none print:p-3 print:border">
-                  <div className="absolute -top-3 left-6 bg-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md print:shadow-none print:text-[10px] print:py-0.5">
+              <div className="relative p-6 rounded-2xl border-2 border-indigo-500 bg-white shadow-xl transform scale-105 print:scale-100 print:shadow-none print:p-4 print:border-2">
+                  <div className="absolute -top-3 left-6 bg-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md print:shadow-none print:text-[11px] print:py-0.5">
                       專案模式
                   </div>
-                  <div className="flex justify-between items-end mb-4 print:mb-2">
-                      <div className="text-indigo-600 font-bold print:text-xs">目標累積</div>
-                      <div className="text-3xl font-black text-indigo-700 print:text-lg">{finalAssetValue_Wan} 萬</div>
+                  <div className="flex justify-between items-end mb-4 print:mb-3">
+                      <div className="text-indigo-600 font-bold print:text-sm">目標累積</div>
+                      <div className="text-3xl font-black text-indigo-700 print:text-xl">{finalAssetValue_Wan} 萬</div>
                   </div>
-                  <div className="space-y-4 print:space-y-1">
+                  <div className="space-y-4 print:space-y-3">
                       <div className="flex justify-between items-center text-sm print:text-xs">
                            <span className="text-slate-600">實付成本</span>
                            <span className="font-bold text-indigo-700">{totalProjectCost_Wan} 萬 <span className="text-xs text-rose-500 ml-1">(-{finalAssetValue_Wan - totalProjectCost_Wan}萬)</span></span>
@@ -276,8 +291,8 @@ const GiftReport = ({ data }: { data: any }) => {
                            <span className="text-slate-600">每月負擔</span>
                            <span className="font-bold text-indigo-700">${avgMonthlyCost.toLocaleString()} <span className="text-xs text-green-600 ml-1">(省 {Math.round(monthlyStandardSaving - avgMonthlyCost).toLocaleString()})</span></span>
                       </div>
-                      <div className="pt-4 border-t border-indigo-50 mt-2 print:mt-1 print:pt-1">
-                           <div className="text-center text-indigo-600 text-sm font-bold flex items-center justify-center gap-2 print:text-[10px]">
+                      <div className="pt-4 border-t border-indigo-50 mt-2 print:mt-2 print:pt-2">
+                           <div className="text-center text-indigo-600 text-sm font-bold flex items-center justify-center gap-2 print:text-[11px]">
                                <TrendingUp size={16} className="print:w-3 print:h-3"/> 獲利空間 {Math.round((netProfit_Wan / totalProjectCost_Wan) * 100)}%
                            </div>
                       </div>
@@ -286,15 +301,14 @@ const GiftReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 3. 三循環成果關鍵指標 (The Roadmap) - 放在 Benefit 之後 */}
-      <div className="print-break-inside">
-          <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2 print:text-base print:mb-3">
+      {/* 3. 三循環成果關鍵指標 (The Roadmap) */}
+      <div className="relative z-10 print-break-inside">
+          <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2 print:text-lg print:mb-4">
               <ArrowRight size={24} className="text-indigo-600 print:w-5 print:h-5"/>
               執行藍圖 (三階段演進)
           </h2>
-          
-          {/* 修改重點：print:flex-row 強制水平排列 */}
-          <div className="flex flex-col md:flex-row gap-4 print:flex-row print:gap-3">
+          {/* print:gap-4 (加大卡片間距) */}
+          <div className="flex flex-col md:flex-row gap-4 print:flex-row print:gap-4">
               <ResultCard 
                   phase={1} title="累積期" subTitle={`Year 1 - ${loanTerm}`}
                   loanAmount={loanAmount} netOut={phase1_NetOut}
@@ -315,13 +329,13 @@ const GiftReport = ({ data }: { data: any }) => {
       </div>
 
       {/* 4. 視覺化圖表 */}
-      <div className="space-y-4 print-break-inside">
-          <h2 className="text-xl font-bold text-slate-700 flex items-center gap-2 print:text-base print:mb-2">
+      <div className="relative z-10 space-y-4 print-break-inside">
+          <h2 className="text-xl font-bold text-slate-700 flex items-center gap-2 print:text-lg print:mb-3">
               <TrendingUp size={24} className="text-indigo-600 print:w-5 print:h-5"/>
               資產成長模擬 ({totalYears}年趨勢)
           </h2>
-          {/* 修改：高度設為 280px，不需太小，因為卡片已經並排省下很多空間 */}
-          <div className="h-[320px] w-full border border-slate-100 rounded-2xl p-4 bg-white shadow-sm print:h-[280px] print:p-2">
+          {/* 修改：高度增加至 320px (原 280px) */}
+          <div className="h-[320px] w-full border border-slate-100 rounded-2xl p-4 bg-white shadow-sm print:h-[320px] print:p-4">
               <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -336,25 +350,25 @@ const GiftReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 強制分頁點：確保第三頁從這裡開始 */}
+      {/* 強制分頁點 */}
       <div className="hidden print:block break-before-page"></div>
 
       {/* 5. 資金防護機制 (Risk & Defense) - 第三頁內容 */}
-      <div className="bg-emerald-50 rounded-2xl p-6 border border-emerald-100 print-break-inside print:mt-8">
-          <h3 className="font-bold text-emerald-800 text-lg mb-3 flex items-center gap-2">
+      <div className="relative z-10 bg-emerald-50 rounded-2xl p-6 border border-emerald-100 print-break-inside print:mt-8 print:p-6">
+          <h3 className="font-bold text-emerald-800 text-lg mb-3 flex items-center gap-2 print:text-lg">
               <ShieldAlert size={20}/> 資金流動性與安心防護
           </h3>
-          <div className="flex flex-col md:flex-row gap-6">
-              <div className="flex-1 space-y-3">
-                  <p className="text-sm text-emerald-700 leading-relaxed">
+          <div className="flex flex-col md:flex-row gap-6 print:gap-6">
+              <div className="flex-1 space-y-3 print:space-y-3">
+                  <p className="text-sm text-emerald-700 leading-relaxed print:text-sm">
                       本計畫運用「投資型保單」進行資產配置。除了追求資產增值外，也兼顧了資金的流動性需求。若在計畫期間有臨時急用（如購屋頭期款、醫療週轉），無需解約即可調度資金。
                   </p>
                   <div className="flex gap-2">
-                      <span className="text-xs font-bold text-white bg-emerald-500 px-2 py-1 rounded">保單貸款</span>
-                      <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-1 rounded border border-emerald-200">緊急預備金功能</span>
+                      <span className="text-xs font-bold text-white bg-emerald-500 px-2 py-1 rounded print:px-2 print:py-1">保單貸款</span>
+                      <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-1 rounded border border-emerald-200 print:px-2 print:py-1">緊急預備金功能</span>
                   </div>
               </div>
-              <div className="flex-1 bg-white/60 rounded-xl p-4 border border-emerald-100 text-sm space-y-2">
+              <div className="flex-1 bg-white/60 rounded-xl p-4 border border-emerald-100 text-sm space-y-2 print:p-4 print:space-y-3">
                   <div className="flex justify-between items-center">
                       <span className="text-slate-600 flex items-center gap-1"><Banknote size={14}/> 最高借貸成數</span>
                       <span className="font-bold text-slate-700">保單價值 50%</span>
@@ -369,21 +383,21 @@ const GiftReport = ({ data }: { data: any }) => {
                   </div>
               </div>
           </div>
-          <p className="text-xs text-emerald-600/70 mt-3 pt-3 border-t border-emerald-200">
+          <p className="text-xs text-emerald-600/70 mt-3 pt-3 border-t border-emerald-200 print:text-[11px] print:mt-4">
               * 顧問叮嚀：從銀行借貸出來的資金在期滿前屬於槓桿部位，建議保單貸款功能僅作為「緊急預備金」使用，確保計畫完整執行。
           </p>
       </div>
 
       {/* 6. 顧問總結 */}
-      <div className="bg-slate-50 p-6 rounded-2xl border-l-4 border-indigo-500 print-break-inside">
+      <div className="relative z-10 bg-slate-50 p-6 rounded-2xl border-l-4 border-indigo-500 print-break-inside print:p-6">
           <div className="flex gap-4">
                <Quote className="text-indigo-300 shrink-0" size={32} />
                <div>
-                   <h3 className="font-bold text-slate-800 text-lg mb-2">顧問觀點</h3>
-                   <p className="text-slate-600 text-sm leading-relaxed mb-4">
+                   <h3 className="font-bold text-slate-800 text-lg mb-2 print:text-lg">顧問觀點</h3>
+                   <p className="text-slate-600 text-sm leading-relaxed mb-4 print:text-sm">
                        「財富自由不是靠省吃儉用，而是靠『資產積累』。百萬禮物專案的核心，在於利用銀行低利資金與時間複利，讓您用『打折』的成本，買到未來的財富。」
                    </p>
-                   <div className="flex items-center gap-2 text-indigo-700 font-bold text-sm">
+                   <div className="flex items-center gap-2 text-indigo-700 font-bold text-sm print:text-xs">
                        <Clock size={16} />
                        <span>時間是這個計畫最貴的成本，越早啟動，複利效應越驚人。</span>
                    </div>
