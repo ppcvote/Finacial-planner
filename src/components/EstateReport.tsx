@@ -1,15 +1,68 @@
 import React from 'react';
 import { 
-  Building2, Landmark, Scale, ShieldCheck, TrendingUp, ArrowRight, Quote, CheckCircle2,
-  XCircle, AlertTriangle, Percent, Banknote, Lock, Coins, PiggyBank, Wallet, Clock
+  Building2, 
+  Landmark, 
+  Scale, 
+  ShieldCheck, 
+  TrendingUp, 
+  ArrowRight, 
+  Quote, 
+  CheckCircle2, 
+  XCircle,
+  AlertTriangle,
+  Percent,
+  Banknote,
+  Lock,
+  Coins,
+  PiggyBank,
+  Wallet,
+  Clock // [修正] 補上 Clock 避免白屏
 } from 'lucide-react';
 import { 
-  ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Legend, ResponsiveContainer, Bar
+  ComposedChart, 
+  Area, 
+  Line, 
+  CartesianGrid, 
+  XAxis, 
+  YAxis, 
+  Legend, 
+  ResponsiveContainer,
+  Bar,
 } from 'recharts';
-import { calculateMonthlyPayment, calculateMonthlyIncome, calculateRemainingBalance } from '../utils';
+
+// --- 計算邏輯 (恢復檔案內計算) ---
+const calculateMonthlyPayment = (principal: number, rate: number, years: number) => {
+  const p = Number(principal) || 0;
+  const rVal = Number(rate) || 0;
+  const y = Number(years) || 0;
+  const r = rVal / 100 / 12;
+  const n = y * 12;
+  if (rVal === 0) return (p * 10000) / (n || 1);
+  const result = (p * 10000 * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  return isNaN(result) ? 0 : result;
+};
+
+const calculateMonthlyIncome = (principal: number, rate: number) => {
+  const p = Number(principal) || 0;
+  const r = Number(rate) || 0;
+  return (p * 10000 * (r / 100)) / 12;
+};
+
+const calculateRemainingBalance = (principal: number, rate: number, totalYears: number, yearsElapsed: number) => {
+  const pVal = Number(principal) || 0;
+  const rVal = Number(rate) || 0;
+  const totalY = Number(totalYears) || 0;
+  const elapsed = Number(yearsElapsed) || 0;
+  const r = rVal / 100 / 12;
+  const n = totalY * 12;
+  const p = elapsed * 12;
+  if (rVal === 0) return Math.max(0, pVal * 10000 * (1 - p / (n || 1)));
+  const balance = (pVal * 10000) * (Math.pow(1 + r, n) - Math.pow(1 + r, p)) / (Math.pow(1 + r, n) - 1);
+  return Math.max(0, isNaN(balance) ? 0 : balance);
+};
 
 // ------------------------------------------------------------------
-// 子元件: 超級比一比
+// 子元件: 超級比一比 (Comparison Card) - 極致緊湊版
 // ------------------------------------------------------------------
 const ComparisonRow = ({ title, physical, financial, isBetter }: any) => (
     <div className="grid grid-cols-3 gap-2 py-3 print:py-1 border-b border-slate-100 last:border-0 text-sm print:text-[10px] items-center">
@@ -24,7 +77,7 @@ const ComparisonRow = ({ title, physical, financial, isBetter }: any) => (
 );
 
 // ------------------------------------------------------------------
-// 主元件: EstateReport (恢復獨立計算版)
+// 主元件: EstateReport
 // ------------------------------------------------------------------
 const EstateReport = ({ data }: { data: any }) => {
   // 1. 資料解構
@@ -38,22 +91,22 @@ const EstateReport = ({ data }: { data: any }) => {
   const isRefinance = existingLoanBalance > 0 && existingLoanBalance < loanAmount;
   const cashOutAmount = isRefinance ? loanAmount - existingLoanBalance : 0;
 
-  // 2. 核心計算 (恢復本地計算)
+  // 2. 核心計算
   const monthlyPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
   
-  // 轉增貸模式
+  // 轉增貸模式計算
   const monthlyInvestIncomeFromCashOut = calculateMonthlyIncome(cashOutAmount, investReturnRate);
   const netNewMonthlyPayment = monthlyPayment - monthlyInvestIncomeFromCashOut;
   const monthlySavings = existingMonthlyPayment - netNewMonthlyPayment;
   const totalSavingsOverTerm = monthlySavings * 12 * loanTerm;
   const totalBenefitRefinance = totalSavingsOverTerm + (cashOutAmount * 10000);
 
-  // 一般模式
+  // 一般模式計算
   const monthlyIncomeFull = calculateMonthlyIncome(loanAmount, investReturnRate);
   const netCashFlow = monthlyIncomeFull - monthlyPayment;
   const isPositiveFlow = netCashFlow >= 0;
   const totalNetCashFlow = netCashFlow * 12 * loanTerm;
-  const totalAssetValue = loanAmount * 10000;
+  const totalAssetValue = loanAmount * 10000; // 假設本金不變
   const totalBenefitStandard = totalAssetValue + totalNetCashFlow;
 
   // 3. 圖表數據
@@ -66,14 +119,16 @@ const EstateReport = ({ data }: { data: any }) => {
         const remainingLoan = calculateRemainingBalance(loanAmount, loanRate, loanTerm, year);
         
         if (isRefinance) {
+            // 轉增貸模式：顯示累積省下的錢
             const cumulativeSavings = monthlySavings * 12 * year;
             dataArr.push({
                 year: `${year}`,
-                累積效益: Math.round(cumulativeSavings / 10000),
-                轉貸現金: Math.round(cashOutAmount),
+                累積效益: Math.round(cumulativeSavings / 10000), // 省下的錢
+                轉貸現金: Math.round(cashOutAmount), // 增貸出來的錢(定值)
                 剩餘貸款: Math.round(remainingLoan / 10000)
             });
         } else {
+            // 一般模式：顯示資產與淨值
             const equity = (loanAmount * 10000) - remainingLoan;
             const cumulativeFlow = netCashFlow * 12 * year;
             dataArr.push({
@@ -90,7 +145,7 @@ const EstateReport = ({ data }: { data: any }) => {
   };
   const chartData = generateChartData();
 
-  // 4. 壓力測試
+  // 4. 壓力測試數據
   const spread = investReturnRate - loanRate;
   const breakEvenRate = investReturnRate;
 
@@ -103,7 +158,12 @@ const EstateReport = ({ data }: { data: any }) => {
       {/* 浮水印 */}
       <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[50] overflow-hidden mix-blend-multiply print:fixed print:top-1/2 print:left-1/2 print:-translate-x-1/2 print:-translate-y-1/2">
           <div className="opacity-[0.08] transform -rotate-12">
-              <img src={LOGO_URL} alt="Watermark" className="w-[500px] h-auto grayscale object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              <img 
+                src={LOGO_URL}
+                alt="Watermark" 
+                className="w-[500px] h-auto grayscale object-contain"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
           </div>
       </div>
 
@@ -139,6 +199,7 @@ const EstateReport = ({ data }: { data: any }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:gap-2 print:grid-cols-2">
+              {/* 左側：傳統房東 */}
               <div className="bg-white p-5 rounded-2xl border border-slate-200 print:p-2 opacity-80 grayscale-[0.3]">
                   <div className="flex items-center gap-2 mb-4 print:mb-1 border-b border-slate-100 pb-2">
                       <Building2 className="text-slate-400 print:w-4 print:h-4" size={20}/>
@@ -155,6 +216,8 @@ const EstateReport = ({ data }: { data: any }) => {
                       </div>
                   </div>
               </div>
+
+              {/* 右側：數位包租公 */}
               <div className="bg-white p-5 rounded-2xl border-2 border-emerald-500 shadow-xl print:shadow-none print:p-2 relative overflow-hidden print:border">
                    <div className="absolute top-0 right-0 bg-emerald-500 text-white text-[10px] px-2 py-1 rounded-bl-lg font-bold print:py-0 print:px-1">Recommended</div>
                   <div className="flex items-center gap-2 mb-4 print:mb-1 border-b border-emerald-100 pb-2">
@@ -175,7 +238,7 @@ const EstateReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 3. 執行三部曲 */}
+      {/* 3. 執行三部曲 (The Roadmap) */}
       <div className="relative z-10 print-break-inside">
           <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2 print:text-base print:mb-2">
               <ArrowRight size={24} className="text-emerald-600 print:w-4 print:h-4"/>
@@ -199,7 +262,7 @@ const EstateReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 4. 資產成長趨勢 與 總結算 */}
+      {/* 4. 資產成長趨勢 (The Vision) 與 專案總結 (The Summary) */}
       <div className="relative z-10 space-y-4 print-break-inside">
           <div className="flex items-center justify-between mb-2">
               <h2 className="text-xl font-bold text-slate-700 flex items-center gap-2 print:text-base">
@@ -219,6 +282,7 @@ const EstateReport = ({ data }: { data: any }) => {
                       <YAxis yAxisId="left" unit="萬" tick={{fontSize: 10}} width={30} />
                       <YAxis yAxisId="right" orientation="right" unit="萬" tick={{fontSize: 10}} width={30} hide />
                       <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }}/>
+                      
                       {isRefinance ? (
                           <>
                             <Area yAxisId="left" type="monotone" name="累積節省金額" dataKey="累積效益" stroke="#f97316" fill="#f97316" fillOpacity={0.1} strokeWidth={2} isAnimationActive={false}/>
@@ -235,7 +299,7 @@ const EstateReport = ({ data }: { data: any }) => {
               </ResponsiveContainer>
           </div>
 
-          {/* 總結算區塊 */}
+          {/* 4.5 專案總結 (Project Summary) - 新增區塊 */}
           <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 print:p-2 print:border-slate-200">
               <h4 className="text-sm font-bold text-emerald-800 mb-3 flex items-center gap-2 print:text-xs print:mb-2">
                   <Banknote size={16} className="print:w-3 print:h-3"/>
@@ -243,6 +307,7 @@ const EstateReport = ({ data }: { data: any }) => {
               </h4>
               <div className="flex items-center justify-between gap-4">
                   {isRefinance ? (
+                      // 轉增貸模式總結
                       <>
                           <div className="flex-1 text-center border-r border-emerald-200 print:border-slate-300">
                               <p className="text-xs text-slate-500 mb-1 print:text-[10px]">累積節省利息</p>
@@ -258,6 +323,7 @@ const EstateReport = ({ data }: { data: any }) => {
                           </div>
                       </>
                   ) : (
+                      // 一般模式總結
                       <>
                           <div className="flex-1 text-center border-r border-emerald-200 print:border-slate-300">
                               <p className="text-xs text-slate-500 mb-1 print:text-[10px]">累積淨領現金流</p>
@@ -279,9 +345,10 @@ const EstateReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
+      {/* 強制分頁：第三頁開始 */}
       <div className="hidden print:block break-before-page"></div>
 
-      {/* 5. 資金防護 - 第三頁 */}
+      {/* 5. 資金防護機制 (Risk & Defense) - 第三頁 */}
       <div className="relative z-10 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm print:shadow-none print:p-4 print:border print:mt-8">
           <h3 className="font-bold text-slate-800 text-lg mb-3 flex items-center gap-2 print:text-base">
               <Lock size={20} className="text-blue-600 print:w-4 print:h-4"/> 資金流動性與安心防護
@@ -316,11 +383,12 @@ const EstateReport = ({ data }: { data: any }) => {
           </p>
       </div>
 
-      {/* 6. 升息防禦 */}
+      {/* 6. 升息防禦力分析 */}
       <div className="bg-emerald-50 rounded-2xl p-6 border border-emerald-100 print:p-4">
           <h3 className="font-bold text-emerald-800 text-lg mb-4 flex items-center gap-2 print:text-base print:mb-2">
               <ShieldCheck size={20} className="text-emerald-600 print:w-4 print:h-4"/> 升息防禦力壓力測試
           </h3>
+          
           <div className="flex items-end gap-2 mb-2">
               <div className="flex-1">
                   <div className="flex justify-between text-xs text-slate-500 mb-1 print:text-[10px]">
@@ -342,6 +410,13 @@ const EstateReport = ({ data }: { data: any }) => {
                   <span className="block text-xs text-slate-500 print:text-[10px]">利差安全氣囊</span>
                   <span className="font-bold text-2xl text-emerald-600 font-mono print:text-lg">{spread.toFixed(1)}%</span>
               </div>
+          </div>
+          <div className="bg-emerald-100/50 rounded-lg p-3 text-xs text-emerald-800 leading-relaxed border border-emerald-100 mt-3 print:mt-2">
+              <p>
+                  <strong>壓力測試結論：</strong> 
+                  即使央行升息 1% (相當劇烈的幅度)，您的利差緩衝仍有 {(spread - 1).toFixed(1)}%，系統依然能維持正向運作。
+                  此外，本金隨時間還款而減少，利息壓力會逐年降低，安全性將逐年提高。
+              </p>
           </div>
       </div>
 
