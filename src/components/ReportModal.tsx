@@ -7,10 +7,13 @@ import {
 import { calculateMonthlyPayment, calculateMonthlyIncome, calculateRemainingBalance } from '../utils';
 
 // ------------------------------------------------------------------
-// Sub-component: Chart Renderer (Isolated for safety)
+// Sub-component: Chart Renderer
 // ------------------------------------------------------------------
 const ChartSection = ({ reportContent }: { reportContent: any }) => {
   const { chartType, chartData } = reportContent;
+
+  // 共用設定：移除動畫，確保列印時圖表是靜態生成的
+  const commonProps = { isAnimationActive: false };
 
   if (chartType === 'area_reservoir') {
     return (
@@ -19,8 +22,8 @@ const ChartSection = ({ reportContent }: { reportContent: any }) => {
         <XAxis dataKey="year" tick={{fontSize: 10}} />
         <YAxis tick={{fontSize: 10}} width={40} />
         <Legend wrapperStyle={{fontSize: '10px'}}/>
-        <Area type="monotone" dataKey="大水庫本金" stackId="1" stroke="#0891b2" fill="#0891b2" fillOpacity={0.1} isAnimationActive={false} />
-        <Area type="monotone" dataKey="小水庫累積" stackId="1" stroke="#fbbf24" fill="#fbbf24" fillOpacity={0.6} isAnimationActive={false} />
+        <Area type="monotone" dataKey="大水庫本金" stackId="1" stroke="#0891b2" fill="#0891b2" fillOpacity={0.1} {...commonProps} />
+        <Area type="monotone" dataKey="小水庫累積" stackId="1" stroke="#fbbf24" fill="#fbbf24" fillOpacity={0.6} {...commonProps} />
       </AreaChart>
     );
   }
@@ -32,8 +35,8 @@ const ChartSection = ({ reportContent }: { reportContent: any }) => {
         <XAxis dataKey="year" tick={{fontSize: 10}} />
         <YAxis tick={{fontSize: 10}} width={40} />
         <Legend wrapperStyle={{fontSize: '10px'}}/>
-        <Area type="monotone" dataKey="專案持有資產" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} isAnimationActive={false}/>
-        <Line type="monotone" dataKey="專案實付成本" stroke="#f59e0b" strokeWidth={2} isAnimationActive={false}/>
+        <Area type="monotone" dataKey="專案持有資產" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} {...commonProps}/>
+        <Line type="monotone" dataKey="專案實付成本" stroke="#f59e0b" strokeWidth={2} {...commonProps}/>
       </ComposedChart>
     );
   }
@@ -45,8 +48,8 @@ const ChartSection = ({ reportContent }: { reportContent: any }) => {
         <XAxis dataKey="cycle" tick={{fontSize: 10}} />
         <YAxis tick={{fontSize: 10}} width={40} />
         <Legend wrapperStyle={{fontSize: '10px'}}/>
-        <Bar dataKey="netPay" name="實際月付金" fill="#f97316" barSize={40} isAnimationActive={false} />
-        <Line type="monotone" dataKey="originalPay" name="原車貸月付" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" isAnimationActive={false} dot={false}/>
+        <Bar dataKey="netPay" name="實際月付金" fill="#f97316" barSize={40} {...commonProps} />
+        <Line type="monotone" dataKey="originalPay" name="原車貸月付" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={false} {...commonProps}/>
       </ComposedChart>
     );
   }
@@ -58,7 +61,7 @@ const ChartSection = ({ reportContent }: { reportContent: any }) => {
         <XAxis type="number" hide />
         <YAxis dataKey="name" type="category" width={80} tick={{fontSize: 11, fontWeight: 'bold', fill:'#475569'}} axisLine={false} tickLine={false} />
         <Legend wrapperStyle={{fontSize: '10px'}}/>
-        <Bar dataKey="value" barSize={30} radius={[0, 4, 4, 0]} isAnimationActive={false} label={{ position: 'right', fill: '#64748b', fontSize: 10, formatter: (val: any) => `$${val.toLocaleString()}` }}>
+        <Bar dataKey="value" barSize={30} radius={[0, 4, 4, 0]} label={{ position: 'right', fill: '#64748b', fontSize: 10, formatter: (val: any) => `$${val.toLocaleString()}` }} {...commonProps}>
             {chartData.map((entry: any, index: number) => (
                 <Cell key={`cell-${index}`} fill={entry.fill || '#3b82f6'} />
             ))}
@@ -67,7 +70,7 @@ const ChartSection = ({ reportContent }: { reportContent: any }) => {
     );
   }
 
-  // Default: Generic Composed Chart (Student, Estate, Active)
+  // Default: Generic Composed Chart
   return (
     <ComposedChart data={chartData}>
       <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -75,7 +78,7 @@ const ChartSection = ({ reportContent }: { reportContent: any }) => {
       <YAxis tick={{fontSize: 10}} width={40} />
       <Legend wrapperStyle={{fontSize: '10px'}}/>
       {Object.keys(chartData[0] || {}).slice(1).map((key, i) => (
-          <Area key={i} type="monotone" dataKey={key} fill={['#8884d8', '#82ca9d', '#ffc658'][i % 3]} stroke="none" fillOpacity={0.2} isAnimationActive={false}/>
+          <Area key={i} type="monotone" dataKey={key} fill={['#8884d8', '#82ca9d', '#ffc658'][i % 3]} stroke="none" fillOpacity={0.2} {...commonProps}/>
       ))}
     </ComposedChart>
   );
@@ -111,7 +114,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
   // --- Report Data Logic ---
   let reportContent = { title: '', mindMap: [] as any[], table: [] as any[], highlights: [] as any[], chartData: [] as any[], chartType: 'composed' };
 
-  // ... (Data Generation Logic - Preserved)
+  // Data Logic (保持不變)
   if (activeTab === 'gift') {
     const loan = data.loanAmount;
     const monthlyLoanPayment = calculateMonthlyPayment(loan, data.loanRate, data.loanTerm);
@@ -299,13 +302,17 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
   // 自動列印邏輯
   const handlePrint = () => {
       setShowNoteInput(false); 
+      // 關鍵：觸發 Resize 事件，強制 Recharts 在隱藏 UI 消失後重新計算尺寸
+      setTimeout(() => {
+          window.dispatchEvent(new Event('resize'));
+      }, 100);
+
       setTimeout(() => {
           window.print();
           setShowNoteInput(true);
-      }, 500);
+      }, 600);
   };
 
-  // 決定 React Portal 的掛載點 (直接掛在 body 下)
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm overflow-y-auto no-scroll-print" id="report-modal-root">
       {/* 注入列印專用樣式 */}
@@ -324,7 +331,6 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
             }
             #root, .toast-container, .no-print { display: none !important; }
             
-            /* 核心修正：解除 Portal 固定定位，讓文件流正常運作 */
             #report-modal-root { 
                 position: static !important; 
                 width: 100% !important; 
@@ -349,17 +355,16 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                 position: relative;
             }
 
-            /* 封面：強制 A4 高度 */
             .cover-page {
                 height: 297mm !important; 
                 overflow: hidden;
             }
 
-            /* 內容頁：自動高度，加上適當內距 */
+            /* 修改處：緊縮 padding (15mm -> 10mm) */
             .content-page {
                 min-height: auto !important; 
                 height: auto !important;
-                padding: 15mm !important; 
+                padding: 10mm !important; 
                 page-break-after: auto !important;
             }
 
@@ -368,11 +373,17 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                 page-break-inside: avoid !important;
             }
 
-            /* 圖表高度修復：給予明確高度讓 Recharts 渲染 */
+            /* 修改處：使用 mm 作為單位，確保寬度足夠；高度縮小至 280px */
             .print-chart-fix {
-                height: 350px !important;
-                width: 100% !important;
+                height: 280px !important;
+                width: 180mm !important;
+                display: block !important;
                 break-inside: avoid;
+            }
+
+            /* 新增：緊縮間距類別，將 mb-8 強制轉為 mb-4 */
+            .print-compact {
+                margin-bottom: 1rem !important; /* 1rem = 16px */
             }
         }
       `}</style>
@@ -464,14 +475,14 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
             {/* === 第二頁：內容分析 (Content Page) === */}
             <div className="print-page content-page flex flex-col">
                 
-                {/* Header (標示這是在內容頁) */}
-                <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-8">
+                {/* Header */}
+                <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-8 print-compact">
                     <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Ultra Advisor System</span>
                     <span className="text-[10px] font-bold text-slate-400">Content Analysis</span>
                 </div>
 
-                {/* 1. 核心數據 (Cards) */}
-                <div className="mb-8 print-break-inside">
+                {/* 1. 核心數據 - 加入 print-compact */}
+                <div className="mb-8 print-break-inside print-compact">
                     <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
                         <div className="w-1 h-6 bg-blue-600 rounded-full"></div>
                         核心戰略指標
@@ -486,12 +497,13 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                     </div>
                 </div>
 
-                {/* 2. 圖表區域 (Chart) - 加入 print-chart-fix */}
-                <div className="mb-8 print-break-inside">
+                {/* 2. 圖表區域 - 加入 print-compact 與 print-chart-fix */}
+                <div className="mb-8 print-break-inside print-compact">
                     <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
                         <div className="w-1 h-6 bg-emerald-500 rounded-full"></div>
                         資產趨勢模擬
                     </h3>
+                    {/* 強制設定高與寬，讓 ResponsiveContainer 有依據 */}
                     <div className="h-[300px] w-full border border-slate-100 rounded-2xl p-4 bg-white shadow-sm print-chart-fix">
                         <ResponsiveContainer width="100%" height="100%">
                             <ChartSection reportContent={reportContent} />
@@ -499,8 +511,8 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                     </div>
                 </div>
 
-                {/* 3. 表格與亮點 */}
-                <div className="grid grid-cols-2 gap-8 mb-8 print-break-inside">
+                {/* 3. 表格與亮點 - 加入 print-compact */}
+                <div className="grid grid-cols-2 gap-8 mb-8 print-break-inside print-compact">
                     <div>
                         <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
                            <div className="w-1 h-6 bg-orange-500 rounded-full"></div>
@@ -546,8 +558,8 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                     </div>
                 </div>
 
-                {/* 4. 顧問結語區 */}
-                <div className="mt-auto border-t-2 border-slate-100 pt-8 print-break-inside">
+                {/* 4. 顧問結語區 - Margin top auto 確保推到底部，但在列印時不要推太遠 */}
+                <div className="mt-auto border-t-2 border-slate-100 pt-8 print-break-inside print:mt-4 print:pt-4">
                     <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
                         <PenTool size={18} className="text-slate-400"/> 顧問建議
                     </h3>
@@ -565,8 +577,8 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                     )}
                 </div>
 
-                {/* Footer */}
-                <div className="mt-12 text-center text-[10px] text-slate-300 border-t border-slate-50 pt-4">
+                {/* Footer - 縮小上方間距 */}
+                <div className="mt-12 text-center text-[10px] text-slate-300 border-t border-slate-50 pt-4 print:mt-4">
                     <p>免責聲明：本報告所載資料僅供財務規劃參考，不構成任何投資建議。投資有風險，請謹慎評估。</p>
                     <p>© {new Date().getFullYear()} Ultra Advisor System • Generated for {client?.name}</p>
                 </div>
