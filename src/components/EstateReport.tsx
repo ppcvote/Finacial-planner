@@ -67,14 +67,16 @@ const EstateReport = ({ data }: { data: any }) => {
         const remainingLoan = calculateRemainingBalance(loanAmount, loanRate, loanTerm, year);
         
         if (isRefinance) {
+            // [轉增貸模式數據]
             const cumulativeSavings = monthlySavings * 12 * year;
             dataArr.push({
                 year: `${year}`,
-                累積節省金額: Math.round(cumulativeSavings / 10000), // 省下的錢
-                轉貸現金: Math.round(cashOutAmount), // 增貸出來的錢
-                剩餘貸款: Math.round(remainingLoan / 10000)
+                累積效益: Math.round(cumulativeSavings / 10000), 
+                // 新增數據點以符合 UI
+                新貸款餘額: Math.round(remainingLoan / 10000) 
             });
         } else {
+            // [一般模式數據]
             const equity = (loanAmount * 10000) - remainingLoan;
             const cumulativeFlow = netCashFlow * 12 * year;
             dataArr.push({
@@ -104,12 +106,7 @@ const EstateReport = ({ data }: { data: any }) => {
       {/* 浮水印 */}
       <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[50] overflow-hidden mix-blend-multiply print:fixed print:top-1/2 print:left-1/2 print:-translate-x-1/2 print:-translate-y-1/2">
           <div className="opacity-[0.08] transform -rotate-12">
-              <img 
-                src={LOGO_URL}
-                alt="Watermark" 
-                className="w-[500px] h-auto grayscale object-contain"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
+              <img src={LOGO_URL} alt="Watermark" className="w-[500px] h-auto grayscale object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           </div>
       </div>
 
@@ -236,7 +233,6 @@ const EstateReport = ({ data }: { data: any }) => {
                           </>
                       ) : (
                           <>
-                            {/* [關鍵修正 2]: 移除 Bar，只保留 Area (資產) 和 Line (貸款) */}
                             <Area yAxisId="left" type="monotone" name="總資產" dataKey="總資產" stroke="#10b981" fill="#ecfdf5" strokeWidth={2} isAnimationActive={false}/>
                             <Line yAxisId="left" type="monotone" name="剩餘貸款" dataKey="剩餘貸款" stroke="#ef4444" strokeWidth={2} dot={false} strokeDasharray="5 5" isAnimationActive={false}/>
                           </>
