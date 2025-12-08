@@ -6,7 +6,7 @@ import {
   ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Legend, ResponsiveContainer 
 } from 'recharts';
 
-// ... (計算邏輯 calculateMonthlyPayment, calculateMonthlyIncome 保持不變) ...
+// --- 重用計算邏輯 ---
 const calculateMonthlyPayment = (principal: number, rate: number, years: number) => {
   const p = Number(principal) || 0;
   const rVal = Number(rate) || 0;
@@ -24,7 +24,9 @@ const calculateMonthlyIncome = (principal: number, rate: number) => {
   return (p * 10000 * (r / 100)) / 12; 
 };
 
-// ... (ResultCard 元件保持不變) ...
+// ------------------------------------------------------------------
+// 子元件: ResultCard (三循環關鍵指標卡片)
+// ------------------------------------------------------------------
 const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmount, isLast = false }: any) => {
     const colorClass = phase === 1 ? 'text-blue-600' : phase === 2 ? 'text-indigo-600' : 'text-purple-600';
     const bgClass = phase === 1 ? 'bg-blue-50 border-blue-200' : phase === 2 ? 'bg-indigo-50 border-indigo-200' : 'bg-purple-50 border-purple-200';
@@ -37,6 +39,7 @@ const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmoun
                     <ArrowRight size={14} className="print:w-4 print:h-4"/>
                 </div>
             )}
+            
             <div className="flex justify-between items-start mb-3 print:mb-3">
                 <div>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeClass} mb-1 inline-block print:px-2 print:py-0.5 print:text-[10px]`}>
@@ -50,6 +53,7 @@ const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmoun
                     <p className="font-bold text-slate-700 print:text-sm">{loanAmount} 萬</p>
                 </div>
             </div>
+
             <div className="space-y-2 print:space-y-2 border-t border-slate-200/50 pt-3 print:pt-3">
                 <div className="flex justify-between items-center text-xs print:text-[11px]">
                     <span className="text-slate-500">每月實質負擔</span>
@@ -74,8 +78,10 @@ const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmoun
     );
 };
 
+// ------------------------------------------------------------------
+// 主元件: GiftReport
+// ------------------------------------------------------------------
 const GiftReport = ({ data }: { data: any }) => {
-  // ... (資料與計算邏輯保持不變) ...
   const loanAmount = Number(data?.loanAmount) || 100;
   const loanTerm = Number(data?.loanTerm) || 7;
   const loanRate = Number(data?.loanRate) || 2.8;
@@ -164,7 +170,9 @@ const GiftReport = ({ data }: { data: any }) => {
             currentAssetValue = (loanAmount + c2Loan + c3Loan) * 10000;
         }
       }
+
       cumulativeProjectCost += currentYearNetOut * 12;
+      
       dataArr.push({
         year: `${year}`,
         一般存錢: Math.round(cumulativeStandard / 10000),
@@ -182,9 +190,9 @@ const GiftReport = ({ data }: { data: any }) => {
       
       {/* --- Logo 浮水印 (背景) --- */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden print:fixed print:top-1/2 print:left-1/2 print:-translate-x-1/2 print:-translate-y-1/2">
-          <div className="opacity-[0.05] transform -rotate-12">
+          <div className="opacity-[0.08] transform -rotate-12">
               <img 
-                src="https://thunderous-cat-56a4a9.netlify.app/logo.png" 
+                src="/logo.png" 
                 alt="Logo Watermark" 
                 className="w-[500px] h-auto grayscale object-contain"
                 onError={(e) => {
@@ -195,19 +203,38 @@ const GiftReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 1. Header */}
+      {/* 1. Header (包含 Logo 顯示) */}
       <div className="relative z-10 flex items-center justify-between border-b-2 border-indigo-100 pb-6 print:pb-3 print-break-inside bg-white/50 backdrop-blur-sm">
-         <div>
-             <div className="flex items-center gap-2 mb-2">
-                 <Gift className="text-indigo-600" size={28} />
-                 <span className="text-sm font-bold text-indigo-600 tracking-widest uppercase">Wealth Legacy Project</span>
+         <div className="flex items-center gap-4">
+             {/* --- Logo 顯示區 --- */}
+             <div className="w-16 h-16 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden shrink-0">
+                 <img 
+                    src="/logo.png" 
+                    alt="Brand Logo" 
+                    className="w-full h-full object-contain p-1"
+                    onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        const iconContainer = (e.target as HTMLImageElement).parentElement!;
+                        iconContainer.classList.add('bg-indigo-50');
+                        // 移除 hidden class 讓備用 icon 顯示
+                        const fallbackIcon = iconContainer.querySelector('svg'); 
+                        if(fallbackIcon) fallbackIcon.classList.remove('hidden');
+                    }}
+                 />
+                 {/* 備用 Icon: 當圖片載入失敗時顯示 */}
+                 <Gift className="text-indigo-600 hidden" size={32} /> 
              </div>
-             <h1 className="text-4xl font-black text-slate-900 mb-2 print:text-2xl">百萬禮物專案</h1>
-             <p className="text-lg text-slate-500 font-medium print:text-sm">給未來的自己與孩子，一份增值 300% 的成年禮</p>
+
+             <div>
+                 <span className="text-xs font-bold text-indigo-600 tracking-widest uppercase block mb-1">Wealth Legacy Project</span>
+                 <h1 className="text-4xl font-black text-slate-900 mb-1 print:text-2xl leading-none">百萬禮物專案</h1>
+                 <p className="text-sm text-slate-500 font-medium print:text-xs">給未來的自己與孩子，一份增值 300% 的成年禮</p>
+             </div>
          </div>
+         
          <div className="text-right hidden print:block">
-             <p className="text-sm text-slate-400">專案代碼</p>
-             <p className="text-xl font-mono font-bold text-slate-700 print:text-sm">GIFT-{loanTerm*3}Y-{finalAssetValue_Wan}W</p>
+             <p className="text-xs text-slate-400">專案代碼</p>
+             <p className="text-lg font-mono font-bold text-slate-700 print:text-sm">GIFT-{loanTerm*3}Y-{finalAssetValue_Wan}W</p>
          </div>
       </div>
 
@@ -217,8 +244,9 @@ const GiftReport = ({ data }: { data: any }) => {
               <Target size={24} className="text-rose-500 print:w-5 print:h-5"/>
               效益成本分析
           </h2>
+          
           <div className="grid grid-cols-2 gap-12 print:gap-6">
-              {/* 一般存錢 */}
+              {/* 左邊：一般存錢 */}
               <div className="relative p-6 rounded-2xl border-2 border-dashed border-slate-300 bg-white opacity-80 print:p-4">
                   <div className="absolute -top-3 left-6 bg-slate-500 text-white px-3 py-1 rounded-full text-xs font-bold print:border print:border-slate-300 print:text-[11px] print:py-0.5">
                       傳統模式
@@ -241,7 +269,8 @@ const GiftReport = ({ data }: { data: any }) => {
                       </div>
                   </div>
               </div>
-              {/* 專案模式 */}
+
+              {/* 右邊：百萬禮物專案 */}
               <div className="relative p-6 rounded-2xl border-2 border-indigo-500 bg-white shadow-xl transform scale-105 print:scale-100 print:shadow-none print:p-4 print:border-2">
                   <div className="absolute -top-3 left-6 bg-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md print:shadow-none print:text-[11px] print:py-0.5">
                       專案模式
@@ -269,7 +298,7 @@ const GiftReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 3. 執行藍圖 */}
+      {/* 3. 執行藍圖 (三階段演進) */}
       <div className="relative z-10 print-break-inside">
           <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2 print:text-lg print:mb-4">
               <ArrowRight size={24} className="text-indigo-600 print:w-5 print:h-5"/>
