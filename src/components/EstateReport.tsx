@@ -1,153 +1,36 @@
 import React from 'react';
 import { 
-  Building2, 
-  Landmark, 
-  Scale, 
-  ShieldCheck, 
-  TrendingUp, 
-  ArrowRight, 
-  Quote, 
-  CheckCircle2, 
-  XCircle,
-  AlertTriangle,
-  Percent,
-  Banknote,
-  Lock,
-  Coins,
-  PiggyBank,
-  Wallet,
-  Clock // [修正] 補上這裡原本缺少的 Clock
+  Building2, Landmark, Scale, ShieldCheck, TrendingUp, ArrowRight, Quote, CheckCircle2,
+  XCircle, AlertTriangle, Percent, Banknote, Lock, Coins, PiggyBank, Wallet, Clock
 } from 'lucide-react';
 import { 
-  ComposedChart, 
-  Area, 
-  Line, 
-  CartesianGrid, 
-  XAxis, 
-  YAxis, 
-  Legend, 
-  ResponsiveContainer,
-  Bar,
+  ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Legend, ResponsiveContainer, Bar
 } from 'recharts';
 
-// --- 計算邏輯 ---
-const calculateMonthlyPayment = (principal: number, rate: number, years: number) => {
-  const p = Number(principal) || 0;
-  const rVal = Number(rate) || 0;
-  const y = Number(years) || 0;
-  const r = rVal / 100 / 12;
-  const n = y * 12;
-  if (rVal === 0) return (p * 10000) / (n || 1);
-  const result = (p * 10000 * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
-  return isNaN(result) ? 0 : result;
-};
+// [修改] 引入計算核心
+import { calculateEstateProject } from '../utils';
 
-const calculateMonthlyIncome = (principal: number, rate: number) => {
-  const p = Number(principal) || 0;
-  const r = Number(rate) || 0;
-  return (p * 10000 * (r / 100)) / 12;
-};
-
-const calculateRemainingBalance = (principal: number, rate: number, totalYears: number, yearsElapsed: number) => {
-  const pVal = Number(principal) || 0;
-  const rVal = Number(rate) || 0;
-  const totalY = Number(totalYears) || 0;
-  const elapsed = Number(yearsElapsed) || 0;
-  const r = rVal / 100 / 12;
-  const n = totalY * 12;
-  const p = elapsed * 12;
-  if (rVal === 0) return Math.max(0, pVal * 10000 * (1 - p / (n || 1)));
-  const balance = (pVal * 10000) * (Math.pow(1 + r, n) - Math.pow(1 + r, p)) / (Math.pow(1 + r, n) - 1);
-  return Math.max(0, isNaN(balance) ? 0 : balance);
-};
-
-// ------------------------------------------------------------------
-// 子元件: 超級比一比 (Comparison Card) - 極致緊湊版
-// ------------------------------------------------------------------
 const ComparisonRow = ({ title, physical, financial, isBetter }: any) => (
     <div className="grid grid-cols-3 gap-2 py-3 print:py-1 border-b border-slate-100 last:border-0 text-sm print:text-[10px] items-center">
         <div className="font-bold text-slate-600 flex items-center">{title}</div>
-        <div className="text-center text-slate-500 flex items-center justify-center gap-1">
-             {physical}
-        </div>
+        <div className="text-center text-slate-500 flex items-center justify-center gap-1">{physical}</div>
         <div className="text-center font-bold text-emerald-600 flex items-center justify-center gap-1 bg-emerald-50 rounded-lg py-1 print:py-0">
              {financial} {isBetter && <CheckCircle2 size={14} className="print:w-3 print:h-3" />}
         </div>
     </div>
 );
 
-// ------------------------------------------------------------------
-// 主元件: EstateReport
-// ------------------------------------------------------------------
 const EstateReport = ({ data }: { data: any }) => {
-  // 1. 資料解構
-  const loanAmount = Number(data?.loanAmount) || 1000;
-  const loanTerm = Number(data?.loanTerm) || 30;
-  const loanRate = Number(data?.loanRate) || 2.2;
-  const investReturnRate = Number(data?.investReturnRate) || 6;
-  const existingLoanBalance = Number(data?.existingLoanBalance) || 0;
-  const existingMonthlyPayment = Number(data?.existingMonthlyPayment) || 0;
-  
-  const isRefinance = existingLoanBalance > 0 && existingLoanBalance < loanAmount;
-  const cashOutAmount = isRefinance ? loanAmount - existingLoanBalance : 0;
-
-  // 2. 核心計算
-  const monthlyPayment = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
-  
-  // 轉增貸模式計算
-  const monthlyInvestIncomeFromCashOut = calculateMonthlyIncome(cashOutAmount, investReturnRate);
-  const netNewMonthlyPayment = monthlyPayment - monthlyInvestIncomeFromCashOut;
-  const monthlySavings = existingMonthlyPayment - netNewMonthlyPayment;
-  const totalSavingsOverTerm = monthlySavings * 12 * loanTerm;
-  const totalBenefitRefinance = totalSavingsOverTerm + (cashOutAmount * 10000);
-
-  // 一般模式計算
-  const monthlyIncomeFull = calculateMonthlyIncome(loanAmount, investReturnRate);
-  const netCashFlow = monthlyIncomeFull - monthlyPayment;
-  const isPositiveFlow = netCashFlow >= 0;
-  const totalNetCashFlow = netCashFlow * 12 * loanTerm;
-  const totalAssetValue = loanAmount * 10000; // 假設本金不變
-  const totalBenefitStandard = totalAssetValue + totalNetCashFlow;
-
-  // 3. 圖表數據
-  const generateChartData = () => {
-    const dataArr = [];
-    const step = Math.max(1, Math.floor(loanTerm / 15));
-
-    for (let year = 1; year <= loanTerm; year++) {
-      if (year === 1 || year % step === 0 || year === loanTerm) {
-        const remainingLoan = calculateRemainingBalance(loanAmount, loanRate, loanTerm, year);
-        
-        if (isRefinance) {
-            // 轉增貸模式：顯示累積省下的錢
-            const cumulativeSavings = monthlySavings * 12 * year;
-            dataArr.push({
-                year: `${year}`,
-                累積效益: Math.round(cumulativeSavings / 10000), // 省下的錢
-                轉貸現金: Math.round(cashOutAmount), // 增貸出來的錢(定值)
-                剩餘貸款: Math.round(remainingLoan / 10000)
-            });
-        } else {
-            // 一般模式：顯示資產與淨值
-            const equity = (loanAmount * 10000) - remainingLoan;
-            const cumulativeFlow = netCashFlow * 12 * year;
-            dataArr.push({
-                year: `${year}`,
-                總資產: Math.round(loanAmount),
-                剩餘貸款: Math.round(remainingLoan / 10000),
-                淨值: Math.round(equity / 10000),
-                累積現金流: Math.round(cumulativeFlow / 10000)
-            });
-        }
-      }
-    }
-    return dataArr;
-  };
-  const chartData = generateChartData();
-
-  // 4. 壓力測試數據
-  const spread = investReturnRate - loanRate;
-  const breakEvenRate = investReturnRate;
+  // 1. 取得計算結果 (Single Source of Truth)
+  const result = calculateEstateProject(data);
+  const {
+      loanAmount, loanTerm, loanRate, investReturnRate, 
+      isRefinance, cashOutAmount, 
+      monthlyPayment, monthlyIncomeFull, netCashFlow, isPositiveFlow, 
+      monthlySavings, totalSavingsOverTerm,
+      totalNetCashFlow, totalBenefitRefinance, totalAssetValue, totalBenefitStandard,
+      chartData, spread, breakEvenRate
+  } = result;
 
   // LOGO 設定
   const LOGO_URL = "/logo.png";
@@ -155,15 +38,9 @@ const EstateReport = ({ data }: { data: any }) => {
   return (
     <div className="font-sans text-slate-800 space-y-8 print:space-y-4 relative">
       
-      {/* 浮水印 */}
       <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[50] overflow-hidden mix-blend-multiply print:fixed print:top-1/2 print:left-1/2 print:-translate-x-1/2 print:-translate-y-1/2">
           <div className="opacity-[0.08] transform -rotate-12">
-              <img 
-                src={LOGO_URL}
-                alt="Watermark" 
-                className="w-[500px] h-auto grayscale object-contain"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
+              <img src={LOGO_URL} alt="Watermark" className="w-[500px] h-auto grayscale object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           </div>
       </div>
 
@@ -262,7 +139,7 @@ const EstateReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 4. 資產成長趨勢 (The Vision) 與 專案總結 (The Summary) */}
+      {/* 4. 資產成長趨勢 (The Vision) 與 專案總結 */}
       <div className="relative z-10 space-y-4 print-break-inside">
           <div className="flex items-center justify-between mb-2">
               <h2 className="text-xl font-bold text-slate-700 flex items-center gap-2 print:text-base">
@@ -299,7 +176,7 @@ const EstateReport = ({ data }: { data: any }) => {
               </ResponsiveContainer>
           </div>
 
-          {/* 4.5 專案總結 (Project Summary) */}
+          {/* 4.5 專案總結 (Project Summary) - 新增區塊 */}
           <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 print:p-2 print:border-slate-200">
               <h4 className="text-sm font-bold text-emerald-800 mb-3 flex items-center gap-2 print:text-xs print:mb-2">
                   <Banknote size={16} className="print:w-3 print:h-3"/>
@@ -307,6 +184,7 @@ const EstateReport = ({ data }: { data: any }) => {
               </h4>
               <div className="flex items-center justify-between gap-4">
                   {isRefinance ? (
+                      // 轉增貸模式總結
                       <>
                           <div className="flex-1 text-center border-r border-emerald-200 print:border-slate-300">
                               <p className="text-xs text-slate-500 mb-1 print:text-[10px]">累積節省利息</p>
@@ -322,6 +200,7 @@ const EstateReport = ({ data }: { data: any }) => {
                           </div>
                       </>
                   ) : (
+                      // 一般模式總結
                       <>
                           <div className="flex-1 text-center border-r border-emerald-200 print:border-slate-300">
                               <p className="text-xs text-slate-500 mb-1 print:text-[10px]">累積淨領現金流</p>
