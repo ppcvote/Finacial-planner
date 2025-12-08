@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { 
   Waves, 
   Calculator, 
-  ArrowRight, 
   Database, 
   TrendingUp, 
   Droplets, 
@@ -33,6 +32,16 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
     let smallReservoir = 0; // 小水庫累積金額 (複利池)
     let totalDividendsReceived = 0; // 對照組：單利累積
     let doubleYear = null; // 翻倍點
+
+    // 加入第 0 年 (初始狀態)，確保圖表從起點開始繪製
+    dataArr.push({
+        year: 0,
+        yearLabel: '起始',
+        大水庫本金: initialCapital,
+        小水庫累積: 0,
+        總資產: initialCapital,
+        單純領息累積: initialCapital
+    });
 
     for (let year = 1; year <= years + 5; year++) { 
       // 1. 大水庫產生配息 (本金 * 配息率)
@@ -66,7 +75,10 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
   };
   
   const { dataArr, doubleYear } = generateData();
-  const currentData = dataArr[Math.min(years, dataArr.length) - 1]; // 取當前設定年份的數據
+  
+  // 取當前設定年份的數據 (注意索引偏移，因為加了第0年)
+  const targetIndex = Math.min(years, dataArr.length - 1);
+  const currentData = dataArr[targetIndex]; 
   
   // 資產總值
   const totalAsset = currentData.總資產;
@@ -164,7 +176,6 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                             <span className="flex items-center gap-1"><Database size={12} className="text-cyan-500"/> 大水庫配息率 (%)</span>
                             <span className="font-bold text-cyan-700">{dividendRate}%</span>
                         </div>
-                        {/* 修正上限至 15% */}
                         <input type="range" min={2} max={15} step={0.5} value={dividendRate} onChange={(e) => updateField('dividendRate', Number(e.target.value))} className="w-full h-1.5 bg-cyan-100 rounded-lg accent-cyan-600" />
                         <p className="text-[10px] text-slate-400 mt-1">建議配置：穩健型標的 (如債券、定存股)</p>
                     </div>
@@ -173,7 +184,6 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                             <span className="flex items-center gap-1"><TrendingUp size={12} className="text-amber-500"/> 小水庫再投報率 (%)</span>
                             <span className="font-bold text-amber-700">{reinvestRate}%</span>
                         </div>
-                        {/* 修正上限至 30% */}
                         <input type="range" min={4} max={30} step={0.5} value={reinvestRate} onChange={(e) => updateField('reinvestRate', Number(e.target.value))} className="w-full h-1.5 bg-amber-100 rounded-lg accent-amber-500" />
                         <p className="text-[10px] text-slate-400 mt-1">建議配置：成長型標的 (如股票型 ETF)</p>
                     </div>
@@ -197,7 +207,7 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                           <Database size={32} className="text-white drop-shadow-md"/>
                       </div>
                       <p className="mt-2 text-sm font-bold text-cyan-300">大水庫</p>
-                      <p className="text-xs text-slate-400">本金 {initialCapital} 萬</p>
+                      <p className="text-xs text-slate-400">本金 {initialCapital} 萬 (恆定)</p>
                   </div>
 
                   {/* Flow Arrow */}
@@ -249,8 +259,8 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
              <div className="flex justify-between items-center mb-4 pl-2 border-l-4 border-cyan-500">
                 <h4 className="font-bold text-slate-700">資產堆疊成長模擬</h4>
                 <div className="flex gap-3 text-xs">
-                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-amber-400 rounded-full"></div> 小水庫 (獲利)</span>
-                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-cyan-600 rounded-full"></div> 大水庫 (本金)</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-amber-400 rounded-full"></div> 小水庫 (獲利成長)</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 bg-cyan-600 rounded-full"></div> 大水庫 (本金恆定)</span>
                 </div>
              </div>
              
@@ -261,11 +271,17 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                     <linearGradient id="colorSmall" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#fbbf24" stopOpacity={0.9}/><stop offset="95%" stopColor="#fbbf24" stopOpacity={0.6}/></linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="year" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} tickFormatter={(val) => `第${val}年`} />
+                  <XAxis 
+                    dataKey="year" 
+                    tick={{fontSize: 12, fill: '#64748b'}} 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tickFormatter={(val) => val === 0 ? '起點' : `第${val}年`} 
+                  />
                   <YAxis unit="萬" tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} />
                   <Tooltip 
                     contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px'}} 
-                    labelFormatter={(val) => `第 ${val} 年`}
+                    labelFormatter={(val) => val === 0 ? '專案起點' : `第 ${val} 年`}
                     formatter={(value, name) => [`${value}萬`, name]}
                   />
                   <Legend iconType="circle"/>
@@ -275,7 +291,7 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                       <ReferenceLine x={doubleYear} stroke="#fbbf24" strokeDasharray="3 3" label={{ position: 'top', value: '資產翻倍點', fill: '#d97706', fontSize: 12, fontWeight: 'bold' }} />
                   )}
 
-                  {/* 修正：先畫大水庫(底層)，再畫小水庫(上層) */}
+                  {/* 關鍵修正：大水庫(本金)在下，小水庫(獲利)在上 */}
                   <Area type="monotone" dataKey="大水庫本金" stackId="1" stroke="#0e7490" fill="url(#colorBig)" />
                   <Area type="monotone" dataKey="小水庫累積" stackId="1" stroke="#f59e0b" fill="url(#colorSmall)" />
                 </AreaChart>
