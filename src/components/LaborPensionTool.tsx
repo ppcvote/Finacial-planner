@@ -1,20 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Umbrella, 
   Calculator, 
   AlertTriangle, 
-  TrendingUp, 
   Clock, 
   Smile, 
   Frown, 
   CheckCircle2, 
   ArrowRight,
-  PiggyBank,
-  ShieldCheck,
-  Landmark,
-  Coins
+  ShieldCheck
 } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceLine, Cell } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceLine } from 'recharts';
 
 export const LaborPensionTool = ({ data, setData }: any) => {
   const safeData = {
@@ -27,53 +23,53 @@ export const LaborPensionTool = ({ data, setData }: any) => {
     desiredMonthlyIncome: Number(data?.desiredMonthlyIncome) || 60000,
     inflationRate: Number(data?.inflationRate) || 2 // 通膨率
   };
-  const { currentAge, retireAge, salary, laborInsYears, selfContribution, pensionReturnRate, desiredMonthlyIncome, inflationRate } = safeData;
+  const { currentAge, retireAge, salary, laborInsYears, selfContribution, pensionReturnRate, desiredMonthlyIncome } = safeData;
+
+  // --- Local State for Inputs (解決輸入卡頓與級距問題) ---
+  const [tempCurrentAge, setTempCurrentAge] = useState(currentAge);
+  const [tempRetireAge, setTempRetireAge] = useState(retireAge);
+  const [tempSalary, setTempSalary] = useState(salary);
+
+  // 當外部數據更新時（例如重置或雲端載入），同步回本地暫存
+  useEffect(() => { setTempCurrentAge(currentAge); }, [currentAge]);
+  useEffect(() => { setTempRetireAge(retireAge); }, [retireAge]);
+  useEffect(() => { setTempSalary(salary); }, [salary]);
 
   // --- 計算核心 ---
-  
   const calculations = useMemo(() => {
       // 1. 勞保年金 (Labor Insurance)
-      // 簡單公式：最高投保薪資 * 年資 * 1.55%
       // 2024年最高投保薪資級距 45,800
       const maxLaborInsSalary = 45800;
       const laborInsBase = Math.min(Math.max(salary, 26400), maxLaborInsSalary);
       const laborInsMonthly = Math.round(laborInsBase * laborInsYears * 0.0155);
 
       // 2. 勞退新制 (Labor Pension)
-      // 雇主提繳 6% + 自提 0~6%
-      // 勞退投保薪資級距 (簡易對應：取大於薪資的最小級距，這裡簡化直接用薪資，上限15萬)
       const pensionBase = Math.min(salary, 150000);
       const contributionRate = 0.06 + (selfContribution ? 0.06 : 0);
       const monthlyContribution = Math.round(pensionBase * contributionRate);
       
-      const yearsToInvest = retireAge - currentAge;
+      const yearsToInvest = Math.max(0, retireAge - currentAge);
       const monthsToInvest = yearsToInvest * 12;
       const monthlyRate = pensionReturnRate / 100 / 12;
       
-      // 未來值公式：PMT * [((1+r)^n - 1) / r]
       const pensionFutureValue = monthlyContribution * ((Math.pow(1 + monthlyRate, monthsToInvest) - 1) / monthlyRate);
       
       // 假設退休後餘命 20 年 (240個月) 領完
       const pensionMonthly = Math.round(pensionFutureValue / 240);
 
-      // 3. 自提節稅效益 (簡易估算)
-      // 假設稅率 5% (最保守估計)
+      // 3. 自提節稅效益 (簡易估算，假設稅率 5%)
       const annualTaxSaving = selfContribution ? Math.round(pensionBase * 0.06 * 12 * 0.05) : 0;
 
       // 4. 缺口計算
       const totalPension = laborInsMonthly + pensionMonthly;
       const gap = Math.max(0, desiredMonthlyIncome - totalPension);
 
-      // 5. 延遲成本 (若晚 10 年開始補缺口)
-      // 計算現在開始每月需存多少 (年報酬假設 6%)
+      // 5. 延遲成本
       const investRateForGap = 0.06 / 12;
-      const targetGapFund = gap * 240; // 粗略估計退休時需要的缺口總準備金 (不含通膨)
+      const targetGapFund = gap * 240; 
       
-      // 現在開始 (n = yearsToInvest * 12)
-      // PMT = FV * r / ((1+r)^n - 1)
       const monthlySaveNow = Math.round(targetGapFund * investRateForGap / (Math.pow(1 + investRateForGap, monthsToInvest) - 1));
       
-      // 10年後開始 (n = (yearsToInvest - 10) * 12)
       const monthsToInvestLater = (yearsToInvest - 10) * 12;
       const monthlySaveLater = monthsToInvestLater > 0 
         ? Math.round(targetGapFund * investRateForGap / (Math.pow(1 + investRateForGap, monthsToInvestLater) - 1))
@@ -99,9 +95,33 @@ export const LaborPensionTool = ({ data, setData }: any) => {
     }
   ];
 
-  // --- UI 更新 ---
+  // --- UI Handlers ---
   const updateField = (field: string, value: number) => { 
       setData({ ...safeData, [field]: value }); 
+  };
+
+  const handleSalaryInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setTempSalary(Number(e.target.value));
+  };
+
+  const finalizeSalary = () => {
+      let finalVal = Number(tempSalary);
+      finalVal = Math.max(26400, Math.min(200000, finalVal)); // 限制範圍
+      setData({ ...safeData, salary: finalVal });
+      setTempSalary(finalVal);
+  };
+
+  const finalizeAge = (field: 'currentAge' | 'retireAge', val: number) => {
+      let finalVal = val;
+      if (field === 'currentAge') {
+          finalVal = Math.max(18, Math.min(retireAge - 1, finalVal)); // 不能大於退休年齡
+          setData({ ...safeData, currentAge: finalVal });
+          setTempCurrentAge(finalVal);
+      } else {
+          finalVal = Math.max(currentAge + 1, Math.min(80, finalVal)); // 不能小於目前年齡
+          setData({ ...safeData, retireAge: finalVal });
+          setTempRetireAge(finalVal);
+      }
   };
 
   return (
@@ -140,31 +160,64 @@ export const LaborPensionTool = ({ data, setData }: any) => {
             </h4>
             <div className="space-y-6">
                
-               {/* 年齡設定 */}
+               {/* 年齡設定 (優化輸入體驗) */}
                <div className="grid grid-cols-2 gap-4">
                    <div>
                        <label className="text-xs font-bold text-slate-500 mb-1 block">目前年齡</label>
                        <div className="relative">
-                           <input type="number" value={currentAge} onChange={(e) => updateField('currentAge', Number(e.target.value))} className="w-full p-2 border rounded-lg font-bold text-slate-700 bg-slate-50 border-slate-200" />
+                           <input 
+                               type="number" 
+                               value={tempCurrentAge} 
+                               onChange={(e) => setTempCurrentAge(Number(e.target.value))}
+                               onBlur={() => finalizeAge('currentAge', tempCurrentAge)}
+                               className="w-full p-2 border rounded-lg font-bold text-slate-700 bg-slate-50 border-slate-200" 
+                           />
                            <span className="absolute right-3 top-2 text-slate-400 text-xs">歲</span>
                        </div>
                    </div>
                    <div>
                        <label className="text-xs font-bold text-slate-500 mb-1 block">預計退休</label>
                        <div className="relative">
-                           <input type="number" value={retireAge} onChange={(e) => updateField('retireAge', Number(e.target.value))} className="w-full p-2 border rounded-lg font-bold text-blue-600 bg-blue-50 border-blue-200" />
+                           <input 
+                               type="number" 
+                               value={tempRetireAge} 
+                               onChange={(e) => setTempRetireAge(Number(e.target.value))}
+                               onBlur={() => finalizeAge('retireAge', tempRetireAge)}
+                               className="w-full p-2 border rounded-lg font-bold text-blue-600 bg-blue-50 border-blue-200" 
+                           />
                            <span className="absolute right-3 top-2 text-slate-400 text-xs">歲</span>
                        </div>
                    </div>
                </div>
 
-               {/* 薪資與年資 */}
+               {/* 薪資輸入 (修正百位數問題 & 增加輸入框) */}
                <div>
                    <div className="flex justify-between items-center mb-2">
                        <label className="text-sm font-medium text-slate-600">目前月薪</label>
-                       <span className="font-mono font-bold text-slate-700 text-lg">${salary.toLocaleString()}</span>
+                       <div className="flex items-center">
+                           <span className="font-bold text-slate-500 mr-1 text-sm">$</span>
+                           <input 
+                               type="number"
+                               min={26400}
+                               max={200000}
+                               step={100}
+                               value={tempSalary}
+                               onChange={handleSalaryInput}
+                               onBlur={finalizeSalary}
+                               onKeyDown={(e) => { if (e.key === 'Enter') { finalizeSalary(); e.currentTarget.blur(); } }}
+                               className="w-24 text-right bg-transparent border-none p-0 font-mono font-bold text-slate-700 text-lg focus:ring-0 focus:bg-slate-100 rounded"
+                           />
+                       </div>
                    </div>
-                   <input type="range" min={26400} max={150000} step={1000} value={salary} onChange={(e) => updateField('salary', Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg accent-slate-600" />
+                   <input 
+                       type="range" 
+                       min={20000} 
+                       max={150000} 
+                       step={100} 
+                       value={salary} 
+                       onChange={(e) => updateField('salary', Number(e.target.value))} 
+                       className="w-full h-2 bg-slate-200 rounded-lg accent-slate-600" 
+                   />
                </div>
 
                <div>
