@@ -61,14 +61,13 @@ const SuperActiveReport = ({ data }: { data: any }) => {
       { name: '市場複利 (獲利)', value: totalInterest, color: '#e879f9' } // fuchsia-400
   ];
 
-  // 計算自由度量表的文字定位 (位於自由區段的正中間)
+  // 計算比率 (用於進度條)
   const workRatio = activeYears / totalYears;
   const freedomRatio = 1 - workRatio;
-  const freedomCenterPercent = (workRatio + (freedomRatio / 2)) * 100;
 
   return (
-    // [調整]: print:space-y-5 (恢復舒適間距，填補下方空白)
-    <div className="font-sans text-slate-800 space-y-6 print:space-y-5 relative text-sm print:text-xs">
+    // [調整]: print:space-y-3 (緊湊模式，確保單頁/雙頁完整顯示)
+    <div className="font-sans text-slate-800 space-y-5 print:space-y-3 relative text-sm print:text-xs">
       
       {/* 浮水印 */}
       <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[50] overflow-hidden mix-blend-multiply print:fixed print:top-1/2 print:left-1/2 print:-translate-x-1/2 print:-translate-y-1/2">
@@ -82,150 +81,144 @@ const SuperActiveReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 1. Header (高度舒適) */}
-      <div className="relative z-10 flex items-center justify-between border-b-2 border-fuchsia-100 pb-4 print:pb-4 print-break-inside bg-white/50 backdrop-blur-sm">
-         <div className="flex items-center gap-4">
-             <div className="w-16 h-16 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden shrink-0">
+      {/* 1. Header (高度微縮) */}
+      <div className="relative z-10 flex items-center justify-between border-b-2 border-fuchsia-100 pb-3 print:pb-3 print-break-inside bg-white/50 backdrop-blur-sm">
+         <div className="flex items-center gap-3">
+             <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden shrink-0">
                  <img src="/logo.png" alt="Logo" className="w-full h-full object-contain p-1" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                  <Rocket className="text-fuchsia-600 hidden" size={32} /> 
              </div>
              <div>
-                 <span className="text-xs font-bold text-fuchsia-600 tracking-widest uppercase block mb-1 print:text-[10px]">FIRE Movement Plan</span>
-                 <h1 className="text-3xl font-black text-slate-900 mb-1 print:text-2xl leading-none">超積極存錢法</h1>
-                 <p className="text-sm text-slate-500 font-medium print:text-xs">用最短的時間，換取最長的人生自由</p>
+                 <span className="text-[10px] font-bold text-fuchsia-600 tracking-widest uppercase block mb-0.5">FIRE Movement Plan</span>
+                 <h1 className="text-2xl font-black text-slate-900 mb-0.5 print:text-xl leading-none">超積極存錢法</h1>
+                 <p className="text-xs text-slate-500 font-medium print:text-[10px]">用最短的時間，換取最長的人生自由</p>
              </div>
          </div>
          <div className="text-right hidden print:block">
-             <p className="text-xs text-slate-400">專案代碼</p>
-             <p className="text-sm font-mono font-bold text-slate-700">FIRE-{activeYears}Y-{investReturnRate}%</p>
+             <p className="text-[10px] text-slate-400">專案代碼</p>
+             <p className="text-xs font-mono font-bold text-slate-700">FIRE-{activeYears}Y-{investReturnRate}%</p>
          </div>
       </div>
 
-      {/* 2. 核心分析：人生自由度量表 (修復定位問題) */}
-      <div className="relative z-10 bg-slate-50 rounded-2xl p-5 border border-slate-200 print-break-inside print:p-5">
-          <div className="flex items-center justify-between mb-4 print:mb-4">
-              <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-base">
-                  <Smile size={20} className="text-fuchsia-500 print:w-5 print:h-5"/>
+      {/* 2. 核心分析：人生自由度量表 (使用區塊對齊法) */}
+      <div className="relative z-10 bg-slate-50 rounded-2xl p-4 border border-slate-200 print-break-inside print:p-3">
+          <div className="flex items-center justify-between mb-3 print:mb-2">
+              <h2 className="text-base font-bold text-slate-700 flex items-center gap-2 print:text-sm">
+                  <Smile size={18} className="text-fuchsia-500 print:w-4 print:h-4"/>
                   人生自由度量表
               </h2>
-              <span className="text-xs bg-fuchsia-100 text-fuchsia-700 px-2 py-0.5 rounded-full font-bold print:text-[10px]">
+              <span className="text-[10px] bg-fuchsia-100 text-fuchsia-700 px-1.5 py-0.5 rounded-full font-bold">
                   以 40 年職涯為基準
               </span>
           </div>
 
-          {/* [FIX]: 移除 px-2，建立純淨的相對定位環境，確保 % 計算準確 */}
-          <div className="relative w-full mt-5 mb-6 print:mt-4 print:mb-5">
-              
-              {/* 進度條背景 (加高至 h-5) */}
-              <div className="w-full h-5 bg-slate-200 rounded-full overflow-hidden flex relative">
-                  {/* 工作期 */}
+          <div className="relative pt-6 pb-2 print:pt-5">
+              {/* 進度條背景 */}
+              <div className="w-full h-4 bg-slate-200 rounded-full overflow-hidden flex relative">
                   <div 
-                    className="h-full bg-slate-600 flex items-center justify-center text-[10px] text-white font-bold tracking-wider relative z-10 print:text-[10px]" 
+                    className="h-full bg-slate-600 flex items-center justify-center text-[9px] text-white font-bold tracking-wider relative z-10" 
                     style={{width: `${workRatio * 100}%`}}
                   >
                       WORK
                   </div>
-                  {/* 自由期 */}
                   <div 
-                    className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 flex items-center justify-center text-[10px] text-white font-bold tracking-wider relative z-10 print:text-[10px]" 
+                    className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 flex items-center justify-center text-[9px] text-white font-bold tracking-wider relative z-10" 
                     style={{width: `${freedomRatio * 100}%`}}
                   >
                       FREEDOM
                   </div>
               </div>
 
-              {/* 標籤指針 - 工作期結束 (上方) */}
+              {/* 標籤指針 - 工作期 (維持絕對定位) */}
               <div 
                 className="absolute top-0 transform -translate-x-1/2 flex flex-col items-center"
                 style={{left: `${workRatio * 100}%`}}
               >
-                  <div className="bg-slate-700 text-white text-xs px-2 py-0.5 rounded mb-1 whitespace-nowrap font-bold shadow-sm -mt-8 print:text-[10px]">
+                  <div className="bg-slate-700 text-white text-[10px] px-1.5 py-0.5 rounded mb-0.5 whitespace-nowrap font-bold shadow-sm -mt-7">
                       {activeYears} 年
                   </div>
-                  <div className="w-0.5 h-9 bg-slate-700/50"></div>
+                  <div className="w-px h-8 bg-slate-700/50"></div>
               </div>
 
-              {/* [FIX]: 標籤指針 - 自由期長度 (下方) */}
-              {/* 1. top-6: 緊貼進度條下方 (進度條 h-5) */}
-              {/* 2. whitespace-nowrap: 強制不換行，解決"被換到下一行"的視覺問題 */}
-              {/* 3. -translate-x-1/2: 確保文字中心點對齊 left 座標 */}
+              {/* [FIX]: 標籤指針 - 自由期長度 (區塊對齊法) */}
+              {/* 建立一個寬度與位置完全等於 Freedom 區塊的容器，並在內部置中文字 */}
               <div 
-                className="absolute top-6 transform -translate-x-1/2 whitespace-nowrap"
-                style={{left: `${freedomCenterPercent}%`}}
+                className="absolute top-5 h-8 flex items-end justify-center print:top-4"
+                style={{
+                    left: `${workRatio * 100}%`,
+                    width: `${freedomRatio * 100}%`
+                }}
               >
-                  <div className="h-2 w-px bg-fuchsia-300 mx-auto mb-0.5"></div>
-                  <p className="text-fuchsia-600 font-bold text-sm flex items-center justify-center gap-1 print:text-xs">
-                      <Star size={14} fill="currentColor"/> 
+                  <p className="text-fuchsia-600 font-bold text-sm flex items-center justify-center gap-1 whitespace-nowrap print:text-[11px]">
+                      <Star size={12} fill="currentColor"/> 
                       恭喜！贖回 {totalYears - activeYears} 年人生
                   </p>
               </div>
           </div>
       </div>
 
-      {/* 3. 終局月薪與貢獻分析 (舒適間距) */}
-      <div className="grid grid-cols-2 gap-5 print:gap-5 print-break-inside">
+      {/* 3. 終局月薪與貢獻分析 */}
+      <div className="grid grid-cols-2 gap-4 print:gap-3 print-break-inside">
           
-          {/* 左：終局月薪支票 */}
+          {/* 左：終局月薪支票 (緊湊) */}
           <div className="bg-white rounded-xl border border-violet-200 p-0 shadow-sm relative overflow-hidden print:border-slate-300">
-              {/* 支票頭 */}
-              <div className="bg-violet-50/50 p-3 border-b border-violet-100 flex justify-between items-center print:bg-slate-50 print:border-slate-200">
-                  <span className="text-[10px] font-bold text-violet-400 tracking-widest print:text-slate-400">PASSIVE INCOME CHECK</span>
-                  <span className="text-[10px] font-mono text-slate-400">NO. 000{activeYears}888</span>
+              <div className="bg-violet-50/50 p-2 border-b border-violet-100 flex justify-between items-center print:bg-slate-50 print:border-slate-200">
+                  <span className="text-[9px] font-bold text-violet-400 tracking-widest print:text-slate-400">PASSIVE INCOME CHECK</span>
+                  <span className="text-[9px] font-mono text-slate-400">NO. 000{activeYears}888</span>
               </div>
-              {/* 支票內容 */}
-              <div className="p-5 space-y-3 relative print:p-4 print:space-y-3">
+              <div className="p-4 space-y-2 relative print:p-3 print:space-y-1.5">
                   <div className="absolute top-1/2 right-4 transform -translate-y-1/2 opacity-5 print:hidden">
-                      <Coins size={100} className="text-violet-600"/>
+                      <Coins size={80} className="text-violet-600"/>
                   </div>
-                  <div className="flex justify-between items-end border-b border-slate-100 pb-2">
-                      <span className="text-xs text-slate-400 print:text-[10px]">Pay to</span>
-                      <span className="font-bold text-slate-700 text-sm italic">未來的您 (Future You)</span>
+                  <div className="flex justify-between items-end border-b border-slate-100 pb-1">
+                      <span className="text-[10px] text-slate-400">Pay to</span>
+                      <span className="font-bold text-slate-700 text-xs italic">未來的您 (Future You)</span>
                   </div>
                   <div className="flex justify-between items-end">
-                      <div className="text-3xl font-black text-violet-600 font-mono print:text-slate-800 print:text-2xl">
+                      <div className="text-2xl font-black text-violet-600 font-mono print:text-slate-800 print:text-xl">
                           ${monthlyPassiveIncome.toLocaleString()}
                       </div>
-                      <span className="text-xs text-slate-400 mb-1 print:text-[10px]">/ 月 (Monthly)</span>
+                      <span className="text-[10px] text-slate-400 mb-1">/ 月 (Monthly)</span>
                   </div>
-                  <div className="text-xs text-slate-400 pt-2 flex items-center gap-1 print:text-[10px]">
-                      <CheckCircle2 size={12} className="text-violet-500"/>
+                  <div className="text-[9px] text-slate-400 pt-1 flex items-center gap-1">
+                      <CheckCircle2 size={10} className="text-violet-500"/>
                       <span>永久發放，不需工作</span>
                   </div>
               </div>
           </div>
 
-          {/* 右：勞力 vs 複利 (Pie Chart - 放大) */}
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative flex items-center justify-between print:p-4">
+          {/* 右：勞力 vs 複利 (緊湊) */}
+          <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm relative flex items-center justify-between print:p-3">
               <div className="w-[55%] z-10">
-                  <h4 className="font-bold text-slate-700 mb-3 text-sm print:text-xs">財富組成分析</h4>
-                  <div className="space-y-3 print:space-y-2">
-                      <div className="flex items-start gap-2">
-                          <div className="w-2 h-2 rounded-full bg-violet-400 mt-1"></div>
+                  <h4 className="font-bold text-slate-700 mb-1.5 text-xs print:text-[10px]">財富組成分析</h4>
+                  <div className="space-y-1.5">
+                      <div className="flex items-start gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-violet-400 mt-1"></div>
                           <div>
-                              <p className="text-xs text-slate-500 print:text-[10px]">本金 (勞力)</p>
-                              <p className="text-sm font-bold text-slate-700 print:text-xs">${Math.round(totalPrincipalActive/10000).toLocaleString()} 萬</p>
+                              <p className="text-[9px] text-slate-500">本金 (勞力)</p>
+                              <p className="text-[10px] font-bold text-slate-700">${Math.round(totalPrincipalActive/10000).toLocaleString()} 萬</p>
                           </div>
                       </div>
-                      <div className="flex items-start gap-2">
-                          <div className="w-2 h-2 rounded-full bg-fuchsia-400 mt-1"></div>
+                      <div className="flex items-start gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 mt-1"></div>
                           <div>
-                              <p className="text-xs text-slate-500 print:text-[10px]">複利 (獲利)</p>
-                              <p className="text-base font-black text-fuchsia-600 print:text-sm">${Math.round(totalInterest/10000).toLocaleString()} 萬</p>
+                              <p className="text-[9px] text-slate-500">複利 (獲利)</p>
+                              <p className="text-xs font-black text-fuchsia-600">${Math.round(totalInterest/10000).toLocaleString()} 萬</p>
                           </div>
                       </div>
                   </div>
-                  <p className="text-xs text-slate-400 mt-3 print:text-[10px]">
+                  <p className="text-[9px] text-slate-400 mt-1.5">
                       資產放大 <span className="font-bold text-fuchsia-500">{(finalActiveAsset / totalPrincipalActive).toFixed(1)} 倍</span>
                   </p>
               </div>
               
-              <div className="w-[45%] h-[140px] relative print:h-[130px]">
+              <div className="w-[45%] h-[100px] relative print:h-[90px]">
                   <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                           <Pie 
                               data={contributionData} 
                               cx="50%" cy="50%" 
-                              innerRadius={30} outerRadius={50} 
+                              innerRadius={25} outerRadius={40} 
                               paddingAngle={5} 
                               dataKey="value"
                               stroke="none"
@@ -240,49 +233,49 @@ const SuperActiveReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 4. 執行藍圖 (Rocket Launch) - 舒適版 */}
+      {/* 4. 執行藍圖 (Rocket Launch) - 緊湊 */}
       <div className="relative z-10 print-break-inside">
-          <h2 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2 print:text-base print:mb-3">
-              <Rocket size={20} className="text-violet-600 print:w-4 print:h-4"/>
+          <h2 className="text-base font-bold text-slate-700 mb-2 flex items-center gap-2 print:text-sm print:mb-1.5">
+              <Rocket size={18} className="text-violet-600 print:w-3.5 print:h-3.5"/>
               執行藍圖 (火箭升空計畫)
           </h2>
-          <div className="grid grid-cols-3 gap-4 print:gap-4">
+          <div className="grid grid-cols-3 gap-3 print:gap-3">
               {[
                   { name: '第一階段：點火', desc: '累積本金，抵抗地心引力。', sub: `前 ${activeYears} 年`, color: 'bg-slate-50 text-slate-700 border-slate-200' },
                   { name: '第二階段：加速', desc: '複利引擎啟動，速度加快。', sub: '資產翻倍期', color: 'bg-violet-50 text-violet-700 border-violet-200' },
                   { name: '第三階段：巡航', desc: '關閉引擎，靠慣性飛行。', sub: `後 ${totalYears - activeYears} 年`, color: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200' },
               ].map((p, i) => (
-                  <div key={i} className={`rounded-xl border p-4 text-center ${p.color} print:p-4 flex flex-col justify-between h-full`}>
+                  <div key={i} className={`rounded-xl border p-2.5 text-center ${p.color} print:p-2 flex flex-col justify-between h-full`}>
                       <div>
-                          <p className="text-[10px] opacity-60 mb-1 font-bold uppercase print:text-[10px]">{p.sub}</p>
-                          <h4 className="font-bold text-base mb-2 print:text-sm">{p.name}</h4>
-                          <p className="text-sm opacity-90 leading-relaxed print:text-xs">{p.desc}</p>
+                          <p className="text-[9px] opacity-60 mb-0.5 font-bold uppercase">{p.sub}</p>
+                          <h4 className="font-bold text-sm mb-1 print:text-[11px]">{p.name}</h4>
+                          <p className="text-[10px] opacity-90 leading-relaxed">{p.desc}</p>
                       </div>
                   </div>
               ))}
           </div>
       </div>
 
-      {/* 5. 資產趨勢圖 (Active vs Passive) - 高度調整至 260px (填補空間) */}
-      <div className="relative z-10 space-y-3 print-break-inside">
-          <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-base">
-                  <TrendingUp size={20} className="text-violet-600 print:w-4 print:h-4"/>
+      {/* 5. 資產趨勢圖 (Active vs Passive) - 高度縮減至 220px */}
+      <div className="relative z-10 space-y-2 print-break-inside">
+          <div className="flex items-center justify-between mb-1">
+              <h2 className="text-base font-bold text-slate-700 flex items-center gap-2 print:text-sm">
+                  <TrendingUp size={18} className="text-violet-600 print:w-3.5 print:h-3.5"/>
                   資產成長模擬
               </h2>
-              <div className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded print:text-[10px]">
+              <div className="text-[9px] text-slate-500 font-medium bg-slate-100 px-1.5 py-0.5 rounded">
                   {activeYears}年積極 / {totalYears}年總期程
               </div>
           </div>
           
-          {/* [調整]: 高度 260px */}
-          <div className="h-[300px] w-full border border-slate-100 rounded-xl p-4 bg-white shadow-sm print:h-[260px] print:p-4">
+          {/* [調整]: 高度 220px，確保頁面不溢出 */}
+          <div className="h-[240px] w-full border border-slate-100 rounded-xl p-3 bg-white shadow-sm print:h-[220px] print:p-2">
               <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={fullChartData} margin={{ top: 15, right: 10, left: 0, bottom: 5 }}>
+                  <ComposedChart data={fullChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="year" tick={{fontSize: 10}} tickLine={false} axisLine={false} interval={4}/>
-                      <YAxis unit="萬" tick={{fontSize: 10}} width={35} tickLine={false} axisLine={false}/>
-                      <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '5px' }} iconSize={10}/>
+                      <XAxis dataKey="year" tick={{fontSize: 9}} tickLine={false} axisLine={false} interval={4}/>
+                      <YAxis unit="萬" tick={{fontSize: 9}} width={30} tickLine={false} axisLine={false}/>
+                      <Legend wrapperStyle={{ fontSize: '9px', paddingTop: '2px' }} iconSize={8}/>
                       
                       <ReferenceArea x1={0} x2={activeYears} fill="#8b5cf6" fillOpacity={0.05} />
                       <Area 
@@ -307,26 +300,26 @@ const SuperActiveReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 6. 專案亮點 (List) - 加大內距 */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 print:p-5 print-break-inside">
-          <h3 className="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2 print:text-sm">
-              <Zap size={16} className="text-yellow-500"/> 專案執行亮點
+      {/* 6. 專案亮點 (List) - 緊湊 */}
+      <div className="bg-white rounded-xl border border-slate-200 p-3 print:p-3 print-break-inside">
+          <h3 className="font-bold text-slate-700 text-xs mb-2 flex items-center gap-2 print:text-sm">
+              <Zap size={14} className="text-yellow-500"/> 專案執行亮點
           </h3>
-          <ul className="grid grid-cols-2 gap-x-6 gap-y-3 text-xs text-slate-600 print:text-[11px]">
-              <li className="flex items-start gap-2"><CheckCircle2 size={14} className="text-fuchsia-500 mt-0.5 shrink-0"/> <span>本金極省：相比傳統，少付了 ${(Math.round(savedPrincipal/10000)).toLocaleString()} 萬本金。</span></li>
-              <li className="flex items-start gap-2"><CheckCircle2 size={14} className="text-fuchsia-500 mt-0.5 shrink-0"/> <span>縮短工時：只需努力 {activeYears} 年，提早贖回人生自由。</span></li>
-              <li className="flex items-start gap-2"><CheckCircle2 size={14} className="text-fuchsia-500 mt-0.5 shrink-0"/> <span>抗通膨：透過長期投資複利，避免存款越存越薄。</span></li>
-              <li className="flex items-start gap-2"><CheckCircle2 size={14} className="text-fuchsia-500 mt-0.5 shrink-0"/> <span>選擇權：工作是為了興趣而非生存，擁有說「不」的權利。</span></li>
+          <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[10px] text-slate-600">
+              <li className="flex items-start gap-1.5"><CheckCircle2 size={12} className="text-fuchsia-500 mt-0.5 shrink-0"/> <span>本金極省：相比傳統，少付了 ${(Math.round(savedPrincipal/10000)).toLocaleString()} 萬本金。</span></li>
+              <li className="flex items-start gap-1.5"><CheckCircle2 size={12} className="text-fuchsia-500 mt-0.5 shrink-0"/> <span>縮短工時：只需努力 {activeYears} 年，提早贖回人生自由。</span></li>
+              <li className="flex items-start gap-1.5"><CheckCircle2 size={12} className="text-fuchsia-500 mt-0.5 shrink-0"/> <span>抗通膨：透過長期投資複利，避免存款越存越薄。</span></li>
+              <li className="flex items-start gap-1.5"><CheckCircle2 size={12} className="text-fuchsia-500 mt-0.5 shrink-0"/> <span>選擇權：工作是為了興趣而非生存，擁有說「不」的權利。</span></li>
           </ul>
       </div>
 
       {/* 7. 顧問總結 (Footer) */}
-      <div className="relative z-10 bg-slate-50 p-4 rounded-xl border-l-4 border-violet-500 print-break-inside print:p-4 print:mt-6">
-          <div className="flex gap-3">
-               <Quote className="text-violet-300 shrink-0" size={24} />
+      <div className="relative z-10 bg-slate-50 p-3 rounded-xl border-l-4 border-violet-500 print-break-inside print:p-3 print:mt-3">
+          <div className="flex gap-2">
+               <Quote className="text-violet-300 shrink-0" size={20} />
                <div>
-                   <h3 className="font-bold text-slate-800 text-sm mb-1 print:text-sm">顧問觀點</h3>
-                   <p className="text-slate-600 text-xs leading-relaxed print:text-xs">
+                   <h3 className="font-bold text-slate-800 text-xs mb-0.5">顧問觀點</h3>
+                   <p className="text-slate-600 text-[10px] leading-relaxed">
                        「複利是世界第八大奇蹟。了解它的人賺取它，不了解它的人支付它。超積極存錢法不是要您當苦行僧，而是要您『先苦後甘』，讓時間成為您最忠實的員工。」
                    </p>
                </div>
