@@ -1,12 +1,11 @@
 import React from 'react';
 import { 
   Building2, Landmark, Scale, ShieldCheck, TrendingUp, ArrowRight, Quote, CheckCircle2,
-  XCircle, AlertTriangle, Percent, Banknote, Lock, Clock
+  XCircle, AlertTriangle, Percent, Banknote, Lock, Clock, PieChart, ArrowDownRight, Wallet
 } from 'lucide-react';
 import { 
-  ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Legend, ResponsiveContainer, Bar
+  ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Legend, ResponsiveContainer, Bar, Pie, Cell, Tooltip as RechartsTooltip
 } from 'recharts';
-// REMOVED: import { calculateMonthlyPayment, calculateMonthlyIncome, calculateRemainingBalance } from '../utils';
 
 // ------------------------------------------------------------------
 // --- 計算邏輯 (本地獨立計算，確保與介面一致) ---
@@ -36,7 +35,7 @@ const calculateRemainingBalance = (principal: number, rate: number, totalYears: 
   const r = rVal / 100 / 12;
   const n = totalY * 12;
   const p = elapsed * 12;
-  if (rVal === 0) return Math.max(0, pVal * 10000 * (1 - p / (n || 1)));
+  if (elapsed >= totalY || rVal === 0) return Math.max(0, pVal * 10000 * (1 - p / (n || 1)));
   const balance = (pVal * 10000) * (Math.pow(1 + r, n) - Math.pow(1 + r, p)) / (Math.pow(1 + r, n) - 1);
   return Math.max(0, isNaN(balance) ? 0 : balance);
 };
@@ -68,8 +67,8 @@ const EstateReport = ({ data }: { data: any }) => {
   const existingLoanBalance = Number(data?.existingLoanBalance) || 0;
   const existingMonthlyPayment = Number(data?.existingMonthlyPayment) || 0;
   
-  // [關鍵修正 1]: 強制讀取 data.isRefinance，確保模式同步
-  const isRefinance = data?.isRefinance ?? false;
+  // [關鍵修正]: 優先讀取 isRefinanceMode，並相容舊版 isRefinance
+  const isRefinance = data?.isRefinanceMode ?? (data?.isRefinance ?? false);
   const cashOutAmount = isRefinance ? Math.max(0, loanAmount - existingLoanBalance) : 0;
 
   // 2. 核心計算
@@ -127,6 +126,12 @@ const EstateReport = ({ data }: { data: any }) => {
     return dataArr;
   };
   const chartData = generateChartData();
+  
+  // 資產活化圓餅圖數據
+  const activationData = [
+      { name: '原本房貸', value: existingLoanBalance, color: '#94a3b8' },
+      { name: '活化資金 (增貸)', value: cashOutAmount, color: '#f97316' }
+  ];
 
   // 4. 壓力測試數據
   const spread = investReturnRate - loanRate;
@@ -220,6 +225,84 @@ const EstateReport = ({ data }: { data: any }) => {
               </div>
           </div>
       </div>
+      
+      {/* 2.5 [NEW] 財務負擔瘦身與資產活化分析 (僅在轉增貸模式顯示) */}
+      {isRefinance && (
+        <div className="relative z-10 print-break-inside">
+             <h2 className="text-xl font-bold text-slate-700 mb-4 flex items-center gap-2 print:text-base print:mb-2">
+                  <Wallet size={24} className="text-orange-500 print:w-4 print:h-4"/>
+                  財務負擔瘦身與資產活化分析
+              </h2>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:gap-4 print:grid-cols-2">
+                 {/* 左側：月付金瘦身 */}
+                 <div className="bg-white rounded-2xl border border-slate-200 p-6 print:p-4 shadow-sm">
+                     <h4 className="font-bold text-slate-600 mb-4 text-center print:text-sm">月付金變化對照</h4>
+                     <div className="flex items-center justify-between gap-2">
+                         <div className="text-center">
+                             <div className="text-xs text-slate-400 mb-1">原月付金</div>
+                             <div className="text-xl font-bold text-slate-400 line-through decoration-red-400 decoration-2 print:text-sm">
+                                 ${Math.round(existingMonthlyPayment).toLocaleString()}
+                             </div>
+                         </div>
+                         <ArrowRight className="text-slate-300" />
+                         <div className="text-center">
+                             <div className="text-xs text-slate-400 mb-1">整合後月付</div>
+                             <div className="text-2xl font-black text-emerald-600 print:text-lg">
+                                 ${Math.round(netNewMonthlyPayment).toLocaleString()}
+                             </div>
+                         </div>
+                     </div>
+                     <div className="mt-4 bg-orange-50 rounded-xl p-3 text-center border border-orange-100">
+                         <p className="text-xs text-orange-800 font-bold">每月省下現金流</p>
+                         <p className="text-2xl font-black text-orange-600 font-mono print:text-lg">
+                             ${Math.round(monthlySavings).toLocaleString()}
+                         </p>
+                     </div>
+                 </div>
+
+                 {/* 右側：資產活化圓餅圖 */}
+                 <div className="bg-white rounded-2xl border border-slate-200 p-4 print:p-2 shadow-sm flex items-center justify-between relative overflow-hidden">
+                     <div className="z-10 w-1/2">
+                         <h4 className="font-bold text-slate-600 mb-1 print:text-sm">資產活化結構</h4>
+                         <p className="text-xs text-slate-400 leading-relaxed mb-2 print:text-[10px]">
+                             將房屋價值中沉睡的資金，轉化為具備生產力的金融資產。
+                         </p>
+                         <div className="space-y-1">
+                             <div className="flex items-center gap-2 text-xs">
+                                 <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+                                 <span className="text-slate-500">原房貸 (負債)</span>
+                             </div>
+                             <div className="flex items-center gap-2 text-xs">
+                                 <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                                 <span className="font-bold text-orange-600">活化資金 (資產)</span>
+                             </div>
+                         </div>
+                     </div>
+                     <div className="w-1/2 h-[120px] print:h-[100px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie 
+                                    data={activationData} 
+                                    cx="50%" cy="50%" 
+                                    innerRadius={25} outerRadius={40} 
+                                    paddingAngle={5} 
+                                    dataKey="value"
+                                >
+                                    {activationData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                </Pie>
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute bottom-2 right-4 text-xs font-bold text-orange-500">
+                            活化 ${cashOutAmount} 萬
+                        </div>
+                     </div>
+                 </div>
+             </div>
+        </div>
+      )}
+
 
       {/* 3. 執行三部曲 (The Roadmap) */}
       <div className="relative z-10 print-break-inside">
@@ -282,7 +365,7 @@ const EstateReport = ({ data }: { data: any }) => {
               </ResponsiveContainer>
           </div>
 
-          {/* 4.5 專案總結 (Project Summary) - 新增區塊 */}
+          {/* 4.5 專案總結 (Project Summary) */}
           <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 print:p-2 print:border-slate-200">
               <h4 className="text-sm font-bold text-emerald-800 mb-3 flex items-center gap-2 print:text-xs print:mb-2">
                   <Banknote size={16} className="print:w-3 print:h-3"/>
