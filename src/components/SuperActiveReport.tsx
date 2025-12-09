@@ -270,7 +270,7 @@ const SuperActiveReport = ({ data }: { data: any }) => {
           </div>
           
           {/* [調整]: 高度 240px (從 220px 微增，保持平衡) */}
-          <div className="h-[300px] w-full border border-slate-100 rounded-2xl p-5 bg-white shadow-sm print:h-[220px] print:p-3">
+          <div className="h-[300px] w-full border border-slate-100 rounded-2xl p-5 bg-white shadow-sm print:h-[190px] print:p-2">
               <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={fullChartData} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
