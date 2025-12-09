@@ -67,8 +67,8 @@ const SuperActiveReport = ({ data }: { data: any }) => {
   const freedomCenterPercent = (workRatio + (freedomRatio / 2)) * 100;
 
   return (
-    // 維持舒適的間距設定
-    <div className="font-sans text-slate-800 space-y-6 print:space-y-6 relative text-sm print:text-xs">
+    // [調整]: print:space-y-4 (折衷間距)
+    <div className="font-sans text-slate-800 space-y-5 print:space-y-4 relative text-sm print:text-xs">
       
       {/* 浮水印 */}
       <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[50] overflow-hidden mix-blend-multiply print:fixed print:top-1/2 print:left-1/2 print:-translate-x-1/2 print:-translate-y-1/2">
@@ -82,8 +82,8 @@ const SuperActiveReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 1. Header */}
-      <div className="relative z-10 flex items-center justify-between border-b-2 border-fuchsia-100 pb-4 print:pb-4 print-break-inside bg-white/50 backdrop-blur-sm">
+      {/* 1. Header (高度微調) */}
+      <div className="relative z-10 flex items-center justify-between border-b-2 border-fuchsia-100 pb-4 print:pb-3 print-break-inside bg-white/50 backdrop-blur-sm">
          <div className="flex items-center gap-4">
              <div className="w-16 h-16 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden shrink-0">
                  <img src="/logo.png" alt="Logo" className="w-full h-full object-contain p-1" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
@@ -96,14 +96,14 @@ const SuperActiveReport = ({ data }: { data: any }) => {
              </div>
          </div>
          <div className="text-right hidden print:block">
-             <p className="text-xs text-slate-400">專案代碼</p>
+             <p className="text-[10px] text-slate-400">專案代碼</p>
              <p className="text-sm font-mono font-bold text-slate-700">FIRE-{activeYears}Y-{investReturnRate}%</p>
          </div>
       </div>
 
-      {/* 2. 核心分析：人生自由度量表 (修正定位) */}
-      <div className="relative z-10 bg-slate-50 rounded-2xl p-5 border border-slate-200 print-break-inside print:p-5">
-          <div className="flex items-center justify-between mb-4 print:mb-4">
+      {/* 2. 核心分析：人生自由度量表 (修正定位誤差) */}
+      <div className="relative z-10 bg-slate-50 rounded-2xl p-5 border border-slate-200 print-break-inside print:p-4">
+          <div className="flex items-center justify-between mb-4 print:mb-3">
               <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-base">
                   <Smile size={20} className="text-fuchsia-500 print:w-5 print:h-5"/>
                   人生自由度量表
@@ -113,19 +113,20 @@ const SuperActiveReport = ({ data }: { data: any }) => {
               </span>
           </div>
 
-          <div className="relative pt-6 pb-2 px-2 print:pt-6">
+          {/* [FIX]: 移除 px-2，確保內部寬度與相對定位基準一致 */}
+          <div className="relative pt-6 pb-2 mt-2 print:pt-5">
               {/* 進度條背景 */}
               <div className="w-full h-5 bg-slate-200 rounded-full overflow-hidden flex relative">
                   {/* 工作期 */}
                   <div 
-                    className="h-full bg-slate-600 flex items-center justify-center text-[10px] text-white font-bold tracking-wider relative z-10 print:text-[10px]" 
+                    className="h-full bg-slate-600 flex items-center justify-center text-[10px] text-white font-bold tracking-wider relative z-10 print:text-[9px]" 
                     style={{width: `${workRatio * 100}%`}}
                   >
                       WORK
                   </div>
                   {/* 自由期 */}
                   <div 
-                    className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 flex items-center justify-center text-[10px] text-white font-bold tracking-wider relative z-10 print:text-[10px]" 
+                    className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 flex items-center justify-center text-[10px] text-white font-bold tracking-wider relative z-10 print:text-[9px]" 
                     style={{width: `${freedomRatio * 100}%`}}
                   >
                       FREEDOM
@@ -143,7 +144,7 @@ const SuperActiveReport = ({ data }: { data: any }) => {
                   <div className="w-0.5 h-8 bg-slate-700/50"></div>
               </div>
 
-              {/* [FIX] 標籤指針 - 修正定位邏輯 (移除 w-full, 使用 whitespace-nowrap) */}
+              {/* 標籤指針 - 自由期長度 (使用絕對定位 + translate 確保置中) */}
               <div 
                 className="absolute top-9 transform -translate-x-1/2 whitespace-nowrap print:top-8"
                 style={{left: `${freedomCenterPercent}%`}}
@@ -157,7 +158,7 @@ const SuperActiveReport = ({ data }: { data: any }) => {
       </div>
 
       {/* 3. 終局月薪與貢獻分析 */}
-      <div className="grid grid-cols-2 gap-5 print:gap-5 print-break-inside">
+      <div className="grid grid-cols-2 gap-5 print:gap-4 print-break-inside">
           
           {/* 左：終局月薪支票 */}
           <div className="bg-white rounded-xl border border-violet-200 p-0 shadow-sm relative overflow-hidden print:border-slate-300">
@@ -257,7 +258,7 @@ const SuperActiveReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 5. 資產趨勢圖 (Active vs Passive) */}
+      {/* 5. 資產趨勢圖 (Active vs Passive) - 高度折衷 220px */}
       <div className="relative z-10 space-y-3 print-break-inside">
           <div className="flex items-center justify-between mb-2">
               <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-base">
@@ -269,7 +270,8 @@ const SuperActiveReport = ({ data }: { data: any }) => {
               </div>
           </div>
           
-          <div className="h-[300px] w-full border border-slate-100 rounded-xl p-4 bg-white shadow-sm print:h-[260px] print:p-4">
+          {/* [調整]: 高度 220px - 平衡閱讀與空間 */}
+          <div className="h-[300px] w-full border border-slate-100 rounded-xl p-4 bg-white shadow-sm print:h-[220px] print:p-3">
               <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={fullChartData} margin={{ top: 15, right: 10, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -301,11 +303,11 @@ const SuperActiveReport = ({ data }: { data: any }) => {
       </div>
 
       {/* 6. 專案亮點 (List) */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 print:p-4 print-break-inside">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 print:p-4 print-break-inside">
           <h3 className="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2 print:text-sm">
               <Zap size={16} className="text-yellow-500"/> 專案執行亮點
           </h3>
-          <ul className="grid grid-cols-2 gap-x-6 gap-y-3 text-xs text-slate-600 print:text-[11px]">
+          <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-600 print:text-[11px]">
               <li className="flex items-start gap-2"><CheckCircle2 size={14} className="text-fuchsia-500 mt-0.5 shrink-0"/> <span>本金極省：相比傳統，少付了 ${(Math.round(savedPrincipal/10000)).toLocaleString()} 萬本金。</span></li>
               <li className="flex items-start gap-2"><CheckCircle2 size={14} className="text-fuchsia-500 mt-0.5 shrink-0"/> <span>縮短工時：只需努力 {activeYears} 年，提早贖回人生自由。</span></li>
               <li className="flex items-start gap-2"><CheckCircle2 size={14} className="text-fuchsia-500 mt-0.5 shrink-0"/> <span>抗通膨：透過長期投資複利，避免存款越存越薄。</span></li>
@@ -314,7 +316,7 @@ const SuperActiveReport = ({ data }: { data: any }) => {
       </div>
 
       {/* 7. 顧問總結 (Footer) */}
-      <div className="relative z-10 bg-slate-50 p-4 rounded-xl border-l-4 border-violet-500 print-break-inside print:p-4 print:mt-6">
+      <div className="relative z-10 bg-slate-50 p-4 rounded-xl border-l-4 border-violet-500 print-break-inside print:p-4 print:mt-4">
           <div className="flex gap-3">
                <Quote className="text-violet-300 shrink-0" size={24} />
                <div>
