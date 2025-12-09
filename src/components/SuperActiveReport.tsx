@@ -67,7 +67,7 @@ const SuperActiveReport = ({ data }: { data: any }) => {
 
   return (
     // [調整]: print:space-y-4 (適中), text-sm (舒適字體)
-    <div className="font-sans text-slate-800 space-y-3 print:space-y-4 relative text-base print:text-sm">
+    <div className="font-sans text-slate-800 space-y-3 print:space-y-3 relative text-base print:text-sm">
       
       {/* 浮水印 */}
       <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[50] overflow-hidden mix-blend-multiply print:fixed print:top-1/2 print:left-1/2 print:-translate-x-1/2 print:-translate-y-1/2">
