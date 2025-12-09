@@ -315,7 +315,7 @@ const SuperActiveReport = ({ data }: { data: any }) => {
       </div>
 
       {/* 7. 顧問總結 (Footer) */}
-      <div className="relative z-10 bg-slate-50 p-4 rounded-xl border-l-4 border-violet-500 print-break-inside print:p-4 print:mt-4">
+      <div className="relative z-10 bg-slate-50 p-4 rounded-xl border-l-4 border-violet-500 mt-3 print-break-inside print:p-4 print:mt-2">
           <div className="flex gap-3">
                <Quote className="text-violet-300 shrink-0" size={24} />
                <div>
