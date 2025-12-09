@@ -133,7 +133,8 @@ const StudentLoanReport = ({ data }: { data: any }) => {
   ];
 
   return (
-    <div className="font-sans text-slate-800 space-y-5 print:space-y-3 relative text-sm print:text-xs">
+    // [調整]: space-y-5 -> print:space-y-6 (拉大間距)
+    <div className="font-sans text-slate-800 space-y-6 print:space-y-6 relative text-sm print:text-xs">
       
       {/* 浮水印 */}
       <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[50] overflow-hidden mix-blend-multiply print:fixed print:top-1/2 print:left-1/2 print:-translate-x-1/2 print:-translate-y-1/2">
@@ -147,98 +148,98 @@ const StudentLoanReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 1. Header (高度微縮) */}
-      <div className="relative z-10 flex items-center justify-between border-b-2 border-blue-100 pb-3 print:pb-1.5 print-break-inside bg-white/50 backdrop-blur-sm">
-         <div className="flex items-center gap-3">
-             <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden shrink-0">
+      {/* 1. Header (高度放鬆) */}
+      <div className="relative z-10 flex items-center justify-between border-b-2 border-blue-100 pb-4 print:pb-4 print-break-inside bg-white/50 backdrop-blur-sm">
+         <div className="flex items-center gap-4">
+             <div className="w-14 h-14 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden shrink-0">
                  <img src="/logo.png" alt="Logo" className="w-full h-full object-contain p-1" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
              </div>
              <div>
                  <span className="text-[10px] font-bold text-blue-600 tracking-widest uppercase block mb-0.5">Student Loan Arbitrage</span>
-                 <h1 className="text-2xl font-black text-slate-900 mb-0.5 print:text-lg leading-none">學貸活化專案</h1>
-                 <p className="text-xs text-slate-500 font-medium print:text-[9px]">將學貸轉化為人生第一筆獲利資產</p>
+                 <h1 className="text-3xl font-black text-slate-900 mb-0.5 print:text-2xl leading-none">學貸活化專案</h1>
+                 <p className="text-xs text-slate-500 font-medium print:text-[11px]">將學貸轉化為人生第一筆獲利資產</p>
              </div>
          </div>
          <div className="text-right hidden print:block">
-             <p className="text-[9px] text-slate-400">專案代碼</p>
-             <p className="text-xs font-mono font-bold text-slate-700">SL-{loanAmount}W-{loanRate}%</p>
+             <p className="text-[10px] text-slate-400">專案代碼</p>
+             <p className="text-sm font-mono font-bold text-slate-700">SL-{loanAmount}W-{loanRate}%</p>
          </div>
       </div>
 
-      {/* 2. 核心分析：學費歸零計畫表 (緊湊版) */}
-      <div className="relative z-10 bg-slate-50 rounded-xl p-3 border border-slate-200 print-break-inside print:p-2">
-          <div className="flex items-center justify-between mb-2 print:mb-1.5">
-              <h2 className="text-base font-bold text-slate-700 flex items-center gap-2 print:text-sm">
-                  <Scale size={18} className="text-blue-500 print:w-3.5 print:h-3.5"/>
+      {/* 2. 核心分析：學費歸零計畫表 (放鬆內距) */}
+      <div className="relative z-10 bg-slate-50 rounded-2xl p-5 border border-slate-200 print-break-inside print:p-5">
+          <div className="flex items-center justify-between mb-4 print:mb-3">
+              <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-base">
+                  <Scale size={20} className="text-blue-500 print:w-4 print:h-4"/>
                   學費歸零損益表
               </h2>
-              <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">
+              <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">
                   期間總結算 ({totalDuration}年)
               </span>
           </div>
 
           {/* 學費成本對照 */}
-          <div className="flex gap-4 mb-2 bg-white p-2 rounded-lg border border-slate-100 print:p-1.5 print:mb-2">
-              <div className="flex-1 flex items-center justify-between border-r border-slate-100 pr-2">
-                  <div className="text-[10px] text-slate-500">規劃前實付 <span className="text-[9px]">(本+利)</span></div>
-                  <div className="text-base font-bold text-slate-400 line-through decoration-red-400 decoration-2 print:text-xs">
-                      ${totalCostOriginalWan} <span className="text-[10px]">萬</span>
+          <div className="flex gap-4 mb-4 bg-white p-3 rounded-xl border border-slate-100 print:p-3 print:mb-4">
+              <div className="flex-1 flex items-center justify-between border-r border-slate-100 pr-4">
+                  <div className="text-[11px] text-slate-500">規劃前實付 <span className="text-[10px]">(本+利)</span></div>
+                  <div className="text-lg font-bold text-slate-400 line-through decoration-red-400 decoration-2 print:text-base">
+                      ${totalCostOriginalWan} <span className="text-xs">萬</span>
                   </div>
               </div>
               <div className="flex-1 flex items-center justify-between pl-2">
-                  <div className="text-[10px] text-slate-500">規劃後成本</div>
-                  <div className="text-lg font-black text-emerald-600 print:text-sm">
-                      $0 <span className="text-[9px] text-emerald-500 font-normal"> (且倒賺)</span>
+                  <div className="text-[11px] text-slate-500">規劃後成本</div>
+                  <div className="text-2xl font-black text-emerald-600 print:text-xl">
+                      $0 <span className="text-[11px] text-emerald-500 font-normal"> (且倒賺)</span>
                   </div>
               </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 divide-x divide-slate-200">
-              <div className="text-center px-1">
-                  <p className="text-[9px] text-slate-500 mb-0.5">累付利息 (成本)</p>
-                  <p className="text-lg font-bold text-slate-400 print:text-sm">-${totalInterestPaidWan} <span className="text-[10px]">萬</span></p>
+          <div className="grid grid-cols-3 gap-4 divide-x divide-slate-200">
+              <div className="text-center px-2">
+                  <p className="text-[10px] text-slate-500 mb-1">累付利息 (成本)</p>
+                  <p className="text-xl font-bold text-slate-400 print:text-lg">-${totalInterestPaidWan} <span className="text-xs">萬</span></p>
               </div>
-              <div className="text-center px-1">
-                  <p className="text-[9px] text-slate-500 mb-0.5">投資獲利 (收入)</p>
-                  <p className="text-lg font-bold text-emerald-500 print:text-sm">+${totalProfitWan} <span className="text-[10px]">萬</span></p>
+              <div className="text-center px-2">
+                  <p className="text-[10px] text-slate-500 mb-1">投資獲利 (收入)</p>
+                  <p className="text-xl font-bold text-emerald-500 print:text-lg">+${totalProfitWan} <span className="text-xs">萬</span></p>
               </div>
-              <div className="text-center px-1">
-                  <p className="text-[9px] text-slate-500 mb-0.5">淨套利獲利</p>
+              <div className="text-center px-2">
+                  <p className="text-[10px] text-slate-500 mb-1">淨套利獲利</p>
                   <div className="flex items-center justify-center gap-1">
-                      <p className="text-xl font-black text-blue-600 print:text-base">+${netArbitrageWan}</p>
-                      <span className="text-[10px] font-bold text-blue-600">萬</span>
+                      <p className="text-2xl font-black text-blue-600 print:text-xl">+${netArbitrageWan}</p>
+                      <span className="text-sm font-bold text-blue-600">萬</span>
                   </div>
               </div>
           </div>
       </div>
 
-      {/* 3. 防護罩與資產差距 (高度與顏色優化) */}
-      <div className="grid grid-cols-2 gap-3 print:gap-2 print-break-inside">
+      {/* 3. 防護罩與資產差距 (高度放鬆) */}
+      <div className="grid grid-cols-2 gap-4 print:gap-4 print-break-inside">
           
-          {/* 左：還款防護罩 (高度縮減) */}
-          <div className="bg-white rounded-xl border border-slate-200 p-3 print:p-2 shadow-sm relative overflow-hidden flex flex-col justify-between">
+          {/* 左：還款防護罩 */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4 print:p-4 shadow-sm relative overflow-hidden flex flex-col justify-between">
               <div>
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                      <ShieldCheck size={16} className="text-emerald-500 print:w-3.5 print:h-3.5"/>
-                      <h3 className="font-bold text-slate-700 text-sm print:text-xs">還款防護罩</h3>
+                  <div className="flex items-center gap-2 mb-3">
+                      <ShieldCheck size={18} className="text-emerald-500 print:w-4 print:h-4"/>
+                      <h3 className="font-bold text-slate-700 print:text-sm">還款防護罩</h3>
                   </div>
                   
-                  <div className="flex items-end gap-1.5 mb-1.5">
-                      <span className="text-2xl font-black font-mono text-emerald-600 print:text-xl">
+                  <div className="flex items-end gap-2 mb-3">
+                      <span className="text-3xl font-black font-mono text-emerald-600 print:text-2xl">
                           {Math.round(coverageRatio)}%
                       </span>
-                      <span className="text-[9px] text-slate-400 mb-1">配息覆蓋率</span>
+                      <span className="text-[10px] text-slate-400 mb-1.5">配息覆蓋率</span>
                   </div>
                   
-                  <div className="w-full bg-slate-100 h-1.5 rounded-full mb-2">
+                  <div className="w-full bg-slate-100 h-2 rounded-full mb-3">
                       <div 
-                        className="h-1.5 rounded-full bg-emerald-500 transition-all duration-500" 
+                        className="h-2 rounded-full bg-emerald-500 transition-all duration-500" 
                         style={{width: `${Math.min(100, coverageRatio)}%`}}
                       ></div>
                   </div>
               </div>
 
-              <div className="text-[10px] text-slate-600 bg-emerald-50 rounded-md p-1.5 leading-tight print:text-[9px]">
+              <div className="text-[11px] text-slate-600 bg-emerald-50 rounded-lg p-2.5 leading-tight print:text-[10px]">
                   {coverageRatio >= 100 ? (
                       <span className="font-bold text-emerald-700">配息完全覆蓋，自動還款。</span>
                   ) : (
@@ -251,55 +252,55 @@ const StudentLoanReport = ({ data }: { data: any }) => {
               </div>
           </div>
 
-          {/* 右：黃金十年差距 (改為淺色風格) */}
-          <div className="bg-amber-50 rounded-xl border border-amber-100 p-3 print:p-2 shadow-sm relative flex flex-col justify-between">
+          {/* 右：黃金十年差距 (淺色風格) */}
+          <div className="bg-amber-50 rounded-xl border border-amber-100 p-4 print:p-4 shadow-sm relative flex flex-col justify-between">
               <div>
-                  <div className="flex items-center gap-1.5 mb-2">
-                      <TrendingUp size={16} className="text-amber-600 print:w-3.5 print:h-3.5"/>
-                      <h3 className="font-bold text-slate-700 text-sm print:text-xs">黃金十年資產差距</h3>
+                  <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp size={18} className="text-amber-600 print:w-4 print:h-4"/>
+                      <h3 className="font-bold text-slate-700 print:text-sm">黃金十年資產差距</h3>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                       <div className="flex justify-between items-center">
-                          <div className="text-[10px] text-slate-500">一般人 (繳學費)</div>
-                          <div className="font-mono text-slate-400 text-xs">$0</div>
+                          <div className="text-[11px] text-slate-500">一般人 (繳學費)</div>
+                          <div className="font-mono text-slate-400 text-sm">$0</div>
                       </div>
                       <div className="w-full bg-amber-200/50 h-px"></div>
                       <div className="flex justify-between items-center">
-                          <div className="font-bold text-amber-800 text-xs">專案結餘</div>
-                          <div className="font-mono font-black text-xl text-amber-600 print:text-lg">
-                              ${finalNetAsset} <span className="text-[10px]">萬</span>
+                          <div className="font-bold text-amber-800 text-sm">專案結餘</div>
+                          <div className="font-mono font-black text-2xl text-amber-600 print:text-xl">
+                              ${finalNetAsset} <span className="text-sm">萬</span>
                           </div>
                       </div>
                   </div>
               </div>
               
-              <div className="absolute bottom-1 right-1 opacity-10">
-                  <PiggyBank size={40} className="text-amber-900"/>
+              <div className="absolute bottom-2 right-2 opacity-10">
+                  <PiggyBank size={50} className="text-amber-900"/>
               </div>
           </div>
       </div>
 
-      {/* 4. 執行藍圖 (SOP) - 緊湊版 */}
+      {/* 4. 執行藍圖 (SOP) */}
       <div className="relative z-10 print-break-inside">
-          <h2 className="text-base font-bold text-slate-700 mb-2 flex items-center gap-2 print:text-sm print:mb-1.5">
-              <ArrowRight size={18} className="text-blue-600 print:w-3.5 print:h-3.5"/>
+          <h2 className="text-lg font-bold text-slate-700 mb-3 flex items-center gap-2 print:text-base print:mb-3">
+              <ArrowRight size={20} className="text-blue-600 print:w-4 print:h-4"/>
               執行藍圖 (SOP)
           </h2>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-3 print:gap-3">
               {[
                   { name: '在學期', desc: '累積本金', sub: '借款投入', money: '掏錢 $0', color: 'bg-blue-50 text-blue-700 border-blue-200' },
                   { name: '寬限期', desc: '複利滾存', sub: '本息緩繳', money: '掏錢 $0', color: 'bg-green-50 text-green-700 border-green-200' },
                   { name: '只繳息', desc: '最低支出', sub: '配息支付', money: coverageRatio>=100 ? '掏錢 $0' : '掏錢極低', color: 'bg-amber-50 text-amber-700 border-amber-200' },
                   { name: '攤還期', desc: '資產償債', sub: '自動扣繳', money: coverageRatio>=100 ? '掏錢 $0' : '補貼少許', color: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
               ].map((p, i) => (
-                  <div key={i} className={`rounded-lg border p-1.5 text-center ${p.color} print:p-1 flex flex-col justify-between h-full`}>
+                  <div key={i} className={`rounded-xl border p-2.5 text-center ${p.color} print:p-2.5 flex flex-col justify-between h-full`}>
                       <div>
-                          <p className="text-[9px] opacity-70 mb-0.5">{p.sub}</p>
-                          <h4 className="font-bold text-xs mb-0.5 print:text-[10px]">{p.name}</h4>
-                          <p className="text-[10px] font-bold mb-1 print:text-[9px]">{p.desc}</p>
+                          <p className="text-[10px] opacity-70 mb-1">{p.sub}</p>
+                          <h4 className="font-bold text-sm mb-1 print:text-xs">{p.name}</h4>
+                          <p className="text-xs font-bold mb-2 print:text-[11px]">{p.desc}</p>
                       </div>
-                      <div className="text-[9px] pt-0.5 border-t border-current/20 font-bold">
+                      <div className="text-[10px] pt-1.5 border-t border-current/20 font-bold">
                           {p.money}
                       </div>
                   </div>
@@ -307,21 +308,22 @@ const StudentLoanReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 5. 資產趨勢圖 (高度縮減) */}
-      <div className="relative z-10 space-y-2 print-break-inside">
-          <div className="flex items-center justify-between mb-1">
-              <h2 className="text-base font-bold text-slate-700 flex items-center gap-2 print:text-sm">
-                  <TrendingUp size={18} className="text-blue-600 print:w-3.5 print:h-3.5"/>
+      {/* 5. 資產趨勢圖 (高度加回) */}
+      <div className="relative z-10 space-y-3 print-break-inside">
+          <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-base">
+                  <TrendingUp size={20} className="text-blue-600 print:w-4 print:h-4"/>
                   資產成長模擬
               </h2>
-              <div className="text-[9px] text-slate-500 font-medium bg-slate-100 px-1.5 py-0.5 rounded">
+              <div className="text-[10px] text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded">
                   {semesters}學期 / 利率 {loanRate}%
               </div>
           </div>
           
-          <div className="h-[200px] w-full border border-slate-100 rounded-xl p-2 bg-white shadow-sm print:h-[160px] print:p-1">
+          {/* [調整]: 高度從 200px 加回 280px */}
+          <div className="h-[280px] w-full border border-slate-100 rounded-xl p-4 bg-white shadow-sm print:h-[280px] print:p-3">
               <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData} margin={{ top: 10, right: 5, left: 0, bottom: 0 }}>
+                  <ComposedChart data={chartData} margin={{ top: 15, right: 10, left: 0, bottom: 5 }}>
                       {phases.map((p, i) => (
                           <ReferenceArea 
                             key={i} 
@@ -330,42 +332,42 @@ const StudentLoanReport = ({ data }: { data: any }) => {
                             fill={p.color} 
                             fillOpacity={0.5} 
                             stroke="none"
-                            label={{ value: p.name, position: 'insideTop', fill: '#94a3b8', fontSize: 9 }}
+                            label={{ value: p.name, position: 'insideTop', fill: '#94a3b8', fontSize: 11 }}
                           />
                       ))}
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="year" tick={{fontSize: 9}} tickLine={false} axisLine={false} interval={1}/>
-                      <YAxis unit="萬" tick={{fontSize: 9}} width={25} tickLine={false} axisLine={false}/>
-                      <Legend wrapperStyle={{ fontSize: '9px', paddingTop: '2px' }} iconSize={8}/>
+                      <XAxis dataKey="year" tick={{fontSize: 10}} tickLine={false} axisLine={false} interval={1}/>
+                      <YAxis unit="萬" tick={{fontSize: 10}} width={30} tickLine={false} axisLine={false}/>
+                      <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} iconSize={10}/>
                       
-                      <Line type="monotone" dataKey="投資複利" name="總資產" stroke="#10b981" strokeWidth={2} dot={false}/>
-                      <Area type="monotone" dataKey="淨資產" name="淨值(扣債)" stroke="#0ea5e9" fill="#e0f2fe" strokeWidth={2}/>
-                      <Line type="monotone" dataKey="一般人" stroke="#94a3b8" strokeDasharray="3 3" strokeWidth={1} dot={false}/>
+                      <Line type="monotone" dataKey="投資複利" name="總資產" stroke="#10b981" strokeWidth={2.5} dot={false}/>
+                      <Area type="monotone" dataKey="淨資產" name="淨值(扣債)" stroke="#0ea5e9" fill="#e0f2fe" strokeWidth={2.5}/>
+                      <Line type="monotone" dataKey="一般人" stroke="#94a3b8" strokeDasharray="4 4" strokeWidth={1.5} dot={false}/>
                   </ComposedChart>
               </ResponsiveContainer>
           </div>
       </div>
 
-      {/* 6. 專案亮點 (List) */}
-      <div className="bg-white rounded-xl border border-slate-200 p-3 print:p-2 print-break-inside">
-          <h3 className="font-bold text-slate-700 text-xs mb-2 flex items-center gap-2">
-              <Zap size={14} className="text-yellow-500"/> 專案執行亮點
+      {/* 6. 專案亮點 (List) - 加大間距 */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 print:p-4 print-break-inside">
+          <h3 className="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2">
+              <Zap size={16} className="text-yellow-500"/> 專案執行亮點
           </h3>
-          <ul className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-slate-600 print:text-[9px]">
-              <li className="flex items-start gap-1"><CheckCircle2 size={10} className="text-green-500 mt-0.5 shrink-0"/> <span>利用「緩繳期」與「只繳息」新規，極大化利差效益。</span></li>
-              <li className="flex items-start gap-1"><CheckCircle2 size={10} className="text-green-500 mt-0.5 shrink-0"/> <span>將學費轉為「定期定額」投資，強迫儲蓄累積資產。</span></li>
-              <li className="flex items-start gap-1"><CheckCircle2 size={10} className="text-green-500 mt-0.5 shrink-0"/> <span>畢業即擁有流動資產，當別人歸零開始，您已手握資產。</span></li>
-              <li className="flex items-start gap-1"><CheckCircle2 size={10} className="text-green-500 mt-0.5 shrink-0"/> <span>保留現金流彈性，應對求學或剛就業時的突發需求。</span></li>
+          <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-600 print:text-[11px]">
+              <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-green-500 mt-0.5 shrink-0"/> <span>利用「緩繳期」與「只繳息」新規，極大化利差效益。</span></li>
+              <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-green-500 mt-0.5 shrink-0"/> <span>將學費轉為「定期定額」投資，強迫儲蓄累積資產。</span></li>
+              <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-green-500 mt-0.5 shrink-0"/> <span>畢業即擁有流動資產，當別人歸零開始，您已手握資產。</span></li>
+              <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-green-500 mt-0.5 shrink-0"/> <span>保留現金流彈性，應對求學或剛就業時的突發需求。</span></li>
           </ul>
       </div>
 
       {/* 7. 顧問總結 (Footer) */}
-      <div className="relative z-10 bg-slate-50 p-3 rounded-xl border-l-4 border-blue-500 print-break-inside print:p-2 print:mt-3">
-          <div className="flex gap-2">
-               <Quote className="text-blue-300 shrink-0" size={20} />
+      <div className="relative z-10 bg-slate-50 p-4 rounded-xl border-l-4 border-blue-500 print-break-inside print:p-4 print:mt-6">
+          <div className="flex gap-3">
+               <Quote className="text-blue-300 shrink-0" size={24} />
                <div>
-                   <h3 className="font-bold text-slate-800 text-xs mb-0.5">顧問觀點</h3>
-                   <p className="text-slate-600 text-[10px] leading-relaxed">
+                   <h3 className="font-bold text-slate-800 text-sm mb-1">顧問觀點</h3>
+                   <p className="text-slate-600 text-xs leading-relaxed">
                        「學貸是多數人這輩子唯一能借到這麼低利、條件這麼寬鬆的資金。懂得善用這筆『天使資金』，將負債轉化為生息資產，是您邁向財富自由的第一堂必修課。」
                    </p>
                </div>
