@@ -27,13 +27,12 @@ const calculateMonthlyIncome = (principal: number, rate: number) => {
 // ------------------------------------------------------------------
 // 子元件: ResultCard (三循環關鍵指標卡片)
 // ------------------------------------------------------------------
-const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmount, isLast = false }: any) => {
+const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmount, isLast = false, isCompoundMode = false }: any) => {
     const colorClass = phase === 1 ? 'text-blue-600' : phase === 2 ? 'text-indigo-600' : 'text-purple-600';
     const bgClass = phase === 1 ? 'bg-blue-50 border-blue-200' : phase === 2 ? 'bg-indigo-50 border-indigo-200' : 'bg-purple-50 border-purple-200';
     const badgeClass = phase === 1 ? 'bg-blue-100 text-blue-700' : phase === 2 ? 'bg-indigo-100 text-indigo-700' : 'bg-purple-100 text-purple-700';
 
     return (
-        // 修改：print:p-4 (從 p-5 微調回 p-4，避免過度撐開)
         <div className={`flex-1 p-4 print:p-4 rounded-xl border ${bgClass} relative flex flex-col justify-between`}>
             {!isLast && (
                 <div className="hidden md:flex print:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 bg-white border border-slate-200 rounded-full items-center justify-center text-slate-400 print:w-5 print:h-5">
@@ -57,7 +56,8 @@ const ResultCard = ({ phase, title, subTitle, netOut, asset, totalOut, loanAmoun
 
             <div className="space-y-2 print:space-y-2 border-t border-slate-200/50 pt-3 print:pt-2">
                 <div className="flex justify-between items-center text-xs print:text-[11px]">
-                    <span className="text-slate-500">每月實質負擔</span>
+                    {/* [Fix] 動態顯示文字：複利模式顯示「每月全額投入」，現金流模式顯示「每月實質負擔」 */}
+                    <span className="text-slate-500">{isCompoundMode ? '每月全額投入' : '每月實質負擔'}</span>
                     <span className={`font-bold ${netOut > 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
                         ${Math.round(netOut).toLocaleString()}
                     </span>
@@ -189,15 +189,9 @@ const GiftReport = ({ data }: { data: any }) => {
   const chartData = generateChartData();
 
   return (
-    // 修改：print:space-y-5 (從 6 改為 5，稍微緊湊一點以防跑版)
     <div className="font-sans text-slate-800 space-y-8 print:space-y-5 relative">
       
       {/* --- 全域浮水印 (Watermark) --- */}
-      {/* 關鍵修正：
-          1. z-[50]: 確保浮水印在最上層，不被背景色蓋住
-          2. pointer-events-none: 讓滑鼠可以穿透點擊下方內容
-          3. mix-blend-multiply: 讓圖片白色部分透明，與內容融合
-      */}
       <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-[50] overflow-hidden mix-blend-multiply print:fixed print:top-1/2 print:left-1/2 print:-translate-x-1/2 print:-translate-y-1/2">
           <div className="opacity-[0.08] transform -rotate-12">
               <img 
@@ -291,7 +285,8 @@ const GiftReport = ({ data }: { data: any }) => {
                            <span className="font-bold text-indigo-700">{totalProjectCost_Wan} 萬 <span className="text-xs text-rose-500 ml-1">(-{finalAssetValue_Wan - totalProjectCost_Wan}萬)</span></span>
                       </div>
                       <div className="flex justify-between items-center text-sm print:text-xs">
-                           <span className="text-slate-600">每月負擔</span>
+                           {/* 根據模式動態調整文字 */}
+                           <span className="text-slate-600">{isCompoundMode ? '每月全額' : '每月淨付'}</span>
                            <span className="font-bold text-indigo-700">${avgMonthlyCost.toLocaleString()} <span className="text-xs text-green-600 ml-1">(省 {Math.round(monthlyStandardSaving - avgMonthlyCost).toLocaleString()})</span></span>
                       </div>
                       <div className="pt-4 border-t border-indigo-50 mt-2 print:mt-2 print:pt-2">
@@ -315,17 +310,20 @@ const GiftReport = ({ data }: { data: any }) => {
                   phase={1} title="累積期" subTitle={`Year 1 - ${loanTerm}`}
                   loanAmount={loanAmount} netOut={phase1_NetOut}
                   totalOut={totalCashOut_T0_T7_Wan} asset={phase1_Asset}
+                  isCompoundMode={isCompoundMode}
               />
               <ResultCard 
                   phase={2} title="成長期" subTitle={`Year ${loanTerm+1} - ${loanTerm*2}`}
                   loanAmount={c2Loan} netOut={phase2_NetOut}
                   totalOut={totalCashOut_T0_T7_Wan + totalCashOut_T7_T14_Wan} asset={phase2_Asset}
+                  isCompoundMode={isCompoundMode}
               />
               <ResultCard 
                   phase={3} title="收割期" subTitle={`Year ${loanTerm*2+1} - ${loanTerm*3}`}
                   loanAmount={c3Loan} netOut={phase3_NetOut}
                   totalOut={totalProjectCost_Wan} asset={phase3_Asset}
                   isLast={true}
+                  isCompoundMode={isCompoundMode}
               />
           </div>
       </div>

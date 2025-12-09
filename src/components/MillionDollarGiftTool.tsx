@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Wallet, 
   Calculator, 
@@ -120,10 +120,15 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
   const c3Loan = safeData.cycle3Loan !== undefined ? safeData.cycle3Loan : loanAmount;
   const c3Rate = safeData.cycle3Rate !== undefined ? safeData.cycle3Rate : loanRate;
 
-  // 新增狀態：是否開啟複利模式 (回滾利息)
-  const [isCompoundMode, setIsCompoundMode] = useState(false);
+  // [Fix] 初始化時優先讀取 data 中的 isCompoundMode，若無則預設 false
+  const [isCompoundMode, setIsCompoundMode] = useState(data?.isCompoundMode || false);
   // 新增狀態：是否顯示進階設定
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // [New] 當複利模式切換時，同步寫入全域資料
+  useEffect(() => {
+    setData({ ...safeData, isCompoundMode });
+  }, [isCompoundMode]);
 
   // --- 計算邏輯 (針對每一筆貸款獨立計算) ---
   
