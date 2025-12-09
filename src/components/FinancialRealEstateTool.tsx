@@ -1,7 +1,3 @@
-{
-type: uploaded file
-fileName: ppcvote/finacial-planner/Finacial-planner-26972a9b3f9794c70c1774f0c0eb61595bd7eb0f/src/components/FinancialRealEstateTool.tsx
-fullContent:
 import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
@@ -21,7 +17,7 @@ import {
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
-// --- 臨時/模擬計算函式 (如果您的 utils 文件丟失，請使用此部分) ---
+// --- 臨時/模擬計算函式 ---
 const calculateMonthlyPayment = (principal: number, rate: number, years: number) => {
   const p = Number(principal) || 0;
   const rVal = Number(rate) || 0;
@@ -90,8 +86,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
 
   // [New] 當轉增貸模式切換時，同步寫入全域資料，確保報表能讀取到正確模式
   useEffect(() => {
-    // 這裡使用函數式更新以確保資料一致性，但為了避免依賴 data 造成迴圈，
-    // 我們假設 setData 會合併資料，或者直接傳遞當前所有參數 + 新增的模式
+    // 這裡同步資料到上層
     setData({ ...safeData, isRefinanceMode });
   }, [isRefinanceMode]);
 
@@ -501,4 +496,3 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
     </div>
   );
 };
-}
