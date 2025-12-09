@@ -344,13 +344,13 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                             <span className="font-bold text-cyan-700">{gracePeriod} 年</span>
                         </div>
                         <input 
-                            type="range" min={0} max={isQualified ? 9 : 1} step={1} 
+                            type="range" min={0} max={isQualified ? 12 : 1} step={1} 
                             value={gracePeriod} 
                             onChange={(e) => updateField('gracePeriod', Number(e.target.value))} 
                             className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer ${isQualified ? 'bg-cyan-200 accent-cyan-600' : 'bg-slate-200 accent-slate-400'}`}
                         />
                         <p className="text-[10px] text-slate-400 mt-1">
-                            {isQualified ? '含新制最多申請 8 次' : '一般戶僅畢業後 1 年'}
+                            {isQualified ? '含新制最多申請 12 次' : '一般戶僅畢業後 1 年'}
                         </p>
                     </div>
 
@@ -361,12 +361,12 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                             <span className="font-bold text-orange-700">{interestOnlyPeriod} 年</span>
                         </div>
                         <input 
-                            type="range" min={0} max={8} step={1} 
+                            type="range" min={0} max={12} step={1} 
                             value={interestOnlyPeriod} 
                             onChange={(e) => updateField('interestOnlyPeriod', Number(e.target.value))} 
                             className="w-full h-1.5 bg-orange-200 rounded-lg appearance-none cursor-pointer accent-orange-500" 
                         />
-                        <p className="text-[10px] text-slate-400 mt-1">新制最長可申請 8 年</p>
+                        <p className="text-[10px] text-slate-400 mt-1">新制最長可申請 12 年</p>
                     </div>
                  </div>
                )}
