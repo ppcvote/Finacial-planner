@@ -9,6 +9,7 @@ import {
 import GiftReport from './GiftReport';
 import EstateReport from './EstateReport';
 import StudentLoanReport from './StudentLoanReport';
+import SuperActiveReport from './SuperActiveReport';
 
 // ------------------------------------------------------------------
 // Legacy Chart Renderer (保留給其他尚未改版的工具)
@@ -83,7 +84,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
       }
   };
 
-  // 舊版資料計算邏輯 (僅當 NOT gift/estate/student 時執行，作為 Fallback)
+  // 舊版資料計算邏輯 (僅當 Fallback 時執行)
   let reportContent = { title: getReportTitle(), mindMap: [] as any[], table: [] as any[], highlights: [] as any[], chartData: [] as any[], chartType: 'composed' };
 
   // 自動列印邏輯
@@ -218,8 +219,9 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                     ) : activeTab === 'estate' ? (
                         <EstateReport data={data} />
                     ) : activeTab === 'student' ? (
-                        /* 學貸活化專案 */
                         <StudentLoanReport data={data} />
+                    ) : activeTab === 'super_active' ? (
+                        <SuperActiveReport data={data} />
                     ) : (
                         /* 舊版型 Fallback */
                         <>
