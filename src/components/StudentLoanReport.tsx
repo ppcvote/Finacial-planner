@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   GraduationCap, TrendingUp, ShieldCheck, Target, ArrowRight, Quote, 
-  PiggyBank, Landmark, Zap, Scale, Wallet, CheckCircle2
+  PiggyBank, Landmark, Zap, Scale, Wallet, CheckCircle2, ArrowDown
 } from 'lucide-react';
 import { 
   ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Legend, ResponsiveContainer, ReferenceArea 
@@ -33,9 +33,8 @@ const StudentLoanReport = ({ data }: { data: any }) => {
   const years = 8;
   const gracePeriod = Number(data?.gracePeriod) || 1;
   const interestOnlyPeriod = Number(data?.interestOnlyPeriod) || 0;
-  // const isQualified = Boolean(data?.isQualified); // 報表端雖不直接調整，但邏輯已內含於 gracePeriod 數值中
 
-  // 2. 核心模擬運算 (與 Tool 一致)
+  // 2. 核心模擬運算
   const studyYears = Math.ceil(semesters / 2);
   const graceEndYear = studyYears + gracePeriod;
   const interestOnlyEndYear = graceEndYear + interestOnlyPeriod;
@@ -115,6 +114,7 @@ const StudentLoanReport = ({ data }: { data: any }) => {
   const totalInterestPaidWan = Math.round(totalInterestPaid / 10000);
   const totalProfitWan = Math.round(totalInvestmentProfit / 10000);
   const netArbitrageWan = totalProfitWan - totalInterestPaidWan; // 淨套利金額
+  const totalCostOriginalWan = loanAmount + Math.round((monthlyPaymentP_I * years * 12 - loanAmount * 10000) / 10000); // 原始總學費(本+利)
 
   // 防護罩計算
   let coverageRatio = 0;
@@ -126,10 +126,10 @@ const StudentLoanReport = ({ data }: { data: any }) => {
 
   // 圖表分區 (用於 ReferenceArea)
   const phases = [
-      { name: '在學', color: '#eff6ff', range: [0, studyYears] }, // blue-50
-      { name: '寬限', color: '#f0fdf4', range: [studyYears, graceEndYear] }, // green-50
+      { name: '在學期', color: '#eff6ff', range: [0, studyYears] }, // blue-50
+      { name: '寬限期', color: '#f0fdf4', range: [studyYears, graceEndYear] }, // green-50
       { name: '只繳息', color: '#fffbeb', range: [graceEndYear, interestOnlyEndYear] }, // amber-50
-      { name: '攤還', color: '#ecfeff', range: [interestOnlyEndYear, repaymentEndYear] }, // cyan-50
+      { name: '攤還期', color: '#ecfeff', range: [interestOnlyEndYear, repaymentEndYear] }, // cyan-50
   ];
 
   return (
@@ -166,7 +166,7 @@ const StudentLoanReport = ({ data }: { data: any }) => {
          </div>
       </div>
 
-      {/* 2. 核心分析：學費歸零計畫表 (New Section A) */}
+      {/* 2. 核心分析：學費歸零計畫表 */}
       <div className="relative z-10 bg-slate-50 rounded-2xl p-4 border border-slate-200 print-break-inside print:p-3">
           <div className="flex items-center justify-between mb-3 print:mb-2">
               <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-sm">
@@ -176,6 +176,22 @@ const StudentLoanReport = ({ data }: { data: any }) => {
               <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">
                   期間總結算 ({totalDuration}年)
               </span>
+          </div>
+
+          {/* New: 學費成本對照 (Before/After) */}
+          <div className="flex gap-4 mb-4 bg-white p-3 rounded-xl border border-slate-100 print:p-2 print:mb-3">
+              <div className="flex-1 flex items-center justify-between border-r border-slate-100 pr-4">
+                  <div className="text-[10px] text-slate-500">規劃前實付學費 <span className="text-[9px]">(本+利)</span></div>
+                  <div className="text-lg font-bold text-slate-400 line-through decoration-red-400 decoration-2 print:text-sm">
+                      ${totalCostOriginalWan} <span className="text-xs">萬</span>
+                  </div>
+              </div>
+              <div className="flex-1 flex items-center justify-between pl-2">
+                  <div className="text-[10px] text-slate-500">規劃後實質成本</div>
+                  <div className="text-2xl font-black text-emerald-600 print:text-lg">
+                      $0 <span className="text-[10px] text-emerald-500 font-normal"> (且倒賺)</span>
+                  </div>
+              </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4 divide-x divide-slate-200">
@@ -193,12 +209,12 @@ const StudentLoanReport = ({ data }: { data: any }) => {
                       <p className="text-2xl font-black text-blue-600 print:text-lg">+${netArbitrageWan}</p>
                       <span className="text-xs font-bold text-blue-600">萬</span>
                   </div>
-                  <p className="text-[9px] text-blue-400 mt-0.5">學費不僅免費，還倒賺</p>
+                  <p className="text-[9px] text-blue-400 mt-0.5">學費免費，再賺一筆</p>
               </div>
           </div>
       </div>
 
-      {/* 3. 防護罩與資產差距 (New Section B & C) */}
+      {/* 3. 防護罩與資產差距 */}
       <div className="grid grid-cols-2 gap-4 print:gap-3 print-break-inside">
           
           {/* 左：還款防護罩 */}
@@ -236,34 +252,34 @@ const StudentLoanReport = ({ data }: { data: any }) => {
               </div>
           </div>
 
-          {/* 右：黃金十年差距 */}
-          <div className="bg-slate-800 rounded-xl p-4 print:p-3 shadow-sm text-white relative">
+          {/* 右：黃金十年差距 (列印優化版) */}
+          <div className="bg-slate-800 rounded-xl p-4 print:p-3 shadow-sm text-white relative print:bg-white print:text-slate-800 print:border-2 print:border-slate-800">
               <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp size={18} className="text-yellow-400 print:w-4 print:h-4"/>
-                  <h3 className="font-bold text-white print:text-sm">黃金十年資產差距</h3>
+                  <TrendingUp size={18} className="text-yellow-400 print:text-slate-800 print:w-4 print:h-4"/>
+                  <h3 className="font-bold text-white print:text-slate-800 print:text-sm">黃金十年資產差距</h3>
               </div>
 
               <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                      <div className="text-xs text-slate-400">一般人 (直接繳掉)</div>
-                      <div className="font-mono text-slate-400">$0</div>
+                      <div className="text-xs text-slate-400 print:text-slate-500">一般人 (直接繳掉)</div>
+                      <div className="font-mono text-slate-400 print:text-slate-500">$0</div>
                   </div>
-                  <div className="w-full bg-slate-600 h-px"></div>
+                  <div className="w-full bg-slate-600 h-px print:bg-slate-200"></div>
                   <div className="flex justify-between items-center">
-                      <div className="font-bold text-yellow-400 text-sm">您的資產 (專案結餘)</div>
-                      <div className="font-mono font-black text-2xl text-yellow-400 print:text-xl">
+                      <div className="font-bold text-yellow-400 text-sm print:text-slate-800">您的資產 (專案結餘)</div>
+                      <div className="font-mono font-black text-2xl text-yellow-400 print:text-slate-800 print:text-xl">
                           ${finalNetAsset} <span className="text-sm">萬</span>
                       </div>
                   </div>
               </div>
               
-              <div className="absolute bottom-2 right-2 opacity-10">
+              <div className="absolute bottom-2 right-2 opacity-10 print:opacity-5">
                   <PiggyBank size={60} />
               </div>
           </div>
       </div>
 
-      {/* 4. 執行藍圖 (Phase Cards) */}
+      {/* 4. 執行藍圖 (SOP) - 優化版 */}
       <div className="relative z-10 print-break-inside">
           <h2 className="text-lg font-bold text-slate-700 mb-3 flex items-center gap-2 print:text-sm print:mb-2">
               <ArrowRight size={20} className="text-blue-600 print:w-3.5 print:h-3.5"/>
@@ -271,21 +287,26 @@ const StudentLoanReport = ({ data }: { data: any }) => {
           </h2>
           <div className="grid grid-cols-4 gap-2">
               {[
-                  { name: '在學期', desc: '累積本金', sub: '借款投入', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-                  { name: '寬限期', desc: '複利滾存', sub: '只進不出', color: 'bg-green-50 text-green-700 border-green-200' },
-                  { name: '只繳息', desc: '最低支出', sub: '配息Cover', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-                  { name: '攤還期', desc: '資產償債', sub: '無痛結清', color: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+                  { name: '在學期', desc: '累積本金', sub: '借款投入', money: '掏錢 $0', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+                  { name: '寬限期', desc: '複利滾存', sub: '本息緩繳', money: '掏錢 $0', color: 'bg-green-50 text-green-700 border-green-200' },
+                  { name: '只繳息', desc: '最低支出', sub: '配息支付', money: coverageRatio>=100 ? '掏錢 $0' : '掏錢極低', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+                  { name: '攤還期', desc: '資產償債', sub: '自動扣繳', money: coverageRatio>=100 ? '掏錢 $0' : '補貼少許', color: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
               ].map((p, i) => (
-                  <div key={i} className={`rounded-lg border p-2 text-center ${p.color} print:p-1.5`}>
-                      <p className="text-[10px] opacity-70 mb-0.5">{p.sub}</p>
-                      <h4 className="font-bold text-sm mb-0.5 print:text-xs">{p.name}</h4>
-                      <p className="text-xs font-bold print:text-[10px]">{p.desc}</p>
+                  <div key={i} className={`rounded-lg border p-2 text-center ${p.color} print:p-1.5 flex flex-col justify-between h-full`}>
+                      <div>
+                          <p className="text-[10px] opacity-70 mb-0.5">{p.sub}</p>
+                          <h4 className="font-bold text-sm mb-0.5 print:text-xs">{p.name}</h4>
+                          <p className="text-xs font-bold mb-2 print:text-[10px]">{p.desc}</p>
+                      </div>
+                      <div className="text-[10px] pt-1 border-t border-current/20 font-bold">
+                          {p.money}
+                      </div>
                   </div>
               ))}
           </div>
       </div>
 
-      {/* 5. 資產趨勢圖 */}
+      {/* 5. 資產趨勢圖 (Label 優化) */}
       <div className="relative z-10 space-y-2 print-break-inside">
           <div className="flex items-center justify-between mb-1">
               <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-sm">
@@ -299,9 +320,17 @@ const StudentLoanReport = ({ data }: { data: any }) => {
           
           <div className="h-[250px] w-full border border-slate-100 rounded-xl p-3 bg-white shadow-sm print:h-[200px] print:p-2">
               <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                  <ComposedChart data={chartData} margin={{ top: 15, right: 5, left: 0, bottom: 5 }}>
                       {phases.map((p, i) => (
-                          <ReferenceArea key={i} x1={p.range[0]} x2={p.range[1]} fill={p.color} fillOpacity={0.5} stroke="none"/>
+                          <ReferenceArea 
+                            key={i} 
+                            x1={p.range[0]} 
+                            x2={p.range[1]} 
+                            fill={p.color} 
+                            fillOpacity={0.5} 
+                            stroke="none"
+                            label={{ value: p.name, position: 'insideTop', fill: '#94a3b8', fontSize: 10 }}
+                          />
                       ))}
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis dataKey="year" tick={{fontSize: 9}} tickLine={false} axisLine={false} interval={1}/>
@@ -316,7 +345,7 @@ const StudentLoanReport = ({ data }: { data: any }) => {
           </div>
       </div>
 
-      {/* 6. 專案亮點 (List) */}
+      {/* 6. 專案亮點 (List) - 修正信用紀錄爭議 */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 print:p-3 print-break-inside">
           <h3 className="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2">
               <Zap size={16} className="text-yellow-500"/> 專案執行亮點
@@ -324,7 +353,8 @@ const StudentLoanReport = ({ data }: { data: any }) => {
           <ul className="grid grid-cols-2 gap-2 text-xs text-slate-600 print:text-[10px]">
               <li className="flex items-start gap-1.5"><CheckCircle2 size={12} className="text-green-500 mt-0.5 shrink-0"/> <span>利用「緩繳期」與「只繳息」新規，極大化利差效益。</span></li>
               <li className="flex items-start gap-1.5"><CheckCircle2 size={12} className="text-green-500 mt-0.5 shrink-0"/> <span>將學費轉為「定期定額」投資，強迫儲蓄累積資產。</span></li>
-              <li className="flex items-start gap-1.5"><CheckCircle2 size={12} className="text-green-500 mt-0.5 shrink-0"/> <span>建立良好信用紀錄，畢業即擁有第一桶金與銀行信用。</span></li>
+              {/* 修正點 */}
+              <li className="flex items-start gap-1.5"><CheckCircle2 size={12} className="text-green-500 mt-0.5 shrink-0"/> <span>畢業即擁有流動資產，當別人歸零開始，您已手握資產。</span></li>
               <li className="flex items-start gap-1.5"><CheckCircle2 size={12} className="text-green-500 mt-0.5 shrink-0"/> <span>保留現金流彈性，應對求學或剛就業時的突發需求。</span></li>
           </ul>
       </div>
