@@ -82,7 +82,7 @@ const SuperActiveReport = ({ data }: { data: any }) => {
       </div>
 
       {/* 1. Header (高度適中) */}
-      <div className="relative z-10 flex items-center justify-between border-b-2 border-fuchsia-100 pb-4 print:pb-4 print-break-inside bg-white/50 backdrop-blur-sm">
+      <div className="relative z-10 flex items-center justify-between border-b-2 border-fuchsia-100 pb-2 print:pb-2 print-break-inside bg-white/50 backdrop-blur-sm">
          <div className="flex items-center gap-4">
              <div className="w-16 h-16 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden shrink-0">
                  <img src="/logo.png" alt="Logo" className="w-full h-full object-contain p-1" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
