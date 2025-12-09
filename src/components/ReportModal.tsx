@@ -295,7 +295,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
                 </div>
 
                 {/* Footer */}
-                <div className="mt-4 text-center text-[10px] text-slate-300 border-t border-slate-50 pt-4 print:mt-8">
+                <div className="mt-4 print:mt-1 text-center text-[10px] text-slate-300 border-t border-slate-50 pt-4 print:mt-8">
                     <p>免責聲明：本報告所載資料僅供財務規劃參考，不構成任何投資建議。投資有風險，請謹慎評估。</p>
                     <p>© {new Date().getFullYear()} Ultra Advisor System • Generated for {client?.name}</p>
                 </div>
