@@ -101,7 +101,7 @@ const SuperActiveReport = ({ data }: { data: any }) => {
       </div>
 
       {/* 2. 核心分析：人生自由度量表 (新視覺方案：雙欄對照) */}
-      <div className="relative z-10 bg-slate-50 rounded-2xl p-4 border border-slate-200 print-break-inside print:p-4">
+      <div className="relative z-10 bg-slate-50 rounded-2xl p-4 border border-slate-200 print-break-inside print:p-3">
           <div className="flex items-center justify-between mb-4 print:mb-3">
               <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-base">
                   <Smile size={20} className="text-fuchsia-500 print:w-5 print:h-5"/>
