@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
   GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key, 
-  ChevronLeft, Users, TrendingUp // [新增] 引入 TrendingUp Icon
+  ChevronLeft, Users
 } from 'lucide-react';
 
 import { 
@@ -15,7 +15,7 @@ import { auth, db, googleProvider } from './firebase';
 import ReportModal from './components/ReportModal';
 import MillionDollarGiftTool from './components/MillionDollarGiftTool';
 import ClientDashboard from './components/ClientDashboard';
-import SplashScreen from './components/SplashScreen'; 
+import SplashScreen from './components/SplashScreen'; // 引入 Logo 動畫
 
 // --- 從各個獨立檔案匯入工具 ---
 import { FinancialRealEstateTool } from './components/FinancialRealEstateTool';
@@ -25,7 +25,6 @@ import { CarReplacementTool } from './components/CarReplacementTool';
 import { LaborPensionTool } from './components/LaborPensionTool';
 import { BigSmallReservoirTool } from './components/BigSmallReservoirTool';
 import { TaxPlannerTool } from './components/TaxPlannerTool';
-import RetirementRealityCheck from './components/RetirementRealityCheck'; // [新增] 匯入退休現實檢測元件
 
 // ------------------------------------------------------------------
 // UI Components
@@ -90,8 +89,8 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   
   // --- 狀態控制區 ---
-  const [loading, setLoading] = useState(true); 
-  const [minSplashTimePassed, setMinSplashTimePassed] = useState(false); 
+  const [loading, setLoading] = useState(true); // 資料載入狀態
+  const [minSplashTimePassed, setMinSplashTimePassed] = useState(false); // 動畫播放狀態
   
   const [clientLoading, setClientLoading] = useState(false); 
   const [currentClient, setCurrentClient] = useState<any>(null);
@@ -119,9 +118,7 @@ export default function App() {
     car: { carPrice: 100, investReturnRate: 6, resaleRate: 50, cycleYears: 5 },
     pension: { currentAge: 30, retireAge: 65, salary: 45000, laborInsYears: 35, selfContribution: false, pensionReturnRate: 3, desiredMonthlyIncome: 60000 },
     reservoir: { initialCapital: 1000, dividendRate: 5, reinvestRate: 8, years: 20 },
-    tax: { spouse: true, children: 2, minorYearsTotal: 0, parents: 0, cash: 3000, realEstateMarket: 4000, stocks: 1000, insurancePlan: 0 },
-    // [新增] 退休現實檢測預設值
-    reality: { currentAge: 35, retireAge: 65, monthlyExpense: 40000, currentSavings: 1000000, roi: 5, inflation: 2 } 
+    tax: { spouse: true, children: 2, minorYearsTotal: 0, parents: 0, cash: 3000, realEstateMarket: 4000, stocks: 1000, insurancePlan: 0 }
   };
 
   const [giftData, setGiftData] = useState(defaultStates.gift);
@@ -132,13 +129,11 @@ export default function App() {
   const [pensionData, setPensionData] = useState(defaultStates.pension);
   const [reservoirData, setReservoirData] = useState(defaultStates.reservoir);
   const [taxData, setTaxData] = useState(defaultStates.tax);
-  
-  // [新增] Reality State
-  const [realityData, setRealityData] = useState(defaultStates.reality);
 
   const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
 
-  // --- 1. Splash Screen Timer ---
+  // --- 1. Splash Screen Timer (已更新) ---
+  // 設定為 4000ms (4秒)，讓動畫跑完(約2.8秒)後，還能停留約 1.2 秒
   useEffect(() => {
     const timer = setTimeout(() => {
       setMinSplashTimePassed(true);
@@ -155,7 +150,7 @@ export default function App() {
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false);
+      setLoading(false); // Auth 檢查完畢
       if (!currentUser) {
           setCurrentClient(null);
           setIsDataLoaded(false);
@@ -187,9 +182,6 @@ export default function App() {
               if (data.reservoirData) setReservoirData(prev => ({...prev, ...data.reservoirData}));
               if (data.taxData) setTaxData(prev => ({...prev, ...data.taxData}));
               
-              // [新增] 載入 realityData
-              if (data.realityData) setRealityData(prev => ({...prev, ...data.realityData}));
-              
               setCurrentClient((prev: any) => ({ ...prev, name: data.name, note: data.note }));
           }
           setClientLoading(false);
@@ -208,9 +200,8 @@ export default function App() {
   useEffect(() => {
     if (!user || !currentClient || !isDataLoaded) return;
 
-    // [新增] 將 realityData 加入 payload
     const dataPayload = {
-        giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData, realityData
+        giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData
     };
 
     const currentDataStr = JSON.stringify(dataPayload);
@@ -234,7 +225,7 @@ export default function App() {
     const handler = setTimeout(saveData, 1500);
     return () => clearTimeout(handler);
   }, [
-    giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData, realityData, // [新增] 依賴項
+    giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData, 
     user, currentClient, isDataLoaded
   ]);
 
@@ -281,7 +272,6 @@ export default function App() {
       case 'reservoir': return reservoirData;
       case 'pension': return pensionData;
       case 'tax': return taxData;
-      case 'reality': return realityData; // [新增]
       default: return {};
     }
   };
@@ -382,8 +372,6 @@ export default function App() {
               <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => {setActiveTab('reservoir'); setIsMobileMenuOpen(false);}} />
               
               <div className="mt-4 text-xs font-bold text-slate-500 px-4 py-2 uppercase tracking-wider">退休與傳承</div>
-              {/* [新增] 手機版選單項目 */}
-              <NavItem icon={TrendingUp} label="退休現實檢測" active={activeTab === 'reality'} onClick={() => {setActiveTab('reality'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => {setActiveTab('pension'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => {setActiveTab('tax'); setIsMobileMenuOpen(false);}} />
            </div>
@@ -437,8 +425,6 @@ export default function App() {
           <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => setActiveTab('reservoir')} />
           
           <div className="mt-4 text-xs font-bold text-slate-600 px-4 py-2 uppercase tracking-wider">退休與傳承</div>
-          {/* [新增] 桌機版選單項目 */}
-          <NavItem icon={TrendingUp} label="退休現實檢測" active={activeTab === 'reality'} onClick={() => setActiveTab('reality')} />
           <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => setActiveTab('pension')} />
           <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => setActiveTab('tax')} />
         </nav>
@@ -474,10 +460,6 @@ export default function App() {
              {activeTab === 'super_active' && <SuperActiveSavingTool data={superActiveData} setData={setSuperActiveData} />}
              {activeTab === 'car' && <CarReplacementTool data={carData} setData={setCarData} />}
              {activeTab === 'reservoir' && <BigSmallReservoirTool data={reservoirData} setData={setReservoirData} />}
-             
-             {/* [新增] 渲染退休現實檢測元件 */}
-             {activeTab === 'reality' && <RetirementRealityCheck data={realityData} setData={setRealityData} />}
-             
              {activeTab === 'pension' && <LaborPensionTool data={pensionData} setData={setPensionData} />}
              {activeTab === 'tax' && <TaxPlannerTool data={taxData} setData={setTaxData} />}
            </div>
