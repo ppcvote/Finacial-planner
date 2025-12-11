@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
   GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key, 
-  ChevronLeft, Users, ShieldCheck // [新增] Icon
+  ChevronLeft, Users, ShieldCheck 
 } from 'lucide-react';
 
 import { 
@@ -24,8 +24,8 @@ import { CarReplacementTool } from './components/CarReplacementTool';
 import { LaborPensionTool } from './components/LaborPensionTool';
 import { BigSmallReservoirTool } from './components/BigSmallReservoirTool';
 import { TaxPlannerTool } from './components/TaxPlannerTool';
-import { MillionDollarGiftTool } from './components/MillionDollarGiftTool'; // 修正引入路徑
-import GoldenSafeVault from './components/GoldenSafeVault'; // [新增]
+import { MillionDollarGiftTool } from './components/MillionDollarGiftTool';
+import { GoldenSafeVault } from './components/GoldenSafeVault'; // [修改重點] 這裡加上了 { } 大括號
 
 // ------------------------------------------------------------------
 // UI Components
@@ -96,7 +96,7 @@ export default function App() {
   const [clientLoading, setClientLoading] = useState(false); 
   const [currentClient, setCurrentClient] = useState<any>(null);
 
-  const [activeTab, setActiveTab] = useState('golden_safe'); // [預設改為黃金保險箱]
+  const [activeTab, setActiveTab] = useState('golden_safe'); 
   const [toast, setToast] = useState<{message: string, type: string} | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false); 
@@ -112,7 +112,7 @@ export default function App() {
 
   // Tool Data States
   const defaultStates = {
-    golden_safe: { mode: 'time', amount: 60000, years: 10, rate: 6, isLocked: false }, // [新增]
+    golden_safe: { mode: 'time', amount: 60000, years: 10, rate: 6, isLocked: false }, 
     gift: { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 },
     estate: { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6, existingLoanBalance: 700, existingMonthlyPayment: 38000 },
     student: { loanAmount: 40, investReturnRate: 6, years: 8, gracePeriod: 1, interestOnlyPeriod: 0, isQualified: false },
@@ -123,7 +123,7 @@ export default function App() {
     tax: { spouse: true, children: 2, minorYearsTotal: 0, parents: 0, cash: 3000, realEstateMarket: 4000, stocks: 1000, insurancePlan: 0 }
   };
 
-  const [goldenSafeData, setGoldenSafeData] = useState(defaultStates.golden_safe); // [新增]
+  const [goldenSafeData, setGoldenSafeData] = useState(defaultStates.golden_safe); 
   const [giftData, setGiftData] = useState(defaultStates.gift);
   const [estateData, setEstateData] = useState(defaultStates.estate);
   const [studentData, setStudentData] = useState(defaultStates.student);
@@ -173,7 +173,7 @@ export default function App() {
       const unsubscribeClient = onSnapshot(clientDocRef, (docSnap) => {
           if (docSnap.exists()) {
               const data = docSnap.data();
-              if (data.goldenSafeData) setGoldenSafeData(prev => ({...prev, ...data.goldenSafeData})); // [新增]
+              if (data.goldenSafeData) setGoldenSafeData(prev => ({...prev, ...data.goldenSafeData}));
               if (data.giftData) setGiftData(prev => ({...prev, ...data.giftData}));
               if (data.estateData) setEstateData(prev => ({...prev, ...data.estateData}));
               if (data.studentData) setStudentData(prev => ({...prev, ...data.studentData}));
@@ -202,7 +202,7 @@ export default function App() {
     if (!user || !currentClient || !isDataLoaded) return;
 
     const dataPayload = {
-        goldenSafeData, // [新增]
+        goldenSafeData, 
         giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData
     };
 
@@ -227,7 +227,7 @@ export default function App() {
     const handler = setTimeout(saveData, 1500);
     return () => clearTimeout(handler);
   }, [
-    goldenSafeData, // [新增]
+    goldenSafeData, 
     giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData, 
     user, currentClient, isDataLoaded
   ]);
@@ -266,7 +266,7 @@ export default function App() {
 
   const getCurrentData = () => {
     switch(activeTab) {
-      case 'golden_safe': return goldenSafeData; // [新增]
+      case 'golden_safe': return goldenSafeData; 
       case 'gift': return giftData;
       case 'estate': return estateData;
       case 'student': return studentData;
@@ -360,7 +360,6 @@ export default function App() {
                   <ChevronLeft size={20}/> 返回客戶列表
               </button>
               
-              {/* [更新] 手機版選單結構 */}
               <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
                  <ShieldCheck size={14}/> 觀念與診斷
               </div>
@@ -425,7 +424,6 @@ export default function App() {
         </div>
         
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {/* [更新] 桌機版選單結構 */}
           <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
              <ShieldCheck size={14}/> 觀念與診斷
           </div>
@@ -477,7 +475,6 @@ export default function App() {
         
         <div className="flex-1 overflow-y-auto p-4 md:p-8 relative">
            <div className="max-w-5xl mx-auto pb-20 md:pb-0">
-             {/* [更新] 渲染元件列表 */}
              {activeTab === 'golden_safe' && <GoldenSafeVault data={goldenSafeData} setData={setGoldenSafeData} />}
              
              {activeTab === 'gift' && <MillionDollarGiftTool data={giftData} setData={setGiftData} />}
