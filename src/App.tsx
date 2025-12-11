@@ -15,7 +15,7 @@ import { auth, db, googleProvider } from './firebase';
 import ReportModal from './components/ReportModal';
 import MillionDollarGiftTool from './components/MillionDollarGiftTool';
 import ClientDashboard from './components/ClientDashboard';
-import SplashScreen from './components/SplashScreen'; // 引入 Logo 動畫
+import SplashScreen from './components/SplashScreen'; 
 
 // --- 從各個獨立檔案匯入工具 ---
 import { FinancialRealEstateTool } from './components/FinancialRealEstateTool';
@@ -132,8 +132,7 @@ export default function App() {
 
   const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
 
-  // --- 1. Splash Screen Timer (已更新) ---
-  // 設定為 4000ms (4秒)，讓動畫跑完(約2.8秒)後，還能停留約 1.2 秒
+  // --- 1. Splash Screen Timer ---
   useEffect(() => {
     const timer = setTimeout(() => {
       setMinSplashTimePassed(true);
@@ -362,17 +361,28 @@ export default function App() {
               <button onClick={handleBackToDashboard} className="w-full bg-blue-600 text-white px-4 py-3 rounded-xl flex items-center gap-2 font-bold mb-4">
                   <ChevronLeft size={20}/> 返回客戶列表
               </button>
-              <div className="text-xs font-bold text-slate-500 px-4 py-2 uppercase tracking-wider">資產軍火庫</div>
+              
+              {/* --- 創富專區 (Wealth Creation) --- */}
+              <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
+                 <Rocket size={14}/> 創富：槓桿與套利
+              </div>
               <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => {setActiveTab('gift'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => {setActiveTab('estate'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => {setActiveTab('student'); setIsMobileMenuOpen(false);}} />
-              {/* ... 其他 NavItem ... */}
               <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => {setActiveTab('super_active'); setIsMobileMenuOpen(false);}} />
-              <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => {setActiveTab('car'); setIsMobileMenuOpen(false);}} />
+
+              {/* --- 守富專區 (Wealth Preservation) --- */}
+              <div className="text-xs font-bold text-blue-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
+                 <ShieldAlert size={14}/> 守富：現金流防禦
+              </div>
               <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => {setActiveTab('reservoir'); setIsMobileMenuOpen(false);}} />
-              
-              <div className="mt-4 text-xs font-bold text-slate-500 px-4 py-2 uppercase tracking-wider">退休與傳承</div>
+              <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => {setActiveTab('car'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => {setActiveTab('pension'); setIsMobileMenuOpen(false);}} />
+
+              {/* --- 傳富專區 (Wealth Transfer) --- */}
+              <div className="text-xs font-bold text-purple-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
+                 <Landmark size={14}/> 傳富：稅務與傳承
+              </div>
               <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => {setActiveTab('tax'); setIsMobileMenuOpen(false);}} />
            </div>
         </div>
@@ -416,16 +426,27 @@ export default function App() {
         </div>
         
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          <div className="text-xs font-bold text-slate-500 px-4 py-2 uppercase tracking-wider">資產軍火庫</div>
+          {/* --- 創富專區 (Wealth Creation) --- */}
+          <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
+             <Rocket size={14}/> 創富：槓桿與套利
+          </div>
           <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => setActiveTab('gift')} />
           <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => setActiveTab('estate')} />
           <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => setActiveTab('student')} />
           <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => setActiveTab('super_active')} />
-          <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => setActiveTab('car')} />
-          <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => setActiveTab('reservoir')} />
           
-          <div className="mt-4 text-xs font-bold text-slate-600 px-4 py-2 uppercase tracking-wider">退休與傳承</div>
+          {/* --- 守富專區 (Wealth Preservation) --- */}
+          <div className="text-xs font-bold text-blue-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
+             <ShieldAlert size={14}/> 守富：現金流防禦
+          </div>
+          <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => setActiveTab('reservoir')} />
+          <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => setActiveTab('car')} />
           <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => setActiveTab('pension')} />
+
+          {/* --- 傳富專區 (Wealth Transfer) --- */}
+          <div className="text-xs font-bold text-purple-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
+             <Landmark size={14}/> 傳富：稅務與傳承
+          </div>
           <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => setActiveTab('tax')} />
         </nav>
 
