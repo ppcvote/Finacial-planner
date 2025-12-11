@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
   GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key, 
-  ChevronLeft, Users
+  ChevronLeft, Users, ShieldCheck // [新增] Icon
 } from 'lucide-react';
 
 import { 
@@ -13,7 +13,6 @@ import { doc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 
 import { auth, db, googleProvider } from './firebase'; 
 import ReportModal from './components/ReportModal';
-import MillionDollarGiftTool from './components/MillionDollarGiftTool';
 import ClientDashboard from './components/ClientDashboard';
 import SplashScreen from './components/SplashScreen'; 
 
@@ -25,6 +24,8 @@ import { CarReplacementTool } from './components/CarReplacementTool';
 import { LaborPensionTool } from './components/LaborPensionTool';
 import { BigSmallReservoirTool } from './components/BigSmallReservoirTool';
 import { TaxPlannerTool } from './components/TaxPlannerTool';
+import { MillionDollarGiftTool } from './components/MillionDollarGiftTool'; // 修正引入路徑
+import GoldenSafeVault from './components/GoldenSafeVault'; // [新增]
 
 // ------------------------------------------------------------------
 // UI Components
@@ -89,13 +90,13 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   
   // --- 狀態控制區 ---
-  const [loading, setLoading] = useState(true); // 資料載入狀態
-  const [minSplashTimePassed, setMinSplashTimePassed] = useState(false); // 動畫播放狀態
+  const [loading, setLoading] = useState(true); 
+  const [minSplashTimePassed, setMinSplashTimePassed] = useState(false); 
   
   const [clientLoading, setClientLoading] = useState(false); 
   const [currentClient, setCurrentClient] = useState<any>(null);
 
-  const [activeTab, setActiveTab] = useState('gift'); 
+  const [activeTab, setActiveTab] = useState('golden_safe'); // [預設改為黃金保險箱]
   const [toast, setToast] = useState<{message: string, type: string} | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false); 
@@ -111,6 +112,7 @@ export default function App() {
 
   // Tool Data States
   const defaultStates = {
+    golden_safe: { mode: 'time', amount: 60000, years: 10, rate: 6, isLocked: false }, // [新增]
     gift: { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 },
     estate: { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6, existingLoanBalance: 700, existingMonthlyPayment: 38000 },
     student: { loanAmount: 40, investReturnRate: 6, years: 8, gracePeriod: 1, interestOnlyPeriod: 0, isQualified: false },
@@ -121,6 +123,7 @@ export default function App() {
     tax: { spouse: true, children: 2, minorYearsTotal: 0, parents: 0, cash: 3000, realEstateMarket: 4000, stocks: 1000, insurancePlan: 0 }
   };
 
+  const [goldenSafeData, setGoldenSafeData] = useState(defaultStates.golden_safe); // [新增]
   const [giftData, setGiftData] = useState(defaultStates.gift);
   const [estateData, setEstateData] = useState(defaultStates.estate);
   const [studentData, setStudentData] = useState(defaultStates.student);
@@ -132,7 +135,6 @@ export default function App() {
 
   const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
 
-  // --- 1. Splash Screen Timer ---
   useEffect(() => {
     const timer = setTimeout(() => {
       setMinSplashTimePassed(true);
@@ -140,7 +142,6 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // --- 2. 全局 Auth 監聽 ---
   useEffect(() => {
     const checkRedirect = async () => {
       try { await getRedirectResult(auth); } catch (e) { console.error(e); }
@@ -149,7 +150,7 @@ export default function App() {
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false); // Auth 檢查完畢
+      setLoading(false);
       if (!currentUser) {
           setCurrentClient(null);
           setIsDataLoaded(false);
@@ -172,6 +173,7 @@ export default function App() {
       const unsubscribeClient = onSnapshot(clientDocRef, (docSnap) => {
           if (docSnap.exists()) {
               const data = docSnap.data();
+              if (data.goldenSafeData) setGoldenSafeData(prev => ({...prev, ...data.goldenSafeData})); // [新增]
               if (data.giftData) setGiftData(prev => ({...prev, ...data.giftData}));
               if (data.estateData) setEstateData(prev => ({...prev, ...data.estateData}));
               if (data.studentData) setStudentData(prev => ({...prev, ...data.studentData}));
@@ -200,6 +202,7 @@ export default function App() {
     if (!user || !currentClient || !isDataLoaded) return;
 
     const dataPayload = {
+        goldenSafeData, // [新增]
         giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData
     };
 
@@ -224,12 +227,12 @@ export default function App() {
     const handler = setTimeout(saveData, 1500);
     return () => clearTimeout(handler);
   }, [
+    goldenSafeData, // [新增]
     giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData, 
     user, currentClient, isDataLoaded
   ]);
 
 
-  // Login Handlers
   const handleGoogleLogin = async () => { 
     const isMobileOrTablet = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
     if (isMobileOrTablet) {
@@ -263,6 +266,7 @@ export default function App() {
 
   const getCurrentData = () => {
     switch(activeTab) {
+      case 'golden_safe': return goldenSafeData; // [新增]
       case 'gift': return giftData;
       case 'estate': return estateData;
       case 'student': return studentData;
@@ -275,12 +279,8 @@ export default function App() {
     }
   };
 
-  // --- Render 邏輯 ---
-
-  // 1. 顯示 Splash Screen
   if (loading || !minSplashTimePassed) return <SplashScreen />;
 
-  // 2. 未登入 -> 顯示登入頁
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
@@ -309,7 +309,6 @@ export default function App() {
     );
   }
 
-  // 3. 已登入，但未選客戶 -> 顯示 ClientDashboard
   if (!currentClient) {
       return (
           <>
@@ -327,7 +326,6 @@ export default function App() {
       );
   }
 
-  // 4. 已選客戶 -> 顯示主介面 (Main Layout)
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       <PrintStyles />
@@ -362,8 +360,13 @@ export default function App() {
                   <ChevronLeft size={20}/> 返回客戶列表
               </button>
               
-              {/* --- 創富專區 (Wealth Creation) --- */}
-              <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
+              {/* [更新] 手機版選單結構 */}
+              <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
+                 <ShieldCheck size={14}/> 觀念與診斷
+              </div>
+              <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => {setActiveTab('golden_safe'); setIsMobileMenuOpen(false);}} />
+
+              <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
                  <Rocket size={14}/> 創富：槓桿與套利
               </div>
               <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => {setActiveTab('gift'); setIsMobileMenuOpen(false);}} />
@@ -371,7 +374,6 @@ export default function App() {
               <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => {setActiveTab('student'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => {setActiveTab('super_active'); setIsMobileMenuOpen(false);}} />
 
-              {/* --- 守富專區 (Wealth Preservation) --- */}
               <div className="text-xs font-bold text-blue-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
                  <ShieldAlert size={14}/> 守富：現金流防禦
               </div>
@@ -379,7 +381,6 @@ export default function App() {
               <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => {setActiveTab('car'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => {setActiveTab('pension'); setIsMobileMenuOpen(false);}} />
 
-              {/* --- 傳富專區 (Wealth Transfer) --- */}
               <div className="text-xs font-bold text-purple-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
                  <Landmark size={14}/> 傳富：稅務與傳承
               </div>
@@ -391,7 +392,6 @@ export default function App() {
       {/* Sidebar (Desktop) */}
       <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10 print:hidden">
         <div className="p-4 border-b border-slate-800">
-           {/* 返回按鈕 */}
            <button 
              onClick={handleBackToDashboard}
              className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-lg transition-all mb-4"
@@ -409,7 +409,6 @@ export default function App() {
              </div>
           </div>
           
-          {/* 同步狀態 */}
           <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 bg-black/20 px-2 py-1 rounded">
              {isSaving ? (
                 <>
@@ -426,8 +425,13 @@ export default function App() {
         </div>
         
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {/* --- 創富專區 (Wealth Creation) --- */}
-          <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
+          {/* [更新] 桌機版選單結構 */}
+          <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
+             <ShieldCheck size={14}/> 觀念與診斷
+          </div>
+          <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => setActiveTab('golden_safe')} />
+
+          <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
              <Rocket size={14}/> 創富：槓桿與套利
           </div>
           <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => setActiveTab('gift')} />
@@ -435,7 +439,6 @@ export default function App() {
           <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => setActiveTab('student')} />
           <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => setActiveTab('super_active')} />
           
-          {/* --- 守富專區 (Wealth Preservation) --- */}
           <div className="text-xs font-bold text-blue-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
              <ShieldAlert size={14}/> 守富：現金流防禦
           </div>
@@ -443,7 +446,6 @@ export default function App() {
           <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => setActiveTab('car')} />
           <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => setActiveTab('pension')} />
 
-          {/* --- 傳富專區 (Wealth Transfer) --- */}
           <div className="text-xs font-bold text-purple-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
              <Landmark size={14}/> 傳富：稅務與傳承
           </div>
@@ -475,6 +477,9 @@ export default function App() {
         
         <div className="flex-1 overflow-y-auto p-4 md:p-8 relative">
            <div className="max-w-5xl mx-auto pb-20 md:pb-0">
+             {/* [更新] 渲染元件列表 */}
+             {activeTab === 'golden_safe' && <GoldenSafeVault data={goldenSafeData} setData={setGoldenSafeData} />}
+             
              {activeTab === 'gift' && <MillionDollarGiftTool data={giftData} setData={setGiftData} />}
              {activeTab === 'estate' && <FinancialRealEstateTool data={estateData} setData={setEstateData} />}
              {activeTab === 'student' && <StudentLoanTool data={studentData} setData={setStudentData} />}
