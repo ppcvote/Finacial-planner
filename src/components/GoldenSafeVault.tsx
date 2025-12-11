@@ -4,8 +4,8 @@ import {
   Coins, ArrowRight, AlertTriangle
 } from 'lucide-react';
 
-// [⚠️注意] 這裡必須是 export const，不能是 export default
-export const GoldenSafeVault = ({ data, setData }: any) => {
+// [修正] 改回 export default，這是最穩的寫法
+export default function GoldenSafeVault({ data, setData }: any) {
   // 預設值
   const safeData = data || { 
     mode: 'time', // 'time' (時間存錢) | 'asset' (資產存錢)
@@ -23,10 +23,10 @@ export const GoldenSafeVault = ({ data, setData }: any) => {
     const { mode, amount, years, rate } = safeData;
     const r = rate / 100;
     if (mode === 'asset') {
-      // 單筆複利: FV = PV * (1+r)^n
+      // 單筆複利
       return Math.round(amount * Math.pow(1 + r, years));
     } else {
-      // 定期定額 (年金終值): FV = PMT * [((1+r)^n - 1) / r] * (1+r) (期初投入)
+      // 定期定額 (年金終值)
       return Math.round(amount * ((Math.pow(1 + r, years) - 1) / r) * (1+r));
     }
   }, [safeData]);
@@ -34,7 +34,7 @@ export const GoldenSafeVault = ({ data, setData }: any) => {
   const principal = safeData.mode === 'asset' ? safeData.amount : safeData.amount * safeData.years;
   const interest = finalValue - principal;
 
-  // 動畫效果：當數值改變時，讓數字跳動
+  // 動畫效果
   useEffect(() => {
     let start = 0;
     const end = finalValue;
@@ -61,7 +61,7 @@ export const GoldenSafeVault = ({ data, setData }: any) => {
   }, [localLocked]);
 
   const handleUpdate = (key: string, value: any) => {
-    setData({ ...safeData, [key]: value, isLocked: false }); // 修改參數時自動解鎖
+    setData({ ...safeData, [key]: value, isLocked: false });
     setLocalLocked(false);
   };
 
@@ -85,7 +85,7 @@ export const GoldenSafeVault = ({ data, setData }: any) => {
 
       <div className="grid lg:grid-cols-12 gap-8">
         
-        {/* Left: Path Selector & Inputs */}
+        {/* Left: Control Panel */}
         <div className="lg:col-span-4 space-y-6">
            {/* 1. 選擇路徑 */}
            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-2 flex">
@@ -155,15 +155,12 @@ export const GoldenSafeVault = ({ data, setData }: any) => {
         {/* Right: The Vault Visual */}
         <div className="lg:col-span-8 flex flex-col gap-6">
            
-           {/* Vault Container */}
            <div className={`relative flex-1 rounded-3xl p-8 flex flex-col items-center justify-center transition-all duration-700 border-4 ${localLocked ? 'bg-slate-900 border-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.3)]' : 'bg-white border-slate-200 shadow-sm'}`}>
               
-              {/* Status Badge */}
               <div className={`absolute top-6 right-6 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-colors ${localLocked ? 'bg-yellow-500 text-black' : 'bg-slate-100 text-slate-400'}`}>
                  {localLocked ? 'SECURED / 已上鎖' : 'UNSECURED / 風險敞開'}
               </div>
 
-              {/* Main Visual */}
               <div className="relative mb-8 mt-4">
                  <div className={`transition-all duration-700 transform ${localLocked ? 'scale-110' : 'scale-100'}`}>
                     {localLocked ? (
@@ -172,7 +169,6 @@ export const GoldenSafeVault = ({ data, setData }: any) => {
                        <Unlock size={180} className="text-slate-300" />
                     )}
                  </div>
-                 {/* Floating Particles if Locked */}
                  {localLocked && (
                     <>
                       <div className="absolute top-0 right-0 w-4 h-4 bg-yellow-400 rounded-full animate-ping opacity-75"></div>
@@ -181,7 +177,6 @@ export const GoldenSafeVault = ({ data, setData }: any) => {
                  )}
               </div>
 
-              {/* Numbers */}
               <div className="text-center space-y-2 z-10">
                  <p className={`text-sm font-bold uppercase tracking-widest ${localLocked ? 'text-yellow-500' : 'text-slate-400'}`}>
                     Total Asset Value
@@ -199,7 +194,6 @@ export const GoldenSafeVault = ({ data, setData }: any) => {
                  </div>
               </div>
 
-              {/* Risk Warnings (Only when Unlocked) */}
               {!localLocked && (
                  <div className="absolute bottom-6 flex gap-3 opacity-60">
                     <div className="px-3 py-1 bg-rose-100 text-rose-500 text-xs font-bold rounded-full flex items-center gap-1 animate-bounce">
@@ -215,7 +209,6 @@ export const GoldenSafeVault = ({ data, setData }: any) => {
               )}
            </div>
 
-           {/* Action Bar */}
            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex-1">
                  <h4 className={`font-bold text-lg mb-1 ${localLocked ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -252,4 +245,4 @@ export const GoldenSafeVault = ({ data, setData }: any) => {
       </div>
     </div>
   );
-};
+}

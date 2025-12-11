@@ -24,8 +24,10 @@ import { CarReplacementTool } from './components/CarReplacementTool';
 import { LaborPensionTool } from './components/LaborPensionTool';
 import { BigSmallReservoirTool } from './components/BigSmallReservoirTool';
 import { TaxPlannerTool } from './components/TaxPlannerTool';
-import { MillionDollarGiftTool } from './components/MillionDollarGiftTool';
-import { GoldenSafeVault } from './components/GoldenSafeVault'; // [修改重點] 這裡加上了 { } 大括號
+
+// [修正重點] 這裡不要加 { }，因為這兩個組件是 export default
+import MillionDollarGiftTool from './components/MillionDollarGiftTool';
+import GoldenSafeVault from './components/GoldenSafeVault'; 
 
 // ------------------------------------------------------------------
 // UI Components
