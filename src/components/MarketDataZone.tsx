@@ -7,13 +7,16 @@ import {
   Bed, 
   Users, 
   Info,
-  BarChart3
+  BarChart3,
+  User,
+  Siren,
+  FileText
 } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
-// [修改重點] 這裡改成 export default function，確保 App.tsx 容易引用
 export default function MarketDataZone() {
   const [activeTab, setActiveTab] = useState('pension');
+  const [age, setAge] = useState(35); // 預設客戶年齡
 
   // 1. 勞保虧損數據 (2024年最新逆差 665億)
   const laborData = [
@@ -33,6 +36,12 @@ export default function MarketDataZone() {
     { name: '全日看護', cost: 2800, type: '支出' },
   ];
 
+  // 動態計算：勞保破產倒數
+  const currentYear = new Date().getFullYear();
+  const bankruptYear = 2031;
+  const yearsLeft = Math.max(0, bankruptYear - currentYear);
+  const ageAtBankrupt = age + yearsLeft;
+
   return (
     <div className="space-y-6 animate-fade-in font-sans pb-20">
       
@@ -42,12 +51,32 @@ export default function MarketDataZone() {
            <BarChart3 size={180} />
         </div>
         <div className="relative z-10">
-           <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2 flex items-center gap-3">
-             <Activity className="text-cyan-400" size={36}/> 市場數據戰情室
-           </h1>
-           <p className="text-slate-400 text-lg max-w-2xl">
-             數據是客觀的，風險是真實的。這裡匯集了台灣最新的退休、醫療與長照關鍵指標。
-           </p>
+           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+              <div>
+                 <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2 flex items-center gap-3">
+                   <Activity className="text-cyan-400" size={36}/> 市場數據戰情室
+                 </h1>
+                 <p className="text-slate-400 text-lg max-w-xl">
+                   數據不會說謊，但數據會示警。這裡匯集了台灣最新的退休、醫療與長照官方統計。
+                 </p>
+              </div>
+
+              {/* 年齡輸入區 (Personalization) */}
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl w-full md:w-auto min-w-[280px]">
+                 <div className="flex items-center gap-2 mb-2 text-cyan-300 font-bold text-sm">
+                    <User size={16}/> 設定您的目前年齡
+                 </div>
+                 <div className="flex items-center gap-4">
+                    <input 
+                      type="range" min={20} max={70} step={1} 
+                      value={age} 
+                      onChange={(e) => setAge(Number(e.target.value))}
+                      className="flex-1 h-2 bg-slate-600 rounded-lg accent-cyan-400"
+                    />
+                    <span className="text-3xl font-black font-mono">{age} <span className="text-sm text-slate-400 font-normal">歲</span></span>
+                 </div>
+              </div>
+           </div>
         </div>
       </div>
 
@@ -76,19 +105,28 @@ export default function MarketDataZone() {
       {/* Content Area */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 min-h-[400px]">
         
-        {/* --- Tab 1: 勞保危機 --- */}
+        {/* --- Tab 1: 勞保危機 (連結年齡) --- */}
         {activeTab === 'pension' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+             <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-slate-100 pb-4 gap-4">
                 <div>
                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                       <AlertTriangle className="text-red-500"/> 勞保收支逆差創新高
                    </h3>
-                   <p className="text-sm text-slate-500 mt-1">2024年逆差達 665 億，政府估計 2031 年恐面臨破產。</p>
+                   <p className="text-sm text-slate-500 mt-1">2024年逆差達 665 億，精算報告估計 2031 年基金恐用罄。</p>
                 </div>
-                <div className="text-right">
-                   <div className="text-xs text-slate-400 font-bold uppercase">Bankruptcy Countdown</div>
-                   <div className="text-3xl font-black text-red-600 font-mono">2031 <span className="text-sm text-slate-500">年</span></div>
+                
+                {/* 倒數計時卡片 */}
+                <div className="bg-red-50 border border-red-100 px-4 py-2 rounded-xl text-right">
+                   <div className="text-xs text-red-400 font-bold uppercase flex items-center justify-end gap-1">
+                      <Siren size={12}/> 您的暴險倒數
+                   </div>
+                   <div className="text-2xl font-black text-red-600 font-mono">
+                      剩 {yearsLeft} 年
+                   </div>
+                   <div className="text-xs text-red-800 font-bold">
+                      屆時您將 {ageAtBankrupt} 歲
+                   </div>
                 </div>
              </div>
 
@@ -105,13 +143,21 @@ export default function MarketDataZone() {
                 </ResponsiveContainer>
              </div>
              
-             <div className="bg-red-50 p-4 rounded-xl border border-red-100 flex gap-4 items-start">
-                <Info className="text-red-500 shrink-0 mt-1" size={20}/>
-                <div>
-                   <h4 className="font-bold text-red-800 text-sm">顧問觀點：</h4>
-                   <p className="text-xs text-red-700/80 mt-1 leading-relaxed">
-                      「依靠政府退休金就像住在海砂屋，您知道它遲早會垮，只是不知道是哪一天。唯一的解法，就是現在開始搭建自己的『鋼骨退休金』。」
-                   </p>
+             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col gap-2">
+                <div className="flex gap-4 items-start">
+                    <Info className="text-slate-500 shrink-0 mt-1" size={20}/>
+                    <div>
+                    <h4 className="font-bold text-slate-700 text-sm">數據解讀：</h4>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                        當您 {ageAtBankrupt} 歲時，勞保基金將面臨破產或是大幅改革（少領/多繳）。這意味著您現在規劃的退休金，必須假設「沒有勞保」也能活下去，才是最安全的策略。
+                    </p>
+                    </div>
+                </div>
+                {/* 來源標註 */}
+                <div className="w-full text-right mt-2">
+                    <span className="text-[10px] text-slate-400 bg-white px-2 py-1 rounded border border-slate-100 inline-flex items-center gap-1">
+                        <FileText size={10}/> 資料來源：勞動部勞工保險局 2024年財務精算報告
+                    </span>
                 </div>
              </div>
           </div>
@@ -123,7 +169,7 @@ export default function MarketDataZone() {
              <div className="grid md:grid-cols-2 gap-6">
                 <div>
                    <h3 className="text-xl font-bold text-slate-800 mb-2">日薪 vs. 日醫療費</h3>
-                   <p className="text-sm text-slate-500 mb-6">生病最可怕的不是痛，而是「收入中斷」加上「支出不斷」。</p>
+                   <p className="text-sm text-slate-500 mb-6">健保自付額上限調高，生病最可怕的是「收入中斷」加上「支出不斷」。</p>
                    <div className="space-y-4">
                       {medicalCostData.map((item, idx) => (
                          <div key={idx}>
@@ -164,9 +210,12 @@ export default function MarketDataZone() {
                           <span className="font-black text-red-500">-$53,000</span>
                        </div>
                     </div>
-                    <p className="text-xs text-blue-600/70 mt-4 text-center">
-                       *這還不包含自費手術與耗材費用
-                    </p>
+                    {/* 來源標註 */}
+                    <div className="mt-6 pt-4 border-t border-blue-200 text-right">
+                        <span className="text-[10px] text-blue-400 bg-white/50 px-2 py-1 rounded inline-flex items-center gap-1">
+                            <FileText size={10}/> 資料來源：衛福部健保署 2024年住院自付額標準 / 各大醫院公告
+                        </span>
+                    </div>
                 </div>
              </div>
           </div>
@@ -229,9 +278,14 @@ export default function MarketDataZone() {
                       <div className="w-20 text-right font-mono font-bold">$300萬</div>
                    </div>
                 </div>
-                <p className="text-xs text-slate-400 mt-4 text-center bg-white/5 p-2 rounded">
-                   註：這還沒計算因照顧家人而導致的「親屬離職」薪資損失。
-                </p>
+                
+                {/* 來源標註 */}
+                <div className="mt-6 pt-4 border-t border-slate-700 flex justify-between items-center text-xs text-slate-400">
+                    <span>*估算長照平均存活年數約 7-10 年</span>
+                    <span className="bg-slate-700 px-2 py-1 rounded inline-flex items-center gap-1">
+                        <FileText size={10}/> 資料來源：衛福部 112年死因統計 / 國健署癌症登記報告 / 家總
+                    </span>
+                </div>
              </div>
           </div>
         )}
