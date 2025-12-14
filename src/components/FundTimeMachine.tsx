@@ -14,14 +14,14 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tool
 import { fundDatabase, generateFundHistory, generateDCAHistory } from '../data/fundData';
 
 const FundTimeMachine = () => {
-  const [mode, setMode] = useState<'lump' | 'dca'>('lump'); // [新增] 模式切換
+  const [mode, setMode] = useState<'lump' | 'dca'>('lump'); // 模式切換
   const [selectedFund, setSelectedFund] = useState("USDEQ3490");
   const [amount, setAmount] = useState(100); // 萬 (單筆)
   const [monthlyAmount, setMonthlyAmount] = useState(10000); // 元 (DCA)
 
   // 取得基金資訊
   const fundInfo = fundDatabase[selectedFund as keyof typeof fundDatabase];
-  const isGrowth = fundInfo.type === 'growth';
+  const isGrowth = fundInfo.type === 'growth'; // 是否為成長型
 
   // 定義顏色主題
   const theme = {
@@ -31,13 +31,13 @@ const FundTimeMachine = () => {
     sliderBg: isGrowth ? 'bg-blue-100' : 'bg-emerald-100',
     sliderAccent: isGrowth ? 'accent-blue-600' : 'accent-emerald-600',
     selectedBorder: isGrowth ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50' : 'border-emerald-500 ring-1 ring-emerald-500 bg-emerald-50',
-    chartStroke: isGrowth ? '#3b82f6' : '#10b981', 
-    chartFill: isGrowth ? '#3b82f6' : '#10b981',
-    chartDivStroke: isGrowth ? '#a855f7' : '#f59e0b',
-    chartPrincipal: '#94a3b8' // 本金線顏色
+    chartStroke: isGrowth ? '#3b82f6' : '#10b981', // 主線條顏色
+    chartFill: isGrowth ? '#3b82f6' : '#10b981',   // 填充顏色
+    chartDivStroke: '#f59e0b', // 配息線固定用黃色
+    chartPrincipal: '#64748b'  // 本金線固定用深灰色
   };
 
-  // 產生回測數據 (根據模式選擇不同函式)
+  // 產生回測數據
   const data = useMemo(() => {
     if (mode === 'lump') {
       return generateFundHistory(selectedFund, amount * 10000);
@@ -50,6 +50,7 @@ const FundTimeMachine = () => {
 
   const finalResult = data[data.length - 1];
   const totalPrincipal = finalResult.investedPrincipal;
+  // 計算總報酬率
   const totalReturnRate = ((finalResult.totalReturn - totalPrincipal) / totalPrincipal) * 100;
 
   return (
@@ -186,6 +187,7 @@ const FundTimeMachine = () => {
            
            {/* 總結算卡片 */}
            <div className="grid md:grid-cols-3 gap-4">
+              {/* 卡片 1: 本金 */}
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
                  <div className="text-xs text-slate-500 font-bold mb-1">
                     {mode === 'lump' ? '單筆投入本金' : '累積投入本金'}
@@ -196,23 +198,30 @@ const FundTimeMachine = () => {
                  <div className="text-xs text-slate-400 mt-1">
                     {mode === 'lump' ? '一次性投入' : '每月持續累積'}
                  </div>
+                 <div className="absolute right-[-10px] bottom-[-10px] opacity-10">
+                    <PiggyBank size={60} className="text-slate-400"/>
+                 </div>
               </div>
 
+              {/* 卡片 2: 配息 (成長型會隱藏數值或顯示說明) */}
               <div className={`bg-white p-5 rounded-2xl border shadow-sm relative overflow-hidden ${isGrowth ? 'border-blue-200 bg-blue-50/30' : 'border-emerald-200 bg-emerald-50/30'}`}>
-                 <div className={`text-xs font-bold mb-1 ${isGrowth ? 'text-blue-600' : 'text-emerald-600'}`}>累積領取配息 (現金流)</div>
+                 <div className={`text-xs font-bold mb-1 ${isGrowth ? 'text-blue-600' : 'text-emerald-600'}`}>
+                    {isGrowth ? '累積配息 (累積型)' : '累積領取配息 (現金流)'}
+                 </div>
                  <div className={`text-2xl font-black font-mono ${isGrowth ? 'text-blue-600' : 'text-emerald-600'}`}>
-                    +${(finalResult.cumulativeDividends / 10000).toFixed(1)} 萬
+                    {isGrowth ? '$0' : `+$${(finalResult.cumulativeDividends / 10000).toFixed(1)} 萬`}
                  </div>
                  <div className={`text-xs mt-1 ${isGrowth ? 'text-blue-500' : 'text-emerald-500'}`}>
-                    {finalResult.cumulativeDividends === 0 ? '本基金不配息 (累積淨值)' : '現金已落袋'}
+                    {isGrowth ? '配息自動滾入淨值再投資' : '現金已落袋'}
                  </div>
                  <div className="absolute right-[-10px] bottom-[-10px] opacity-10">
-                    {isGrowth ? <Zap size={60} className="text-blue-600"/> : <PiggyBank size={60} className="text-emerald-600"/>}
+                    {isGrowth ? <Zap size={60} className="text-blue-600"/> : <Coins size={60} className="text-emerald-600"/>}
                  </div>
               </div>
 
+              {/* 卡片 3: 總資產 */}
               <div className="bg-slate-800 p-5 rounded-2xl text-white shadow-lg relative overflow-hidden">
-                 <div className="text-xs text-slate-400 font-bold mb-1">總資產 (本金+配息)</div>
+                 <div className="text-xs text-slate-400 font-bold mb-1">總資產 (本金+配息+資本利得)</div>
                  <div className="text-3xl font-black text-yellow-400 font-mono">
                     ${(finalResult.totalReturn / 10000).toFixed(1)} 萬
                  </div>
@@ -220,7 +229,7 @@ const FundTimeMachine = () => {
                     總報酬率 <span className="text-yellow-400 font-bold">+{totalReturnRate.toFixed(1)}%</span>
                  </div>
                  <div className="absolute right-[-10px] bottom-[-10px] opacity-10">
-                    <Coins size={60} className="text-yellow-400"/>
+                    <TrendingUp size={60} className="text-yellow-400"/>
                  </div>
               </div>
            </div>
@@ -228,7 +237,7 @@ const FundTimeMachine = () => {
            {/* 圖表區 */}
            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-[450px]">
               <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                 <TrendingUp size={20} className={theme.accentColor}/> 資產成長走勢圖 (含息)
+                 <LineChartIcon size={20} className={theme.accentColor}/> 資產成長走勢圖 (含息)
               </h4>
               <ResponsiveContainer width="100%" height="90%">
                  <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -241,23 +250,49 @@ const FundTimeMachine = () => {
                     <XAxis dataKey="year" type="number" domain={['dataMin', 'dataMax']} tickFormatter={(tick) => tick.toFixed(0)} tick={{fontSize:12}} />
                     <YAxis tickFormatter={(val) => `${(val/10000).toFixed(0)}萬`} width={60} tick={{fontSize:12}} />
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9"/>
+                    
+                    {/* [修正] 移除 formatter 中的判斷邏輯，直接顯示數值 */}
                     <Tooltip 
                        labelFormatter={(val) => `${Math.floor(val)}年`}
-                       formatter={(value: number, name: string) => [
-                           `$${(value/10000).toFixed(1)}萬`, 
-                           name === 'totalReturn' ? '總資產' : (name === 'investedPrincipal' ? '投入本金' : '累積配息')
-                       ]}
+                       formatter={(value: number) => `$${(value/10000).toFixed(1)}萬`}
                        contentStyle={{borderRadius:'12px', border:'none', boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}
                     />
+                    
                     <Legend />
-                    {/* 總資產區域 */}
-                    <Area type="monotone" dataKey="totalReturn" name="總資產 (含息)" stackId="1" stroke={theme.chartStroke} fill="url(#colorTotal)" strokeWidth={3} />
                     
-                    {/* 本金線 (DCA時特別重要) */}
-                    <Area type="monotone" dataKey="investedPrincipal" name="投入本金" stackId="3" stroke={theme.chartPrincipal} fill="none" strokeWidth={2} strokeDasharray="3 3"/>
+                    {/* 1. 總資產 (最底層，無 stackId，避免疊加) */}
+                    <Area 
+                        type="monotone" 
+                        dataKey="totalReturn" 
+                        name="總資產" 
+                        stroke={theme.chartStroke} 
+                        fill="url(#colorTotal)" 
+                        strokeWidth={3} 
+                    />
                     
-                    {/* 配息線 */}
-                    <Area type="monotone" dataKey="cumulativeDividends" name="累積配息" stackId="2" stroke={theme.chartDivStroke} fill="none" strokeWidth={2} strokeDasharray="5 5"/>
+                    {/* 2. 累積配息 (僅在配息型基金顯示) */}
+                    {!isGrowth && (
+                        <Area 
+                            type="monotone" 
+                            dataKey="cumulativeDividends" 
+                            name="累積配息" 
+                            stroke={theme.chartDivStroke} 
+                            fill="none" 
+                            strokeWidth={2} 
+                            strokeDasharray="5 5"
+                        />
+                    )}
+
+                    {/* 3. 投入本金 (最上層，深色虛線，用於比較) */}
+                    <Area 
+                        type="monotone" 
+                        dataKey="investedPrincipal" 
+                        name="投入本金" 
+                        stroke={theme.chartPrincipal} 
+                        fill="none" 
+                        strokeWidth={2} 
+                        strokeDasharray="4 4"
+                    />
                  </AreaChart>
               </ResponsiveContainer>
            </div>
@@ -276,4 +311,5 @@ const FundTimeMachine = () => {
   );
 };
 
+// 確保 Default Export 在最後
 export default FundTimeMachine;
