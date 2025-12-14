@@ -10,15 +10,20 @@ import {
   BarChart3,
   User,
   Siren,
-  FileText
+  FileText,
+  Wheelchair,
+  HeartPulse,
+  Banknote
 } from 'lucide-react';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar, ReferenceLine, Cell } from 'recharts';
 
 export default function MarketDataZone() {
-  const [activeTab, setActiveTab] = useState('pension');
-  const [age, setAge] = useState(35); // 預設客戶年齡
+  const [activeTab, setActiveTab] = useState('unhealthy'); // 預設顯示最新的不健康餘命
+  const [age, setAge] = useState(40); 
+  const [gender, setGender] = useState<'male'|'female'>('male');
+  const [monthlyCareCost, setMonthlyCareCost] = useState(50000); // 預設長照月費
 
-  // 1. 勞保虧損數據 (2024年最新逆差 665億)
+  // --- 1. 勞保虧損數據 (2024年最新逆差 665億) ---
   const laborData = [
     { year: '2017', 逆差: 275 },
     { year: '2018', 逆差: 251 },
@@ -28,12 +33,31 @@ export default function MarketDataZone() {
     { year: '2024', 逆差: 665 },
   ];
 
-  // 2. 醫療/長照費用數據
+  // --- 2. 醫療/長照費用數據 ---
   const medicalCostData = [
     { name: '每日薪資(均)', cost: 1800, type: '收入' },
     { name: '雙人房差額', cost: 2500, type: '支出' },
     { name: '單人房差額', cost: 6000, type: '支出' },
     { name: '全日看護', cost: 2800, type: '支出' },
+  ];
+
+  // --- 3. 不健康餘命數據 (112年最新統計) ---
+  // 男性平均壽命 76.94，女性 83.74
+  // 不健康餘命平均約 7.78 年 (衛福部資料)
+  const lifeExpectancy = gender === 'male' ? 76.9 : 83.7;
+  const unhealthyYears = 7.8; // 平均不健康餘命
+  const healthyLife = lifeExpectancy - unhealthyYears;
+  
+  // 計算總長照費用
+  const totalCareCost = Math.round(monthlyCareCost * 12 * unhealthyYears);
+
+  // 餘命圖表數據
+  const lifeData = [
+    {
+      name: '人生階段',
+      健康生活: healthyLife,
+      臥床失能: unhealthyYears,
+    }
   ];
 
   // 動態計算：勞保破產倒數
@@ -57,11 +81,11 @@ export default function MarketDataZone() {
                    <Activity className="text-cyan-400" size={36}/> 市場數據戰情室
                  </h1>
                  <p className="text-slate-400 text-lg max-w-xl">
-                   數據不會說謊，但數據會示警。這裡匯集了台灣最新的退休、醫療與長照官方統計。
+                   數據不會說謊。這裡匯集了內政部與衛福部最新的退休、醫療與長照官方統計。
                  </p>
               </div>
 
-              {/* 年齡輸入區 (Personalization) */}
+              {/* 年齡輸入區 */}
               <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl w-full md:w-auto min-w-[280px]">
                  <div className="flex items-center gap-2 mb-2 text-cyan-300 font-bold text-sm">
                     <User size={16}/> 設定您的目前年齡
@@ -81,30 +105,141 @@ export default function MarketDataZone() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <button 
+          onClick={() => setActiveTab('unhealthy')}
+          className={`px-4 py-3 rounded-xl font-bold flex items-center gap-2 whitespace-nowrap transition-all ${activeTab === 'unhealthy' ? 'bg-slate-700 text-white shadow-lg border border-slate-600' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+        >
+          <Wheelchair size={20} className={activeTab === 'unhealthy' ? 'text-rose-400' : ''}/> 不健康餘命 (長照)
+        </button>
         <button 
           onClick={() => setActiveTab('pension')}
-          className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 whitespace-nowrap transition-all ${activeTab === 'pension' ? 'bg-red-600 text-white shadow-lg' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+          className={`px-4 py-3 rounded-xl font-bold flex items-center gap-2 whitespace-nowrap transition-all ${activeTab === 'pension' ? 'bg-red-600 text-white shadow-lg' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
         >
-          <TrendingUp size={18}/> 勞保破產危機
+          <TrendingUp size={20}/> 勞保破產危機
         </button>
         <button 
           onClick={() => setActiveTab('medical')}
-          className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 whitespace-nowrap transition-all ${activeTab === 'medical' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+          className={`px-4 py-3 rounded-xl font-bold flex items-center gap-2 whitespace-nowrap transition-all ${activeTab === 'medical' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
         >
-          <Bed size={18}/> 醫療通膨現況
+          <Bed size={20}/> 醫療通膨現況
         </button>
         <button 
           onClick={() => setActiveTab('cancer')}
-          className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 whitespace-nowrap transition-all ${activeTab === 'cancer' ? 'bg-orange-500 text-white shadow-lg' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+          className={`px-4 py-3 rounded-xl font-bold flex items-center gap-2 whitespace-nowrap transition-all ${activeTab === 'cancer' ? 'bg-orange-500 text-white shadow-lg' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
         >
-          <Clock size={18}/> 癌症與長照
+          <Clock size={20}/> 癌症時鐘
         </button>
       </div>
 
       {/* Content Area */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 min-h-[400px]">
         
+        {/* --- Tab 0: 不健康餘命 (New & Hot) --- */}
+        {activeTab === 'unhealthy' && (
+           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+              
+              {/* 控制區 */}
+              <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                 {/* 性別選擇 */}
+                 <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-slate-600">您的生理性別：</span>
+                    <div className="flex bg-white rounded-lg p-1 border border-slate-200">
+                       <button 
+                         onClick={() => setGender('male')}
+                         className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${gender === 'male' ? 'bg-blue-500 text-white shadow' : 'text-slate-400 hover:text-slate-600'}`}
+                       >
+                         男性
+                       </button>
+                       <button 
+                         onClick={() => setGender('female')}
+                         className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${gender === 'female' ? 'bg-rose-500 text-white shadow' : 'text-slate-400 hover:text-slate-600'}`}
+                       >
+                         女性
+                       </button>
+                    </div>
+                 </div>
+
+                 {/* 費用設定 */}
+                 <div className="flex-1 w-full md:w-auto">
+                    <div className="flex justify-between text-sm mb-1">
+                       <span className="font-bold text-slate-600">預估每月照護費用</span>
+                       <span className="font-mono font-bold text-rose-600">${monthlyCareCost.toLocaleString()}</span>
+                    </div>
+                    <input 
+                      type="range" min={30000} max={100000} step={1000} 
+                      value={monthlyCareCost} 
+                      onChange={(e) => setMonthlyCareCost(Number(e.target.value))}
+                      className="w-full h-2 bg-rose-100 rounded-lg accent-rose-500"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                       <span>居家 ($3萬)</span>
+                       <span>機構 ($5萬)</span>
+                       <span>VIP照護 ($10萬)</span>
+                    </div>
+                 </div>
+              </div>
+
+              {/* 視覺化圖表 */}
+              <div className="grid md:grid-cols-2 gap-8 items-center">
+                 
+                 {/* 長條圖 */}
+                 <div className="h-[180px]">
+                    <h4 className="text-sm font-bold text-slate-500 mb-2 text-center">您的人生長度預估 ({gender === 'male' ? '男' : '女'})</h4>
+                    <ResponsiveContainer width="100%" height="100%">
+                       <BarChart layout="vertical" data={lifeData} margin={{top: 0, right: 30, left: 30, bottom: 0}}>
+                          <XAxis type="number" hide domain={[0, 100]}/>
+                          <YAxis type="category" dataKey="name" hide/>
+                          <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '8px'}}/>
+                          <Legend />
+                          <Bar dataKey="健康生活" stackId="a" fill="#10b981" radius={[4, 0, 0, 4]} barSize={60} label={{position: 'center', fill: 'white', fontWeight: 'bold', formatter: (val:any) => `${val.toFixed(1)}歲`}}>
+                          </Bar>
+                          <Bar dataKey="臥床失能" stackId="a" fill="#94a3b8" radius={[0, 4, 4, 0]} barSize={60} label={{position: 'center', fill: 'white', fontWeight: 'bold', formatter: (val:any) => `${val}年`}}>
+                             <Cell fill="#cbd5e1" />{/* 灰色代表失能 */}
+                          </Bar>
+                       </BarChart>
+                    </ResponsiveContainer>
+                    <div className="flex justify-between text-xs text-slate-400 px-4 mt-[-10px]">
+                       <span>0歲</span>
+                       <span className="pl-12">健康餘命</span>
+                       <span>平均壽命 {lifeExpectancy}歲</span>
+                    </div>
+                 </div>
+
+                 {/* 殘酷結論卡片 */}
+                 <div className="bg-rose-50 border border-rose-100 p-6 rounded-2xl text-center relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                       <Banknote size={120} className="text-rose-900"/>
+                    </div>
+                    
+                    <h4 className="text-sm font-bold text-rose-800 uppercase tracking-widest mb-1">
+                       The Cost of Dignity
+                    </h4>
+                    <div className="text-xs text-rose-500 font-bold mb-4">
+                       預估尊嚴總價 (不含通膨)
+                    </div>
+                    
+                    <div className="text-4xl md:text-5xl font-black text-rose-600 font-mono mb-2">
+                       ${(totalCareCost / 10000).toFixed(0)} <span className="text-2xl">萬</span>
+                    </div>
+                    
+                    <p className="text-xs text-slate-600 leading-relaxed bg-white/60 p-3 rounded-lg">
+                       統計顯示，國人平均需被照顧 <strong>{unhealthyYears}</strong> 年。
+                       如果這 <strong>{totalCareCost.toLocaleString()}元</strong> 不想讓子女買單，
+                       您現在的退休金準備夠了嗎？
+                    </p>
+                 </div>
+              </div>
+
+              {/* 來源 */}
+              <div className="text-right border-t border-slate-100 pt-2">
+                 <span className="text-[10px] text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-200 inline-flex items-center gap-1">
+                    <FileText size={10}/> 資料來源：內政部 112年簡易生命表 / 衛福部 112年國人健康平均餘命統計
+                 </span>
+              </div>
+           </div>
+        )}
+
         {/* --- Tab 1: 勞保危機 (連結年齡) --- */}
         {activeTab === 'pension' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
