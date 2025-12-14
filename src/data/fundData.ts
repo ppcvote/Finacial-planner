@@ -1,16 +1,17 @@
 // src/data/fundData.ts
 
 export const fundDatabase = {
+  // --- 1. 配息型：安聯美元 ---
   "USDEQ3490": {
     id: "USDEQ3490",
     name: "安聯收益成長-AM穩定月收 (美元)",
     currency: "USD",
+    type: "income",
     inceptionDate: "2012-10-16",
     startNav: 10.0,
-    currentNav: 8.42, // 2024年底參考價
-    avgYield: 8.5, // 平均年化配息率 %
+    currentNav: 8.42,
+    avgYield: 8.5, 
     desc: "股債平衡策略，適合持有美元資產的穩健投資人。",
-    // 模擬歷史匯率 (USD/TWD) 與 淨值走勢
     historyNodes: [
       { year: 2012, nav: 10.00, rate: 29.3 },
       { year: 2013, nav: 10.80, rate: 29.6 },
@@ -21,20 +22,22 @@ export const fundDatabase = {
       { year: 2018, nav: 8.80,  rate: 30.1 },
       { year: 2019, nav: 9.50,  rate: 30.8 },
       { year: 2020, nav: 9.80,  rate: 29.5 },
-      { year: 2021, nav: 10.20, rate: 27.8 }, // 台幣最強時
-      { year: 2022, nav: 8.10,  rate: 29.7 }, // 股債雙殺
+      { year: 2021, nav: 10.20, rate: 27.8 },
+      { year: 2022, nav: 8.10,  rate: 29.7 },
       { year: 2023, nav: 8.30,  rate: 31.1 },
-      { year: 2024, nav: 8.42,  rate: 32.4 }, // 現在
+      { year: 2024, nav: 8.42,  rate: 32.4 },
     ]
   },
+  // --- 2. 配息型：安聯台幣 ---
   "USDEQ5220": {
     id: "USDEQ5220",
     name: "安聯收益成長-AM穩定月收 (台幣)",
     currency: "TWD",
+    type: "income",
     inceptionDate: "2014-05-27",
     startNav: 10.0,
-    currentNav: 7.85, // 台幣級別因高配息，淨值修正較多
-    avgYield: 9.2, // 台幣級別配息率通常較高
+    currentNav: 7.85,
+    avgYield: 9.2,
     desc: "含匯率避險，直接以台幣收息，適合無美元需求者。",
     historyNodes: [
       { year: 2014, nav: 10.00, rate: 1 },
@@ -49,6 +52,64 @@ export const fundDatabase = {
       { year: 2023, nav: 7.50,  rate: 1 },
       { year: 2024, nav: 7.85,  rate: 1 },
     ]
+  },
+  // --- 3. 成長型：模擬0940 ---
+  "NTDEQ0940": {
+    id: "NTDEQ0940",
+    name: "元大台灣價值高息 (模擬0940)",
+    currency: "TWD",
+    type: "growth",
+    inceptionDate: "2024-03-11",
+    startNav: 10.0,
+    currentNav: 10.8,
+    avgYield: 4.0,
+    desc: "鎖定高價值成長股，波動較大但具資本利得潛力。",
+    historyNodes: [
+      { year: 2024, nav: 10.00, rate: 1 },
+      { year: 2024.5, nav: 9.60, rate: 1 },
+      { year: 2025, nav: 10.80, rate: 1 },
+    ]
+  },
+  // --- 4. 成長型：模擬0930 ---
+  "NTDEQ0930": {
+    id: "NTDEQ0930",
+    name: "永豐ESG低碳高息 (模擬0930)",
+    currency: "TWD",
+    type: "growth",
+    inceptionDate: "2023-07-13",
+    startNav: 15.0,
+    currentNav: 19.5,
+    avgYield: 5.0,
+    desc: "結合ESG與低碳趨勢的成長型標的。",
+    historyNodes: [
+      { year: 2023, nav: 15.00, rate: 1 },
+      { year: 2024, nav: 17.80, rate: 1 },
+      { year: 2025, nav: 19.50, rate: 1 },
+    ]
+  },
+  // --- 5. 成長型：模擬0050 ---
+  "NTDMD0020": {
+    id: "NTDMD0020",
+    name: "元大台灣50 (模擬0050)",
+    currency: "TWD",
+    type: "growth",
+    inceptionDate: "2003-06-25",
+    startNav: 36.9,
+    currentNav: 185.0,
+    avgYield: 3.5,
+    desc: "追蹤台灣市值前50大企業，長期隨經濟成長。",
+    historyNodes: [
+      { year: 2003, nav: 36.9, rate: 1 },
+      { year: 2008, nav: 30.5, rate: 1 },
+      { year: 2012, nav: 53.2, rate: 1 },
+      { year: 2016, nav: 72.8, rate: 1 },
+      { year: 2019, nav: 96.5, rate: 1 },
+      { year: 2021, nav: 140.0, rate: 1 },
+      { year: 2022, nav: 110.0, rate: 1 },
+      { year: 2023, nav: 130.0, rate: 1 },
+      { year: 2024, nav: 165.0, rate: 1 },
+      { year: 2025, nav: 185.0, rate: 1 },
+    ]
   }
 };
 
@@ -59,17 +120,14 @@ export const generateFundHistory = (fundId: string, initialAmountTwd: number) =>
 
   const nodes = fund.historyNodes;
   const result = [];
-  let currentUnits = 0;
-  let cumulativeDividendsTwd = 0;
   
-  // 1. 決定進場點 (以成立日開始)
   const startNode = nodes[0];
   const startRate = startNode.rate;
-  // 如果是美元基金，要把台幣本金換成美元，再除以淨值算出單位數
+  // 計算初始單位數
   const initialAmountFundCurrency = fund.currency === 'USD' ? initialAmountTwd / startRate : initialAmountTwd;
-  currentUnits = initialAmountFundCurrency / startNode.nav;
+  const currentUnits = initialAmountFundCurrency / startNode.nav;
+  let cumulativeDividendsTwd = 0;
 
-  // 2. 逐年生成數據 (每月)
   for (let i = 0; i < nodes.length - 1; i++) {
     const nodeA = nodes[i];
     const nodeB = nodes[i+1];
@@ -77,25 +135,21 @@ export const generateFundHistory = (fundId: string, initialAmountTwd: number) =>
     // 模擬這一年中間的 12 個月
     for (let m = 0; m < 12; m++) {
       const progress = m / 12;
-      // 線性插值計算當月淨值與匯率
       const currentNav = nodeA.nav + (nodeB.nav - nodeA.nav) * progress;
       const currentRate = nodeA.rate + (nodeB.rate - nodeA.rate) * progress;
       
-      // 計算當月配息 (模擬：淨值 * 年化配息率 / 12)
-      // 這裡加入一點隨機波動讓數據看起來更真實
+      // 計算當月配息
       const monthlyDivPerUnit = (currentNav * (fund.avgYield / 100)) / 12; 
       const monthlyDivTotalFundCurrency = currentUnits * monthlyDivPerUnit;
-      
-      // 換算回台幣配息
       const monthlyDivTwd = fund.currency === 'USD' ? monthlyDivTotalFundCurrency * currentRate : monthlyDivTotalFundCurrency;
       cumulativeDividendsTwd += monthlyDivTwd;
 
-      // 計算當下本金價值 (台幣)
+      // 計算當下本金價值
       const assetValueFundCurrency = currentUnits * currentNav;
       const assetValueTwd = fund.currency === 'USD' ? assetValueFundCurrency * currentRate : assetValueFundCurrency;
 
       result.push({
-        date: `${nodeA.year}-${String(m+1).padStart(2, '0')}`,
+        date: `${Math.floor(nodeA.year + progress)}-${String(m+1).padStart(2, '0')}`,
         year: nodeA.year + progress,
         nav: currentNav,
         rate: currentRate,
@@ -106,7 +160,7 @@ export const generateFundHistory = (fundId: string, initialAmountTwd: number) =>
     }
   }
   
-  // 加入最後一個節點 (Current)
+  // 最後一個節點
   const lastNode = nodes[nodes.length-1];
   const lastAssetTwd = fund.currency === 'USD' 
     ? (currentUnits * lastNode.nav) * lastNode.rate 
