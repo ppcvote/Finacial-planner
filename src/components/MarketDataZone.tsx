@@ -11,19 +11,18 @@ import {
   User,
   Siren,
   FileText,
-  Wheelchair,
-  HeartPulse,
-  Banknote
+  Coins, // 改用 Coins 替換 Banknote
+  Accessibility // 改用 Accessibility 嘗試，或直接用 Bed
 } from 'lucide-react';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar, ReferenceLine, Cell } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar, Cell } from 'recharts';
 
 export default function MarketDataZone() {
-  const [activeTab, setActiveTab] = useState('unhealthy'); // 預設顯示最新的不健康餘命
+  const [activeTab, setActiveTab] = useState('unhealthy'); 
   const [age, setAge] = useState(40); 
   const [gender, setGender] = useState<'male'|'female'>('male');
-  const [monthlyCareCost, setMonthlyCareCost] = useState(50000); // 預設長照月費
+  const [monthlyCareCost, setMonthlyCareCost] = useState(50000); 
 
-  // --- 1. 勞保虧損數據 (2024年最新逆差 665億) ---
+  // --- 1. 勞保虧損數據 ---
   const laborData = [
     { year: '2017', 逆差: 275 },
     { year: '2018', 逆差: 251 },
@@ -33,7 +32,7 @@ export default function MarketDataZone() {
     { year: '2024', 逆差: 665 },
   ];
 
-  // --- 2. 醫療/長照費用數據 ---
+  // --- 2. 醫療費用數據 ---
   const medicalCostData = [
     { name: '每日薪資(均)', cost: 1800, type: '收入' },
     { name: '雙人房差額', cost: 2500, type: '支出' },
@@ -41,17 +40,13 @@ export default function MarketDataZone() {
     { name: '全日看護', cost: 2800, type: '支出' },
   ];
 
-  // --- 3. 不健康餘命數據 (112年最新統計) ---
-  // 男性平均壽命 76.94，女性 83.74
-  // 不健康餘命平均約 7.78 年 (衛福部資料)
+  // --- 3. 不健康餘命數據 ---
   const lifeExpectancy = gender === 'male' ? 76.9 : 83.7;
-  const unhealthyYears = 7.8; // 平均不健康餘命
+  const unhealthyYears = 7.8; 
   const healthyLife = lifeExpectancy - unhealthyYears;
   
-  // 計算總長照費用
   const totalCareCost = Math.round(monthlyCareCost * 12 * unhealthyYears);
 
-  // 餘命圖表數據
   const lifeData = [
     {
       name: '人生階段',
@@ -60,7 +55,6 @@ export default function MarketDataZone() {
     }
   ];
 
-  // 動態計算：勞保破產倒數
   const currentYear = new Date().getFullYear();
   const bankruptYear = 2031;
   const yearsLeft = Math.max(0, bankruptYear - currentYear);
@@ -85,7 +79,6 @@ export default function MarketDataZone() {
                  </p>
               </div>
 
-              {/* 年齡輸入區 */}
               <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl w-full md:w-auto min-w-[280px]">
                  <div className="flex items-center gap-2 mb-2 text-cyan-300 font-bold text-sm">
                     <User size={16}/> 設定您的目前年齡
@@ -110,7 +103,8 @@ export default function MarketDataZone() {
           onClick={() => setActiveTab('unhealthy')}
           className={`px-4 py-3 rounded-xl font-bold flex items-center gap-2 whitespace-nowrap transition-all ${activeTab === 'unhealthy' ? 'bg-slate-700 text-white shadow-lg border border-slate-600' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
         >
-          <Wheelchair size={20} className={activeTab === 'unhealthy' ? 'text-rose-400' : ''}/> 不健康餘命 (長照)
+          {/* [修正] 改用 Bed 代表臥床/長照，確保 Icon 存在 */}
+          <Bed size={20} className={activeTab === 'unhealthy' ? 'text-rose-400' : ''}/> 不健康餘命 (長照)
         </button>
         <button 
           onClick={() => setActiveTab('pension')}
@@ -122,7 +116,7 @@ export default function MarketDataZone() {
           onClick={() => setActiveTab('medical')}
           className={`px-4 py-3 rounded-xl font-bold flex items-center gap-2 whitespace-nowrap transition-all ${activeTab === 'medical' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
         >
-          <Bed size={20}/> 醫療通膨現況
+          <Activity size={20}/> 醫療通膨現況
         </button>
         <button 
           onClick={() => setActiveTab('cancer')}
@@ -135,13 +129,11 @@ export default function MarketDataZone() {
       {/* Content Area */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 min-h-[400px]">
         
-        {/* --- Tab 0: 不健康餘命 (New & Hot) --- */}
+        {/* --- Tab 0: 不健康餘命 --- */}
         {activeTab === 'unhealthy' && (
            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
               
-              {/* 控制區 */}
               <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                 {/* 性別選擇 */}
                  <div className="flex items-center gap-3">
                     <span className="text-sm font-bold text-slate-600">您的生理性別：</span>
                     <div className="flex bg-white rounded-lg p-1 border border-slate-200">
@@ -160,7 +152,6 @@ export default function MarketDataZone() {
                     </div>
                  </div>
 
-                 {/* 費用設定 */}
                  <div className="flex-1 w-full md:w-auto">
                     <div className="flex justify-between text-sm mb-1">
                        <span className="font-bold text-slate-600">預估每月照護費用</span>
@@ -180,10 +171,8 @@ export default function MarketDataZone() {
                  </div>
               </div>
 
-              {/* 視覺化圖表 */}
               <div className="grid md:grid-cols-2 gap-8 items-center">
                  
-                 {/* 長條圖 */}
                  <div className="h-[180px]">
                     <h4 className="text-sm font-bold text-slate-500 mb-2 text-center">您的人生長度預估 ({gender === 'male' ? '男' : '女'})</h4>
                     <ResponsiveContainer width="100%" height="100%">
@@ -195,7 +184,7 @@ export default function MarketDataZone() {
                           <Bar dataKey="健康生活" stackId="a" fill="#10b981" radius={[4, 0, 0, 4]} barSize={60} label={{position: 'center', fill: 'white', fontWeight: 'bold', formatter: (val:any) => `${val.toFixed(1)}歲`}}>
                           </Bar>
                           <Bar dataKey="臥床失能" stackId="a" fill="#94a3b8" radius={[0, 4, 4, 0]} barSize={60} label={{position: 'center', fill: 'white', fontWeight: 'bold', formatter: (val:any) => `${val}年`}}>
-                             <Cell fill="#cbd5e1" />{/* 灰色代表失能 */}
+                             <Cell fill="#cbd5e1" />
                           </Bar>
                        </BarChart>
                     </ResponsiveContainer>
@@ -206,10 +195,10 @@ export default function MarketDataZone() {
                     </div>
                  </div>
 
-                 {/* 殘酷結論卡片 */}
                  <div className="bg-rose-50 border border-rose-100 p-6 rounded-2xl text-center relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                       <Banknote size={120} className="text-rose-900"/>
+                       {/* [修正] 改用 Coins 代表錢 */}
+                       <Coins size={120} className="text-rose-900"/>
                     </div>
                     
                     <h4 className="text-sm font-bold text-rose-800 uppercase tracking-widest mb-1">
@@ -231,7 +220,6 @@ export default function MarketDataZone() {
                  </div>
               </div>
 
-              {/* 來源 */}
               <div className="text-right border-t border-slate-100 pt-2">
                  <span className="text-[10px] text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-200 inline-flex items-center gap-1">
                     <FileText size={10}/> 資料來源：內政部 112年簡易生命表 / 衛福部 112年國人健康平均餘命統計
@@ -240,7 +228,7 @@ export default function MarketDataZone() {
            </div>
         )}
 
-        {/* --- Tab 1: 勞保危機 (連結年齡) --- */}
+        {/* --- Tab 1: 勞保危機 --- */}
         {activeTab === 'pension' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
              <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-slate-100 pb-4 gap-4">
@@ -251,7 +239,6 @@ export default function MarketDataZone() {
                    <p className="text-sm text-slate-500 mt-1">2024年逆差達 665 億，精算報告估計 2031 年基金恐用罄。</p>
                 </div>
                 
-                {/* 倒數計時卡片 */}
                 <div className="bg-red-50 border border-red-100 px-4 py-2 rounded-xl text-right">
                    <div className="text-xs text-red-400 font-bold uppercase flex items-center justify-end gap-1">
                       <Siren size={12}/> 您的暴險倒數
@@ -288,7 +275,6 @@ export default function MarketDataZone() {
                     </p>
                     </div>
                 </div>
-                {/* 來源標註 */}
                 <div className="w-full text-right mt-2">
                     <span className="text-[10px] text-slate-400 bg-white px-2 py-1 rounded border border-slate-100 inline-flex items-center gap-1">
                         <FileText size={10}/> 資料來源：勞動部勞工保險局 2024年財務精算報告
@@ -345,7 +331,6 @@ export default function MarketDataZone() {
                           <span className="font-black text-red-500">-$53,000</span>
                        </div>
                     </div>
-                    {/* 來源標註 */}
                     <div className="mt-6 pt-4 border-t border-blue-200 text-right">
                         <span className="text-[10px] text-blue-400 bg-white/50 px-2 py-1 rounded inline-flex items-center gap-1">
                             <FileText size={10}/> 資料來源：衛福部健保署 2024年住院自付額標準 / 各大醫院公告
@@ -414,7 +399,6 @@ export default function MarketDataZone() {
                    </div>
                 </div>
                 
-                {/* 來源標註 */}
                 <div className="mt-6 pt-4 border-t border-slate-700 flex justify-between items-center text-xs text-slate-400">
                     <span>*估算長照平均存活年數約 7-10 年</span>
                     <span className="bg-slate-700 px-2 py-1 rounded inline-flex items-center gap-1">
