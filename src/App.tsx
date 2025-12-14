@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
   GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key, 
-  ChevronLeft, Users, ShieldCheck 
+  ChevronLeft, Users, ShieldCheck, Activity // [新增] Activity Icon
 } from 'lucide-react';
 
 import { 
@@ -24,8 +24,9 @@ import { CarReplacementTool } from './components/CarReplacementTool';
 import { LaborPensionTool } from './components/LaborPensionTool';
 import { BigSmallReservoirTool } from './components/BigSmallReservoirTool';
 import { TaxPlannerTool } from './components/TaxPlannerTool';
+import { MarketDataZone } from './components/MarketDataZone'; // [新增] 市場數據專區
 
-// [修正重點] 這裡不要加 { }，因為這兩個組件是 export default
+// 這裡不要加 { }，因為這兩個組件是 export default
 import MillionDollarGiftTool from './components/MillionDollarGiftTool';
 import GoldenSafeVault from './components/GoldenSafeVault'; 
 
@@ -115,6 +116,7 @@ export default function App() {
   // Tool Data States
   const defaultStates = {
     golden_safe: { mode: 'time', amount: 60000, years: 10, rate: 6, isLocked: false }, 
+    market_data: {}, // [新增]
     gift: { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 },
     estate: { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6, existingLoanBalance: 700, existingMonthlyPayment: 38000 },
     student: { loanAmount: 40, investReturnRate: 6, years: 8, gracePeriod: 1, interestOnlyPeriod: 0, isQualified: false },
@@ -269,6 +271,7 @@ export default function App() {
   const getCurrentData = () => {
     switch(activeTab) {
       case 'golden_safe': return goldenSafeData; 
+      case 'market_data': return {}; // [新增]
       case 'gift': return giftData;
       case 'estate': return estateData;
       case 'student': return studentData;
@@ -366,6 +369,7 @@ export default function App() {
                  <ShieldCheck size={14}/> 觀念與診斷
               </div>
               <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => {setActiveTab('golden_safe'); setIsMobileMenuOpen(false);}} />
+              <NavItem icon={Activity} label="市場數據戰情室" active={activeTab === 'market_data'} onClick={() => {setActiveTab('market_data'); setIsMobileMenuOpen(false);}} />
 
               <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
                  <Rocket size={14}/> 創富：槓桿與套利
@@ -430,6 +434,7 @@ export default function App() {
              <ShieldCheck size={14}/> 觀念與診斷
           </div>
           <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => setActiveTab('golden_safe')} />
+          <NavItem icon={Activity} label="市場數據戰情室" active={activeTab === 'market_data'} onClick={() => setActiveTab('market_data')} />
 
           <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
              <Rocket size={14}/> 創富：槓桿與套利
@@ -478,6 +483,7 @@ export default function App() {
         <div className="flex-1 overflow-y-auto p-4 md:p-8 relative">
            <div className="max-w-5xl mx-auto pb-20 md:pb-0">
              {activeTab === 'golden_safe' && <GoldenSafeVault data={goldenSafeData} setData={setGoldenSafeData} />}
+             {activeTab === 'market_data' && <MarketDataZone />}
              
              {activeTab === 'gift' && <MillionDollarGiftTool data={giftData} setData={setGiftData} />}
              {activeTab === 'estate' && <FinancialRealEstateTool data={estateData} setData={setEstateData} />}
