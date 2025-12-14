@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
   GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key, 
-  ChevronLeft, Users, ShieldCheck, Activity 
+  ChevronLeft, Users, ShieldCheck, Activity, History // [新增] History Icon
 } from 'lucide-react';
 
 import { 
@@ -16,7 +16,7 @@ import ReportModal from './components/ReportModal';
 import ClientDashboard from './components/ClientDashboard';
 import SplashScreen from './components/SplashScreen'; 
 
-// --- 從各個獨立檔案匯入工具 ---
+// --- 從各個獨立檔案匯入工具 (具名匯入) ---
 import { FinancialRealEstateTool } from './components/FinancialRealEstateTool';
 import { StudentLoanTool } from './components/StudentLoanTool';
 import { SuperActiveSavingTool } from './components/SuperActiveSavingTool';
@@ -25,10 +25,11 @@ import { LaborPensionTool } from './components/LaborPensionTool';
 import { BigSmallReservoirTool } from './components/BigSmallReservoirTool';
 import { TaxPlannerTool } from './components/TaxPlannerTool';
 
-// [修改重點] 這裡全部使用 Default Import (沒有大括號)
+// --- Default Import (無大括號) ---
 import MarketDataZone from './components/MarketDataZone'; 
 import MillionDollarGiftTool from './components/MillionDollarGiftTool';
 import GoldenSafeVault from './components/GoldenSafeVault'; 
+import FundTimeMachine from './components/FundTimeMachine'; // [新增] 基金時光機
 
 // ------------------------------------------------------------------
 // UI Components
@@ -117,6 +118,7 @@ export default function App() {
   const defaultStates = {
     golden_safe: { mode: 'time', amount: 60000, years: 10, rate: 6, isLocked: false }, 
     market_data: {}, 
+    fund_machine: {}, // [新增]
     gift: { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 },
     estate: { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6, existingLoanBalance: 700, existingMonthlyPayment: 38000 },
     student: { loanAmount: 40, investReturnRate: 6, years: 8, gracePeriod: 1, interestOnlyPeriod: 0, isQualified: false },
@@ -272,6 +274,7 @@ export default function App() {
     switch(activeTab) {
       case 'golden_safe': return goldenSafeData; 
       case 'market_data': return {}; 
+      case 'fund_machine': return {}; // [新增]
       case 'gift': return giftData;
       case 'estate': return estateData;
       case 'student': return studentData;
@@ -370,6 +373,7 @@ export default function App() {
               </div>
               <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => {setActiveTab('golden_safe'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Activity} label="市場數據戰情室" active={activeTab === 'market_data'} onClick={() => {setActiveTab('market_data'); setIsMobileMenuOpen(false);}} />
+              <NavItem icon={History} label="基金時光機" active={activeTab === 'fund_machine'} onClick={() => {setActiveTab('fund_machine'); setIsMobileMenuOpen(false);}} />
 
               <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
                  <Rocket size={14}/> 創富：槓桿與套利
@@ -435,6 +439,7 @@ export default function App() {
           </div>
           <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => setActiveTab('golden_safe')} />
           <NavItem icon={Activity} label="市場數據戰情室" active={activeTab === 'market_data'} onClick={() => setActiveTab('market_data')} />
+          <NavItem icon={History} label="基金時光機" active={activeTab === 'fund_machine'} onClick={() => setActiveTab('fund_machine')} />
 
           <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
              <Rocket size={14}/> 創富：槓桿與套利
@@ -484,6 +489,7 @@ export default function App() {
            <div className="max-w-5xl mx-auto pb-20 md:pb-0">
              {activeTab === 'golden_safe' && <GoldenSafeVault data={goldenSafeData} setData={setGoldenSafeData} />}
              {activeTab === 'market_data' && <MarketDataZone />}
+             {activeTab === 'fund_machine' && <FundTimeMachine />}
              
              {activeTab === 'gift' && <MillionDollarGiftTool data={giftData} setData={setGiftData} />}
              {activeTab === 'estate' && <FinancialRealEstateTool data={estateData} setData={setEstateData} />}
