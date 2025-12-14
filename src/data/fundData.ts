@@ -2,7 +2,7 @@
 
 export const fundDatabase = {
   // ==========================================
-  // 1. 境外基金 - 配息型 (既有)
+  // 1. 境外基金 - 配息型 (Income)
   // ==========================================
   "USDEQ3490": {
     id: "USDEQ3490",
@@ -48,41 +48,41 @@ export const fundDatabase = {
   },
 
   // ==========================================
-  // 2. 台股基金 - 成長型 (累積型，不配息)
+  // 2. 台股基金 - 成長型 (Growth)
   // ==========================================
   "NTDEQ0930": {
     id: "NTDEQ0930",
     name: "安聯台灣科技基金",
     currency: "TWD",
-    type: "growth", // 成長型
-    inceptionDate: "2001-07-01", // 模擬從較早期開始
+    type: "growth", 
+    inceptionDate: "2001-07-01", 
     startNav: 10.0,
-    currentNav: 155.0, // 台灣科技長線淨值極高
-    avgYield: 0, // [修正] 成長型配息率為 0
+    currentNav: 155.0, 
+    avgYield: 0, 
     desc: "鎖定高科技成長股，淨值波動大但長期爆發力極強，不配息。",
     historyNodes: [
       { year: 2001, nav: 10.0, rate: 1 },
       { year: 2004, nav: 12.5, rate: 1 },
-      { year: 2008, nav: 8.5, rate: 1 },  // 金融海嘯
+      { year: 2008, nav: 8.5, rate: 1 },  
       { year: 2012, nav: 18.0, rate: 1 },
       { year: 2016, nav: 35.0, rate: 1 },
       { year: 2019, nav: 55.0, rate: 1 },
-      { year: 2020, nav: 85.0, rate: 1 }, // 疫情後科技股飆漲
+      { year: 2020, nav: 85.0, rate: 1 }, 
       { year: 2021, nav: 110.0, rate: 1 },
-      { year: 2022, nav: 80.0, rate: 1 }, // 股債雙殺修正
+      { year: 2022, nav: 80.0, rate: 1 }, 
       { year: 2023, nav: 120.0, rate: 1 },
-      { year: 2024, nav: 155.0, rate: 1 }, // AI浪潮創新高
+      { year: 2024, nav: 155.0, rate: 1 }, 
     ]
   },
   "NTDEQ0940": {
     id: "NTDEQ0940",
     name: "安聯台灣大壩基金-A類型-新臺幣",
     currency: "TWD",
-    type: "growth", // 成長型
-    inceptionDate: "2000-04-11", // 模擬從早期開始
+    type: "growth", 
+    inceptionDate: "2000-04-11", 
     startNav: 10.0,
-    currentNav: 110.0, // 也是高淨值基金
-    avgYield: 0, // [修正] 成長型配息率為 0
+    currentNav: 110.0, 
+    avgYield: 0, 
     desc: "投資台股績優權值股與高成長潛力股，追求長期資本增值，不配息。",
     historyNodes: [
       { year: 2000, nav: 10.0, rate: 1 },
@@ -98,17 +98,17 @@ export const fundDatabase = {
   },
 
   // ==========================================
-  // 3. 投資型保單帳戶 - 平衡型 (月撥回)
+  // 3. 投資型保單帳戶 - 平衡型
   // ==========================================
   "NTDMD0020": {
     id: "NTDMD0020",
     name: "台幣環球股債均衡組合(月撥回資產)",
     currency: "TWD",
-    type: "income", // [修正] 月撥回屬於配息型
-    inceptionDate: "2015-01-01", // 假設成立日
+    type: "income", 
+    inceptionDate: "2015-01-01", 
     startNav: 10.0,
-    currentNav: 8.8, // 撥回機制通常會導致淨值微幅修正
-    avgYield: 5.5, // 投資型保單帳戶常見撥回率
+    currentNav: 8.8, 
+    avgYield: 5.5, 
     desc: "安聯人壽委託管理帳戶，股債平衡配置，每月撥回現金流。",
     historyNodes: [
       { year: 2015, nav: 10.0, rate: 1 },
@@ -118,16 +118,16 @@ export const fundDatabase = {
       { year: 2019, nav: 9.6, rate: 1 },
       { year: 2020, nav: 9.9, rate: 1 },
       { year: 2021, nav: 10.5, rate: 1 },
-      { year: 2022, nav: 8.5, rate: 1 }, // 股債雙殺影響大
+      { year: 2022, nav: 8.5, rate: 1 }, 
       { year: 2023, nav: 8.7, rate: 1 },
       { year: 2024, nav: 8.8, rate: 1 },
     ]
   }
 };
 
-// -----------------------------------------------------------
-// 核心計算引擎 (已修正邏輯)
-// -----------------------------------------------------------
+// =========================================================
+// 計算邏輯 1：單筆投入 (Lump Sum)
+// =========================================================
 export const generateFundHistory = (fundId: string, initialAmountTwd: number) => {
   const fund = fundDatabase[fundId as keyof typeof fundDatabase];
   if (!fund) return [];
@@ -135,36 +135,27 @@ export const generateFundHistory = (fundId: string, initialAmountTwd: number) =>
   const nodes = fund.historyNodes;
   const result = [];
   
-  // 1. 進場點初始化
   const startNode = nodes[0];
-  // 單位數計算：台幣本金 / (匯率 * 淨值)
-  // 若是台幣基金 rate=1，公式通用
   const initialUnits = initialAmountTwd / (startNode.rate * startNode.nav);
-  
-  let cumulativeDividendsTwd = 0; // 累積配息 (台幣)
+  let cumulativeDividendsTwd = 0;
 
-  // 2. 逐年模擬 (線性插值)
   for (let i = 0; i < nodes.length - 1; i++) {
     const nodeA = nodes[i];
     const nodeB = nodes[i+1];
     
-    // 模擬這一年中間的 12 個月
     for (let m = 0; m < 12; m++) {
       const progress = m / 12;
       const currentNav = nodeA.nav + (nodeB.nav - nodeA.nav) * progress;
       const currentRate = nodeA.rate + (nodeB.rate - nodeA.rate) * progress;
       
-      // 計算當月配息
-      // [修正] 只有當 avgYield > 0 時才計算配息
       let monthlyDivTwd = 0;
       if (fund.avgYield > 0) {
         const monthlyDivPerUnit = (currentNav * (fund.avgYield / 100)) / 12; 
-        const monthlyDivTotalFundCurrency = initialUnits * monthlyDivPerUnit; // 注意：是用初始單位數計算(除非有再投入，但這裡模擬現金領回)
+        const monthlyDivTotalFundCurrency = initialUnits * monthlyDivPerUnit;
         monthlyDivTwd = fund.currency === 'USD' ? monthlyDivTotalFundCurrency * currentRate : monthlyDivTotalFundCurrency;
         cumulativeDividendsTwd += monthlyDivTwd;
       }
 
-      // 計算當下本金價值
       const assetValueFundCurrency = initialUnits * currentNav;
       const assetValueTwd = fund.currency === 'USD' ? assetValueFundCurrency * currentRate : assetValueFundCurrency;
 
@@ -173,6 +164,7 @@ export const generateFundHistory = (fundId: string, initialAmountTwd: number) =>
         year: nodeA.year + progress,
         nav: currentNav,
         rate: currentRate,
+        investedPrincipal: initialAmountTwd, // 單筆投入本金不變
         assetValueTwd: Math.round(assetValueTwd),
         cumulativeDividends: Math.round(cumulativeDividendsTwd),
         totalReturn: Math.round(assetValueTwd + cumulativeDividendsTwd)
@@ -180,17 +172,93 @@ export const generateFundHistory = (fundId: string, initialAmountTwd: number) =>
     }
   }
   
-  // 最後一個節點
   const lastNode = nodes[nodes.length-1];
-  const lastAssetTwd = fund.currency === 'USD' 
-    ? (initialUnits * lastNode.nav) * lastNode.rate 
-    : (initialUnits * lastNode.nav);
+  const lastAssetTwd = fund.currency === 'USD' ? (initialUnits * lastNode.nav) * lastNode.rate : (initialUnits * lastNode.nav);
     
   result.push({
     date: `${lastNode.year}-12`,
     year: lastNode.year,
     nav: lastNode.nav,
     rate: lastNode.rate,
+    investedPrincipal: initialAmountTwd,
+    assetValueTwd: Math.round(lastAssetTwd),
+    cumulativeDividends: Math.round(cumulativeDividendsTwd),
+    totalReturn: Math.round(lastAssetTwd + cumulativeDividendsTwd)
+  });
+
+  return result;
+};
+
+// =========================================================
+// 計算邏輯 2：定期定額 (DCA) - [新增功能]
+// =========================================================
+export const generateDCAHistory = (fundId: string, monthlyAmountTwd: number) => {
+  const fund = fundDatabase[fundId as keyof typeof fundDatabase];
+  if (!fund) return [];
+
+  const nodes = fund.historyNodes;
+  const result = [];
+  
+  let totalUnits = 0;
+  let cumulativeDividendsTwd = 0;
+  let totalInvestedPrincipal = 0;
+
+  for (let i = 0; i < nodes.length - 1; i++) {
+    const nodeA = nodes[i];
+    const nodeB = nodes[i+1];
+    
+    for (let m = 0; m < 12; m++) {
+      const progress = m / 12;
+      const currentNav = nodeA.nav + (nodeB.nav - nodeA.nav) * progress;
+      const currentRate = nodeA.rate + (nodeB.rate - nodeA.rate) * progress;
+      
+      // 1. 每月買入 (DCA)
+      const investedThisMonth = monthlyAmountTwd;
+      totalInvestedPrincipal += investedThisMonth;
+      
+      // 計算本月買到的單位數
+      // 如果是台幣：直接除以淨值
+      // 如果是美元：先換成美元，再除以淨值
+      const amountFundCurrency = fund.currency === 'USD' ? investedThisMonth / currentRate : investedThisMonth;
+      const unitsBought = amountFundCurrency / currentNav;
+      totalUnits += unitsBought;
+
+      // 2. 計算配息 (針對目前累積的總單位數)
+      let monthlyDivTwd = 0;
+      if (fund.avgYield > 0) {
+        const monthlyDivPerUnit = (currentNav * (fund.avgYield / 100)) / 12; 
+        const monthlyDivTotalFundCurrency = totalUnits * monthlyDivPerUnit;
+        monthlyDivTwd = fund.currency === 'USD' ? monthlyDivTotalFundCurrency * currentRate : monthlyDivTotalFundCurrency;
+        cumulativeDividendsTwd += monthlyDivTwd;
+      }
+
+      // 3. 計算當下總市值
+      const assetValueFundCurrency = totalUnits * currentNav;
+      const assetValueTwd = fund.currency === 'USD' ? assetValueFundCurrency * currentRate : assetValueFundCurrency;
+
+      result.push({
+        date: `${Math.floor(nodeA.year + progress)}-${String(m+1).padStart(2, '0')}`,
+        year: nodeA.year + progress,
+        nav: currentNav,
+        rate: currentRate,
+        investedPrincipal: totalInvestedPrincipal, // 本金是持續增加的
+        assetValueTwd: Math.round(assetValueTwd),
+        cumulativeDividends: Math.round(cumulativeDividendsTwd),
+        totalReturn: Math.round(assetValueTwd + cumulativeDividendsTwd)
+      });
+    }
+  }
+  
+  // Last Node Calculation
+  const lastNode = nodes[nodes.length-1];
+  const lastAssetTwd = fund.currency === 'USD' ? (totalUnits * lastNode.nav) * lastNode.rate : (totalUnits * lastNode.nav);
+    
+  result.push({
+    date: `${lastNode.year}-12`,
+    year: lastNode.year,
+    nav: lastNode.nav,
+    rate: lastNode.rate,
+    investedPrincipal: totalInvestedPrincipal,
     assetValueTwd: Math.round(lastAssetTwd),
     cumulativeDividends: Math.round(cumulativeDividendsTwd),
     totalReturn: Math.round(lastAssetTwd + cumulativeDividendsTwd)

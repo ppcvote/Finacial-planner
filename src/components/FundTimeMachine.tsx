@@ -6,18 +6,22 @@ import {
   LineChart as LineChartIcon,
   Info,
   Zap,
-  PiggyBank
+  PiggyBank,
+  CalendarDays,
+  Target
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { fundDatabase, generateFundHistory } from '../data/fundData';
+import { fundDatabase, generateFundHistory, generateDCAHistory } from '../data/fundData';
 
 const FundTimeMachine = () => {
+  const [mode, setMode] = useState<'lump' | 'dca'>('lump'); // [新增] 模式切換
   const [selectedFund, setSelectedFund] = useState("USDEQ3490");
-  const [initialAmount, setInitialAmount] = useState(100); // 萬
+  const [amount, setAmount] = useState(100); // 萬 (單筆)
+  const [monthlyAmount, setMonthlyAmount] = useState(10000); // 元 (DCA)
 
   // 取得基金資訊
   const fundInfo = fundDatabase[selectedFund as keyof typeof fundDatabase];
-  const isGrowth = fundInfo.type === 'growth'; // 判斷是否為成長型
+  const isGrowth = fundInfo.type === 'growth';
 
   // 定義顏色主題
   const theme = {
@@ -27,20 +31,26 @@ const FundTimeMachine = () => {
     sliderBg: isGrowth ? 'bg-blue-100' : 'bg-emerald-100',
     sliderAccent: isGrowth ? 'accent-blue-600' : 'accent-emerald-600',
     selectedBorder: isGrowth ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50' : 'border-emerald-500 ring-1 ring-emerald-500 bg-emerald-50',
-    chartStroke: isGrowth ? '#3b82f6' : '#10b981', // 藍 vs 綠
+    chartStroke: isGrowth ? '#3b82f6' : '#10b981', 
     chartFill: isGrowth ? '#3b82f6' : '#10b981',
-    chartDivStroke: isGrowth ? '#a855f7' : '#f59e0b', // 紫 vs 黃 (配息線)
+    chartDivStroke: isGrowth ? '#a855f7' : '#f59e0b',
+    chartPrincipal: '#94a3b8' // 本金線顏色
   };
 
-  // 產生回測數據
+  // 產生回測數據 (根據模式選擇不同函式)
   const data = useMemo(() => {
-    return generateFundHistory(selectedFund, initialAmount * 10000);
-  }, [selectedFund, initialAmount]);
+    if (mode === 'lump') {
+      return generateFundHistory(selectedFund, amount * 10000);
+    } else {
+      return generateDCAHistory(selectedFund, monthlyAmount);
+    }
+  }, [mode, selectedFund, amount, monthlyAmount]);
 
   if (!data || data.length === 0) return <div className="p-8 text-center text-slate-500">數據載入中...</div>;
 
   const finalResult = data[data.length - 1];
-  const totalReturnRate = ((finalResult.totalReturn - (initialAmount * 10000)) / (initialAmount * 10000)) * 100;
+  const totalPrincipal = finalResult.investedPrincipal;
+  const totalReturnRate = ((finalResult.totalReturn - totalPrincipal) / totalPrincipal) * 100;
 
   return (
     <div className="space-y-6 animate-fade-in font-sans pb-20">
@@ -53,7 +63,7 @@ const FundTimeMachine = () => {
         <div className="relative z-10">
            <div className="flex items-center gap-2 mb-2">
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded tracking-wider border uppercase ${isGrowth ? 'bg-blue-500/20 text-blue-200 border-blue-400/30' : 'bg-emerald-500/20 text-emerald-200 border-emerald-400/30'}`}>
-                 {isGrowth ? 'Capital Growth Focus' : 'Income & Stability Focus'}
+                 {isGrowth ? 'Capital Growth' : 'Income & Stability'}
               </span>
            </div>
            <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2 flex items-center gap-3">
@@ -61,9 +71,9 @@ const FundTimeMachine = () => {
              {isGrowth ? '成長型資產回測' : '配息型資產回測'}
            </h1>
            <p className="text-white/80 text-lg max-w-xl">
-             {isGrowth 
-                ? '回測成長型標的爆發力。如果當年您就開始累積，現在資產翻了幾倍？' 
-                : '回測穩定現金流威力。見證「本金還在，配息已經領回一倍」的複利奇蹟。'}
+             {mode === 'lump' 
+                ? '回測單筆投入的複利效應。時間是財富最好的朋友。' 
+                : '回測定期定額的累積力量。紀律投資，無懼市場波動。'}
            </p>
         </div>
       </div>
@@ -73,8 +83,25 @@ const FundTimeMachine = () => {
         {/* 左側：控制面板 */}
         <div className="lg:col-span-4 space-y-6">
            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+              
+              {/* 模式切換 */}
+              <div className="flex bg-slate-100 p-1 rounded-xl">
+                 <button 
+                   onClick={() => setMode('lump')}
+                   className={`flex-1 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${mode === 'lump' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+                 >
+                    <Target size={16}/> 單筆投入
+                 </button>
+                 <button 
+                   onClick={() => setMode('dca')}
+                   className={`flex-1 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${mode === 'dca' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
+                 >
+                    <CalendarDays size={16}/> 定期定額
+                 </button>
+              </div>
+
               <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                 <Coins size={20} className={theme.accentColor}/> 設定回測參數
+                 <Coins size={20} className={theme.accentColor}/> 設定參數
               </h3>
 
               {/* 1. 選擇基金 */}
@@ -105,18 +132,32 @@ const FundTimeMachine = () => {
                  </div>
               </div>
 
-              {/* 2. 投入金額 */}
+              {/* 2. 投入金額 (根據模式變換) */}
               <div>
-                 <label className="text-xs font-bold text-slate-500 mb-2 block">成立日單筆投入 (萬台幣)</label>
+                 <label className="text-xs font-bold text-slate-500 mb-2 block">
+                    {mode === 'lump' ? '成立日單筆投入 (萬)' : '每月定期定額 (元)'}
+                 </label>
                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-2xl font-black text-slate-700">{initialAmount} 萬</span>
+                    <span className="text-2xl font-black text-slate-700">
+                        {mode === 'lump' ? `${amount} 萬` : `$${monthlyAmount.toLocaleString()}`}
+                    </span>
                  </div>
-                 <input 
-                   type="range" min={10} max={1000} step={10}
-                   value={initialAmount}
-                   onChange={(e) => setInitialAmount(Number(e.target.value))}
-                   className={`w-full h-2 rounded-lg cursor-pointer ${theme.sliderBg} ${theme.sliderAccent}`}
-                 />
+                 
+                 {mode === 'lump' ? (
+                    <input 
+                      type="range" min={10} max={1000} step={10}
+                      value={amount}
+                      onChange={(e) => setAmount(Number(e.target.value))}
+                      className={`w-full h-2 rounded-lg cursor-pointer ${theme.sliderBg} ${theme.sliderAccent}`}
+                    />
+                 ) : (
+                    <input 
+                      type="range" min={3000} max={50000} step={1000}
+                      value={monthlyAmount}
+                      onChange={(e) => setMonthlyAmount(Number(e.target.value))}
+                      className={`w-full h-2 rounded-lg cursor-pointer ${theme.sliderBg} ${theme.sliderAccent}`}
+                    />
+                 )}
               </div>
 
               {/* 資訊卡 */}
@@ -146,15 +187,14 @@ const FundTimeMachine = () => {
            {/* 總結算卡片 */}
            <div className="grid md:grid-cols-3 gap-4">
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-                 <div className="text-xs text-slate-500 font-bold mb-1">目前本金價值 (資本利得)</div>
-                 <div className={`text-2xl font-black font-mono ${finalResult.assetValueTwd >= initialAmount*10000 ? 'text-red-500' : 'text-green-600'}`}>
-                    ${(finalResult.assetValueTwd / 10000).toFixed(1)} 萬
+                 <div className="text-xs text-slate-500 font-bold mb-1">
+                    {mode === 'lump' ? '單筆投入本金' : '累積投入本金'}
+                 </div>
+                 <div className="text-xl font-bold font-mono text-slate-600">
+                    ${(totalPrincipal / 10000).toFixed(1)} 萬
                  </div>
                  <div className="text-xs text-slate-400 mt-1">
-                    {finalResult.assetValueTwd >= initialAmount*10000 ? '▲ 本金增值' : '▼ 淨值波動(含匯差)'}
-                 </div>
-                 <div className="absolute right-[-10px] bottom-[-10px] opacity-10">
-                    <TrendingUp size={60} className="text-slate-400"/>
+                    {mode === 'lump' ? '一次性投入' : '每月持續累積'}
                  </div>
               </div>
 
@@ -164,7 +204,7 @@ const FundTimeMachine = () => {
                     +${(finalResult.cumulativeDividends / 10000).toFixed(1)} 萬
                  </div>
                  <div className={`text-xs mt-1 ${isGrowth ? 'text-blue-500' : 'text-emerald-500'}`}>
-                    現金已落袋
+                    {finalResult.cumulativeDividends === 0 ? '本基金不配息 (累積淨值)' : '現金已落袋'}
                  </div>
                  <div className="absolute right-[-10px] bottom-[-10px] opacity-10">
                     {isGrowth ? <Zap size={60} className="text-blue-600"/> : <PiggyBank size={60} className="text-emerald-600"/>}
@@ -186,7 +226,7 @@ const FundTimeMachine = () => {
            </div>
 
            {/* 圖表區 */}
-           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-[400px]">
+           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-[450px]">
               <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
                  <TrendingUp size={20} className={theme.accentColor}/> 資產成長走勢圖 (含息)
               </h4>
@@ -203,11 +243,20 @@ const FundTimeMachine = () => {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9"/>
                     <Tooltip 
                        labelFormatter={(val) => `${Math.floor(val)}年`}
-                       formatter={(value: number) => [`$${Math.round(value/10000)}萬`, '']}
+                       formatter={(value: number, name: string) => [
+                           `$${(value/10000).toFixed(1)}萬`, 
+                           name === 'totalReturn' ? '總資產' : (name === 'investedPrincipal' ? '投入本金' : '累積配息')
+                       ]}
                        contentStyle={{borderRadius:'12px', border:'none', boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}
                     />
                     <Legend />
+                    {/* 總資產區域 */}
                     <Area type="monotone" dataKey="totalReturn" name="總資產 (含息)" stackId="1" stroke={theme.chartStroke} fill="url(#colorTotal)" strokeWidth={3} />
+                    
+                    {/* 本金線 (DCA時特別重要) */}
+                    <Area type="monotone" dataKey="investedPrincipal" name="投入本金" stackId="3" stroke={theme.chartPrincipal} fill="none" strokeWidth={2} strokeDasharray="3 3"/>
+                    
+                    {/* 配息線 */}
                     <Area type="monotone" dataKey="cumulativeDividends" name="累積配息" stackId="2" stroke={theme.chartDivStroke} fill="none" strokeWidth={2} strokeDasharray="5 5"/>
                  </AreaChart>
               </ResponsiveContainer>
