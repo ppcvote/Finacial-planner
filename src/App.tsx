@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
   GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key, 
-  ChevronLeft, Users, ShieldCheck, Activity // [新增] Activity Icon
+  ChevronLeft, Users, ShieldCheck, Activity 
 } from 'lucide-react';
 
 import { 
@@ -24,9 +24,9 @@ import { CarReplacementTool } from './components/CarReplacementTool';
 import { LaborPensionTool } from './components/LaborPensionTool';
 import { BigSmallReservoirTool } from './components/BigSmallReservoirTool';
 import { TaxPlannerTool } from './components/TaxPlannerTool';
-import { MarketDataZone } from './components/MarketDataZone'; // [新增] 市場數據專區
 
-// 這裡不要加 { }，因為這兩個組件是 export default
+// [修改重點] 這裡全部使用 Default Import (沒有大括號)
+import MarketDataZone from './components/MarketDataZone'; 
 import MillionDollarGiftTool from './components/MillionDollarGiftTool';
 import GoldenSafeVault from './components/GoldenSafeVault'; 
 
@@ -116,7 +116,7 @@ export default function App() {
   // Tool Data States
   const defaultStates = {
     golden_safe: { mode: 'time', amount: 60000, years: 10, rate: 6, isLocked: false }, 
-    market_data: {}, // [新增]
+    market_data: {}, 
     gift: { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 },
     estate: { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6, existingLoanBalance: 700, existingMonthlyPayment: 38000 },
     student: { loanAmount: 40, investReturnRate: 6, years: 8, gracePeriod: 1, interestOnlyPeriod: 0, isQualified: false },
@@ -271,7 +271,7 @@ export default function App() {
   const getCurrentData = () => {
     switch(activeTab) {
       case 'golden_safe': return goldenSafeData; 
-      case 'market_data': return {}; // [新增]
+      case 'market_data': return {}; 
       case 'gift': return giftData;
       case 'estate': return estateData;
       case 'student': return studentData;
