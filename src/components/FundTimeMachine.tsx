@@ -8,20 +8,22 @@ import {
   Zap,
   PiggyBank,
   CalendarDays,
-  Target
+  Target,
+  Search // [新增] 搜尋圖示
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { fundDatabase, generateFundHistory, generateDCAHistory } from '../data/fundData';
 
 const FundTimeMachine = () => {
-  const [mode, setMode] = useState<'lump' | 'dca'>('lump'); // 模式切換
+  const [mode, setMode] = useState<'lump' | 'dca'>('lump'); 
   const [selectedFund, setSelectedFund] = useState("USDEQ3490");
   const [amount, setAmount] = useState(100); // 萬 (單筆)
   const [monthlyAmount, setMonthlyAmount] = useState(10000); // 元 (DCA)
+  const [searchTerm, setSearchTerm] = useState(""); // [新增] 搜尋關鍵字
 
   // 取得基金資訊
   const fundInfo = fundDatabase[selectedFund as keyof typeof fundDatabase];
-  const isGrowth = fundInfo.type === 'growth'; // 是否為成長型
+  const isGrowth = fundInfo.type === 'growth'; 
 
   // 定義顏色主題
   const theme = {
@@ -31,11 +33,19 @@ const FundTimeMachine = () => {
     sliderBg: isGrowth ? 'bg-blue-100' : 'bg-emerald-100',
     sliderAccent: isGrowth ? 'accent-blue-600' : 'accent-emerald-600',
     selectedBorder: isGrowth ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50' : 'border-emerald-500 ring-1 ring-emerald-500 bg-emerald-50',
-    chartStroke: isGrowth ? '#3b82f6' : '#10b981', // 主線條顏色
-    chartFill: isGrowth ? '#3b82f6' : '#10b981',   // 填充顏色
-    chartDivStroke: '#f59e0b', // 配息線固定用黃色
-    chartPrincipal: '#64748b'  // 本金線固定用深灰色
+    chartStroke: isGrowth ? '#3b82f6' : '#10b981', 
+    chartFill: isGrowth ? '#3b82f6' : '#10b981',   
+    chartDivStroke: '#f59e0b', 
+    chartPrincipal: '#64748b'  
   };
+
+  // [新增] 過濾基金清單邏輯
+  const filteredFunds = useMemo(() => {
+    return Object.values(fundDatabase).filter(fund => 
+      fund.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      fund.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [searchTerm]);
 
   // 產生回測數據
   const data = useMemo(() => {
@@ -50,7 +60,6 @@ const FundTimeMachine = () => {
 
   const finalResult = data[data.length - 1];
   const totalPrincipal = finalResult.investedPrincipal;
-  // 計算總報酬率
   const totalReturnRate = ((finalResult.totalReturn - totalPrincipal) / totalPrincipal) * 100;
 
   return (
@@ -101,40 +110,59 @@ const FundTimeMachine = () => {
                  </button>
               </div>
 
-              <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                 <Coins size={20} className={theme.accentColor}/> 設定參數
-              </h3>
-
-              {/* 1. 選擇基金 */}
+              {/* 1. 選擇基金 (含搜尋與卷軸) */}
               <div>
-                 <label className="text-xs font-bold text-slate-500 mb-2 block">選擇基金標的</label>
-                 <div className="grid grid-cols-1 gap-2">
-                    {Object.values(fundDatabase).map((fund) => {
-                       const isThisGrowth = fund.type === 'growth';
-                       return (
-                        <button
-                          key={fund.id}
-                          onClick={() => setSelectedFund(fund.id)}
-                          className={`p-3 rounded-xl border text-left transition-all relative overflow-hidden ${selectedFund === fund.id ? theme.selectedBorder : 'bg-white border-slate-200 hover:bg-slate-50'}`}
-                        >
-                            <div className="flex justify-between items-center relative z-10">
-                              <span className={`font-bold ${selectedFund === fund.id ? (isThisGrowth ? 'text-blue-700' : 'text-emerald-700') : 'text-slate-700'}`}>{fund.id}</span>
-                              <div className="flex gap-1">
-                                <span className={`text-[10px] px-2 py-1 rounded font-bold ${isThisGrowth ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                                    {isThisGrowth ? '⚡ 成長' : '💰 配息'}
-                                </span>
-                                <span className="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-500">{fund.currency}</span>
-                              </div>
-                            </div>
-                            <div className="text-sm text-slate-600 mt-1 relative z-10">{fund.name}</div>
-                        </button>
-                       )
-                    })}
+                 <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs font-bold text-slate-500 block">選擇基金標的</label>
+                    <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-400">{filteredFunds.length} 支</span>
+                 </div>
+                 
+                 {/* [新增] 搜尋框 */}
+                 <div className="relative mb-3">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <input 
+                      type="text" 
+                      placeholder="搜尋代碼 (如 0050) 或名稱..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
+                    />
+                 </div>
+
+                 {/* [新增] 卷軸區域 (高度限制) */}
+                 <div className="grid grid-cols-1 gap-2 max-h-[420px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+                    {filteredFunds.length > 0 ? (
+                        filteredFunds.map((fund) => {
+                           const isThisGrowth = fund.type === 'growth';
+                           return (
+                            <button
+                              key={fund.id}
+                              onClick={() => setSelectedFund(fund.id)}
+                              className={`p-3 rounded-xl border text-left transition-all relative overflow-hidden shrink-0 ${selectedFund === fund.id ? theme.selectedBorder : 'bg-white border-slate-200 hover:bg-slate-50'}`}
+                            >
+                                <div className="flex justify-between items-center relative z-10">
+                                  <span className={`font-bold ${selectedFund === fund.id ? (isThisGrowth ? 'text-blue-700' : 'text-emerald-700') : 'text-slate-700'}`}>{fund.id}</span>
+                                  <div className="flex gap-1">
+                                    <span className={`text-[10px] px-2 py-1 rounded font-bold ${isThisGrowth ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                        {isThisGrowth ? '⚡ 成長' : '💰 配息'}
+                                    </span>
+                                    <span className="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-500">{fund.currency}</span>
+                                  </div>
+                                </div>
+                                <div className="text-sm text-slate-600 mt-1 relative z-10 line-clamp-1">{fund.name}</div>
+                            </button>
+                           )
+                        })
+                    ) : (
+                        <div className="text-center py-8 text-slate-400 text-sm">
+                            找不到相關基金
+                        </div>
+                    )}
                  </div>
               </div>
 
               {/* 2. 投入金額 (根據模式變換) */}
-              <div>
+              <div className="pt-2 border-t border-slate-100">
                  <label className="text-xs font-bold text-slate-500 mb-2 block">
                     {mode === 'lump' ? '成立日單筆投入 (萬)' : '每月定期定額 (元)'}
                  </label>
@@ -203,7 +231,7 @@ const FundTimeMachine = () => {
                  </div>
               </div>
 
-              {/* 卡片 2: 配息 (成長型會隱藏數值或顯示說明) */}
+              {/* 卡片 2: 配息 */}
               <div className={`bg-white p-5 rounded-2xl border shadow-sm relative overflow-hidden ${isGrowth ? 'border-blue-200 bg-blue-50/30' : 'border-emerald-200 bg-emerald-50/30'}`}>
                  <div className={`text-xs font-bold mb-1 ${isGrowth ? 'text-blue-600' : 'text-emerald-600'}`}>
                     {isGrowth ? '累積配息 (累積型)' : '累積領取配息 (現金流)'}
@@ -251,7 +279,6 @@ const FundTimeMachine = () => {
                     <YAxis tickFormatter={(val) => `${(val/10000).toFixed(0)}萬`} width={60} tick={{fontSize:12}} />
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9"/>
                     
-                    {/* [修正] 移除 formatter 中的判斷邏輯，直接顯示數值 */}
                     <Tooltip 
                        labelFormatter={(val) => `${Math.floor(val)}年`}
                        formatter={(value: number) => `$${(value/10000).toFixed(1)}萬`}
@@ -260,7 +287,7 @@ const FundTimeMachine = () => {
                     
                     <Legend />
                     
-                    {/* 1. 總資產 (最底層，無 stackId，避免疊加) */}
+                    {/* 1. 總資產 (最底層) */}
                     <Area 
                         type="monotone" 
                         dataKey="totalReturn" 
@@ -270,7 +297,7 @@ const FundTimeMachine = () => {
                         strokeWidth={3} 
                     />
                     
-                    {/* 2. 累積配息 (僅在配息型基金顯示) */}
+                    {/* 2. 累積配息 (僅配息型顯示) */}
                     {!isGrowth && (
                         <Area 
                             type="monotone" 
@@ -283,7 +310,7 @@ const FundTimeMachine = () => {
                         />
                     )}
 
-                    {/* 3. 投入本金 (最上層，深色虛線，用於比較) */}
+                    {/* 3. 投入本金 (最上層) */}
                     <Area 
                         type="monotone" 
                         dataKey="investedPrincipal" 
@@ -311,5 +338,4 @@ const FundTimeMachine = () => {
   );
 };
 
-// 確保 Default Export 在最後
 export default FundTimeMachine;
