@@ -46,6 +46,49 @@ export const fundDatabase = {
       { year: 2024, nav: 7.85,  rate: 1 },
     ]
   },
+  // [新增] 貝萊德世界科技 (配息版)
+  "MLE24": {
+    id: "MLE24",
+    name: "貝萊德世界科技基金A10 (美元配息)",
+    currency: "USD",
+    type: "income", 
+    inceptionDate: "2019-12-18", 
+    startNav: 10.0,
+    currentNav: 13.5, 
+    avgYield: 6.5, 
+    desc: "科技股的高成長爆發力 + 月配息現金流，適合積極型領息族。",
+    historyNodes: [
+      { year: 2019, nav: 10.0, rate: 30.1 },
+      { year: 2020, nav: 14.5, rate: 28.5 }, 
+      { year: 2021, nav: 16.2, rate: 27.8 }, 
+      { year: 2022, nav: 9.8,  rate: 29.7 }, 
+      { year: 2023, nav: 12.5, rate: 31.1 }, 
+      { year: 2024, nav: 13.5, rate: 32.4 }, 
+    ]
+  },
+  // [新增] 摩根多重收益
+  "JPF11": {
+    id: "JPF11",
+    name: "摩根多重收益基金-A股 (美元對沖)",
+    currency: "USD",
+    type: "income",
+    inceptionDate: "2012-01-13",
+    startNav: 10.0,
+    currentNav: 8.35,
+    avgYield: 7.8, 
+    desc: "廣納全球收益資產，波動相對股票低，追求長期穩健現金流。",
+    historyNodes: [
+      { year: 2012, nav: 10.0, rate: 29.8 },
+      { year: 2014, nav: 10.5, rate: 30.3 },
+      { year: 2016, nav: 9.8,  rate: 32.2 },
+      { year: 2018, nav: 9.2,  rate: 30.1 },
+      { year: 2020, nav: 9.5,  rate: 29.5 },
+      { year: 2021, nav: 10.1, rate: 27.8 },
+      { year: 2022, nav: 8.2,  rate: 29.7 },
+      { year: 2023, nav: 8.3,  rate: 31.1 },
+      { year: 2024, nav: 8.35, rate: 32.4 },
+    ]
+  },
 
   // ==========================================
   // 2. 台股基金 - 成長型 (Growth)
@@ -58,7 +101,7 @@ export const fundDatabase = {
     inceptionDate: "2001-07-01", 
     startNav: 10.0,
     currentNav: 155.0, 
-    avgYield: 0, 
+    avgYield: 0, // 成長型不配息
     desc: "鎖定高科技成長股，淨值波動大但長期爆發力極強，不配息。",
     historyNodes: [
       { year: 2001, nav: 10.0, rate: 1 },
@@ -82,7 +125,7 @@ export const fundDatabase = {
     inceptionDate: "2000-04-11", 
     startNav: 10.0,
     currentNav: 110.0, 
-    avgYield: 0, 
+    avgYield: 0, // 成長型不配息
     desc: "投資台股績優權值股與高成長潛力股，追求長期資本增值，不配息。",
     historyNodes: [
       { year: 2000, nav: 10.0, rate: 1 },
@@ -190,7 +233,7 @@ export const generateFundHistory = (fundId: string, initialAmountTwd: number) =>
 };
 
 // =========================================================
-// 計算邏輯 2：定期定額 (DCA) - [新增功能]
+// 計算邏輯 2：定期定額 (DCA)
 // =========================================================
 export const generateDCAHistory = (fundId: string, monthlyAmountTwd: number) => {
   const fund = fundDatabase[fundId as keyof typeof fundDatabase];
@@ -216,14 +259,11 @@ export const generateDCAHistory = (fundId: string, monthlyAmountTwd: number) => 
       const investedThisMonth = monthlyAmountTwd;
       totalInvestedPrincipal += investedThisMonth;
       
-      // 計算本月買到的單位數
-      // 如果是台幣：直接除以淨值
-      // 如果是美元：先換成美元，再除以淨值
       const amountFundCurrency = fund.currency === 'USD' ? investedThisMonth / currentRate : investedThisMonth;
       const unitsBought = amountFundCurrency / currentNav;
       totalUnits += unitsBought;
 
-      // 2. 計算配息 (針對目前累積的總單位數)
+      // 2. 計算配息
       let monthlyDivTwd = 0;
       if (fund.avgYield > 0) {
         const monthlyDivPerUnit = (currentNav * (fund.avgYield / 100)) / 12; 
@@ -241,7 +281,7 @@ export const generateDCAHistory = (fundId: string, monthlyAmountTwd: number) => 
         year: nodeA.year + progress,
         nav: currentNav,
         rate: currentRate,
-        investedPrincipal: totalInvestedPrincipal, // 本金是持續增加的
+        investedPrincipal: totalInvestedPrincipal,
         assetValueTwd: Math.round(assetValueTwd),
         cumulativeDividends: Math.round(cumulativeDividendsTwd),
         totalReturn: Math.round(assetValueTwd + cumulativeDividendsTwd)
@@ -249,7 +289,6 @@ export const generateDCAHistory = (fundId: string, monthlyAmountTwd: number) => 
     }
   }
   
-  // Last Node Calculation
   const lastNode = nodes[nodes.length-1];
   const lastAssetTwd = fund.currency === 'USD' ? (totalUnits * lastNode.nav) * lastNode.rate : (totalUnits * lastNode.nav);
     
