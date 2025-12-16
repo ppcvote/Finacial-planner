@@ -8,7 +8,9 @@ import {
   Frown, 
   CheckCircle2, 
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  TrendingUp, // 新增圖示
+  Percent     // 新增圖示
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceLine } from 'recharts';
 
@@ -21,9 +23,10 @@ export const LaborPensionTool = ({ data, setData }: any) => {
     selfContribution: Boolean(data?.selfContribution),
     pensionReturnRate: Number(data?.pensionReturnRate) || 3, 
     desiredMonthlyIncome: Number(data?.desiredMonthlyIncome) || 60000,
-    inflationRate: Number(data?.inflationRate) || 2 // 通膨率
+    inflationRate: data?.inflationRate !== undefined ? Number(data.inflationRate) : 2.5, // 預設通膨 2.5%
+    pensionDiscount: data?.pensionDiscount !== undefined ? Number(data.pensionDiscount) : 70 // 預設勞保 70%
   };
-  const { currentAge, retireAge, salary, laborInsYears, selfContribution, pensionReturnRate, desiredMonthlyIncome } = safeData;
+  const { currentAge, retireAge, salary, laborInsYears, selfContribution, pensionReturnRate, desiredMonthlyIncome, inflationRate, pensionDiscount } = safeData;
 
   // --- Local State for Inputs ---
   const [tempCurrentAge, setTempCurrentAge] = useState<string | number>(currentAge);
@@ -35,13 +38,24 @@ export const LaborPensionTool = ({ data, setData }: any) => {
   useEffect(() => { setTempRetireAge(retireAge); }, [retireAge]);
   useEffect(() => { setTempSalary(salary); }, [salary]);
 
-  // --- 計算核心 ---
+  // --- 計算核心 (已植入通膨與打折邏輯) ---
   const calculations = useMemo(() => {
+      // 0. 時間參數
+      const yearsToRetire = Math.max(0, retireAge - currentAge);
+      const monthsToInvest = yearsToRetire * 12;
+
+      // [核心變更 1] 真實需求：考慮通膨後的未來終值 (FV)
+      // FV = PV * (1 + r)^n
+      const futureDesiredIncome = Math.round(desiredMonthlyIncome * Math.pow(1 + inflationRate / 100, yearsToRetire));
+
       // 1. 勞保年金 (Labor Insurance)
       // 2024年最高投保薪資級距 45,800
       const maxLaborInsSalary = 45800;
       const laborInsBase = Math.min(Math.max(salary, 26400), maxLaborInsSalary);
-      const laborInsMonthly = Math.round(laborInsBase * laborInsYears * 0.0155);
+      const rawLaborInsMonthly = Math.round(laborInsBase * laborInsYears * 0.0155);
+      
+      // [核心變更 2] 勞保打折模擬
+      const laborInsMonthly = Math.round(rawLaborInsMonthly * (pensionDiscount / 100));
 
       // 2. 勞退新制 (Labor Pension)
       // 勞退提撥工資上限目前為 150,000
@@ -49,8 +63,6 @@ export const LaborPensionTool = ({ data, setData }: any) => {
       const contributionRate = 0.06 + (selfContribution ? 0.06 : 0);
       const monthlyContribution = Math.round(pensionBase * contributionRate);
       
-      const yearsToInvest = Math.max(0, retireAge - currentAge);
-      const monthsToInvest = yearsToInvest * 12;
       const monthlyRate = pensionReturnRate / 100 / 12;
       
       const pensionFutureValue = monthlyContribution * ((Math.pow(1 + monthlyRate, monthsToInvest) - 1) / monthlyRate);
@@ -61,31 +73,33 @@ export const LaborPensionTool = ({ data, setData }: any) => {
       // 3. 自提節稅效益 (簡易估算，假設稅率 5%)
       const annualTaxSaving = selfContribution ? Math.round(pensionBase * 0.06 * 12 * 0.05) : 0;
 
-      // 4. 缺口計算
+      // 4. 缺口計算 (使用通膨後的真實需求來減)
       const totalPension = laborInsMonthly + pensionMonthly;
-      const gap = Math.max(0, desiredMonthlyIncome - totalPension);
+      const gap = Math.max(0, futureDesiredIncome - totalPension);
 
-      // 5. 延遲成本
+      // 5. 延遲成本 (計算基礎也隨之變大)
       const investRateForGap = 0.06 / 12;
       const targetGapFund = gap * 240; 
       
       const monthlySaveNow = Math.round(targetGapFund * investRateForGap / (Math.pow(1 + investRateForGap, monthsToInvest) - 1));
       
-      const monthsToInvestLater = (yearsToInvest - 10) * 12;
+      const monthsToInvestLater = (yearsToRetire - 10) * 12;
       const monthlySaveLater = monthsToInvestLater > 0 
         ? Math.round(targetGapFund * investRateForGap / (Math.pow(1 + investRateForGap, monthsToInvestLater) - 1))
         : 0;
 
       return {
+          futureDesiredIncome, // 回傳未來需求
           laborInsMonthly,
           pensionMonthly,
           totalPension,
           gap,
           annualTaxSaving,
           monthlySaveNow,
-          monthlySaveLater
+          monthlySaveLater,
+          yearsToRetire
       };
-  }, [salary, laborInsYears, selfContribution, pensionReturnRate, currentAge, retireAge, desiredMonthlyIncome]);
+  }, [salary, laborInsYears, selfContribution, pensionReturnRate, currentAge, retireAge, desiredMonthlyIncome, inflationRate, pensionDiscount]);
 
   const chartData = [
     {
@@ -107,7 +121,6 @@ export const LaborPensionTool = ({ data, setData }: any) => {
 
   const finalizeSalary = () => {
       let finalVal = Number(tempSalary) || 26400; 
-      // [修正] 上限改為 50 萬
       finalVal = Math.max(26400, Math.min(500000, finalVal)); 
       setData({ ...safeData, salary: finalVal });
       setTempSalary(finalVal);
@@ -150,10 +163,10 @@ export const LaborPensionTool = ({ data, setData }: any) => {
             </span>
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold mb-2 tracking-tight flex items-center gap-3">
-            退休缺口試算
+            退休缺口試算 (殘酷版)
           </h1>
           <p className="text-slate-300 text-lg opacity-90 max-w-2xl">
-            別讓「覺得還久」成為您晚年最大的遺憾。精算三大支柱，找出潛藏的財務黑洞。
+            別讓「覺得還久」成為您晚年最大的遺憾。加入 <span className="text-yellow-400 font-bold">通膨</span> 與 <span className="text-rose-400 font-bold">勞保打折</span> 因子，還原真實退休樣貌。
           </p>
         </div>
       </div>
@@ -198,7 +211,7 @@ export const LaborPensionTool = ({ data, setData }: any) => {
                    </div>
                </div>
 
-               {/* 薪資輸入 (修正：上限 50 萬) */}
+               {/* 薪資輸入 */}
                <div>
                    <div className="flex justify-between items-center mb-2">
                        <label className="text-sm font-medium text-slate-600">目前月薪</label>
@@ -207,7 +220,7 @@ export const LaborPensionTool = ({ data, setData }: any) => {
                            <input 
                                type="number"
                                min={26400}
-                               max={500000} // [修正] 上限 50 萬
+                               max={500000}
                                step={100}
                                value={tempSalary.toString()}
                                onChange={handleSalaryInput}
@@ -220,7 +233,7 @@ export const LaborPensionTool = ({ data, setData }: any) => {
                    <input 
                        type="range" 
                        min={20000} 
-                       max={500000} // [修正] 上限 50 萬
+                       max={500000} 
                        step={1000} 
                        value={salary} 
                        onChange={(e) => updateField('salary', Number(e.target.value))} 
@@ -248,10 +261,43 @@ export const LaborPensionTool = ({ data, setData }: any) => {
                {/* 理想退休金 */}
                <div className="pt-4 border-t border-slate-100">
                    <div className="flex justify-between items-center mb-2">
-                       <label className="text-sm font-bold text-rose-600 flex items-center gap-1"><Smile size={14}/> 理想退休月薪</label>
+                       <label className="text-sm font-bold text-rose-600 flex items-center gap-1"><Smile size={14}/> 理想退休月薪 (現值)</label>
                        <span className="font-mono font-bold text-rose-600 text-lg">${desiredMonthlyIncome.toLocaleString()}</span>
                    </div>
                    <input type="range" min={30000} max={150000} step={2000} value={desiredMonthlyIncome} onChange={(e) => updateField('desiredMonthlyIncome', Number(e.target.value))} className="w-full h-2 bg-rose-100 rounded-lg accent-rose-500" />
+               </div>
+
+               {/* [新增區塊] 隱藏風險因子 */}
+               <div className="pt-4 border-t border-slate-100 space-y-4">
+                  <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                    <AlertTriangle size={12}/> 隱藏風險因子 (Reality Check)
+                  </h5>
+                  
+                  {/* 通膨率 */}
+                  <div>
+                     <div className="flex justify-between items-center mb-1">
+                        <label className="text-xs font-bold text-slate-600 flex items-center gap-1"><TrendingUp size={12}/> 預估年通膨率</label>
+                        <span className="font-mono font-bold text-slate-700 text-sm">{inflationRate}%</span>
+                     </div>
+                     <input type="range" min={0} max={5} step={0.5} value={inflationRate} onChange={(e) => updateField('inflationRate', Number(e.target.value))} className="w-full h-2 bg-yellow-100 rounded-lg accent-yellow-500" />
+                     <div className="text-[10px] text-slate-400 mt-1 flex justify-between">
+                        <span>0% (不可能)</span>
+                        <span>2.5% (平均)</span>
+                        <span>5% (惡性)</span>
+                     </div>
+                  </div>
+
+                  {/* 勞保打折 */}
+                  <div>
+                     <div className="flex justify-between items-center mb-1">
+                        <label className="text-xs font-bold text-slate-600 flex items-center gap-1"><Percent size={12}/> 勞保預期給付率</label>
+                        <span className={`font-mono font-bold text-sm ${pensionDiscount < 100 ? 'text-rose-600' : 'text-emerald-600'}`}>{pensionDiscount}%</span>
+                     </div>
+                     <input type="range" min={50} max={100} step={5} value={pensionDiscount} onChange={(e) => updateField('pensionDiscount', Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg accent-slate-500" />
+                     <div className="text-[10px] text-slate-400 mt-1 text-right">
+                        {pensionDiscount === 100 ? '樂觀: 不破產' : '悲觀: 年金改革縮水'}
+                     </div>
+                  </div>
                </div>
 
                {/* 勞退自提開關 */}
@@ -287,7 +333,12 @@ export const LaborPensionTool = ({ data, setData }: any) => {
              {/* Chart Area */}
              <div className="flex-1 h-full relative">
                 <div className="flex justify-between items-center mb-4 pl-2 border-l-4 border-rose-500">
-                    <h4 className="font-bold text-slate-700">退休金結構金字塔</h4>
+                    <div>
+                      <h4 className="font-bold text-slate-700">退休金結構 (未來價值)</h4>
+                      <div className="text-xs text-rose-500 font-bold mt-0.5 flex items-center gap-1">
+                         <AlertTriangle size={10}/> 已計入通膨 {inflationRate}% 與勞保打 {pensionDiscount/10} 折
+                      </div>
+                    </div>
                     <span className="text-xs text-slate-400">單位：新台幣/月</span>
                 </div>
                 <ResponsiveContainer width="100%" height="85%">
@@ -301,12 +352,12 @@ export const LaborPensionTool = ({ data, setData }: any) => {
                             formatter={(value: number) => `$${value.toLocaleString()}`}
                         />
                         <Legend />
-                        <ReferenceLine y={desiredMonthlyIncome} stroke="#e11d48" strokeDasharray="3 3" label={{ position: 'right', value: '理想目標', fill: '#e11d48', fontSize: 12, fontWeight: 'bold' }} />
+                        <ReferenceLine y={calculations.futureDesiredIncome} stroke="#e11d48" strokeDasharray="3 3" label={{ position: 'right', value: '真實需求(通膨後)', fill: '#e11d48', fontSize: 12, fontWeight: 'bold' }} />
                         
                         {/* Stacked Bars simulating a Pyramid hierarchy */}
                         <Bar dataKey="財務缺口" stackId="a" fill="#f43f5e" barSize={80} name="缺口 (需自行準備)" radius={[4, 4, 0, 0]} />
                         <Bar dataKey="勞退月領" stackId="a" fill={selfContribution ? "#10b981" : "#3b82f6"} barSize={100} name={selfContribution ? "勞退 (含自提)" : "勞退 (僅雇主)"} />
-                        <Bar dataKey="勞保年金" stackId="a" fill="#94a3b8" barSize={120} name="勞保年金 (基礎)" radius={[0, 0, 4, 4]} />
+                        <Bar dataKey="勞保年金" stackId="a" fill="#94a3b8" barSize={120} name="勞保年金 (打折後)" radius={[0, 0, 4, 4]} />
                     </BarChart>
                 </ResponsiveContainer>
              </div>
@@ -318,12 +369,12 @@ export const LaborPensionTool = ({ data, setData }: any) => {
                  <div className="bg-rose-50 p-4 rounded-xl border border-rose-100 text-center animate-pulse-soft">
                      <div className="flex items-center justify-center gap-2 mb-1">
                          <AlertTriangle size={18} className="text-rose-500"/>
-                         <span className="text-sm font-bold text-rose-800">每月缺口</span>
+                         <span className="text-sm font-bold text-rose-800">真實每月缺口</span>
                      </div>
                      <p className="text-3xl font-black text-rose-600 font-mono">
                          ${calculations.gap.toLocaleString()}
                      </p>
-                     <p className="text-xs text-rose-400 mt-2">不補足只能「生存」，無法「生活」</p>
+                     <p className="text-xs text-rose-400 mt-2">目標金額因通膨增至 <br/> <span className="font-bold underline">${calculations.futureDesiredIncome.toLocaleString()}</span> /月</p>
                  </div>
 
                  {/* Coverage Stats */}
@@ -333,8 +384,8 @@ export const LaborPensionTool = ({ data, setData }: any) => {
                          <span className="font-bold text-slate-700">${calculations.totalPension.toLocaleString()}</span>
                      </div>
                      <div className="flex justify-between items-center text-sm p-2 bg-slate-50 rounded-lg">
-                         <span className="text-slate-500">所得替代率</span>
-                         <span className="font-bold text-blue-600">{Math.round(calculations.totalPension / salary * 100)}%</span>
+                         <span className="text-slate-500">實際所得替代率</span>
+                         <span className="font-bold text-blue-600">{Math.round(calculations.totalPension / calculations.futureDesiredIncome * 100)}%</span>
                      </div>
                  </div>
 
@@ -350,25 +401,25 @@ export const LaborPensionTool = ({ data, setData }: any) => {
                       <Frown size={32} className="text-slate-400"/>
                   </div>
                   <p className="text-2xl font-bold text-slate-600 mb-1">${calculations.totalPension.toLocaleString()} <span className="text-sm font-normal">/月</span></p>
-                  <p className="text-sm text-slate-500 font-bold mb-4">勉強溫飽型</p>
+                  <p className="text-sm text-slate-500 font-bold mb-4">下流老人風險</p>
                   <ul className="text-xs text-slate-500 space-y-2">
-                      <li className="flex gap-2"><span className="text-slate-400">●</span> 僅能應付基本食宿開銷</li>
-                      <li className="flex gap-2"><span className="text-slate-400">●</span> 生病需依賴子女或政府補助</li>
-                      <li className="flex gap-2"><span className="text-slate-400">●</span> 無法負擔旅遊或休閒娛樂</li>
+                      <li className="flex gap-2"><span className="text-slate-400">●</span> 僅能應付 {Math.round(calculations.totalPension / calculations.futureDesiredIncome * 100)}% 的生活開銷</li>
+                      <li className="flex gap-2"><span className="text-slate-400">●</span> 勞保打折後，醫療支出將成重擔</li>
+                      <li className="flex gap-2"><span className="text-slate-400">●</span> 無法抵抗通膨帶來的資產縮水</li>
                   </ul>
               </div>
 
               {/* 理想 */}
               <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-5 border border-emerald-100 shadow-md">
                   <div className="flex justify-between items-start mb-4">
-                      <div className="bg-emerald-500 text-white px-2 py-1 rounded text-xs font-bold">理想目標</div>
+                      <div className="bg-emerald-500 text-white px-2 py-1 rounded text-xs font-bold">理想目標 (未來值)</div>
                       <Smile size={32} className="text-emerald-500"/>
                   </div>
-                  <p className="text-2xl font-bold text-emerald-700 mb-1">${desiredMonthlyIncome.toLocaleString()} <span className="text-sm font-normal">/月</span></p>
-                  <p className="text-sm text-emerald-600 font-bold mb-4">尊嚴享樂型</p>
+                  <p className="text-2xl font-bold text-emerald-700 mb-1">${calculations.futureDesiredIncome.toLocaleString()} <span className="text-sm font-normal">/月</span></p>
+                  <p className="text-sm text-emerald-600 font-bold mb-4">尊嚴抗通膨型</p>
                   <ul className="text-xs text-emerald-700/80 space-y-2">
-                      <li className="flex gap-2"><CheckCircle2 size={14} className="text-emerald-500"/> 飲食自由，偶爾享受大餐</li>
-                      <li className="flex gap-2"><CheckCircle2 size={14} className="text-emerald-500"/> 每年一次國外旅遊</li>
+                      <li className="flex gap-2"><CheckCircle2 size={14} className="text-emerald-500"/> 購買力維持，便當漲價也不怕</li>
+                      <li className="flex gap-2"><CheckCircle2 size={14} className="text-emerald-500"/> 已考慮 {calculations.yearsToRetire} 年後的物價水準</li>
                       <li className="flex gap-2"><CheckCircle2 size={14} className="text-emerald-500"/> 擁有高品質醫療照護能力</li>
                   </ul>
               </div>
@@ -388,7 +439,7 @@ export const LaborPensionTool = ({ data, setData }: any) => {
           </div>
           
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-              <p className="text-sm text-slate-500 mb-4">為了補足 <strong>${calculations.gap.toLocaleString()}</strong> 的缺口，您需要每月投資：</p>
+              <p className="text-sm text-slate-500 mb-4">為了補足 <strong>${calculations.gap.toLocaleString()}</strong> 的真實缺口，您需要每月投資：</p>
               
               <div className="flex items-center gap-4 mb-6">
                   <div className="flex-1">
