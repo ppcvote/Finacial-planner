@@ -25,10 +25,10 @@ export const LaborPensionTool = ({ data, setData }: any) => {
   };
   const { currentAge, retireAge, salary, laborInsYears, selfContribution, pensionReturnRate, desiredMonthlyIncome } = safeData;
 
-  // --- Local State for Inputs (解決輸入卡頓與級距問題) ---
-  const [tempCurrentAge, setTempCurrentAge] = useState(currentAge);
-  const [tempRetireAge, setTempRetireAge] = useState(retireAge);
-  const [tempSalary, setTempSalary] = useState(salary);
+  // --- Local State for Inputs (解決輸入卡頓與前導零問題) ---
+  const [tempCurrentAge, setTempCurrentAge] = useState<string | number>(currentAge);
+  const [tempRetireAge, setTempRetireAge] = useState<string | number>(retireAge);
+  const [tempSalary, setTempSalary] = useState<string | number>(salary);
 
   // 當外部數據更新時（例如重置或雲端載入），同步回本地暫存
   useEffect(() => { setTempCurrentAge(currentAge); }, [currentAge]);
@@ -95,32 +95,39 @@ export const LaborPensionTool = ({ data, setData }: any) => {
     }
   ];
 
-  // --- UI Handlers ---
+  // --- UI Handlers (更穩健的輸入處理) ---
   const updateField = (field: string, value: number) => { 
       setData({ ...safeData, [field]: value }); 
   };
 
   const handleSalaryInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setTempSalary(Number(e.target.value));
+      // 允許暫時為空字串，方便刪除修改
+      setTempSalary(e.target.value === '' ? '' : Number(e.target.value));
   };
 
   const finalizeSalary = () => {
-      let finalVal = Number(tempSalary);
+      let finalVal = Number(tempSalary) || 26400; // 防呆：若是空值或0則預設26400
       finalVal = Math.max(26400, Math.min(200000, finalVal)); // 限制範圍
       setData({ ...safeData, salary: finalVal });
       setTempSalary(finalVal);
   };
 
-  const finalizeAge = (field: 'currentAge' | 'retireAge', val: number) => {
-      let finalVal = val;
+  const handleAgeInput = (field: 'currentAge' | 'retireAge', val: string) => {
+      if (field === 'currentAge') setTempCurrentAge(val === '' ? '' : Number(val));
+      else setTempRetireAge(val === '' ? '' : Number(val));
+  };
+
+  const finalizeAge = (field: 'currentAge' | 'retireAge') => {
       if (field === 'currentAge') {
-          finalVal = Math.max(18, Math.min(retireAge - 1, finalVal)); // 不能大於退休年齡
-          setData({ ...safeData, currentAge: finalVal });
-          setTempCurrentAge(finalVal);
+          let val = Number(tempCurrentAge) || 18;
+          val = Math.max(18, Math.min(retireAge - 1, val));
+          setData({ ...safeData, currentAge: val });
+          setTempCurrentAge(val);
       } else {
-          finalVal = Math.max(currentAge + 1, Math.min(80, finalVal)); // 不能小於目前年齡
-          setData({ ...safeData, retireAge: finalVal });
-          setTempRetireAge(finalVal);
+          let val = Number(tempRetireAge) || 65;
+          val = Math.max(currentAge + 1, Math.min(80, val));
+          setData({ ...safeData, retireAge: val });
+          setTempRetireAge(val);
       }
   };
 
@@ -160,16 +167,16 @@ export const LaborPensionTool = ({ data, setData }: any) => {
             </h4>
             <div className="space-y-6">
                
-               {/* 年齡設定 (優化輸入體驗) */}
+               {/* 年齡設定 (使用 toString() 解決前導零) */}
                <div className="grid grid-cols-2 gap-4">
                    <div>
                        <label className="text-xs font-bold text-slate-500 mb-1 block">目前年齡</label>
                        <div className="relative">
                            <input 
                                type="number" 
-                               value={tempCurrentAge} 
-                               onChange={(e) => setTempCurrentAge(Number(e.target.value))}
-                               onBlur={() => finalizeAge('currentAge', tempCurrentAge)}
+                               value={tempCurrentAge.toString()} 
+                               onChange={(e) => handleAgeInput('currentAge', e.target.value)}
+                               onBlur={() => finalizeAge('currentAge')}
                                className="w-full p-2 border rounded-lg font-bold text-slate-700 bg-slate-50 border-slate-200" 
                            />
                            <span className="absolute right-3 top-2 text-slate-400 text-xs">歲</span>
@@ -180,9 +187,9 @@ export const LaborPensionTool = ({ data, setData }: any) => {
                        <div className="relative">
                            <input 
                                type="number" 
-                               value={tempRetireAge} 
-                               onChange={(e) => setTempRetireAge(Number(e.target.value))}
-                               onBlur={() => finalizeAge('retireAge', tempRetireAge)}
+                               value={tempRetireAge.toString()} 
+                               onChange={(e) => handleAgeInput('retireAge', e.target.value)}
+                               onBlur={() => finalizeAge('retireAge')}
                                className="w-full p-2 border rounded-lg font-bold text-blue-600 bg-blue-50 border-blue-200" 
                            />
                            <span className="absolute right-3 top-2 text-slate-400 text-xs">歲</span>
@@ -190,7 +197,7 @@ export const LaborPensionTool = ({ data, setData }: any) => {
                    </div>
                </div>
 
-               {/* 薪資輸入 (修正百位數問題 & 增加輸入框) */}
+               {/* 薪資輸入 */}
                <div>
                    <div className="flex justify-between items-center mb-2">
                        <label className="text-sm font-medium text-slate-600">目前月薪</label>
@@ -201,7 +208,7 @@ export const LaborPensionTool = ({ data, setData }: any) => {
                                min={26400}
                                max={200000}
                                step={100}
-                               value={tempSalary}
+                               value={tempSalary.toString()}
                                onChange={handleSalaryInput}
                                onBlur={finalizeSalary}
                                onKeyDown={(e) => { if (e.key === 'Enter') { finalizeSalary(); e.currentTarget.blur(); } }}
@@ -220,12 +227,21 @@ export const LaborPensionTool = ({ data, setData }: any) => {
                    />
                </div>
 
+               {/* 勞保年資 (修正：上限提升至 60) */}
                <div>
                    <div className="flex justify-between items-center mb-2">
                        <label className="text-sm font-medium text-slate-600">預計勞保年資</label>
                        <span className="font-mono font-bold text-slate-700 text-lg">{laborInsYears} 年</span>
                    </div>
-                   <input type="range" min={15} max={45} step={1} value={laborInsYears} onChange={(e) => updateField('laborInsYears', Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg accent-slate-600" />
+                   <input 
+                     type="range" 
+                     min={15} 
+                     max={60} // [修正] 上限提升
+                     step={1} 
+                     value={laborInsYears} 
+                     onChange={(e) => updateField('laborInsYears', Number(e.target.value))} 
+                     className="w-full h-2 bg-slate-200 rounded-lg accent-slate-600" 
+                   />
                </div>
 
                {/* 理想退休金 */}
