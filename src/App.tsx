@@ -2,34 +2,41 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
   GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key, 
-  ChevronLeft, Users, ShieldCheck, Activity, History // [新增] History Icon
+  ChevronLeft, Users, ShieldCheck, Activity, History 
 } from 'lucide-react';
 
 import { 
   signInWithPopup, signOut, onAuthStateChanged, signInWithEmailAndPassword, 
   signInWithRedirect, getRedirectResult 
 } from 'firebase/auth';
-import { doc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore';
+
+// [重點] 引入 getDoc 用於讀取舊 Session
+import { doc, setDoc, onSnapshot, Timestamp, getDoc } from 'firebase/firestore';
 
 import { auth, db, googleProvider } from './firebase'; 
 import ReportModal from './components/ReportModal';
 import ClientDashboard from './components/ClientDashboard';
 import SplashScreen from './components/SplashScreen'; 
 
-// --- 從各個獨立檔案匯入工具 (具名匯入) ---
+// --- 工具匯入 ---
 import { FinancialRealEstateTool } from './components/FinancialRealEstateTool';
 import { StudentLoanTool } from './components/StudentLoanTool';
 import { SuperActiveSavingTool } from './components/SuperActiveSavingTool';
 import { CarReplacementTool } from './components/CarReplacementTool';
-import { LaborPensionTool } from './components/LaborPensionTool';
+import { LaborPensionTool } from './components/LaborPensionTool'; // 剛修好的退休缺口
 import { BigSmallReservoirTool } from './components/BigSmallReservoirTool';
 import { TaxPlannerTool } from './components/TaxPlannerTool';
+import MillionDollarGiftTool from './components/MillionDollarGiftTool'; // 剛修好的百萬禮物
 
-// --- Default Import (無大括號) ---
+// --- Default Import ---
 import MarketDataZone from './components/MarketDataZone'; 
-import MillionDollarGiftTool from './components/MillionDollarGiftTool';
 import GoldenSafeVault from './components/GoldenSafeVault'; 
-import FundTimeMachine from './components/FundTimeMachine'; // [新增] 基金時光機
+import FundTimeMachine from './components/FundTimeMachine'; 
+
+// ------------------------------------------------------------------
+// Helper: 產生隨機 Session ID
+// ------------------------------------------------------------------
+const generateSessionId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
 
 // ------------------------------------------------------------------
 // UI Components
@@ -118,7 +125,7 @@ export default function App() {
   const defaultStates = {
     golden_safe: { mode: 'time', amount: 60000, years: 10, rate: 6, isLocked: false }, 
     market_data: {}, 
-    fund_machine: {}, // [新增]
+    fund_machine: {}, 
     gift: { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 },
     estate: { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6, existingLoanBalance: 700, existingMonthlyPayment: 38000 },
     student: { loanAmount: 40, investReturnRate: 6, years: 8, gracePeriod: 1, interestOnlyPeriod: 0, isQualified: false },
@@ -141,6 +148,90 @@ export default function App() {
 
   const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
 
+  // =================================================================
+  // [核心] 安全機制：雙裝置限制 (Max 2 Concurrent Sessions)
+  // =================================================================
+  
+  // 1. 登入成功後，註冊裝置 ID (FIFO 機制)
+  const registerDeviceSession = async (uid: string) => {
+    const newSessionId = generateSessionId();
+    localStorage.setItem('my_app_session_id', newSessionId); // 存入本地
+
+    const metaRef = doc(db, 'users', uid, 'system', 'metadata');
+    
+    try {
+        // 讀取目前的 sessions
+        const docSnap = await getDoc(metaRef);
+        let activeSessions: string[] = [];
+        
+        if (docSnap.exists() && docSnap.data().activeSessions) {
+            activeSessions = docSnap.data().activeSessions;
+        }
+
+        // 加入新 ID
+        activeSessions.push(newSessionId);
+
+        // 限制數量 (保留最新的 2 個)
+        const MAX_DEVICES = 2; 
+        if (activeSessions.length > MAX_DEVICES) {
+            // 切掉舊的，只留最後 MAX_DEVICES 個
+            activeSessions = activeSessions.slice(activeSessions.length - MAX_DEVICES);
+        }
+
+        // 寫回資料庫
+        await setDoc(metaRef, {
+            activeSessions: activeSessions,
+            lastLoginTime: Timestamp.now(),
+            deviceInfo: navigator.userAgent
+        }, { merge: true });
+
+    } catch (error) {
+        console.error("Session update failed:", error);
+    }
+  };
+
+  // 2. 隨時監聽：我是否被踢出？
+  useEffect(() => {
+    if (!user) return;
+
+    // [強制升級] 檢查本地是否有 Session ID
+    const localSessionId = localStorage.getItem('my_app_session_id');
+    if (!localSessionId) {
+        // 如果已登入但沒有 ID (舊用戶)，強制登出以進行升級
+        console.warn("Detected legacy session, forcing logout for upgrade.");
+        signOut(auth).then(() => {
+            alert("系統安全性升級 (啟用雙裝置防護)。\n請重新登入。");
+            window.location.reload();
+        });
+        return;
+    }
+
+    const userMetaRef = doc(db, 'users', user.uid, 'system', 'metadata');
+    const unsubscribe = onSnapshot(userMetaRef, async (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const activeSessions: string[] = data.activeSessions || [];
+            
+            // 邏輯：如果資料庫有記錄，且我的本地 ID 不在白名單內 -> 代表我被踢了
+            // (activeSessions.length > 0 是為了避免剛初始化時誤判)
+            if (activeSessions.length > 0 && !activeSessions.includes(localSessionId)) {
+                console.warn("裝置數量超過限制，此裝置已被登出");
+                
+                // 清除本地 ID 避免無限迴圈
+                localStorage.removeItem('my_app_session_id');
+                
+                await signOut(auth);
+                alert("您的帳號已在第 3 台裝置登入。\n系統限制同時使用 2 台裝置 (如: 手機+平板)。\n最舊的連線已自動登出。");
+                window.location.reload();
+            }
+        }
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // =================================================================
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setMinSplashTimePassed(true);
@@ -150,7 +241,12 @@ export default function App() {
 
   useEffect(() => {
     const checkRedirect = async () => {
-      try { await getRedirectResult(auth); } catch (e) { console.error(e); }
+      try { 
+        const result = await getRedirectResult(auth);
+        if (result && result.user) {
+            await registerDeviceSession(result.user.uid); // Redirect 登入也要註冊
+        }
+      } catch (e) { console.error(e); }
     };
     checkRedirect();
 
@@ -166,7 +262,7 @@ export default function App() {
   }, []);
 
 
-  // --- 3. 客戶資料載入 ---
+  // --- 客戶資料載入 ---
   useEffect(() => {
       if (!user || !currentClient) {
           setIsDataLoaded(false);
@@ -203,7 +299,7 @@ export default function App() {
   }, [currentClient?.id, user]); 
 
 
-  // --- 4. 自動儲存邏輯 ---
+  // --- 自動儲存 ---
   useEffect(() => {
     if (!user || !currentClient || !isDataLoaded) return;
 
@@ -246,19 +342,31 @@ export default function App() {
          await signInWithRedirect(auth, googleProvider);
          return;
     }
-    try { await signInWithPopup(auth, googleProvider); } catch (e: any) { console.error(e); showToast("登入失敗", "error"); } 
+    try { 
+       const result = await signInWithPopup(auth, googleProvider); 
+       // [新增] 登入成功後註冊裝置
+       if (result.user) {
+          await registerDeviceSession(result.user.uid);
+       }
+    } catch (e: any) { console.error(e); showToast("登入失敗", "error"); } 
   };
   
   const handleEmailLogin = async () => {
     if (!testEmail || !testPassword) { showToast("請輸入 Email 和密碼", "error"); return; }
     try {
-      await signInWithEmailAndPassword(auth, testEmail, testPassword);
+      const result = await signInWithEmailAndPassword(auth, testEmail, testPassword);
+      // [新增] 登入成功後註冊裝置
+      if (result.user) {
+         await registerDeviceSession(result.user.uid);
+      }
       setIsEmailLoginOpen(false); 
       showToast("管理員登入成功", "success");
     } catch (e: any) { showToast("Email 登入失敗", "error"); }
   };
 
   const handleLogout = async () => { 
+      // 登出時清除本地 Session ID
+      localStorage.removeItem('my_app_session_id');
       await signOut(auth); 
       setCurrentClient(null);
       setIsDataLoaded(false);
@@ -274,7 +382,7 @@ export default function App() {
     switch(activeTab) {
       case 'golden_safe': return goldenSafeData; 
       case 'market_data': return {}; 
-      case 'fund_machine': return {}; // [新增]
+      case 'fund_machine': return {}; 
       case 'gift': return giftData;
       case 'estate': return estateData;
       case 'student': return studentData;
