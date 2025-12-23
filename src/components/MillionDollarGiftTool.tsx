@@ -105,7 +105,7 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
     loanTerm: Number(data?.loanTerm) || 7, // 假設信貸期數為 7 年
     loanRate: Number(data?.loanRate) || 2.8,
     investReturnRate: Number(data?.investReturnRate) || 6,
-    // 進階參數：若無設定，預設為 undefined，計算時會 fallback 回第一循環的數值
+    // 進階參數
     cycle2Loan: data?.cycle2Loan !== undefined ? Number(data.cycle2Loan) : undefined,
     cycle2Rate: data?.cycle2Rate !== undefined ? Number(data.cycle2Rate) : undefined,
     cycle3Loan: data?.cycle3Loan !== undefined ? Number(data.cycle3Loan) : undefined,
@@ -114,143 +114,106 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
   
   const { loanAmount, loanTerm, loanRate, investReturnRate } = safeData;
 
-  // 決定實際使用的參數 (若進階參數未設定，則使用第一循環參數)
+  // 決定實際使用的參數
   const c2Loan = safeData.cycle2Loan !== undefined ? safeData.cycle2Loan : loanAmount;
   const c2Rate = safeData.cycle2Rate !== undefined ? safeData.cycle2Rate : loanRate;
   const c3Loan = safeData.cycle3Loan !== undefined ? safeData.cycle3Loan : loanAmount;
   const c3Rate = safeData.cycle3Rate !== undefined ? safeData.cycle3Rate : loanRate;
 
-  // [Fix] 初始化時優先讀取 data 中的 isCompoundMode，若無則預設 false
   const [isCompoundMode, setIsCompoundMode] = useState(data?.isCompoundMode || false);
-  // 新增狀態：是否顯示進階設定
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // [New] 當複利模式切換時，同步寫入全域資料
+  // [Fix] 本地暫存狀態，解決輸入卡頓問題
+  const [tempLoanAmount, setTempLoanAmount] = useState<string | number>(loanAmount);
+
+  // 當外部 props 更新時，同步回本地暫存
+  useEffect(() => {
+    setTempLoanAmount(loanAmount);
+  }, [loanAmount]);
+
   useEffect(() => {
     setData({ ...safeData, isCompoundMode });
   }, [isCompoundMode]);
 
-  // --- 計算邏輯 (針對每一筆貸款獨立計算) ---
-  
-  // 1. 各筆貸款的月付金
+  // --- 計算邏輯 ---
   const payment1 = calculateMonthlyPayment(loanAmount, loanRate, loanTerm);
   const payment2 = calculateMonthlyPayment(c2Loan, c2Rate, loanTerm);
   const payment3 = calculateMonthlyPayment(c3Loan, c3Rate, loanTerm);
 
-  // 2. 各筆貸款對應的月配息 (假設投入金額 = 貸款金額)
   const income1 = calculateMonthlyIncome(loanAmount, investReturnRate);
   const income2 = calculateMonthlyIncome(c2Loan, investReturnRate);
   const income3 = calculateMonthlyIncome(c3Loan, investReturnRate);
   
-  // 3. 計算各階段的資產與現金流
   let phase1_Asset, phase2_Asset, phase3_Asset;
   let phase1_NetOut, phase2_NetOut, phase3_NetOut;
 
-  // 輔助計算：複利終值因子 (單一週期)
   const monthlyRate = investReturnRate / 100 / 12;
   const totalMonthsPerCycle = loanTerm * 12;
   const compoundFactor = Math.pow(1 + monthlyRate, totalMonthsPerCycle);
 
   if (isCompoundMode) {
-      // --- 複利模式 ---
-      // 負擔：使用者需全額支付貸款月付金 (不拿配息出來)
       phase1_NetOut = payment1;
-      phase2_NetOut = payment2; // 前債已清，只負擔新債
+      phase2_NetOut = payment2; 
       phase3_NetOut = payment3; 
       
-      // 資產：期初本金 * 複利因子
       phase1_Asset = Math.round(loanAmount * compoundFactor);
       phase2_Asset = Math.round((phase1_Asset + c2Loan) * compoundFactor);
       phase3_Asset = Math.round((phase2_Asset + c3Loan) * compoundFactor);
-
   } else {
-      // --- 現金流模式 (以息養貸) ---
-      // 資產累積 (線性)
       phase1_Asset = loanAmount;
       phase2_Asset = loanAmount + c2Loan;
       phase3_Asset = loanAmount + c2Loan + c3Loan;
 
-      // 負擔：
       phase1_NetOut = payment1 - income1;
       phase2_NetOut = payment2 - (income1 + income2);
       phase3_NetOut = payment3 - (income1 + income2 + income3);
   }
 
-  // --- 總付出計算邏輯 (萬為單位) ---
   const monthsPerCycle = loanTerm * 12;
-
   const totalCashOut_T0_T7_Raw = phase1_NetOut * monthsPerCycle;
   const totalCashOut_T0_T7_Wan = Math.round(totalCashOut_T0_T7_Raw / 10000);
-
   const totalCashOut_T7_T14_Raw = phase2_NetOut * monthsPerCycle;
   const totalCashOut_T7_T14_Wan = Math.round(totalCashOut_T7_T14_Raw / 10000);
-
   const totalCashOut_T14_T21_Raw = phase3_NetOut * monthsPerCycle;
   const totalCashOut_T14_T21_Wan = Math.round(totalCashOut_T14_T21_Raw / 10000);
   
-  // 21 年總實質付出 (T0-T21)
   const totalProjectCost_Wan = totalCashOut_T0_T7_Wan + totalCashOut_T7_T14_Wan + totalCashOut_T14_T21_Wan;
-  
-  // 21 年後的最終資產 (第三階段結束)
   const finalAssetValue_Wan = phase3_Asset;
-  
-  // 21 年淨獲利 (資產 - 總實質付出)
   const netProfit_Wan = finalAssetValue_Wan - totalProjectCost_Wan;
-  
-  // --- 一般存錢成本比較 ---
-  const standardCost_Wan = finalAssetValue_Wan; // 目標資產
+  const standardCost_Wan = finalAssetValue_Wan; 
   const savedAmount_Wan = standardCost_Wan - totalProjectCost_Wan;
 
-  // --- 每月平均需要存多少 ---
   const totalYears = loanTerm * 3;
   const monthlyStandardSaving = Math.round((finalAssetValue_Wan * 10000) / (totalYears * 12));
   const monthlyProjectCost = Math.round((totalProjectCost_Wan * 10000) / (totalYears * 12));
 
-  // --- 財務結構分析計算 (Dashboard Data) ---
-  
-  // 1. 總利息成本計算
   const totalInterest1 = (payment1 * loanTerm * 12) - (loanAmount * 10000);
   const totalInterest2 = (payment2 * loanTerm * 12) - (c2Loan * 10000);
   const totalInterest3 = (payment3 * loanTerm * 12) - (c3Loan * 10000);
   const totalInterestRaw = totalInterest1 + totalInterest2 + totalInterest3;
   const totalInterestWan = Math.round(totalInterestRaw / 10000);
 
-  // 2. 平均月現金流負擔 (3階段平均)
   const avgMonthlyNetPay = Math.round((phase1_NetOut + phase2_NetOut + phase3_NetOut) / 3);
-
-  // 3. 資產槓桿倍數 (期末資產 / 總實付成本)
-  // 若總實付成本 <= 0 (完全無痛或正現金流)，顯示 ∞ 或高倍數
   const leverageMultiplier = totalProjectCost_Wan > 0 
     ? (finalAssetValue_Wan / totalProjectCost_Wan).toFixed(1) 
     : "∞";
 
-  // 4. 進度條比例 (利息 vs 淨利)
   const totalBarValue = totalInterestWan + netProfit_Wan;
   const interestPercent = totalBarValue > 0 ? (totalInterestWan / totalBarValue) * 100 : 0;
   const profitPercent = totalBarValue > 0 ? (netProfit_Wan / totalBarValue) * 100 : 0;
 
-
-  // --- 圖表數據生成 ---
   const generateChartData = () => {
     const dataArr = [];
     let cumulativeStandard = 0;
     let cumulativeProjectCost = 0;
-    
-    // 一般存錢每月需存金額
     const standardMonthlySaving = (finalAssetValue_Wan * 10000) / (totalYears * 12); 
-
-    // 模擬資產成長曲線 (用於圖表顯示)
     let currentAssetValue = 0;
 
     for (let year = 1; year <= totalYears; year++) {
-      // 一般存錢累積
       cumulativeStandard += standardMonthlySaving * 12;
-      
       let currentPhaseNetOut;
       
-      // 計算該年度的資產價值與成本
       if (year <= loanTerm) {
-        // Phase 1
         currentPhaseNetOut = phase1_NetOut;
         if(isCompoundMode) {
             currentAssetValue = (loanAmount * 10000) * Math.pow(1 + monthlyRate, year * 12);
@@ -258,19 +221,16 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
             currentAssetValue = loanAmount * 10000;
         }
       } else if (year <= loanTerm * 2) {
-        // Phase 2
         currentPhaseNetOut = phase2_NetOut;
         if(isCompoundMode) {
-             const prevAsset = phase1_Asset * 10000; // T7 結束時的金額
+             const prevAsset = phase1_Asset * 10000; 
              const yearsInPhase2 = year - loanTerm;
-             // Phase 2 起點本金 = Phase 1 結束 + 新增 c2Loan
              const startPrincipalP2 = prevAsset + (c2Loan * 10000);
              currentAssetValue = startPrincipalP2 * Math.pow(1 + monthlyRate, yearsInPhase2 * 12);
         } else {
             currentAssetValue = (loanAmount + c2Loan) * 10000;
         }
       } else {
-        // Phase 3
         currentPhaseNetOut = phase3_NetOut; 
         if(isCompoundMode) {
             const prevAsset = phase2_Asset * 10000;
@@ -301,10 +261,33 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
           if (field.includes('Amount') || field.includes('Loan')) {
              const clampedValue = Math.max(10, Math.min(1000, Number(value)));
              setData({ ...safeData, [field]: Math.round(clampedValue) }); 
+             
+             // 如果是更新第一循環金額，也要同步更新 tempLoanAmount
+             if(field === 'loanAmount') {
+                 setTempLoanAmount(Math.round(clampedValue));
+             }
           } else {
             setData({ ...safeData, [field]: Number(value) }); 
           }
       }
+  };
+
+  // [Fix] 處理輸入框變更：只更新 UI 暫存，不擋輸入
+  const handleAmountInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setTempLoanAmount(e.target.value);
+  };
+
+  // [Fix] 處理輸入框確認：離開焦點或按 Enter 時才驗證
+  const finalizeAmount = () => {
+      let val = Number(tempLoanAmount);
+      // 限制範圍 10 ~ 1000
+      val = Math.max(10, Math.min(1000, val));
+      // 若非數字 (NaN)，回退到預設 100 或當前安全值
+      if(isNaN(val)) val = loanAmount || 100;
+      
+      // 更新暫存與全局
+      setTempLoanAmount(val);
+      updateField('loanAmount', val);
   };
 
   return (
@@ -429,7 +412,7 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                        <span className="text-sm font-bold text-slate-700">第一循環 (基礎設定)</span>
                    </div>
 
-                   {/* 金額 */}
+                   {/* 金額 (Input + Slider) */}
                    <div className="mb-4">
                         <div className="flex justify-between items-center mb-1">
                             <label className="text-sm font-medium text-slate-600">單次借貸額度 (萬)</label>
@@ -439,8 +422,10 @@ const MillionDollarGiftTool = ({ data, setData }: any) => {
                                     min={10} 
                                     max={1000} 
                                     step={1}
-                                    value={loanAmount} 
-                                    onChange={(e) => updateField('loanAmount', Number(e.target.value))} 
+                                    value={tempLoanAmount} 
+                                    onChange={handleAmountInputChange} 
+                                    onBlur={finalizeAmount}
+                                    onKeyDown={(e) => { if(e.key === 'Enter') finalizeAmount(); }}
                                     className="w-16 text-right bg-transparent border-none p-0 font-mono font-bold text-blue-600 text-lg focus:ring-0 focus:border-blue-500 focus:bg-blue-50/50 rounded"
                                 />
                                 <span className="font-mono font-bold text-blue-600 text-lg ml-1">萬</span>
