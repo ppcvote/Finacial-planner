@@ -1,384 +1,246 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Users, 
-  UserPlus, 
   Search, 
-  Trash2, 
-  ChevronRight, 
-  Calendar, 
-  TrendingUp,
-  Clock,
-  Briefcase,
-  Edit, // 新增編輯圖示
-  X
+  Plus, 
+  FileEdit, 
+  Trash2,
+  Phone,
+  MoreHorizontal,
+  ChevronRight,
+  Filter
 } from 'lucide-react';
-import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-
-// 預設的工具資料
-const defaultToolStates = {
-    giftData: { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 },
-    estateData: { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6, existingLoanBalance: 700, existingMonthlyPayment: 38000 },
-    studentData: { loanAmount: 40, investReturnRate: 6, years: 8, gracePeriod: 1, interestOnlyPeriod: 0, isQualified: false },
-    superActiveData: { monthlySaving: 10000, investReturnRate: 6, activeYears: 15 },
-    carData: { carPrice: 100, investReturnRate: 6, resaleRate: 50, cycleYears: 5 },
-    pensionData: { currentAge: 30, retireAge: 65, salary: 45000, laborInsYears: 35, selfContribution: false, pensionReturnRate: 3, desiredMonthlyIncome: 60000 },
-    reservoirData: { initialCapital: 1000, dividendRate: 5, reinvestRate: 8, years: 20 },
-    taxData: { spouse: true, children: 2, minorYearsTotal: 0, parents: 0, cash: 3000, realEstateMarket: 4000, stocks: 1000, insurancePlan: 0 }
-};
+import MarketWarRoom from './MarketWarRoom'; // [新增]
 
 interface ClientDashboardProps {
-    user: any;
-    onSelectClient: (client: any) => void;
+  user: any;
+  onSelectClient: (client: any) => void;
 }
 
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient }) => {
-    const [clients, setClients] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [clients, setClients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientNote, setNewClientNote] = useState('');
+
+  // 監聽客戶列表
+  React.useEffect(() => {
+    if (!user) return;
     
-    // Modal 狀態控制
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingClient, setEditingClient] = useState<any>(null); // 用來判斷是新增還是編輯
+    // 這裡使用 onSnapshot 即時監聽
+    const { collection, onSnapshot, query, orderBy } = require('firebase/firestore');
     
-    // 表單狀態
-    const [clientName, setClientName] = useState('');
-    const [clientNote, setClientNote] = useState('');
-
-    // 1. 監聽客戶列表
-    useEffect(() => {
-        if (!user) return;
-        
-        const q = query(
-            collection(db, 'users', user.uid, 'clients'), 
-            orderBy('updatedAt', 'desc')
-        );
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const clientList = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-            setClients(clientList);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching clients:", error);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [user]);
-
-    // 開啟新增模式
-    const openAddModal = () => {
-        setEditingClient(null);
-        setClientName('');
-        setClientNote('');
-        setIsModalOpen(true);
-    };
-
-    // 開啟編輯模式
-    const openEditModal = (e: React.MouseEvent, client: any) => {
-        e.stopPropagation(); // 阻止冒泡，避免觸發進入客戶
-        setEditingClient(client);
-        setClientName(client.name);
-        setClientNote(client.note || '');
-        setIsModalOpen(true);
-    };
-
-    // 2. 處理表單提交 (新增或更新)
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!clientName.trim()) return;
-
-        try {
-            if (editingClient) {
-                // --- 編輯模式 ---
-                const clientRef = doc(db, 'users', user.uid, 'clients', editingClient.id);
-                await updateDoc(clientRef, {
-                    name: clientName,
-                    note: clientNote,
-                    updatedAt: Timestamp.now() // 更新時間戳記
-                });
-            } else {
-                // --- 新增模式 ---
-                const newClientData = {
-                    name: clientName,
-                    note: clientNote,
-                    createdAt: Timestamp.now(),
-                    updatedAt: Timestamp.now(),
-                    ...defaultToolStates
-                };
-                await addDoc(collection(db, 'users', user.uid, 'clients'), newClientData);
-            }
-            
-            setIsModalOpen(false);
-            setClientName('');
-            setClientNote('');
-            setEditingClient(null);
-        } catch (error) {
-            console.error("Error saving client:", error);
-            alert("儲存失敗，請檢查網路連線");
-        }
-    };
-
-    // 3. 刪除客戶
-    const handleDeleteClient = async (e: React.MouseEvent, clientId: string) => {
-        e.stopPropagation(); 
-        if (window.confirm("確定要刪除這位客戶的資料嗎？此操作無法復原。")) {
-            try {
-                await deleteDoc(doc(db, 'users', user.uid, 'clients', clientId));
-            } catch (error) {
-                console.error("Error deleting client:", error);
-            }
-        }
-    };
-
-    // 4. 搜尋過濾
-    const filteredClients = clients.filter(client => 
-        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (client.note && client.note.toLowerCase().includes(searchTerm.toLowerCase()))
+    const q = query(
+        collection(db, 'users', user.uid, 'clients'), 
+        orderBy('updatedAt', 'desc')
     );
 
-    // 5. 統計數據
-    const totalClients = clients.length;
-    const activeThisMonth = clients.filter(c => {
-        const date = c.updatedAt?.toDate();
-        const now = new Date();
-        return date && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-    }).length;
+    const unsubscribe = onSnapshot(q, (querySnapshot: any) => {
+        const clientList: any[] = [];
+        querySnapshot.forEach((doc: any) => {
+            clientList.push({ id: doc.id, ...doc.data() });
+        });
+        setClients(clientList);
+        setLoading(false);
+    });
 
-    return (
-        <div className="min-h-screen bg-slate-50 relative overflow-hidden">
-            {/* Background Decoration */}
-            <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 z-0"></div>
-            <div className="absolute top-0 right-0 p-10 opacity-10 pointer-events-none z-0">
-                <Briefcase size={200} className="text-white"/>
+    return () => unsubscribe();
+  }, [user]);
+
+  // 新增客戶
+  const handleAddClient = async () => {
+    if (!newClientName.trim()) return;
+    try {
+        const { collection, addDoc, Timestamp } = require('firebase/firestore');
+        await addDoc(collection(db, 'users', user.uid, 'clients'), {
+            name: newClientName,
+            note: newClientNote,
+            createdAt: Timestamp.now(),
+            updatedAt: Timestamp.now(),
+            // 初始化空的工具數據
+            goldenSafeData: {},
+            giftData: {},
+            estateData: {},
+            // ...其他可選
+        });
+        setShowAddModal(false);
+        setNewClientName('');
+        setNewClientNote('');
+    } catch (e) {
+        console.error("Error adding client: ", e);
+        alert("新增失敗");
+    }
+  };
+
+  // 刪除客戶
+  const handleDeleteClient = async (e: React.MouseEvent, clientId: string) => {
+      e.stopPropagation(); // 避免觸發卡片點擊
+      if (!window.confirm("確定要刪除此客戶檔案嗎？此動作無法復原。")) return;
+      
+      try {
+          await deleteDoc(doc(db, 'users', user.uid, 'clients', clientId));
+      } catch (e) {
+          console.error("Error deleting client: ", e);
+          alert("刪除失敗");
+      }
+  };
+
+  const filteredClients = useMemo(() => {
+      return clients.filter(c => 
+        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.note && c.note.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+  }, [clients, searchTerm]);
+
+  return (
+    <div className="bg-slate-50 min-h-screen pb-20">
+        
+        {/* --- [新增] 戰情室區塊 --- */}
+        <div className="bg-white border-b border-slate-200 pt-6 px-4 md:px-8 pb-8">
+            <div className="max-w-5xl mx-auto">
+                <MarketWarRoom userName={user.displayName || user.email?.split('@')[0] || "菁英顧問"} />
             </div>
+        </div>
 
-            <div className="max-w-6xl mx-auto p-4 md:p-8 relative z-10 animate-fade-in-up">
+        {/* --- 客戶列表區塊 --- */}
+        <div className="px-4 md:px-8 py-8 max-w-5xl mx-auto">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div>
+                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <Users className="text-blue-600"/> 我的客戶名單
+                    </h2>
+                    <p className="text-sm text-slate-500 mt-1">
+                        共 {clients.length} 位客戶，最近更新：{clients[0]?.updatedAt?.toDate().toLocaleDateString() || '無'}
+                    </p>
+                </div>
                 
-                {/* 1. Dashboard Header & Stats */}
-                <div className="mb-8 text-white">
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
-                        <div>
-                            <p className="text-blue-300 font-bold tracking-wider text-xs mb-1 uppercase">Overview</p>
-                            <h1 className="text-3xl md:text-4xl font-black tracking-tight">
-                                歡迎回來，{user?.displayName || '顧問'}
-                            </h1>
-                            <p className="text-slate-400 mt-1">準備好為您的客戶創造價值了嗎？</p>
-                        </div>
-                        <button 
-                            onClick={openAddModal}
-                            className="bg-blue-500 hover:bg-blue-400 text-white px-5 py-3 rounded-xl font-bold shadow-lg shadow-blue-900/30 flex items-center gap-2 transition-all transform hover:-translate-y-1 active:scale-95"
-                        >
-                            <UserPlus size={20}/> 新增客戶檔案
-                        </button>
+                <div className="flex gap-2">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18}/>
+                        <input 
+                          type="text" 
+                          placeholder="搜尋姓名或備註..." 
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 w-full md:w-64"
+                        />
                     </div>
-
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl">
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="p-2 bg-blue-500/20 rounded-lg"><Users size={18} className="text-blue-400"/></div>
-                                <span className="text-slate-300 text-xs font-bold">總客戶數</span>
-                            </div>
-                            <p className="text-2xl font-black">{totalClients}</p>
-                        </div>
-                        <div className="bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl">
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="p-2 bg-emerald-500/20 rounded-lg"><TrendingUp size={18} className="text-emerald-400"/></div>
-                                <span className="text-slate-300 text-xs font-bold">本月活躍</span>
-                            </div>
-                            <p className="text-2xl font-black">{activeThisMonth}</p>
-                        </div>
-                        <div className="bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl hidden md:block">
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="p-2 bg-purple-500/20 rounded-lg"><Clock size={18} className="text-purple-400"/></div>
-                                <span className="text-slate-300 text-xs font-bold">最後更新</span>
-                            </div>
-                            <p className="text-sm font-bold truncate">
-                                {clients.length > 0 && clients[0].updatedAt 
-                                    ? new Date(clients[0].updatedAt.seconds * 1000).toLocaleDateString()
-                                    : '--'}
-                            </p>
-                        </div>
-                    </div>
+                    <button 
+                        onClick={() => setShowAddModal(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all"
+                    >
+                        <Plus size={18}/> 新增
+                    </button>
                 </div>
-
-                {/* 2. Search & Filter Bar */}
-                <div className="bg-white p-2 rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 flex items-center gap-2 mb-6 sticky top-4 z-20">
-                    <div className="p-3 text-slate-400">
-                        <Search size={20}/>
-                    </div>
-                    <input 
-                        type="text" 
-                        placeholder="搜尋客戶姓名或備註..." 
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="flex-1 bg-transparent outline-none text-slate-700 placeholder:text-slate-400 h-full py-2"
-                    />
-                </div>
-
-                {/* 3. Client List Grid */}
-                {loading ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                        <div className="animate-spin mb-4"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div></div>
-                        <p>正在同步雲端資料...</p>
-                    </div>
-                ) : filteredClients.length === 0 ? (
-                    <div className="text-center py-20 bg-white rounded-3xl border border-slate-200 shadow-sm">
-                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Users className="text-slate-300" size={40}/>
-                        </div>
-                        <h3 className="text-lg font-bold text-slate-700 mb-1">尚無符合的客戶資料</h3>
-                        <p className="text-slate-400 text-sm mb-6">點擊上方「新增客戶」開始建立您的第一份規劃</p>
-                        <button onClick={openAddModal} className="text-blue-600 font-bold hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors">
-                            + 立即新增
-                        </button>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {filteredClients.map((client, idx) => (
-                            <div 
-                                key={client.id}
-                                onClick={() => onSelectClient(client)}
-                                className="group bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-xl hover:border-blue-200 hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden"
-                                style={{ animationDelay: `${idx * 50}ms` }} // Staggered animation
-                            >
-                                {/* Hover Effect Background */}
-                                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-
-                                <div className="relative z-10 flex justify-between items-start mb-4">
-                                    <div className="flex items-center gap-3">
-                                        {/* Avatar with Gradient */}
-                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg bg-gradient-to-br ${
-                                            ['from-blue-500 to-indigo-600', 'from-emerald-500 to-teal-600', 'from-orange-500 to-red-600', 'from-purple-500 to-pink-600'][idx % 4]
-                                        }`}>
-                                            {client.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-lg text-slate-800 leading-tight group-hover:text-blue-600 transition-colors">
-                                                {client.name}
-                                            </h3>
-                                            <p className="text-xs text-slate-400 mt-0.5 font-medium">
-                                                ID: {client.id.slice(0, 4)}...
-                                            </p>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Action Buttons */}
-                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-sm p-1 rounded-lg shadow-sm">
-                                        <button 
-                                            onClick={(e) => openEditModal(e, client)}
-                                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                                            title="編輯資料"
-                                        >
-                                            <Edit size={16}/>
-                                        </button>
-                                        <button 
-                                            onClick={(e) => handleDeleteClient(e, client.id)}
-                                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                                            title="刪除"
-                                        >
-                                            <Trash2 size={16}/>
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <div className="relative z-10">
-                                    <div className="min-h-[3rem] text-sm text-slate-500 mb-4 bg-slate-50 rounded-lg p-2.5 line-clamp-2">
-                                        {client.note || "暫無備註說明..."}
-                                    </div>
-
-                                    <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                                        <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-                                            <Calendar size={14}/>
-                                            {client.updatedAt?.seconds 
-                                                ? new Date(client.updatedAt.seconds * 1000).toLocaleDateString() 
-                                                : '剛剛'}
-                                        </div>
-                                        <div className="flex items-center gap-1 text-sm font-bold text-slate-300 group-hover:text-blue-600 transition-colors">
-                                            進入規劃 <ChevronRight size={16}/>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
             </div>
 
-            {/* Client Form Modal (Create / Edit) */}
-            {isModalOpen && (
-                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl space-y-6 relative overflow-hidden">
-                        {/* Modal Header Decoration */}
-                        <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${editingClient ? 'from-amber-400 to-orange-500' : 'from-blue-500 to-purple-600'}`}></div>
-                        
-                        <div className="absolute top-4 right-4">
-                            <button onClick={() => setIsModalOpen(false)} className="p-2 bg-slate-100 rounded-full text-slate-400 hover:bg-slate-200 transition-colors">
-                                <X size={20}/>
-                            </button>
-                        </div>
-
-                        <div>
-                            <h3 className="text-2xl font-black text-slate-800 flex items-center gap-2 mb-1">
-                                {editingClient ? <Edit className="text-amber-500" size={28}/> : <UserPlus className="text-blue-600" size={28}/>}
-                                {editingClient ? '編輯客戶資料' : '新增客戶'}
-                            </h3>
-                            <p className="text-slate-500 text-sm">
-                                {editingClient ? '更新客戶的基本資訊與備註' : '建立新的專屬規劃檔案'}
-                            </p>
-                        </div>
-
-                        <form onSubmit={handleSubmit} className="space-y-5">
-                            <div>
-                                <label className="text-sm font-bold text-slate-700 block mb-1.5 ml-1">客戶姓名</label>
-                                <input 
-                                    type="text" 
-                                    required
-                                    autoFocus
-                                    placeholder="請輸入姓名"
-                                    value={clientName}
-                                    onChange={e => setClientName(e.target.value)}
-                                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-slate-800"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-sm font-bold text-slate-700 block mb-1.5 ml-1">備註 (選填)</label>
-                                <textarea 
-                                    placeholder="例如：35歲，科技業，有兩名子女..."
-                                    value={clientNote}
-                                    onChange={e => setClientNote(e.target.value)}
-                                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all h-28 resize-none text-slate-600"
-                                />
-                            </div>
-                            <div className="flex gap-3 pt-2">
+            {loading ? (
+                <div className="text-center py-20 text-slate-400">讀取中...</div>
+            ) : filteredClients.length > 0 ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredClients.map(client => (
+                        <div 
+                          key={client.id}
+                          onClick={() => onSelectClient(client)}
+                          className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group relative"
+                        >
+                            <div className="flex justify-between items-start mb-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-lg group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                                        {client.name.charAt(0)}
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-800">{client.name}</h3>
+                                        <span className="text-xs text-slate-400">
+                                            {client.updatedAt?.toDate().toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                </div>
                                 <button 
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="flex-1 py-3.5 text-slate-600 font-bold bg-white border-2 border-slate-100 hover:bg-slate-50 rounded-xl transition-colors"
+                                    onClick={(e) => handleDeleteClient(e, client.id)}
+                                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                 >
-                                    取消
-                                </button>
-                                <button 
-                                    type="submit"
-                                    className={`flex-1 py-3.5 text-white font-bold shadow-lg rounded-xl transition-all active:scale-95 ${
-                                        editingClient 
-                                        ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-200' 
-                                        : 'bg-blue-600 hover:bg-blue-500 shadow-blue-200'
-                                    }`}
-                                >
-                                    {editingClient ? '儲存變更' : '建立檔案'}
+                                    <Trash2 size={16}/>
                                 </button>
                             </div>
-                        </form>
+                            
+                            <div className="text-sm text-slate-500 line-clamp-2 min-h-[2.5rem] mb-3">
+                                {client.note || "無備註資料..."}
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
+                                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                                    點擊進入規劃
+                                </span>
+                                <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-500 transform group-hover:translate-x-1 transition-all"/>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300">
+                    <div className="inline-block p-4 bg-slate-50 rounded-full mb-4">
+                        <Users size={40} className="text-slate-300"/>
                     </div>
+                    <h3 className="text-lg font-bold text-slate-600">找不到相關客戶</h3>
+                    <p className="text-slate-400 text-sm mt-1">試著調整搜尋關鍵字，或新增一位客戶吧！</p>
                 </div>
             )}
         </div>
-    );
+
+        {/* Add Client Modal */}
+        {showAddModal && (
+            <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
+                    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <Plus size={20} className="text-blue-600"/> 新增客戶
+                    </h3>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-slate-600 mb-1">客戶姓名</label>
+                            <input 
+                                type="text" 
+                                value={newClientName}
+                                onChange={(e) => setNewClientName(e.target.value)}
+                                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                placeholder="例如：王小明"
+                                autoFocus
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-slate-600 mb-1">備註 (選填)</label>
+                            <textarea 
+                                value={newClientNote}
+                                onChange={(e) => setNewClientNote(e.target.value)}
+                                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none h-24 resize-none"
+                                placeholder="例如：工程師，年收 150 萬，有房貸..."
+                            />
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                            <button 
+                                onClick={() => setShowAddModal(false)}
+                                className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors"
+                            >
+                                取消
+                            </button>
+                            <button 
+                                onClick={handleAddClient}
+                                disabled={!newClientName.trim()}
+                                className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                建立檔案
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+    </div>
+  );
 };
 
 export default ClientDashboard;
