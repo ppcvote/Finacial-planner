@@ -1,24 +1,40 @@
 import React, { useState } from 'react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, Timestamp, writeBatch } from 'firebase/firestore';
 import { auth, db } from '../../firebase';
-import { UserPlus, Lock, Mail, Loader2, CheckCircle2 } from 'lucide-react';
+import { UserPlus, Lock, Mail, Loader2, CheckCircle2, KeyRound } from 'lucide-react';
 
 interface SecretSignupPageProps {
   onSignupSuccess: () => void;
 }
 
-// [修正關鍵] 這裡必須是 export const，不能只有 const
+// 產生 ID 的小工具
+const generateSessionId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
+
+// -----------------------------------------------------------
+// [設定] 請在這裡設定您的啟動金鑰 (Invitation Code)
+// 建議每季更換一次，並更新在您的 Zapier 自動信中
+// -----------------------------------------------------------
+const SECRET_INVITE_CODE = "Ultra888"; 
+
 export const SecretSignupPage: React.FC<SecretSignupPageProps> = ({ onSignupSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
+  const [inviteCode, setInviteCode] = useState(''); // [新增] 金鑰狀態
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // [新增] 驗證啟動金鑰
+    if (inviteCode !== SECRET_INVITE_CODE) {
+        setError("啟動金鑰錯誤，請檢查您的付款通知信。");
+        return;
+    }
+
     if (password !== confirmPassword) {
       setError("兩次密碼輸入不一致");
       return;
@@ -32,12 +48,18 @@ export const SecretSignupPage: React.FC<SecretSignupPageProps> = ({ onSignupSucc
     setError('');
 
     try {
+      const newSessionId = generateSessionId();
+      localStorage.setItem('my_app_session_id', newSessionId);
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
       await updateProfile(user, { displayName: name || '菁英顧問' });
 
-      await setDoc(doc(db, 'users', user.uid), {
+      const batch = writeBatch(db);
+
+      const userRef = doc(db, 'users', user.uid);
+      batch.set(userRef, {
         email: user.email,
         displayName: name || '菁英顧問',
         role: 'paid_user',
@@ -46,15 +68,27 @@ export const SecretSignupPage: React.FC<SecretSignupPageProps> = ({ onSignupSucc
         status: 'active',
         system: {
             dashboard: {
-                displayName: name || '菁英顧問'
+                displayName: name || '菁英顧問',
+                announcement: "歡迎加入 Ultra Advisor！請先建立您的第一位客戶。"
             }
         }
       });
+
+      const metaRef = doc(db, 'users', user.uid, 'system', 'metadata');
+      batch.set(metaRef, {
+          activeSessions: [newSessionId],
+          lastLoginTime: Timestamp.now(),
+          deviceInfo: navigator.userAgent
+      });
+
+      await batch.commit();
 
       onSignupSuccess(); 
 
     } catch (err: any) {
       console.error(err);
+      localStorage.removeItem('my_app_session_id');
+      
       if (err.code === 'auth/email-already-in-use') {
           setError("此 Email 已被註冊過，請直接登入。");
       } else {
@@ -78,6 +112,23 @@ export const SecretSignupPage: React.FC<SecretSignupPageProps> = ({ onSignupSucc
         </div>
 
         <form onSubmit={handleSignup} className="space-y-4">
+          
+          {/* [新增] 啟動金鑰輸入框 */}
+          <div className="bg-emerald-50/50 p-3 rounded-xl border border-emerald-100">
+            <label className="block text-xs font-bold text-emerald-700 mb-1 ml-1">啟動金鑰 (Check Email)</label>
+            <div className="relative">
+              <KeyRound className="absolute left-3 top-3 text-emerald-500" size={18} />
+              <input 
+                type="text" 
+                required
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all font-mono font-bold text-emerald-800 tracking-wider"
+                placeholder="輸入您的金鑰"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1 ml-1">您的稱呼</label>
             <input 
