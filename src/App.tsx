@@ -6,14 +6,13 @@ import {
 } from 'lucide-react';
 
 import { 
-  signInWithPopup, signOut, onAuthStateChanged, signInWithEmailAndPassword, 
-  signInWithRedirect, getRedirectResult 
+  signOut, onAuthStateChanged, signInWithEmailAndPassword
 } from 'firebase/auth';
 
-// [重點] 引入 getDoc 用於讀取舊 Session
+// 引入 getDoc 用於讀取舊 Session
 import { doc, setDoc, onSnapshot, Timestamp, getDoc } from 'firebase/firestore';
 
-import { auth, db, googleProvider } from './firebase'; 
+import { auth, db } from './firebase'; // 移除 googleProvider
 import ReportModal from './components/ReportModal';
 import ClientDashboard from './components/ClientDashboard';
 import SplashScreen from './components/SplashScreen'; 
@@ -23,10 +22,10 @@ import { FinancialRealEstateTool } from './components/FinancialRealEstateTool';
 import { StudentLoanTool } from './components/StudentLoanTool';
 import { SuperActiveSavingTool } from './components/SuperActiveSavingTool';
 import { CarReplacementTool } from './components/CarReplacementTool';
-import { LaborPensionTool } from './components/LaborPensionTool'; // 剛修好的退休缺口
+import { LaborPensionTool } from './components/LaborPensionTool';
 import { BigSmallReservoirTool } from './components/BigSmallReservoirTool';
 import { TaxPlannerTool } from './components/TaxPlannerTool';
-import MillionDollarGiftTool from './components/MillionDollarGiftTool'; // 剛修好的百萬禮物
+import MillionDollarGiftTool from './components/MillionDollarGiftTool';
 
 // --- Default Import ---
 import MarketDataZone from './components/MarketDataZone'; 
@@ -116,10 +115,12 @@ export default function App() {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const lastSavedDataStr = useRef<string>("");
 
-  // Login Modal State
-  const [testEmail, setTestEmail] = useState('');
-  const [testPassword, setTestPassword] = useState('');
-  const [isEmailLoginOpen, setIsEmailLoginOpen] = useState(false);
+  // Login Inputs
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  
+  // [Fix] 註冊鎖：防止剛登入還沒寫入 DB 就被自己踢出去
+  const isRegistering = useRef(false);
 
   // Tool Data States
   const defaultStates = {
@@ -154,6 +155,8 @@ export default function App() {
   
   // 1. 登入成功後，註冊裝置 ID (FIFO 機制)
   const registerDeviceSession = async (uid: string) => {
+    isRegistering.current = true; // [Lock] 開啟註冊鎖，告訴監聽器先別動作
+    
     const newSessionId = generateSessionId();
     localStorage.setItem('my_app_session_id', newSessionId); // 存入本地
 
@@ -187,6 +190,11 @@ export default function App() {
 
     } catch (error) {
         console.error("Session update failed:", error);
+    } finally {
+        // [Unlock] 寫入完成後，稍微延遲一下再解鎖，確保監聽器讀到的是新數據
+        setTimeout(() => {
+            isRegistering.current = false; 
+        }, 1000);
     }
   };
 
@@ -197,7 +205,10 @@ export default function App() {
     // [強制升級] 檢查本地是否有 Session ID
     const localSessionId = localStorage.getItem('my_app_session_id');
     if (!localSessionId) {
-        // 如果已登入但沒有 ID (舊用戶)，強制登出以進行升級
+        // 如果是剛登入，可能還在 registerDeviceSession 過程中，先不強制登出
+        if (isRegistering.current) return;
+
+        // 如果已穩定登入但沒有 ID (舊用戶)，強制登出以進行升級
         console.warn("Detected legacy session, forcing logout for upgrade.");
         signOut(auth).then(() => {
             alert("系統安全性升級 (啟用雙裝置防護)。\n請重新登入。");
@@ -208,12 +219,14 @@ export default function App() {
 
     const userMetaRef = doc(db, 'users', user.uid, 'system', 'metadata');
     const unsubscribe = onSnapshot(userMetaRef, async (docSnap) => {
+        // [Check Lock] 如果正在註冊中，跳過檢查 (避免自己殺自己)
+        if (isRegistering.current) return;
+
         if (docSnap.exists()) {
             const data = docSnap.data();
             const activeSessions: string[] = data.activeSessions || [];
             
             // 邏輯：如果資料庫有記錄，且我的本地 ID 不在白名單內 -> 代表我被踢了
-            // (activeSessions.length > 0 是為了避免剛初始化時誤判)
             if (activeSessions.length > 0 && !activeSessions.includes(localSessionId)) {
                 console.warn("裝置數量超過限制，此裝置已被登出");
                 
@@ -239,17 +252,8 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  // 監聽登入狀態
   useEffect(() => {
-    const checkRedirect = async () => {
-      try { 
-        const result = await getRedirectResult(auth);
-        if (result && result.user) {
-            await registerDeviceSession(result.user.uid); // Redirect 登入也要註冊
-        }
-      } catch (e) { console.error(e); }
-    };
-    checkRedirect();
-
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
@@ -334,38 +338,21 @@ export default function App() {
     user, currentClient, isDataLoaded
   ]);
 
-
-  const handleGoogleLogin = async () => { 
-    const isMobileOrTablet = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
-    if (isMobileOrTablet) {
-         showToast("偵測到行動裝置，切換至全頁登入模式...", "info");
-         await signInWithRedirect(auth, googleProvider);
-         return;
-    }
-    try { 
-       const result = await signInWithPopup(auth, googleProvider); 
-       // [新增] 登入成功後註冊裝置
-       if (result.user) {
-          await registerDeviceSession(result.user.uid);
-       }
-    } catch (e: any) { console.error(e); showToast("登入失敗", "error"); } 
-  };
   
-  const handleEmailLogin = async () => {
-    if (!testEmail || !testPassword) { showToast("請輸入 Email 和密碼", "error"); return; }
+  // 處理 Email 登入
+  const handleLogin = async () => {
+    if (!loginEmail || !loginPassword) { showToast("請輸入帳號和密碼", "error"); return; }
     try {
-      const result = await signInWithEmailAndPassword(auth, testEmail, testPassword);
-      // [新增] 登入成功後註冊裝置
+      const result = await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      // [核心] 登入成功後註冊裝置
       if (result.user) {
          await registerDeviceSession(result.user.uid);
       }
-      setIsEmailLoginOpen(false); 
-      showToast("管理員登入成功", "success");
-    } catch (e: any) { showToast("Email 登入失敗", "error"); }
+      showToast("登入成功", "success");
+    } catch (e: any) { showToast("登入失敗，請檢查帳號密碼", "error"); }
   };
 
   const handleLogout = async () => { 
-      // 登出時清除本地 Session ID
       localStorage.removeItem('my_app_session_id');
       await signOut(auth); 
       setCurrentClient(null);
@@ -397,29 +384,47 @@ export default function App() {
 
   if (loading || !minSplashTimePassed) return <SplashScreen />;
 
+  // 登入介面 (只留 Email/Password)
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-         {isEmailLoginOpen && (
-            <div className="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4">
-                <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
-                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Mail size={20} className="text-blue-600"/> 管理員登入測試</h3>
-                    <input type="email" placeholder="Email" value={testEmail} onChange={(e) => setTestEmail(e.target.value)} className="w-full p-3 border rounded-lg"/>
-                    <input type="password" placeholder="密碼" value={testPassword} onChange={(e) => setTestPassword(e.target.value)} className="w-full p-3 border rounded-lg"/>
-                    <div className="flex justify-between gap-3">
-                       <button onClick={() => setIsEmailLoginOpen(false)} className="flex-1 px-4 py-2 text-slate-600 border rounded-xl">取消</button>
-                       <button onClick={handleEmailLogin} className="flex-1 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl">登入</button>
-                    </div>
-                </div>
-            </div>
-         )}
-        <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center space-y-6 shadow-2xl animate-fade-in-up">
+        <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center space-y-6 shadow-2xl animate-fade-in-up">
           <div className="flex justify-center"><div className="bg-blue-100 p-4 rounded-full"><Coins size={48} className="text-blue-600" /></div></div>
-          <div><h1 className="text-3xl font-black text-slate-800">超業菁英戰情室</h1><p className="text-slate-500 mt-2">武裝您的專業，讓數字幫您說故事</p></div>
-          <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-100 hover:bg-slate-50 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all">
-            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center font-bold text-blue-600">G</div>使用 Google 帳號登入
+          <div>
+              <h1 className="text-2xl font-black text-slate-800">超業菁英戰情室</h1>
+              <p className="text-slate-500 mt-2 text-sm">武裝您的專業，讓數字幫您說故事</p>
+          </div>
+          
+          <div className="space-y-3 text-left">
+              <div>
+                  <label className="text-xs font-bold text-slate-500 ml-1">帳號 (Email)</label>
+                  <input 
+                    type="email" 
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                  />
+              </div>
+              <div>
+                  <label className="text-xs font-bold text-slate-500 ml-1">密碼</label>
+                  <input 
+                    type="password" 
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                  />
+              </div>
+          </div>
+
+          <button onClick={handleLogin} className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-600/30">
+            <Key size={18}/> 登入系統
           </button>
-          <div className="text-center text-sm"><button onClick={() => setIsEmailLoginOpen(true)} className="text-slate-500 hover:text-blue-600 underline">管理員測試登入</button></div>
+          
+          <div className="text-xs text-slate-400 mt-4">
+             僅限授權人員使用
+          </div>
         </div>
       </div>
     );
