@@ -1,23 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
-  GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key, 
-  ChevronLeft, Users, ShieldCheck, Activity, History, 
-  LayoutDashboard // [修正] 改用 LayoutDashboard
+  GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2,
+  ChevronLeft, Users, ShieldCheck, Activity, History, LayoutDashboard
 } from 'lucide-react';
 
-import { 
-  signOut, onAuthStateChanged, signInWithEmailAndPassword
-} from 'firebase/auth';
-
+// Firebase 相關引入
+import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, Timestamp, getDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
 
-import { auth, db } from './firebase'; 
+// --- 頁面元件 (包含剛剛建立的 Auth 頁面) ---
+import LoginPage from './components/auth/LoginPage';
+import SecretSignupPage from './components/auth/SecretSignupPage';
 import ReportModal from './components/ReportModal';
 import ClientDashboard from './components/ClientDashboard';
 import SplashScreen from './components/SplashScreen'; 
 
-// --- 工具匯入 ---
+// --- 工具元件 ---
 import { FinancialRealEstateTool } from './components/FinancialRealEstateTool';
 import { StudentLoanTool } from './components/StudentLoanTool';
 import { SuperActiveSavingTool } from './components/SuperActiveSavingTool';
@@ -27,8 +27,6 @@ import { BigSmallReservoirTool } from './components/BigSmallReservoirTool';
 import { TaxPlannerTool } from './components/TaxPlannerTool';
 import MillionDollarGiftTool from './components/MillionDollarGiftTool';
 import FreeDashboardTool from './components/FreeDashboardTool';
-
-// --- Default Import ---
 import MarketDataZone from './components/MarketDataZone'; 
 import GoldenSafeVault from './components/GoldenSafeVault'; 
 import FundTimeMachine from './components/FundTimeMachine'; 
@@ -41,7 +39,6 @@ const generateSessionId = () => Date.now().toString(36) + Math.random().toString
 // ------------------------------------------------------------------
 // UI Components
 // ------------------------------------------------------------------
-
 const PrintStyles = () => (
   <style>{`
     @media print {
@@ -63,9 +60,7 @@ const Toast = ({ message, type = 'success', onClose }: { message: string, type: 
     const timer = setTimeout(() => { onClose(); }, 4000); 
     return () => clearTimeout(timer);
   }, [onClose]);
-
   const bgColors: Record<string, string> = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
-
   return (
     <div className={`fixed bottom-6 right-6 ${bgColors[type] || 'bg-blue-600'} text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-bounce-in z-[100] toast-container max-w-[90vw]`}>
       {type === 'success' && <Check size={20} className="shrink-0" />}
@@ -99,29 +94,20 @@ const NavItem = ({ icon: Icon, label, active, onClick, disabled = false }: any) 
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
-  
-  // --- 狀態控制區 ---
   const [loading, setLoading] = useState(true); 
   const [minSplashTimePassed, setMinSplashTimePassed] = useState(false); 
-  
+  const [isSecretSignupRoute, setIsSecretSignupRoute] = useState(false); // [路由] 是否為秘密註冊頁
+
   const [clientLoading, setClientLoading] = useState(false); 
   const [currentClient, setCurrentClient] = useState<any>(null);
-
   const [activeTab, setActiveTab] = useState('golden_safe'); 
   const [toast, setToast] = useState<{message: string, type: string} | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false); 
   const [isSaving, setIsSaving] = useState(false); 
-  
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const lastSavedDataStr = useRef<string>("");
-
-  // Login Inputs
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  
-  // 註冊鎖
-  const isRegistering = useRef(false);
+  const isRegistering = useRef(false); // 註冊/登入鎖，防止 Race Condition
 
   // Tool Data States
   const defaultStates = {
@@ -148,7 +134,6 @@ export default function App() {
   const [pensionData, setPensionData] = useState(defaultStates.pension);
   const [reservoirData, setReservoirData] = useState(defaultStates.reservoir);
   const [taxData, setTaxData] = useState(defaultStates.tax);
-  // [修正] 定義正確的 TypeScript 類型 (允許 null)
   const [freeDashboardLayout, setFreeDashboardLayout] = useState<(string | null)[]>(defaultStates.free_dashboard.layout);
 
   const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
@@ -157,7 +142,7 @@ export default function App() {
   // [核心] 安全機制：雙裝置限制 (Max 2 Concurrent Sessions)
   // =================================================================
   const registerDeviceSession = async (uid: string) => {
-    isRegistering.current = true; 
+    isRegistering.current = true; // 上鎖：告訴監聽器「我正在註冊，先別踢我」
     const newSessionId = generateSessionId();
     localStorage.setItem('my_app_session_id', newSessionId); 
 
@@ -169,9 +154,9 @@ export default function App() {
             activeSessions = docSnap.data().activeSessions;
         }
         activeSessions.push(newSessionId);
-        const MAX_DEVICES = 2; 
-        if (activeSessions.length > MAX_DEVICES) {
-            activeSessions = activeSessions.slice(activeSessions.length - MAX_DEVICES);
+        // 限制數量：保留最新的 2 個
+        if (activeSessions.length > 2) {
+            activeSessions = activeSessions.slice(activeSessions.length - 2);
         }
         await setDoc(metaRef, {
             activeSessions: activeSessions,
@@ -181,33 +166,39 @@ export default function App() {
     } catch (error) {
         console.error("Session update failed:", error);
     } finally {
-        setTimeout(() => { isRegistering.current = false; }, 1000);
+        setTimeout(() => { isRegistering.current = false; }, 1500); // 延遲解鎖
     }
   };
 
+  // 裝置踢出監聽器
   useEffect(() => {
     if (!user) return;
     const localSessionId = localStorage.getItem('my_app_session_id');
+    
+    // 如果是剛登入(上鎖狀態)，跳過檢查
+    if (isRegistering.current) return;
+
+    // 如果本地沒有 ID (舊用戶或異常狀態)，強制登出
     if (!localSessionId) {
-        if (isRegistering.current) return;
         console.warn("Detected legacy session, forcing logout for upgrade.");
         signOut(auth).then(() => {
-            alert("系統安全性升級 (啟用雙裝置防護)。\n請重新登入。");
-            window.location.reload();
+            // 可以選擇 reload 或安靜登出
         });
         return;
     }
+
     const userMetaRef = doc(db, 'users', user.uid, 'system', 'metadata');
     const unsubscribe = onSnapshot(userMetaRef, async (docSnap) => {
         if (isRegistering.current) return;
         if (docSnap.exists()) {
             const data = docSnap.data();
             const activeSessions: string[] = data.activeSessions || [];
+            // 如果資料庫的白名單裡沒有我的 ID，代表我是第 3 台裝置，執行登出
             if (activeSessions.length > 0 && !activeSessions.includes(localSessionId)) {
                 console.warn("裝置數量超過限制，此裝置已被登出");
                 localStorage.removeItem('my_app_session_id');
                 await signOut(auth);
-                alert("您的帳號已在第 3 台裝置登入。\n系統限制同時使用 2 台裝置 (如: 手機+平板)。\n最舊的連線已自動登出。");
+                alert("您的帳號已在第 3 台裝置登入。\n系統限制同時使用 2 台裝置。\n此舊連線已自動登出。");
                 window.location.reload();
             }
         }
@@ -217,11 +208,18 @@ export default function App() {
 
   // =================================================================
 
+  // 初始化檢查路由
   useEffect(() => {
-    const timer = setTimeout(() => { setMinSplashTimePassed(true); }, 4000); 
+    // 簡單路由檢查：判斷是否為秘密註冊頁
+    if (window.location.pathname === '/signup-secret') {
+        setIsSecretSignupRoute(true);
+    }
+    
+    const timer = setTimeout(() => { setMinSplashTimePassed(true); }, 3000); 
     return () => clearTimeout(timer);
   }, []);
 
+  // 監聽 Auth 狀態
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -234,17 +232,14 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-
   // --- 客戶資料載入 ---
   useEffect(() => {
       if (!user || !currentClient) {
           setIsDataLoaded(false);
           return;
       }
-
       setClientLoading(true);
       const clientDocRef = doc(db, 'users', user.uid, 'clients', currentClient.id);
-      
       const unsubscribeClient = onSnapshot(clientDocRef, (docSnap) => {
           if (docSnap.exists()) {
               const data = docSnap.data();
@@ -257,8 +252,7 @@ export default function App() {
               if (data.pensionData) setPensionData(prev => ({...prev, ...data.pensionData}));
               if (data.reservoirData) setReservoirData(prev => ({...prev, ...data.reservoirData}));
               if (data.taxData) setTaxData(prev => ({...prev, ...data.taxData}));
-              if (data.freeDashboardLayout) setFreeDashboardLayout(data.freeDashboardLayout); 
-              
+              if (data.freeDashboardLayout) setFreeDashboardLayout(data.freeDashboardLayout);
               setCurrentClient((prev: any) => ({ ...prev, name: data.name, note: data.note }));
           }
           setClientLoading(false);
@@ -268,24 +262,18 @@ export default function App() {
           showToast("讀取客戶資料失敗", "error");
           setClientLoading(false);
       });
-
       return () => unsubscribeClient();
   }, [currentClient?.id, user]); 
 
-
-  // --- 自動儲存 (加入 Layout) ---
+  // --- 自動儲存 ---
   useEffect(() => {
     if (!user || !currentClient || !isDataLoaded) return;
-
     const dataPayload = {
-        goldenSafeData, 
-        giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData,
-        freeDashboardLayout 
+        goldenSafeData, giftData, estateData, studentData, superActiveData, 
+        carData, pensionData, reservoirData, taxData, freeDashboardLayout 
     };
-
     const currentDataStr = JSON.stringify(dataPayload);
     if (currentDataStr === lastSavedDataStr.current) return;
-
     const saveData = async () => {
         setIsSaving(true);
         try {
@@ -300,26 +288,13 @@ export default function App() {
             setIsSaving(false);
         }
     };
-
     const handler = setTimeout(saveData, 1500);
     return () => clearTimeout(handler);
   }, [
-    goldenSafeData, 
-    giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData, freeDashboardLayout,
+    goldenSafeData, giftData, estateData, studentData, superActiveData, 
+    carData, pensionData, reservoirData, taxData, freeDashboardLayout,
     user, currentClient, isDataLoaded
   ]);
-
-  
-  const handleLogin = async () => {
-    if (!loginEmail || !loginPassword) { showToast("請輸入帳號和密碼", "error"); return; }
-    try {
-      const result = await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
-      if (result.user) {
-         await registerDeviceSession(result.user.uid);
-      }
-      showToast("登入成功", "success");
-    } catch (e: any) { showToast("登入失敗，請檢查帳號密碼", "error"); }
-  };
 
   const handleLogout = async () => { 
       localStorage.removeItem('my_app_session_id');
@@ -351,53 +326,27 @@ export default function App() {
     }
   };
 
+  // --- 畫面渲染邏輯 (路由判斷) ---
+
   if (loading || !minSplashTimePassed) return <SplashScreen />;
 
+  // 情境 1: 未登入
   if (!user) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center space-y-6 shadow-2xl animate-fade-in-up">
-          <div className="flex justify-center"><div className="bg-blue-100 p-4 rounded-full"><Coins size={48} className="text-blue-600" /></div></div>
-          <div>
-              <h1 className="text-2xl font-black text-slate-800">超業菁英戰情室</h1>
-              <p className="text-slate-500 mt-2 text-sm">武裝您的專業，讓數字幫您說故事</p>
-          </div>
-          
-          <div className="space-y-3 text-left">
-              <div>
-                  <label className="text-xs font-bold text-slate-500 ml-1">帳號 (Email)</label>
-                  <input 
-                    type="email" 
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
-                  />
-              </div>
-              <div>
-                  <label className="text-xs font-bold text-slate-500 ml-1">密碼</label>
-                  <input 
-                    type="password" 
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
-                  />
-              </div>
-          </div>
-
-          <button onClick={handleLogin} className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-600/30">
-            <Key size={18}/> 登入系統
-          </button>
-          
-          <div className="text-xs text-slate-400 mt-4">
-             僅限授權人員使用
-          </div>
-        </div>
-      </div>
-    );
+      // 判斷是否走後門 (秘密連結)
+      if (isSecretSignupRoute) {
+          return <SecretSignupPage onSignupSuccess={() => {
+              if (auth.currentUser) registerDeviceSession(auth.currentUser.uid);
+              setIsSecretSignupRoute(false); // 成功後關閉秘密路由狀態
+              window.history.pushState({}, '', '/'); // 美化 URL
+          }} />;
+      }
+      // 否則顯示一般登入頁
+      return <LoginPage onLoginSuccess={() => {
+          if (auth.currentUser) registerDeviceSession(auth.currentUser.uid);
+      }} />;
   }
 
+  // 情境 2: 已登入，未選客戶 -> 戰情室
   if (!currentClient) {
       return (
           <>
@@ -415,6 +364,7 @@ export default function App() {
       );
   }
 
+  // 情境 3: 已登入且已選客戶 -> 工具操作介面
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       <PrintStyles />
@@ -464,7 +414,7 @@ export default function App() {
               <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => {setActiveTab('estate'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => {setActiveTab('student'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => {setActiveTab('super_active'); setIsMobileMenuOpen(false);}} />
-
+              
               <div className="text-xs font-bold text-blue-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
                  <ShieldAlert size={14}/> 守富：現金流防禦
               </div>

@@ -1,9 +1,9 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getAuth } from "firebase/auth";       // 1. 引入驗證功能
+import { getFirestore } from "firebase/firestore"; // 2. 引入資料庫功能
 
 // ------------------------------------------------------------------
-// Firebase 設定區域
+// Firebase 設定區域 (您的專屬身分證)
 // ------------------------------------------------------------------
 const firebaseConfig = {
   apiKey: "AIzaSyAqS6fhHQVyBNr1LCkCaQPyJ13Rkq7bfHA",
@@ -15,14 +15,9 @@ const firebaseConfig = {
   measurementId: "G-58N4KK9M5W"
 };
 
-// 1. 初始化 Firebase 應用程式
+// 初始化 Firebase 應用程式
 const app = initializeApp(firebaseConfig);
 
-// 2. 初始化並匯出驗證與資料庫功能 (App.tsx 會用到這些)
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
-export const db = getFirestore(app);
-
-// (可選) 如果您以後需要分析功能再加回來，目前先保持簡單以免出錯
-// import { getAnalytics } from "firebase/analytics";
-// const analytics = getAnalytics(app);
+// 匯出功能讓 App.tsx 使用
+export const auth = getAuth(app);       // 匯出「守門員 (Auth)」
+export const db = getFirestore(app);    // 匯出「檔案櫃 (Firestore)」
