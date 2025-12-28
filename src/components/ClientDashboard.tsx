@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Users, 
   Search, 
@@ -6,9 +6,20 @@ import {
   Trash2,
   ChevronRight
 } from 'lucide-react';
-import { doc, deleteDoc } from 'firebase/firestore';
+
+// [修正重點 1] 將原本在程式碼中間的 require 全部移到這裡變成 import
+import { 
+  collection, 
+  doc, 
+  deleteDoc, 
+  onSnapshot, 
+  query, 
+  orderBy, 
+  addDoc, 
+  Timestamp 
+} from 'firebase/firestore';
+
 import { db } from '../firebase';
-// [修正重點] 這裡改成具名匯入 (Named Import)
 import { MarketWarRoom } from './MarketWarRoom'; 
 
 interface ClientDashboardProps {
@@ -25,11 +36,10 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
   const [newClientNote, setNewClientNote] = useState('');
 
   // 監聽客戶列表
-  React.useEffect(() => {
+  useEffect(() => {
     if (!user) return;
     
-    const { collection, onSnapshot, query, orderBy } = require('firebase/firestore');
-    
+    // [修正重點 2] 移除 require，直接使用上方 import 的函式
     const q = query(
         collection(db, 'users', user.uid, 'clients'), 
         orderBy('updatedAt', 'desc')
@@ -51,7 +61,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
   const handleAddClient = async () => {
     if (!newClientName.trim()) return;
     try {
-        const { collection, addDoc, Timestamp } = require('firebase/firestore');
+        // [修正重點 3] 移除 require，直接使用上方 import 的函式
         await addDoc(collection(db, 'users', user.uid, 'clients'), {
             name: newClientName,
             note: newClientNote,
