@@ -5,14 +5,14 @@ import {
   ChevronLeft, Users, ShieldCheck, Activity, History, LayoutDashboard
 } from 'lucide-react';
 
-// Firebase 相關引入
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, Timestamp, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
-// --- 頁面元件 (包含剛剛建立的 Auth 頁面) ---
-import LoginPage from './components/auth/LoginPage';
-import SecretSignupPage from './components/auth/SecretSignupPage';
+// [修正] 改為具名匯入 (加上花括號)
+import { LoginPage } from './components/auth/LoginPage';
+import { SecretSignupPage } from './components/auth/SecretSignupPage';
+
 import ReportModal from './components/ReportModal';
 import ClientDashboard from './components/ClientDashboard';
 import SplashScreen from './components/SplashScreen'; 
@@ -96,7 +96,7 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true); 
   const [minSplashTimePassed, setMinSplashTimePassed] = useState(false); 
-  const [isSecretSignupRoute, setIsSecretSignupRoute] = useState(false); // [路由] 是否為秘密註冊頁
+  const [isSecretSignupRoute, setIsSecretSignupRoute] = useState(false); 
 
   const [clientLoading, setClientLoading] = useState(false); 
   const [currentClient, setCurrentClient] = useState<any>(null);
@@ -107,7 +107,7 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false); 
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const lastSavedDataStr = useRef<string>("");
-  const isRegistering = useRef(false); // 註冊/登入鎖，防止 Race Condition
+  const isRegistering = useRef(false);
 
   // Tool Data States
   const defaultStates = {
@@ -142,7 +142,7 @@ export default function App() {
   // [核心] 安全機制：雙裝置限制 (Max 2 Concurrent Sessions)
   // =================================================================
   const registerDeviceSession = async (uid: string) => {
-    isRegistering.current = true; // 上鎖：告訴監聽器「我正在註冊，先別踢我」
+    isRegistering.current = true; 
     const newSessionId = generateSessionId();
     localStorage.setItem('my_app_session_id', newSessionId); 
 
@@ -154,7 +154,6 @@ export default function App() {
             activeSessions = docSnap.data().activeSessions;
         }
         activeSessions.push(newSessionId);
-        // 限制數量：保留最新的 2 個
         if (activeSessions.length > 2) {
             activeSessions = activeSessions.slice(activeSessions.length - 2);
         }
@@ -166,7 +165,7 @@ export default function App() {
     } catch (error) {
         console.error("Session update failed:", error);
     } finally {
-        setTimeout(() => { isRegistering.current = false; }, 1500); // 延遲解鎖
+        setTimeout(() => { isRegistering.current = false; }, 1500); 
     }
   };
 
@@ -175,14 +174,11 @@ export default function App() {
     if (!user) return;
     const localSessionId = localStorage.getItem('my_app_session_id');
     
-    // 如果是剛登入(上鎖狀態)，跳過檢查
     if (isRegistering.current) return;
 
-    // 如果本地沒有 ID (舊用戶或異常狀態)，強制登出
     if (!localSessionId) {
         console.warn("Detected legacy session, forcing logout for upgrade.");
         signOut(auth).then(() => {
-            // 可以選擇 reload 或安靜登出
         });
         return;
     }
@@ -193,7 +189,6 @@ export default function App() {
         if (docSnap.exists()) {
             const data = docSnap.data();
             const activeSessions: string[] = data.activeSessions || [];
-            // 如果資料庫的白名單裡沒有我的 ID，代表我是第 3 台裝置，執行登出
             if (activeSessions.length > 0 && !activeSessions.includes(localSessionId)) {
                 console.warn("裝置數量超過限制，此裝置已被登出");
                 localStorage.removeItem('my_app_session_id');
@@ -210,11 +205,9 @@ export default function App() {
 
   // 初始化檢查路由
   useEffect(() => {
-    // 簡單路由檢查：判斷是否為秘密註冊頁
     if (window.location.pathname === '/signup-secret') {
         setIsSecretSignupRoute(true);
     }
-    
     const timer = setTimeout(() => { setMinSplashTimePassed(true); }, 3000); 
     return () => clearTimeout(timer);
   }, []);
@@ -326,27 +319,23 @@ export default function App() {
     }
   };
 
-  // --- 畫面渲染邏輯 (路由判斷) ---
+  // --- 畫面渲染邏輯 ---
 
   if (loading || !minSplashTimePassed) return <SplashScreen />;
 
-  // 情境 1: 未登入
   if (!user) {
-      // 判斷是否走後門 (秘密連結)
       if (isSecretSignupRoute) {
           return <SecretSignupPage onSignupSuccess={() => {
               if (auth.currentUser) registerDeviceSession(auth.currentUser.uid);
-              setIsSecretSignupRoute(false); // 成功後關閉秘密路由狀態
-              window.history.pushState({}, '', '/'); // 美化 URL
+              setIsSecretSignupRoute(false);
+              window.history.pushState({}, '', '/');
           }} />;
       }
-      // 否則顯示一般登入頁
       return <LoginPage onLoginSuccess={() => {
           if (auth.currentUser) registerDeviceSession(auth.currentUser.uid);
       }} />;
   }
 
-  // 情境 2: 已登入，未選客戶 -> 戰情室
   if (!currentClient) {
       return (
           <>
@@ -364,7 +353,6 @@ export default function App() {
       );
   }
 
-  // 情境 3: 已登入且已選客戶 -> 工具操作介面
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       <PrintStyles />
@@ -390,6 +378,7 @@ export default function App() {
 
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900 text-white flex flex-col animate-fade-in md:hidden">
+           {/* Mobile Menu ... */}
            <div className="p-4 flex justify-between items-center border-b border-slate-800">
               <span className="font-bold text-lg">功能選單</span>
               <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-slate-800 rounded-full"><X size={24}/></button>
@@ -398,7 +387,6 @@ export default function App() {
               <button onClick={handleBackToDashboard} className="w-full bg-blue-600 text-white px-4 py-3 rounded-xl flex items-center gap-2 font-bold mb-4">
                   <ChevronLeft size={20}/> 返回客戶列表
               </button>
-              
               <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
                  <ShieldCheck size={14}/> 觀念與診斷
               </div>
