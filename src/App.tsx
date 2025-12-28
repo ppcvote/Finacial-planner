@@ -323,14 +323,23 @@ export default function App() {
 
   if (loading || !minSplashTimePassed) return <SplashScreen />;
 
+  // 情境 1: 未登入
   if (!user) {
+      // 判斷是否走後門 (秘密連結)
       if (isSecretSignupRoute) {
           return <SecretSignupPage onSignupSuccess={() => {
+              // 1. 彈出成功視窗 (給予明確回饋)
+              alert("🎉 帳號開通成功！\n\n系統將自動導向至您的專屬戰情室。");
+              
+              // 2. 註冊裝置 Session
               if (auth.currentUser) registerDeviceSession(auth.currentUser.uid);
-              setIsSecretSignupRoute(false);
-              window.history.pushState({}, '', '/');
+              
+              // 3. [暴力解法] 強制瀏覽器重新整理並回到首頁 (清除網址列的 /signup-secret)
+              // 這樣能保證 100% 進入登入後狀態
+              window.location.href = '/'; 
           }} />;
       }
+      // 否則顯示一般登入頁
       return <LoginPage onLoginSuccess={() => {
           if (auth.currentUser) registerDeviceSession(auth.currentUser.uid);
       }} />;
