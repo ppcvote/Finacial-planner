@@ -9,7 +9,7 @@ import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, Timestamp, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
-// [修正] 改為具名匯入 (加上花括號)
+// 具名匯入
 import { LoginPage } from './components/auth/LoginPage';
 import { SecretSignupPage } from './components/auth/SecretSignupPage';
 
@@ -17,7 +17,6 @@ import ReportModal from './components/ReportModal';
 import ClientDashboard from './components/ClientDashboard';
 import SplashScreen from './components/SplashScreen'; 
 
-// --- 工具元件 ---
 import { FinancialRealEstateTool } from './components/FinancialRealEstateTool';
 import { StudentLoanTool } from './components/StudentLoanTool';
 import { SuperActiveSavingTool } from './components/SuperActiveSavingTool';
@@ -31,14 +30,8 @@ import MarketDataZone from './components/MarketDataZone';
 import GoldenSafeVault from './components/GoldenSafeVault'; 
 import FundTimeMachine from './components/FundTimeMachine'; 
 
-// ------------------------------------------------------------------
-// Helper: 產生隨機 Session ID
-// ------------------------------------------------------------------
 const generateSessionId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
 
-// ------------------------------------------------------------------
-// UI Components
-// ------------------------------------------------------------------
 const PrintStyles = () => (
   <style>{`
     @media print {
@@ -139,7 +132,7 @@ export default function App() {
   const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
 
   // =================================================================
-  // [核心] 安全機制：雙裝置限制 (Max 2 Concurrent Sessions)
+  // [核心] 安全機制：雙裝置限制 (已修正：註冊時暫停檢查)
   // =================================================================
   const registerDeviceSession = async (uid: string) => {
     isRegistering.current = true; 
@@ -171,6 +164,9 @@ export default function App() {
 
   // 裝置踢出監聽器
   useEffect(() => {
+    // [重要修正] 如果正在註冊流程中，不要執行踢人檢查！
+    if (isSecretSignupRoute) return;
+
     if (!user) return;
     const localSessionId = localStorage.getItem('my_app_session_id');
     
@@ -199,7 +195,7 @@ export default function App() {
         }
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user, isSecretSignupRoute]); // 加入 isSecretSignupRoute 依賴
 
   // =================================================================
 
@@ -323,28 +319,26 @@ export default function App() {
 
   if (loading || !minSplashTimePassed) return <SplashScreen />;
 
-  // 情境 1: 未登入
+  // [重要修正] 1. 優先處理註冊頁
+  // 即使 user 已經建立(已登入)，只要網址是 signup-secret，就強迫顯示註冊頁
+  // 直到 onSignupSuccess 被呼叫並執行轉址
+  if (isSecretSignupRoute) {
+      return <SecretSignupPage onSignupSuccess={() => {
+          alert("🎉 帳號開通成功！\n\n系統將自動導向至您的專屬戰情室。");
+          // 因為 SecretSignupPage 已經寫入 LocalStorage，這裡不需要再做
+          setIsSecretSignupRoute(false);
+          window.location.href = '/'; 
+      }} />;
+  }
+
+  // 2. 如果沒登入 -> 顯示登入頁
   if (!user) {
-      if (isSecretSignupRoute) {
-          return <SecretSignupPage onSignupSuccess={() => {
-              // 1. 彈出成功視窗
-              alert("🎉 帳號開通成功！\n\n系統將自動導向至您的專屬戰情室。");
-              
-              // 2. [修正] 這裡不需要再呼叫 registerDeviceSession 了，
-              // 因為 SecretSignupPage 已經在內部處理好了。
-              
-              // 3. 關閉秘密路由狀態
-              setIsSecretSignupRoute(false);
-              
-              // 4. 強制轉址回首頁 (最保險的做法)
-              window.location.href = '/'; 
-          }} />;
-      }
       return <LoginPage onLoginSuccess={() => {
           if (auth.currentUser) registerDeviceSession(auth.currentUser.uid);
       }} />;
   }
 
+  // 3. 已登入，未選客戶 -> 戰情室
   if (!currentClient) {
       return (
           <>
@@ -362,6 +356,7 @@ export default function App() {
       );
   }
 
+  // 4. 已登入且已選客戶 -> 工具操作介面 (保持不變)
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       <PrintStyles />
@@ -396,6 +391,7 @@ export default function App() {
               <button onClick={handleBackToDashboard} className="w-full bg-blue-600 text-white px-4 py-3 rounded-xl flex items-center gap-2 font-bold mb-4">
                   <ChevronLeft size={20}/> 返回客戶列表
               </button>
+              
               <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
                  <ShieldCheck size={14}/> 觀念與診斷
               </div>
