@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
   GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key, 
-  ChevronLeft, Users, ShieldCheck, Activity, History 
+  ChevronLeft, Users, ShieldCheck, Activity, History, Layout // [新增 Layout Icon]
 } from 'lucide-react';
 
 import { 
@@ -12,7 +12,7 @@ import {
 // 引入 getDoc 用於讀取舊 Session
 import { doc, setDoc, onSnapshot, Timestamp, getDoc } from 'firebase/firestore';
 
-import { auth, db } from './firebase'; // 移除 googleProvider
+import { auth, db } from './firebase'; 
 import ReportModal from './components/ReportModal';
 import ClientDashboard from './components/ClientDashboard';
 import SplashScreen from './components/SplashScreen'; 
@@ -26,6 +26,7 @@ import { LaborPensionTool } from './components/LaborPensionTool';
 import { BigSmallReservoirTool } from './components/BigSmallReservoirTool';
 import { TaxPlannerTool } from './components/TaxPlannerTool';
 import MillionDollarGiftTool from './components/MillionDollarGiftTool';
+import FreeDashboardTool from './components/FreeDashboardTool'; // [新增]
 
 // --- Default Import ---
 import MarketDataZone from './components/MarketDataZone'; 
@@ -119,7 +120,7 @@ export default function App() {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   
-  // [Fix] 註冊鎖：防止剛登入還沒寫入 DB 就被自己踢出去
+  // 註冊鎖
   const isRegistering = useRef(false);
 
   // Tool Data States
@@ -134,7 +135,8 @@ export default function App() {
     car: { carPrice: 100, investReturnRate: 6, resaleRate: 50, cycleYears: 5 },
     pension: { currentAge: 30, retireAge: 65, salary: 45000, laborInsYears: 35, selfContribution: false, pensionReturnRate: 3, desiredMonthlyIncome: 60000 },
     reservoir: { initialCapital: 1000, dividendRate: 5, reinvestRate: 8, years: 20 },
-    tax: { spouse: true, children: 2, minorYearsTotal: 0, parents: 0, cash: 3000, realEstateMarket: 4000, stocks: 1000, insurancePlan: 0 }
+    tax: { spouse: true, children: 2, minorYearsTotal: 0, parents: 0, cash: 3000, realEstateMarket: 4000, stocks: 1000, insurancePlan: 0 },
+    free_dashboard: { layout: [null, null, null, null] } // [新增] 自由畫布的預設佈局
   };
 
   const [goldenSafeData, setGoldenSafeData] = useState(defaultStates.golden_safe); 
@@ -146,69 +148,47 @@ export default function App() {
   const [pensionData, setPensionData] = useState(defaultStates.pension);
   const [reservoirData, setReservoirData] = useState(defaultStates.reservoir);
   const [taxData, setTaxData] = useState(defaultStates.tax);
+  const [freeDashboardLayout, setFreeDashboardLayout] = useState<string[]>(defaultStates.free_dashboard.layout); // [新增]
 
   const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
 
   // =================================================================
   // [核心] 安全機制：雙裝置限制 (Max 2 Concurrent Sessions)
   // =================================================================
-  
-  // 1. 登入成功後，註冊裝置 ID (FIFO 機制)
   const registerDeviceSession = async (uid: string) => {
-    isRegistering.current = true; // [Lock] 開啟註冊鎖，告訴監聽器先別動作
-    
+    isRegistering.current = true; 
     const newSessionId = generateSessionId();
-    localStorage.setItem('my_app_session_id', newSessionId); // 存入本地
+    localStorage.setItem('my_app_session_id', newSessionId); 
 
     const metaRef = doc(db, 'users', uid, 'system', 'metadata');
-    
     try {
-        // 讀取目前的 sessions
         const docSnap = await getDoc(metaRef);
         let activeSessions: string[] = [];
-        
         if (docSnap.exists() && docSnap.data().activeSessions) {
             activeSessions = docSnap.data().activeSessions;
         }
-
-        // 加入新 ID
         activeSessions.push(newSessionId);
-
-        // 限制數量 (保留最新的 2 個)
         const MAX_DEVICES = 2; 
         if (activeSessions.length > MAX_DEVICES) {
-            // 切掉舊的，只留最後 MAX_DEVICES 個
             activeSessions = activeSessions.slice(activeSessions.length - MAX_DEVICES);
         }
-
-        // 寫回資料庫
         await setDoc(metaRef, {
             activeSessions: activeSessions,
             lastLoginTime: Timestamp.now(),
             deviceInfo: navigator.userAgent
         }, { merge: true });
-
     } catch (error) {
         console.error("Session update failed:", error);
     } finally {
-        // [Unlock] 寫入完成後，稍微延遲一下再解鎖，確保監聽器讀到的是新數據
-        setTimeout(() => {
-            isRegistering.current = false; 
-        }, 1000);
+        setTimeout(() => { isRegistering.current = false; }, 1000);
     }
   };
 
-  // 2. 隨時監聽：我是否被踢出？
   useEffect(() => {
     if (!user) return;
-
-    // [強制升級] 檢查本地是否有 Session ID
     const localSessionId = localStorage.getItem('my_app_session_id');
     if (!localSessionId) {
-        // 如果是剛登入，可能還在 registerDeviceSession 過程中，先不強制登出
         if (isRegistering.current) return;
-
-        // 如果已穩定登入但沒有 ID (舊用戶)，強制登出以進行升級
         console.warn("Detected legacy session, forcing logout for upgrade.");
         signOut(auth).then(() => {
             alert("系統安全性升級 (啟用雙裝置防護)。\n請重新登入。");
@@ -216,43 +196,31 @@ export default function App() {
         });
         return;
     }
-
     const userMetaRef = doc(db, 'users', user.uid, 'system', 'metadata');
     const unsubscribe = onSnapshot(userMetaRef, async (docSnap) => {
-        // [Check Lock] 如果正在註冊中，跳過檢查 (避免自己殺自己)
         if (isRegistering.current) return;
-
         if (docSnap.exists()) {
             const data = docSnap.data();
             const activeSessions: string[] = data.activeSessions || [];
-            
-            // 邏輯：如果資料庫有記錄，且我的本地 ID 不在白名單內 -> 代表我被踢了
             if (activeSessions.length > 0 && !activeSessions.includes(localSessionId)) {
                 console.warn("裝置數量超過限制，此裝置已被登出");
-                
-                // 清除本地 ID 避免無限迴圈
                 localStorage.removeItem('my_app_session_id');
-                
                 await signOut(auth);
                 alert("您的帳號已在第 3 台裝置登入。\n系統限制同時使用 2 台裝置 (如: 手機+平板)。\n最舊的連線已自動登出。");
                 window.location.reload();
             }
         }
     });
-
     return () => unsubscribe();
   }, [user]);
 
   // =================================================================
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setMinSplashTimePassed(true);
-    }, 4000); 
+    const timer = setTimeout(() => { setMinSplashTimePassed(true); }, 4000); 
     return () => clearTimeout(timer);
   }, []);
 
-  // 監聽登入狀態
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -288,6 +256,7 @@ export default function App() {
               if (data.pensionData) setPensionData(prev => ({...prev, ...data.pensionData}));
               if (data.reservoirData) setReservoirData(prev => ({...prev, ...data.reservoirData}));
               if (data.taxData) setTaxData(prev => ({...prev, ...data.taxData}));
+              if (data.freeDashboardLayout) setFreeDashboardLayout(data.freeDashboardLayout); // [新增]
               
               setCurrentClient((prev: any) => ({ ...prev, name: data.name, note: data.note }));
           }
@@ -303,13 +272,14 @@ export default function App() {
   }, [currentClient?.id, user]); 
 
 
-  // --- 自動儲存 ---
+  // --- 自動儲存 (加入 Layout) ---
   useEffect(() => {
     if (!user || !currentClient || !isDataLoaded) return;
 
     const dataPayload = {
         goldenSafeData, 
-        giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData
+        giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData,
+        freeDashboardLayout // [新增] 儲存佈局
     };
 
     const currentDataStr = JSON.stringify(dataPayload);
@@ -334,17 +304,15 @@ export default function App() {
     return () => clearTimeout(handler);
   }, [
     goldenSafeData, 
-    giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData, 
+    giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData, freeDashboardLayout,
     user, currentClient, isDataLoaded
   ]);
 
   
-  // 處理 Email 登入
   const handleLogin = async () => {
     if (!loginEmail || !loginPassword) { showToast("請輸入帳號和密碼", "error"); return; }
     try {
       const result = await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
-      // [核心] 登入成功後註冊裝置
       if (result.user) {
          await registerDeviceSession(result.user.uid);
       }
@@ -384,7 +352,6 @@ export default function App() {
 
   if (loading || !minSplashTimePassed) return <SplashScreen />;
 
-  // 登入介面 (只留 Email/Password)
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
@@ -484,6 +451,7 @@ export default function App() {
               <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
                  <ShieldCheck size={14}/> 觀念與診斷
               </div>
+              <NavItem icon={Layout} label="自由組合戰情室" active={activeTab === 'free_dashboard'} onClick={() => {setActiveTab('free_dashboard'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => {setActiveTab('golden_safe'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Activity} label="市場數據戰情室" active={activeTab === 'market_data'} onClick={() => {setActiveTab('market_data'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={History} label="基金時光機" active={activeTab === 'fund_machine'} onClick={() => {setActiveTab('fund_machine'); setIsMobileMenuOpen(false);}} />
@@ -550,6 +518,7 @@ export default function App() {
           <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
              <ShieldCheck size={14}/> 觀念與診斷
           </div>
+          <NavItem icon={Layout} label="自由組合戰情室" active={activeTab === 'free_dashboard'} onClick={() => setActiveTab('free_dashboard')} />
           <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => setActiveTab('golden_safe')} />
           <NavItem icon={Activity} label="市場數據戰情室" active={activeTab === 'market_data'} onClick={() => setActiveTab('market_data')} />
           <NavItem icon={History} label="基金時光機" active={activeTab === 'fund_machine'} onClick={() => setActiveTab('fund_machine')} />
@@ -600,6 +569,27 @@ export default function App() {
         
         <div className="flex-1 overflow-y-auto p-4 md:p-8 relative">
            <div className="max-w-5xl mx-auto pb-20 md:pb-0">
+             {activeTab === 'free_dashboard' && (
+                <FreeDashboardTool 
+                   allData={{
+                      goldenSafeData, giftData, estateData, studentData, superActiveData, 
+                      carData, pensionData, reservoirData, taxData
+                   }}
+                   setAllData={{
+                      goldenSafeData: setGoldenSafeData,
+                      giftData: setGiftData,
+                      estateData: setEstateData,
+                      studentData: setStudentData,
+                      superActiveData: setSuperActiveData,
+                      carData: setCarData,
+                      pensionData: setPensionData,
+                      reservoirData: setReservoirData,
+                      taxData: setTaxData
+                   }}
+                   savedLayout={freeDashboardLayout}
+                   onSaveLayout={setFreeDashboardLayout}
+                />
+             )}
              {activeTab === 'golden_safe' && <GoldenSafeVault data={goldenSafeData} setData={setGoldenSafeData} />}
              {activeTab === 'market_data' && <MarketDataZone />}
              {activeTab === 'fund_machine' && <FundTimeMachine />}
