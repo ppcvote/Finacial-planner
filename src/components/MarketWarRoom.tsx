@@ -9,11 +9,13 @@ import {
   DollarSign,
   Activity,
   User,
-  Megaphone, // 佈告欄圖示
-  Edit3,     // 編輯圖示
+  Calculator, // 計算機圖示
+  Home,       // 房貸圖示
+  Percent,    // 利率圖示
+  Coins,      // 複利圖示
+  Edit3,
   Check,
-  X,
-  Save
+  X
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { updateProfile } from 'firebase/auth'; 
@@ -36,25 +38,127 @@ const DAILY_QUOTES = [
   "風險來自於你不知道自己在做什麼，專業讓風險可控。"
 ];
 
-// --- 內建 12 款商務風格頭像庫 (DiceBear API) ---
-const PRESET_AVATARS = [
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&clothing=blazerAndShirt&eyes=happy",
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&clothing=blazerAndShirt&eyes=happy",
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=Christian&clothing=blazerAndShirt",
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=Sorelle&clothing=blazerAndShirt",
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=Emery&clothing=blazerAndShirt&eyebrows=default",
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=Jocelyn&clothing=collarAndSweater",
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=Brian&clothing=shirt",
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=Destiny&clothing=shirt",
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=Joshua&clothing=blazerAndSweater",
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=Sophia&clothing=blazerAndSweater",
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=Tyler&clothing=graphicShirt",
-    "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria&clothing=graphicShirt"
-];
-
 interface MarketWarRoomProps {
   userName?: string; 
 }
+
+// --- 子元件：極簡文字頭像 ---
+const TextAvatar = ({ name, size = "md", className = "" }: { name: string, size?: "sm"|"md"|"lg"|"xl", className?: string }) => {
+    const firstChar = name ? name.charAt(0) : "專";
+    const sizeClasses = {
+        sm: "w-8 h-8 text-xs",
+        md: "w-12 h-12 text-lg",
+        lg: "w-16 h-16 text-2xl",
+        xl: "w-20 h-20 text-3xl"
+    };
+
+    return (
+        <div className={`${sizeClasses[size]} rounded-full bg-gradient-to-br from-slate-700 to-slate-900 text-white flex items-center justify-center font-bold shadow-inner border-2 border-white/20 ${className}`}>
+            {firstChar}
+        </div>
+    );
+};
+
+// --- 子元件：業務閃算機 ---
+const QuickCalculator = () => {
+    const [mode, setMode] = useState<'compound' | 'loan' | 'irr'>('compound');
+    
+    // 輸入狀態
+    const [val1, setVal1] = useState<number | string>(''); // 本金 / 貸款 / 投入
+    const [val2, setVal2] = useState<number | string>(''); // 年期
+    const [val3, setVal3] = useState<number | string>(''); // 利率 / 回收
+
+    // 計算結果
+    const [result, setResult] = useState<string>('---');
+
+    const calculate = () => {
+        const v1 = Number(val1);
+        const v2 = Number(val2);
+        const v3 = Number(val3);
+
+        if (!v1 || !v2 || !v3) {
+            setResult('---');
+            return;
+        }
+
+        if (mode === 'compound') {
+            // 複利：本金 * (1+r)^n
+            const r = v3 / 100;
+            const fv = v1 * Math.pow(1 + r, v2);
+            setResult(`${Math.round(fv).toLocaleString()} 萬`);
+        } else if (mode === 'loan') {
+            // 房貸月付 (本息平均攤還)
+            // v1: 總額(萬), v2: 年, v3: 利率(%)
+            const principal = v1 * 10000;
+            const r = v3 / 100 / 12;
+            const n = v2 * 12;
+            const pmt = (principal * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+            setResult(`$${Math.round(pmt).toLocaleString()} /月`);
+        } else if (mode === 'irr') {
+            // 簡易 IRR (CAGR) : (終值/現值)^(1/n) - 1
+            // v1: 投入, v2: 年期, v3: 回收
+            const cagr = (Math.pow(v3 / v1, 1 / v2) - 1) * 100;
+            setResult(`${cagr.toFixed(2)} %`);
+        }
+    };
+
+    // 當數值改變自動計算
+    useEffect(() => {
+        calculate();
+    }, [val1, val2, val3, mode]);
+
+    return (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col h-full shadow-sm relative overflow-hidden">
+            {/* 裝飾背景 */}
+            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                <Calculator size={100} />
+            </div>
+
+            <div className="flex items-center gap-2 mb-4 z-10">
+                <div className="bg-blue-100 text-blue-600 p-2 rounded-lg">
+                    {mode === 'compound' && <Coins size={20}/>}
+                    {mode === 'loan' && <Home size={20}/>}
+                    {mode === 'irr' && <Percent size={20}/>}
+                </div>
+                <h4 className="font-bold text-slate-800">業務閃算機</h4>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex bg-slate-100 p-1 rounded-xl mb-4 z-10">
+                <button onClick={() => {setMode('compound'); setVal1(''); setVal2(''); setVal3('');}} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${mode === 'compound' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>複利滾存</button>
+                <button onClick={() => {setMode('loan'); setVal1(''); setVal2(''); setVal3('');}} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${mode === 'loan' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>貸款月付</button>
+                <button onClick={() => {setMode('irr'); setVal1(''); setVal2(''); setVal3('');}} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${mode === 'irr' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>年化報酬</button>
+            </div>
+
+            {/* Inputs */}
+            <div className="space-y-3 z-10">
+                <div className="flex items-center gap-2">
+                    <label className="w-16 text-xs font-bold text-slate-500 text-right">
+                        {mode === 'compound' ? '本金(萬)' : mode === 'loan' ? '總額(萬)' : '投入(萬)'}
+                    </label>
+                    <input type="number" value={val1} onChange={e => setVal1(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0"/>
+                </div>
+                <div className="flex items-center gap-2">
+                    <label className="w-16 text-xs font-bold text-slate-500 text-right">年期</label>
+                    <input type="number" value={val2} onChange={e => setVal2(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0"/>
+                </div>
+                <div className="flex items-center gap-2">
+                    <label className="w-16 text-xs font-bold text-slate-500 text-right">
+                        {mode === 'compound' ? '利率(%)' : mode === 'loan' ? '利率(%)' : '回收(萬)'}
+                    </label>
+                    <input type="number" value={val3} onChange={e => setVal3(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0"/>
+                </div>
+            </div>
+
+            {/* Result */}
+            <div className="mt-auto pt-4 text-center z-10">
+                <div className="text-xs text-slate-400 mb-1">試算結果</div>
+                <div className="text-3xl font-black text-blue-600 font-mono tracking-tight">{result}</div>
+            </div>
+        </div>
+    );
+};
+
 
 export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英顧問" }) => {
   const [marketData, setMarketData] = useState<any>(null);
@@ -64,21 +168,12 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
   
   // --- 用戶資料狀態 ---
   const [displayName, setDisplayName] = useState(userName);
-  const [avatarUrl, setAvatarUrl] = useState(PRESET_AVATARS[0]);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  
-  // 編輯暫存
   const [tempName, setTempName] = useState("");
-  const [tempAvatar, setTempAvatar] = useState("");
-
-  // --- 戰略佈告欄狀態 ---
-  const [announcement, setAnnouncement] = useState("本週戰略重點：\n1. 鎖定高資產客戶，檢視退休缺口。\n2. 美元匯率波動，適合切入分期繳保單。");
-  const [isEditingBoard, setIsEditingBoard] = useState(false);
-  const [tempAnnouncement, setTempAnnouncement] = useState("");
 
   const storyRef = useRef<HTMLDivElement>(null);
 
-  // 初始化：載入市場數據、個人資料、佈告欄
+  // 初始化
   useEffect(() => {
     // 1. 金句與市場數據
     const todayIndex = new Date().getDate() % DAILY_QUOTES.length;
@@ -100,21 +195,17 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
         fearGreed: MOCK_MARKET_DATA.fearGreed
     });
 
-    // 2. 載入 Firebase 用戶資料 (Auth + Firestore)
+    // 2. 載入 Firebase 用戶資料
     if (auth.currentUser) {
         setDisplayName(auth.currentUser.displayName || userName);
-        setAvatarUrl(auth.currentUser.photoURL || PRESET_AVATARS[0]);
         
-        // 從 Firestore 讀取佈告欄內容與最新頭像
+        // 從 Firestore 讀取最新名字
         const fetchData = async () => {
             try {
                 const docRef = doc(db, 'users', auth.currentUser!.uid, 'system', 'dashboard');
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    if (data.announcement) setAnnouncement(data.announcement);
-                    // 如果 Firestore 有存頭像，優先使用 (覆蓋 Auth 的舊資料)
-                    if (data.photoURL) setAvatarUrl(data.photoURL);
                     if (data.displayName) setDisplayName(data.displayName);
                 }
             } catch (e) {
@@ -125,56 +216,25 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
     }
   }, [userName]);
 
-  // --- 功能：更新個人資料 (名稱 + 頭像) ---
+  // --- 更新名字 ---
   const handleUpdateProfile = async () => {
       if (!auth.currentUser) return;
       try {
-          // 1. 更新 Firebase Auth (登入驗證層)
-          await updateProfile(auth.currentUser, {
-              displayName: tempName,
-              photoURL: tempAvatar
-          });
-
-          // 2. 更新 Firestore (資料庫層，確保下次讀取無誤)
+          await updateProfile(auth.currentUser, { displayName: tempName });
           await setDoc(doc(db, 'users', auth.currentUser.uid, 'system', 'dashboard'), {
-              displayName: tempName,
-              photoURL: tempAvatar
+              displayName: tempName
           }, { merge: true });
 
-          // 3. 更新本地狀態
           setDisplayName(tempName);
-          setAvatarUrl(tempAvatar);
           setIsEditingProfile(false);
-          alert("個人資料更新成功！");
       } catch (error) {
-          console.error("Update profile failed", error);
           alert("更新失敗，請稍後再試。");
-      }
-  };
-
-  // --- 功能：儲存佈告欄 ---
-  const handleSaveAnnouncement = async () => {
-      if (!auth.currentUser) return;
-      try {
-          await setDoc(doc(db, 'users', auth.currentUser.uid, 'system', 'dashboard'), {
-              announcement: tempAnnouncement
-          }, { merge: true });
-          setAnnouncement(tempAnnouncement);
-          setIsEditingBoard(false);
-      } catch (error) {
-          console.error("Save announcement failed", error);
       }
   };
 
   const openProfileEditor = () => {
       setTempName(displayName || "");
-      setTempAvatar(avatarUrl || PRESET_AVATARS[0]);
       setIsEditingProfile(true);
-  };
-
-  const openBoardEditor = () => {
-      setTempAnnouncement(announcement);
-      setIsEditingBoard(true);
   };
 
   // 下載圖片
@@ -196,7 +256,7 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
 
   const handleCopyText = () => {
     if (!marketData) return;
-    const text = `📅 ${new Date().toLocaleDateString()} 市場快訊\n\n📊 加權指數：${marketData.taiex.value} (${marketData.taiex.isUp ? '▲' : '▼'} ${Math.abs(Number(marketData.taiex.change))})\n💵 美元匯率：${marketData.usdtwd.value}\n🔥 市場情緒：${marketData.fearGreed.status} (${marketData.fearGreed.score})\n\n💡 戰略觀點：\n${announcement}\n\n#財經 #投資 #理財規劃`;
+    const text = `📅 ${new Date().toLocaleDateString()} 市場快訊\n\n📊 加權指數：${marketData.taiex.value} (${marketData.taiex.isUp ? '▲' : '▼'} ${Math.abs(Number(marketData.taiex.change))})\n💵 美元匯率：${marketData.usdtwd.value}\n🔥 市場情緒：${marketData.fearGreed.status} (${marketData.fearGreed.score})\n\n💡 顧問觀點：\n${quote}\n\n#財經 #投資 #理財規劃`;
     navigator.clipboard.writeText(text);
     alert("文案已複製！");
   };
@@ -214,44 +274,26 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
   return (
     <div className="grid lg:grid-cols-12 gap-6 mb-8 animate-fade-in relative">
       
-      {/* --- 個人資料編輯 Modal --- */}
+      {/* --- 個人資料編輯 Modal (僅名字) --- */}
       {isEditingProfile && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm rounded-2xl h-full">
-              <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl m-4">
+              <div className="bg-white p-6 rounded-2xl w-full max-w-sm shadow-2xl m-4 animate-in zoom-in-95">
                   <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-xl font-bold text-slate-800">編輯個人名片</h3>
+                      <h3 className="text-xl font-bold text-slate-800">修改顯示名稱</h3>
                       <button onClick={() => setIsEditingProfile(false)}><X size={24} className="text-slate-400"/></button>
                   </div>
-                  
                   <div className="space-y-4">
-                      {/* 頭像選擇器 */}
                       <div>
-                          <label className="block text-sm font-bold text-slate-600 mb-2">選擇您的形象頭像</label>
-                          <div className="grid grid-cols-4 gap-2 h-48 overflow-y-auto p-2 border border-slate-100 rounded-xl">
-                              {PRESET_AVATARS.map((url, idx) => (
-                                  <button 
-                                    key={idx}
-                                    onClick={() => setTempAvatar(url)}
-                                    className={`p-1 rounded-lg border-2 transition-all ${tempAvatar === url ? 'border-blue-600 bg-blue-50' : 'border-transparent hover:bg-slate-50'}`}
-                                  >
-                                      <img src={url} alt={`Avatar ${idx}`} className="w-full h-auto rounded-full"/>
-                                  </button>
-                              ))}
-                          </div>
-                      </div>
-
-                      {/* 姓名輸入 */}
-                      <div>
-                          <label className="block text-sm font-bold text-slate-600 mb-1">顯示名稱</label>
+                          <label className="block text-sm font-bold text-slate-600 mb-1">您的名字 / 職稱</label>
                           <input 
                              type="text" 
                              value={tempName}
                              onChange={(e) => setTempName(e.target.value)}
                              className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 font-bold text-slate-700"
-                             placeholder="輸入您的名字或職稱"
+                             placeholder="例如：陳經理"
+                             autoFocus
                           />
                       </div>
-
                       <button 
                         onClick={handleUpdateProfile}
                         className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
@@ -263,15 +305,13 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
           </div>
       )}
 
-      {/* 左側：市場儀表板 + 戰略佈告欄 */}
+      {/* 左側：市場儀表板 + 閃算機 */}
       <div className="lg:col-span-7 flex flex-col gap-4">
-         {/* 頂部 Header & 編輯按鈕 */}
+         {/* 頂部 Header */}
          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
                 <button onClick={openProfileEditor} className="relative group">
-                    <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-white shadow-sm overflow-hidden">
-                        <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                    </div>
+                    <TextAvatar name={displayName} size="md" />
                     <div className="absolute bottom-0 right-0 bg-slate-800 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                         <Edit3 size={10} />
                     </div>
@@ -323,41 +363,9 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
              </div>
          </div>
 
-         {/* [新增] 團隊戰略佈告欄 (填補空白區) */}
-         <div className="flex-1 flex flex-col">
-             <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5 flex-1 relative flex flex-col">
-                 <div className="flex justify-between items-start mb-2">
-                     <h4 className="text-amber-800 font-bold flex items-center gap-2">
-                         <Megaphone size={18}/> 團隊戰略佈告欄
-                     </h4>
-                     {isEditingBoard ? (
-                         <div className="flex gap-2">
-                             <button onClick={() => setIsEditingBoard(false)} className="p-1 text-slate-400 hover:text-slate-600"><X size={18}/></button>
-                             <button onClick={handleSaveAnnouncement} className="p-1 text-blue-600 hover:text-blue-800"><Save size={18}/></button>
-                         </div>
-                     ) : (
-                         <button onClick={openBoardEditor} className="text-amber-800/40 hover:text-amber-800 transition-colors">
-                             <Edit3 size={16}/>
-                         </button>
-                     )}
-                 </div>
-                 
-                 {isEditingBoard ? (
-                     <textarea 
-                        className="w-full h-full bg-white/50 p-2 rounded-lg border border-amber-200 focus:ring-2 focus:ring-amber-400 focus:outline-none resize-none text-sm text-slate-700 leading-relaxed"
-                        value={tempAnnouncement}
-                        onChange={(e) => setTempAnnouncement(e.target.value)}
-                        placeholder="輸入本週重點..."
-                     />
-                 ) : (
-                     <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-medium">
-                         {announcement}
-                     </p>
-                 )}
-                 <div className="mt-auto pt-2 text-[10px] text-amber-800/40 text-right">
-                     Last updated: {new Date().toLocaleDateString()}
-                 </div>
-             </div>
+         {/* [新增] 業務閃算機 (填補空白區) */}
+         <div className="flex-1 min-h-[250px]">
+             <QuickCalculator />
          </div>
       </div>
 
@@ -394,9 +402,7 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
                          <div className="text-2xl font-black tracking-tight">{new Date().toLocaleDateString()}</div>
                          <div className={`text-sm opacity-70`}>{['週日','週一','週二','週三','週四','週五','週六'][new Date().getDay()]}</div>
                      </div>
-                     <div className="w-12 h-12 rounded-full border-2 border-white/20 overflow-hidden bg-white/10">
-                         <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                     </div>
+                     <TextAvatar name={displayName} size="md" className="border-2 border-white/20 shadow-lg"/>
                  </div>
 
                  {/* Market Stats */}
@@ -426,13 +432,12 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
                      </div>
                  </div>
 
-                 {/* 戰略觀點 (替換原本的 Quote，顯示佈告欄內容的前 50 字) */}
+                 {/* Quote */}
                  <div className="relative z-10 flex-1 flex items-center">
                      <div>
                         <div className={`w-8 h-1 mb-4 ${isLightMode ? 'bg-rose-500' : 'bg-white/30'}`}></div>
-                        <div className={`text-xs font-bold mb-1 opacity-70 uppercase tracking-wider`}>Strategy Focus</div>
                         <p className={`text-lg font-medium leading-relaxed ${isLightMode ? 'text-slate-700' : 'text-white/90'}`}>
-                            {announcement.length > 60 ? announcement.substring(0, 60) + "..." : announcement}
+                            {quote}
                         </p>
                      </div>
                  </div>
