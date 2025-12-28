@@ -8,7 +8,8 @@ interface SecretSignupPageProps {
   onSignupSuccess: () => void;
 }
 
-const SecretSignupPage: React.FC<SecretSignupPageProps> = ({ onSignupSuccess }) => {
+// [修正關鍵] 這裡必須是 export const，不能只有 const
+export const SecretSignupPage: React.FC<SecretSignupPageProps> = ({ onSignupSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,31 +32,25 @@ const SecretSignupPage: React.FC<SecretSignupPageProps> = ({ onSignupSuccess }) 
     setError('');
 
     try {
-      // 1. 建立 Auth 帳號 (請警衛發新身分證)
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. 更新 Profile 名字 (身分證上寫名字)
       await updateProfile(user, { displayName: name || '菁英顧問' });
 
-      // 3. 寫入 Firestore 用戶資料 (在檔案櫃建立專屬資料夾)
       await setDoc(doc(db, 'users', user.uid), {
         email: user.email,
         displayName: name || '菁英顧問',
-        role: 'paid_user', // 標記為付費會員
+        role: 'paid_user',
         plan: 'pro',
         createdAt: Timestamp.now(),
         status: 'active',
-        // 初始化系統設定
         system: {
             dashboard: {
-                announcement: "歡迎加入 Ultra Advisor！請先建立您的第一位客戶。",
                 displayName: name || '菁英顧問'
             }
         }
       });
 
-      // 4. 成功回調
       onSignupSuccess(); 
 
     } catch (err: any) {
@@ -160,5 +155,3 @@ const SecretSignupPage: React.FC<SecretSignupPageProps> = ({ onSignupSuccess }) 
     </div>
   );
 };
-
-export default SecretSignupPage;
