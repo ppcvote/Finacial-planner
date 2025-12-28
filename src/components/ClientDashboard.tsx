@@ -3,16 +3,13 @@ import {
   Users, 
   Search, 
   Plus, 
-  FileEdit, 
   Trash2,
-  Phone,
-  MoreHorizontal,
-  ChevronRight,
-  Filter
+  ChevronRight
 } from 'lucide-react';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import MarketWarRoom from './MarketWarRoom'; // [新增]
+// [修正重點] 這裡改成具名匯入 (Named Import)
+import { MarketWarRoom } from './MarketWarRoom'; 
 
 interface ClientDashboardProps {
   user: any;
@@ -31,7 +28,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
   React.useEffect(() => {
     if (!user) return;
     
-    // 這裡使用 onSnapshot 即時監聽
     const { collection, onSnapshot, query, orderBy } = require('firebase/firestore');
     
     const q = query(
@@ -61,11 +57,9 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
             note: newClientNote,
             createdAt: Timestamp.now(),
             updatedAt: Timestamp.now(),
-            // 初始化空的工具數據
             goldenSafeData: {},
             giftData: {},
             estateData: {},
-            // ...其他可選
         });
         setShowAddModal(false);
         setNewClientName('');
@@ -78,7 +72,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
 
   // 刪除客戶
   const handleDeleteClient = async (e: React.MouseEvent, clientId: string) => {
-      e.stopPropagation(); // 避免觸發卡片點擊
+      e.stopPropagation(); 
       if (!window.confirm("確定要刪除此客戶檔案嗎？此動作無法復原。")) return;
       
       try {
@@ -99,7 +93,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
   return (
     <div className="bg-slate-50 min-h-screen pb-20">
         
-        {/* --- [新增] 戰情室區塊 --- */}
+        {/* --- 戰情室區塊 --- */}
         <div className="bg-white border-b border-slate-200 pt-6 px-4 md:px-8 pb-8">
             <div className="max-w-5xl mx-auto">
                 <MarketWarRoom userName={user.displayName || user.email?.split('@')[0] || "菁英顧問"} />
