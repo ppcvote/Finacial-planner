@@ -2,14 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
   GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2, Mail, Key, 
-  ChevronLeft, Users, ShieldCheck, Activity, History, Layout // [新增 Layout Icon]
+  ChevronLeft, Users, ShieldCheck, Activity, History, 
+  LayoutDashboard // [修正] 改用 LayoutDashboard
 } from 'lucide-react';
 
 import { 
   signOut, onAuthStateChanged, signInWithEmailAndPassword
 } from 'firebase/auth';
 
-// 引入 getDoc 用於讀取舊 Session
 import { doc, setDoc, onSnapshot, Timestamp, getDoc } from 'firebase/firestore';
 
 import { auth, db } from './firebase'; 
@@ -26,7 +26,7 @@ import { LaborPensionTool } from './components/LaborPensionTool';
 import { BigSmallReservoirTool } from './components/BigSmallReservoirTool';
 import { TaxPlannerTool } from './components/TaxPlannerTool';
 import MillionDollarGiftTool from './components/MillionDollarGiftTool';
-import FreeDashboardTool from './components/FreeDashboardTool'; // [新增]
+import FreeDashboardTool from './components/FreeDashboardTool';
 
 // --- Default Import ---
 import MarketDataZone from './components/MarketDataZone'; 
@@ -136,7 +136,7 @@ export default function App() {
     pension: { currentAge: 30, retireAge: 65, salary: 45000, laborInsYears: 35, selfContribution: false, pensionReturnRate: 3, desiredMonthlyIncome: 60000 },
     reservoir: { initialCapital: 1000, dividendRate: 5, reinvestRate: 8, years: 20 },
     tax: { spouse: true, children: 2, minorYearsTotal: 0, parents: 0, cash: 3000, realEstateMarket: 4000, stocks: 1000, insurancePlan: 0 },
-    free_dashboard: { layout: [null, null, null, null] } // [新增] 自由畫布的預設佈局
+    free_dashboard: { layout: [null, null, null, null] }
   };
 
   const [goldenSafeData, setGoldenSafeData] = useState(defaultStates.golden_safe); 
@@ -148,7 +148,8 @@ export default function App() {
   const [pensionData, setPensionData] = useState(defaultStates.pension);
   const [reservoirData, setReservoirData] = useState(defaultStates.reservoir);
   const [taxData, setTaxData] = useState(defaultStates.tax);
-  const [freeDashboardLayout, setFreeDashboardLayout] = useState<string[]>(defaultStates.free_dashboard.layout); // [新增]
+  // [修正] 定義正確的 TypeScript 類型 (允許 null)
+  const [freeDashboardLayout, setFreeDashboardLayout] = useState<(string | null)[]>(defaultStates.free_dashboard.layout);
 
   const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
 
@@ -256,7 +257,7 @@ export default function App() {
               if (data.pensionData) setPensionData(prev => ({...prev, ...data.pensionData}));
               if (data.reservoirData) setReservoirData(prev => ({...prev, ...data.reservoirData}));
               if (data.taxData) setTaxData(prev => ({...prev, ...data.taxData}));
-              if (data.freeDashboardLayout) setFreeDashboardLayout(data.freeDashboardLayout); // [新增]
+              if (data.freeDashboardLayout) setFreeDashboardLayout(data.freeDashboardLayout); 
               
               setCurrentClient((prev: any) => ({ ...prev, name: data.name, note: data.note }));
           }
@@ -279,7 +280,7 @@ export default function App() {
     const dataPayload = {
         goldenSafeData, 
         giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData,
-        freeDashboardLayout // [新增] 儲存佈局
+        freeDashboardLayout 
     };
 
     const currentDataStr = JSON.stringify(dataPayload);
@@ -451,7 +452,7 @@ export default function App() {
               <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
                  <ShieldCheck size={14}/> 觀念與診斷
               </div>
-              <NavItem icon={Layout} label="自由組合戰情室" active={activeTab === 'free_dashboard'} onClick={() => {setActiveTab('free_dashboard'); setIsMobileMenuOpen(false);}} />
+              <NavItem icon={LayoutDashboard} label="自由組合戰情室" active={activeTab === 'free_dashboard'} onClick={() => {setActiveTab('free_dashboard'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => {setActiveTab('golden_safe'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={Activity} label="市場數據戰情室" active={activeTab === 'market_data'} onClick={() => {setActiveTab('market_data'); setIsMobileMenuOpen(false);}} />
               <NavItem icon={History} label="基金時光機" active={activeTab === 'fund_machine'} onClick={() => {setActiveTab('fund_machine'); setIsMobileMenuOpen(false);}} />
@@ -518,7 +519,7 @@ export default function App() {
           <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
              <ShieldCheck size={14}/> 觀念與診斷
           </div>
-          <NavItem icon={Layout} label="自由組合戰情室" active={activeTab === 'free_dashboard'} onClick={() => setActiveTab('free_dashboard')} />
+          <NavItem icon={LayoutDashboard} label="自由組合戰情室" active={activeTab === 'free_dashboard'} onClick={() => setActiveTab('free_dashboard')} />
           <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => setActiveTab('golden_safe')} />
           <NavItem icon={Activity} label="市場數據戰情室" active={activeTab === 'market_data'} onClick={() => setActiveTab('market_data')} />
           <NavItem icon={History} label="基金時光機" active={activeTab === 'fund_machine'} onClick={() => setActiveTab('fund_machine')} />
