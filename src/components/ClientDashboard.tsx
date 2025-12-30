@@ -6,8 +6,6 @@ import {
   Trash2,
   ChevronRight
 } from 'lucide-react';
-
-// [修正重點 1] 將原本在程式碼中間的 require 全部移到這裡變成 import
 import { 
   collection, 
   doc, 
@@ -18,9 +16,9 @@ import {
   addDoc, 
   Timestamp 
 } from 'firebase/firestore';
-
 import { db } from '../firebase';
-import { MarketWarRoom } from './MarketWarRoom'; 
+// [Fixed] Use default import to match export default in MarketWarRoom
+import MarketWarRoom from './MarketWarRoom'; 
 
 interface ClientDashboardProps {
   user: any;
@@ -39,7 +37,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
   useEffect(() => {
     if (!user) return;
     
-    // [修正重點 2] 移除 require，直接使用上方 import 的函式
     const q = query(
         collection(db, 'users', user.uid, 'clients'), 
         orderBy('updatedAt', 'desc')
@@ -61,7 +58,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
   const handleAddClient = async () => {
     if (!newClientName.trim()) return;
     try {
-        // [修正重點 3] 移除 require，直接使用上方 import 的函式
         await addDoc(collection(db, 'users', user.uid, 'clients'), {
             name: newClientName,
             note: newClientNote,
