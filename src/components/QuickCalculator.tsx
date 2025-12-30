@@ -1,118 +1,193 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, Home, Percent, Coins } from 'lucide-react';
+import { Calculator, Home, TrendingUp, RefreshCw, DollarSign, Percent } from 'lucide-react';
 
+// ----------------------------------------------------------------------
+// 子组件：复利计算器
+// ----------------------------------------------------------------------
+const CompoundInterest = () => {
+  const [principal, setPrincipal] = useState(100000);
+  const [monthly, setMonthly] = useState(5000);
+  const [rate, setRate] = useState(6);
+  const [years, setYears] = useState(20);
+  const [result, setResult] = useState(0);
+
+  useEffect(() => {
+    const r = rate / 100 / 12;
+    const n = years * 12;
+    const fvPrincipal = principal * Math.pow(1 + r, n);
+    const fvMonthly = monthly * ((Math.pow(1 + r, n) - 1) / r);
+    setResult(Math.round(fvPrincipal + fvMonthly));
+  }, [principal, monthly, rate, years]);
+
+  return (
+    <div className="space-y-4 animate-fadeIn">
+      <div className="grid grid-cols-2 gap-4">
+        <InputGroup label="單筆投入" value={principal} onChange={setPrincipal} prefix="$" />
+        <InputGroup label="每月定期" value={monthly} onChange={setMonthly} prefix="$" />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <InputGroup label="年報酬率" value={rate} onChange={setRate} suffix="%" step={0.5} />
+        <InputGroup label="投資年期" value={years} onChange={setYears} suffix="年" />
+      </div>
+      
+      <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-emerald-500/20 to-emerald-900/20 border border-emerald-500/30 text-center">
+        <p className="text-emerald-200 text-sm mb-1">預估未來資產</p>
+        <p className="text-3xl font-bold text-emerald-400 font-mono tracking-tight">
+          ${result.toLocaleString()}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ----------------------------------------------------------------------
+// 子组件：房贷试算
+// ----------------------------------------------------------------------
+const MortgageCalc = () => {
+  const [loanAmount, setLoanAmount] = useState(10000000);
+  const [rate, setRate] = useState(2.1);
+  const [years, setYears] = useState(30);
+  const [monthlyPay, setMonthlyPay] = useState(0);
+
+  useEffect(() => {
+    const r = rate / 100 / 12;
+    const n = years * 12;
+    // 本息平均摊还
+    const pmt = (loanAmount * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+    setMonthlyPay(Math.round(pmt || 0));
+  }, [loanAmount, rate, years]);
+
+  return (
+    <div className="space-y-4 animate-fadeIn">
+      <InputGroup label="貸款總額" value={loanAmount} onChange={setLoanAmount} prefix="$" step={100000} />
+      <div className="grid grid-cols-2 gap-4">
+        <InputGroup label="房貸利率" value={rate} onChange={setRate} suffix="%" step={0.01} />
+        <InputGroup label="貸款年期" value={years} onChange={setYears} suffix="年" />
+      </div>
+
+      <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-blue-500/20 to-blue-900/20 border border-blue-500/30 text-center">
+        <p className="text-blue-200 text-sm mb-1">每月本息攤還</p>
+        <p className="text-3xl font-bold text-blue-400 font-mono tracking-tight">
+          ${monthlyPay.toLocaleString()}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ----------------------------------------------------------------------
+// 子组件：IRR 速算
+// ----------------------------------------------------------------------
+const IRRCalc = () => {
+  const [totalPayment, setTotalPayment] = useState(1000000); // 总缴保费
+  const [cashValue, setCashValue] = useState(1050000); // 期满解约金
+  const [years, setYears] = useState(6);
+  const [irr, setIrr] = useState(0);
+
+  useEffect(() => {
+    // 简化 IRR 公式: (FV / PV)^(1/n) - 1
+    // 这是一个近似值，假设单笔投入。如果是分期缴，真实IRR会更高。
+    // 这里为了"闪算"使用 CAGR 概念模拟
+    if(totalPayment > 0 && years > 0) {
+        const res = (Math.pow(cashValue / totalPayment, 1 / years) - 1) * 100;
+        setIrr(res);
+    }
+  }, [totalPayment, cashValue, years]);
+
+  return (
+    <div className="space-y-4 animate-fadeIn">
+      <InputGroup label="總繳保費" value={totalPayment} onChange={setTotalPayment} prefix="$" />
+      <InputGroup label="期滿領回" value={cashValue} onChange={setCashValue} prefix="$" />
+      <InputGroup label="累積年期" value={years} onChange={setYears} suffix="年" />
+
+      <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-900/20 border border-amber-500/30 text-center">
+        <p className="text-amber-200 text-sm mb-1">年化報酬率 (CAGR)</p>
+        <p className="text-3xl font-bold text-amber-400 font-mono tracking-tight">
+          {irr.toFixed(2)}%
+        </p>
+      </div>
+    </div>
+  );
+};
+
+
+// ----------------------------------------------------------------------
+// 通用 Input 组件 (Glassmorphism Style)
+// ----------------------------------------------------------------------
+const InputGroup = ({ label, value, onChange, prefix, suffix, step = 1 }: any) => (
+  <div className="flex flex-col gap-1">
+    <label className="text-xs text-gray-400 font-medium ml-1">{label}</label>
+    <div className="relative group">
+      {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-white transition-colors">{prefix}</span>}
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        step={step}
+        className={`w-full bg-white/5 border border-white/10 rounded-lg py-2.5 px-3 
+          ${prefix ? 'pl-8' : ''} ${suffix ? 'pr-8' : ''}
+          text-white font-mono placeholder-gray-600 outline-none
+          focus:bg-white/10 focus:border-white/30 focus:ring-1 focus:ring-white/30 transition-all`}
+      />
+      {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-white transition-colors">{suffix}</span>}
+    </div>
+  </div>
+);
+
+// ----------------------------------------------------------------------
+// 主组件
+// ----------------------------------------------------------------------
 const QuickCalculator = () => {
-    const [mode, setMode] = useState<'compound' | 'loan' | 'irr'>('compound');
-    
-    // 輸入狀態
-    const [val1, setVal1] = useState<string>(''); // 本金 / 貸款總額 / 投入本金
-    const [val2, setVal2] = useState<string>(''); // 年期
-    const [val3, setVal3] = useState<string>(''); // 年利率 / 回收金額
+  const [activeTab, setActiveTab] = useState<'compound' | 'mortgage' | 'irr'>('compound');
 
-    // 計算結果
-    const [result, setResult] = useState<string>('---');
+  const tabs = [
+    { id: 'compound', label: '複利', icon: TrendingUp, color: 'text-emerald-400' },
+    { id: 'mortgage', label: '房貸', icon: Home, color: 'text-blue-400' },
+    { id: 'irr', label: 'IRR', icon: Percent, color: 'text-amber-400' },
+  ];
 
-    const calculate = () => {
-        const v1 = parseFloat(val1);
-        const v2 = parseFloat(val2);
-        const v3 = parseFloat(val3);
-
-        // 防呆：如果有任何數值未填或不合法，顯示 ---
-        if (isNaN(v1) || isNaN(v2) || isNaN(v3) || v1 <= 0 || v2 <= 0) {
-            setResult('---');
-            return;
-        }
-
-        if (mode === 'compound') {
-            // 複利滾存 (Lump Sum Compound Interest)
-            // 公式：FV = PV * (1 + r)^n
-            const r = v3 / 100;
-            const fv = v1 * Math.pow(1 + r, v2);
-            setResult(`${Math.round(fv).toLocaleString()} 萬`);
-        } else if (mode === 'loan') {
-            // 房貸月付 (本息平均攤還)
-            // 公式：PMT = (P * r * (1+r)^n) / ((1+r)^n - 1)
-            // P = 總額(元), r = 月利率, n = 總月數
-            const principal = v1 * 10000; // 萬轉元
-            const monthlyRate = v3 / 100 / 12;
-            const totalMonths = v2 * 12; // 年轉月
-
-            if (monthlyRate === 0) {
-                // 零利率狀況
-                const pmt = principal / totalMonths;
-                setResult(`$${Math.round(pmt).toLocaleString()} /月`);
-            } else {
-                const pmt = (principal * monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) / (Math.pow(1 + monthlyRate, totalMonths) - 1);
-                setResult(`$${Math.round(pmt).toLocaleString()} /月`);
-            }
-        } else if (mode === 'irr') {
-            // 簡易 IRR (CAGR 年化報酬率)
-            // 公式：(FV / PV)^(1/n) - 1
-            // v1: 投入(PV), v2: 年期(n), v3: 回收(FV)
-            if (v3 <= 0) {
-                 setResult('---');
-                 return;
-            }
-            const cagr = (Math.pow(v3 / v1, 1 / v2) - 1) * 100;
-            setResult(`${cagr.toFixed(2)} %`);
-        }
-    };
-
-    // 當數值改變自動計算
-    useEffect(() => {
-        calculate();
-    }, [val1, val2, val3, mode]);
-
-    return (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col h-full shadow-sm relative overflow-hidden">
-            {/* 裝飾背景 */}
-            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                <Calculator size={100} />
-            </div>
-
-            <div className="flex items-center gap-2 mb-4 z-10">
-                <div className="bg-blue-100 text-blue-600 p-2 rounded-lg">
-                    {mode === 'compound' && <Coins size={20}/>}
-                    {mode === 'loan' && <Home size={20}/>}
-                    {mode === 'irr' && <Percent size={20}/>}
-                </div>
-                <h4 className="font-bold text-slate-800">業務閃算機</h4>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex bg-slate-100 p-1 rounded-xl mb-4 z-10">
-                <button onClick={() => {setMode('compound'); setVal1(''); setVal2(''); setVal3(''); setResult('---');}} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${mode === 'compound' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>複利滾存</button>
-                <button onClick={() => {setMode('loan'); setVal1(''); setVal2(''); setVal3(''); setResult('---');}} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${mode === 'loan' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>貸款月付</button>
-                <button onClick={() => {setMode('irr'); setVal1(''); setVal2(''); setVal3(''); setResult('---');}} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${mode === 'irr' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>IRR反推</button>
-            </div>
-
-            {/* Inputs */}
-            <div className="space-y-3 z-10">
-                <div className="flex items-center gap-2">
-                    <label className="w-16 text-xs font-bold text-slate-500 text-right">
-                        {mode === 'compound' ? '本金(萬)' : mode === 'loan' ? '總額(萬)' : '投入(萬)'}
-                    </label>
-                    <input type="number" value={val1} onChange={e => setVal1(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0"/>
-                </div>
-                <div className="flex items-center gap-2">
-                    <label className="w-16 text-xs font-bold text-slate-500 text-right">年期</label>
-                    <input type="number" value={val2} onChange={e => setVal2(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0"/>
-                </div>
-                <div className="flex items-center gap-2">
-                    <label className="w-16 text-xs font-bold text-slate-500 text-right">
-                        {mode === 'compound' ? '利率(%)' : mode === 'loan' ? '利率(%)' : '回收(萬)'}
-                    </label>
-                    <input type="number" value={val3} onChange={e => setVal3(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0"/>
-                </div>
-            </div>
-
-            {/* Result */}
-            <div className="mt-auto pt-4 text-center z-10">
-                <div className="text-xs text-slate-400 mb-1">試算結果</div>
-                <div className="text-3xl font-black text-blue-600 font-mono tracking-tight">{result}</div>
-            </div>
+  return (
+    <div className="h-full flex flex-col">
+      {/* Glassmorphism Container */}
+      <div className="relative flex-1 bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+        
+        {/* Header / Tabs */}
+        <div className="flex border-b border-white/10">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-medium transition-all relative
+                  ${isActive ? 'text-white bg-white/5' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}
+                `}
+              >
+                <Icon size={16} className={isActive ? tab.color : 'text-gray-500'} />
+                {tab.label}
+                {isActive && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+                )}
+              </button>
+            );
+          })}
         </div>
-    );
+
+        {/* Content Area */}
+        <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
+            {activeTab === 'compound' && <CompoundInterest />}
+            {activeTab === 'mortgage' && <MortgageCalc />}
+            {activeTab === 'irr' && <IRRCalc />}
+        </div>
+        
+        {/* Footer Decor */}
+        <div className="py-2 text-center border-t border-white/5 bg-black/20">
+             <span className="text-[10px] text-gray-600 tracking-widest uppercase">Ultra Quick Calc v2.0</span>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default QuickCalculator;
