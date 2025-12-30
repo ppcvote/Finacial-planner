@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Activity, Edit2, Check, Loader2, RefreshCw } from 'lucide-react'; // 加入 RefreshCw
+import { Download, Activity, Edit2, Check, Loader2, RefreshCw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import QuickCalculator from './QuickCalculator';
 
@@ -16,16 +16,18 @@ const MarketWarRoom = ({ user, userName }: { user: any; userName?: any }) => {
   const [advisorName, setAdvisorName] = useState(user?.displayName || userName || '專業財務顧問');
   const [isEditingName, setIsEditingName] = useState(false);
 
-  // --- [核心修改] 抓取本地端 AI 數據 ---
+  // --- [核心修改] 抓取 AI 數據 ---
   const fetchAIInsight = async () => {
     setIsLoadingAI(true);
-    // 自動判斷環境：如果在 localhost 就用模擬器網址，否則用雲端網址
-const API_URL = window.location.hostname === "localhost" 
-  ? "http://127.0.0.1:5001/grbt-f87fa/us-central1/getDailyInsight"
-  : "https://us-central1-grbt-f87fa.cloudfunctions.net/getDailyInsight";
+    
+    // 定義變數名稱為 API_URL
+    const API_URL = window.location.hostname === "localhost" 
+      ? "http://127.0.0.1:5001/grbt-f87fa/us-central1/getDailyInsight"
+      : "https://us-central1-grbt-f87fa.cloudfunctions.net/getDailyInsight";
     
     try {
-      const response = await fetch(LOCAL_API_URL);
+      // 修正點：這裡必須與上方變數名稱一致，使用 API_URL
+      const response = await fetch(API_URL);
       if (!response.ok) throw new Error("API 回報錯誤");
       
       const data = await response.json();
@@ -33,7 +35,7 @@ const API_URL = window.location.hostname === "localhost"
         text: data.text,
         author: data.author || "金融智庫"
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI 獲取失敗:", error);
       setDailyQuote({ 
         text: "市場本質是不確定的，唯有邏輯與紀律是你的盔甲。", 
@@ -84,7 +86,6 @@ const API_URL = window.location.hostname === "localhost"
             </p>
           </div>
           
-          {/* 重新整理按鈕 */}
           <button 
             onClick={fetchAIInsight}
             disabled={isLoadingAI}
@@ -134,7 +135,6 @@ const API_URL = window.location.hostname === "localhost"
                 <div ref={storyRef} className="w-full h-full relative flex flex-col bg-black text-white">
                     <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-yellow-950/40 z-0"></div>
                     
-                    {/* LOGO 浮水印 - 建議放你個人的標誌 */}
                     <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none z-0">
                         <img src="/logo.png" alt="Watermark" className="w-[80%] h-auto grayscale" />
                     </div>
@@ -142,7 +142,6 @@ const API_URL = window.location.hostname === "localhost"
                     <div className="relative z-10 flex flex-col h-full p-8 justify-between">
                         <div className="text-[10px] tracking-[0.3em] text-amber-500/50 font-bold uppercase">Market Insight</div>
 
-                        {/* AI 內容區 */}
                         <div className="flex flex-col gap-6 flex-1 justify-center">
                             <div className="relative">
                                 {isLoadingAI ? (
@@ -164,7 +163,6 @@ const API_URL = window.location.hostname === "localhost"
                             </div>
                         </div>
 
-                        {/* 顧問品牌個人化區塊 */}
                         <div className="pb-4">
                             <div className="flex items-center gap-4 bg-white/5 backdrop-blur-xl p-4 rounded-2xl border border-white/10 shadow-2xl">
                                 <div className="w-10 h-10 rounded-full bg-amber-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-inner">
@@ -183,7 +181,6 @@ const API_URL = window.location.hostname === "localhost"
         </div>
       </div>
 
-      {/* 右側計算機保持不變 */}
       <div className="md:w-96 w-full flex-shrink-0">
          <div className="sticky top-8 h-[calc(100vh-4rem)]">
             <QuickCalculator />
