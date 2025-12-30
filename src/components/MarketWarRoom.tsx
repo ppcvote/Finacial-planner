@@ -1,53 +1,51 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Share2, Activity, Edit2, Check, Loader2 } from 'lucide-react';
+import { Download, Activity, Edit2, Check, Loader2, RefreshCw } from 'lucide-react'; // 加入 RefreshCw
 import html2canvas from 'html2canvas';
-// 引入 Firebase 功能
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import QuickCalculator from './QuickCalculator';
 
 const MarketWarRoom = ({ user, userName }: { user: any; userName?: any }) => {
   const storyRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isLoadingAI, setIsLoadingAI] = useState(true); // AI 載入狀態
+  const [isLoadingAI, setIsLoadingAI] = useState(true);
   
-  // 設定初始狀態
   const [dailyQuote, setDailyQuote] = useState({ 
-    text: "正在透過 Gemini AI 產生今日財富洞察...", 
-    author: "Ultra Advisor AI" 
+    text: "正在連線智庫...", 
+    author: "金融智庫" 
   });
 
   const [advisorName, setAdvisorName] = useState(user?.displayName || userName || '專業財務顧問');
   const [isEditingName, setIsEditingName] = useState(false);
 
-  // --- [核心修改] 呼叫雲端 AI 函式 ---
-  useEffect(() => {
-    const fetchAIInsight = async () => {
-      setIsLoadingAI(true);
-      try {
-        const functions = getFunctions();
-        // 呼叫您剛剛部署的 v2 函式
-        const getInsight = httpsCallable(functions, 'getDailyInsight');
-        const result = await getInsight();
-        
-        if (result.data) {
-          setDailyQuote(result.data as any);
-        }
-      } catch (error) {
-        console.error("AI 獲取失敗:", error);
-        // 失敗時的備案
-        setDailyQuote({ 
-          text: "複利是世界第八大奇蹟，知之者賺，不知者賠。", 
-          author: "Albert Einstein" 
-        });
-      } finally {
-        setIsLoadingAI(false);
-      }
-    };
+  // --- [核心修改] 抓取本地端 AI 數據 ---
+  const fetchAIInsight = async () => {
+    setIsLoadingAI(true);
+    // 這是你剛剛在終端機看到的本地端網址
+    const LOCAL_API_URL = "http://127.0.0.1:5001/grbt-f87fa/us-central1/getDailyInsight";
+    
+    try {
+      const response = await fetch(LOCAL_API_URL);
+      if (!response.ok) throw new Error("API 回報錯誤");
+      
+      const data = await response.json();
+      setDailyQuote({
+        text: data.text,
+        author: data.author || "金融智庫"
+      });
+    } catch (error) {
+      console.error("AI 獲取失敗:", error);
+      setDailyQuote({ 
+        text: "市場本質是不確定的，唯有邏輯與紀律是你的盔甲。", 
+        author: "金融智庫" 
+      });
+    } finally {
+      setIsLoadingAI(false);
+    }
+  };
 
+  useEffect(() => {
     fetchAIInsight();
   }, []);
 
-  // 下載邏輯保持不變...
   const handleDownloadStory = async () => {
     if (!storyRef.current) return;
     setIsGenerating(true);
@@ -59,7 +57,7 @@ const MarketWarRoom = ({ user, userName }: { user: any; userName?: any }) => {
         logging: false,
       });
       const link = document.createElement('a');
-      link.download = `Ultra_Story_${new Date().toISOString().slice(0,10)}.png`;
+      link.download = `Ultra_Insight_${new Date().toISOString().slice(0,10)}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     } catch (err) {
@@ -77,17 +75,26 @@ const MarketWarRoom = ({ user, userName }: { user: any; userName?: any }) => {
           <div>
             <h2 className="text-2xl font-bold text-white flex items-center gap-2">
               <Activity className="text-amber-400" />
-              Advisor Brand Room
+              Wealth War Room
             </h2>
             <p className="text-gray-400 text-sm mt-1">
-              {isLoadingAI ? "AI 正在思考中..." : "AI 每日洞察已就緒"}
+              {isLoadingAI ? "正在讀取全球金融邏輯..." : "AI 戰情分析已更新"}
             </p>
           </div>
+          
+          {/* 重新整理按鈕 */}
+          <button 
+            onClick={fetchAIInsight}
+            disabled={isLoadingAI}
+            className="p-2 text-gray-400 hover:text-amber-400 transition-colors disabled:opacity-30"
+            title="更換文案"
+          >
+            <RefreshCw size={20} className={isLoadingAI ? "animate-spin" : ""} />
+          </button>
         </div>
 
         {/* 限動產生器卡片 */}
         <div className="mt-4 bg-gray-900/50 p-6 rounded-2xl border border-gray-800">
-            {/* 控制區 */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <div className="flex items-center gap-3 bg-black/40 p-2 rounded-lg border border-gray-700">
                     <div className="text-xs text-gray-400">顯示名稱:</div>
@@ -113,68 +120,68 @@ const MarketWarRoom = ({ user, userName }: { user: any; userName?: any }) => {
                 <button 
                   onClick={handleDownloadStory} 
                   disabled={isLoadingAI || isGenerating}
-                  className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-amber-900/20 disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-amber-900/40 active:scale-95 disabled:opacity-50"
                 >
                     {isGenerating ? <Loader2 className="animate-spin" size={16}/> : <Download size={16} />} 
-                    {isGenerating ? "生成中..." : "下載 AI 洞察圖卡"}
+                    {isGenerating ? "正在渲染圖卡..." : "儲存為限動圖卡"}
                 </button>
             </div>
 
             {/* 圖卡畫布 */}
             <div className="relative w-full max-w-[340px] mx-auto aspect-[9/16] rounded-2xl overflow-hidden shadow-2xl border border-gray-800 bg-black">
                 <div ref={storyRef} className="w-full h-full relative flex flex-col bg-black text-white">
-                    <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-yellow-950 z-0"></div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-yellow-950/40 z-0"></div>
                     
-                    {/* LOGO 浮水印 */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none z-0">
-                        <img src="/logo.png" alt="Watermark" className="w-[70%] h-auto grayscale brightness-200" />
+                    {/* LOGO 浮水印 - 建議放你個人的標誌 */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none z-0">
+                        <img src="/logo.png" alt="Watermark" className="w-[80%] h-auto grayscale" />
                     </div>
 
-                    <div className="relative z-10 flex flex-col h-full p-6 justify-between">
-                        <div className="h-10"></div>
+                    <div className="relative z-10 flex flex-col h-full p-8 justify-between">
+                        <div className="text-[10px] tracking-[0.3em] text-amber-500/50 font-bold uppercase">Market Insight</div>
 
                         {/* AI 內容區 */}
                         <div className="flex flex-col gap-6 flex-1 justify-center">
                             <div className="relative">
-                                <span className="absolute -top-10 -left-2 text-7xl text-amber-500/10 font-serif">"</span>
                                 {isLoadingAI ? (
-                                  <div className="flex flex-col items-center gap-4 py-10">
-                                    <Loader2 className="animate-spin text-amber-500/50" size={40} />
-                                    <p className="text-slate-500 text-xs tracking-widest uppercase">Consulting Gemini AI...</p>
+                                  <div className="flex flex-col items-center gap-4">
+                                    <Loader2 className="animate-spin text-amber-500/30" size={32} />
+                                    <p className="text-slate-600 text-[10px] tracking-widest uppercase">Fetching Logic...</p>
                                   </div>
                                 ) : (
-                                  <>
-                                    <p className="text-xl font-light leading-relaxed text-center text-gray-100 font-serif italic relative z-10 px-2 animate-fade-in">
+                                  <div className="animate-in fade-in zoom-in duration-500">
+                                    <p className="text-2xl font-medium leading-relaxed text-left text-gray-100 relative z-10 px-2">
                                         {dailyQuote.text}
                                     </p>
-                                    <p className="text-right text-[10px] text-amber-500/60 mt-8 font-bold uppercase tracking-widest border-t border-white/10 pt-4">
-                                        — {dailyQuote.author}
+                                    <div className="w-12 h-1 bg-amber-500/50 mt-8 mb-4"></div>
+                                    <p className="text-left text-[12px] text-amber-500/80 font-bold uppercase tracking-[0.2em]">
+                                        {dailyQuote.author}
                                     </p>
-                                  </>
+                                  </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* 顧問品牌 */}
-                        <div className="pb-4 pt-4 flex-shrink-0">
-                            <div className="flex items-center gap-3 bg-white/5 backdrop-blur-md p-4 rounded-xl border border-white/10 shadow-2xl">
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center text-white font-bold text-lg shadow-lg flex-shrink-0">
-                                    {advisorName.slice(0, 2).toUpperCase()}
+                        {/* 顧問品牌個人化區塊 */}
+                        <div className="pb-4">
+                            <div className="flex items-center gap-4 bg-white/5 backdrop-blur-xl p-4 rounded-2xl border border-white/10 shadow-2xl">
+                                <div className="w-10 h-10 rounded-full bg-amber-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-inner">
+                                    {advisorName.slice(0, 1).toUpperCase()}
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-base font-bold text-white truncate">{advisorName}</p>
-                                    <p className="text-xs text-amber-400/70 truncate tracking-tight uppercase font-medium">Wealth Strategy Insight</p>
+                                    <p className="text-sm font-bold text-white truncate">{advisorName}</p>
+                                    <p className="text-[9px] text-gray-500 truncate tracking-wider uppercase">Independent Advisor</p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 pointer-events-none"></div>
                 </div>
             </div>
-            <p className="text-center text-xs text-gray-500 mt-4">AI 內容由 Google Gemini 1.5 提供，每日更新</p>
+            <p className="text-center text-[10px] text-gray-600 mt-6 tracking-widest uppercase font-medium">Ultra Advisor Digital Lab</p>
         </div>
       </div>
 
+      {/* 右側計算機保持不變 */}
       <div className="md:w-96 w-full flex-shrink-0">
          <div className="sticky top-8 h-[calc(100vh-4rem)]">
             <QuickCalculator />

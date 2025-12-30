@@ -1,42 +1,52 @@
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { onRequest } from "firebase-functions/v2/https";
 
-// 定義雲端函式 getDailyInsight (v2 語法)
-export const getDailyInsight = onCall({ 
-    secrets: ["GEMINI_API_KEY"], // 讀取安全金鑰
-    region: "us-central1"        // 建議指定區域，與 Firebase 預設一致
-  }, async (request) => {
+export const getDailyInsight = onRequest({ region: "us-central1", cors: true }, async (req, res): Promise<void> => {
     
-    // 安全檢查：v2 使用 request.auth 檢查登入狀態
-    if (!request.auth) {
-      throw new HttpsError("unauthenticated", "請先登入系統");
-    }
-
-    // 初始化 AI 模型
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    const prompt = `
-      你是一位頂尖的私人銀行家與財務顧問，說話有哲理且專業。
-      請撰寫一則簡短且具啟發性的「今日財富洞察」。
-      要求：
-      1. 字數約 60-80 字。
-      2. 專注於投資心法、複利、或資產配置。
-      3. 格式必須是 JSON 如下：{"text": "內容", "author": "作者或金句來源"}
-      4. 請直接回傳 JSON 內容，不要包含 \`\`\`json 等標記。
-    `;
+    // 請確保這裡依然是你那組測試成功的 AI Studio 金鑰
+    const apiKey = "AIzaSyDrdPHgdGX1T0BRp8WnpdGfl1tT6c4CnFg".trim(); 
 
     try {
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text().replace(/```json/g, "").replace(/```/g, "").trim();
-      
-      return JSON.parse(text);
-    } catch (error) {
-      console.error("AI 生成出錯:", error);
-      return { 
-        text: "複利是世界第八大奇蹟，知之者賺，不知者賠。", 
-        author: "Albert Einstein" 
-      };
+        const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+        const listResponse = await fetch(listUrl);
+        const listData: any = await listResponse.json();
+
+        const availableModels = listData.models || [];
+        const targetModel = availableModels.find((m: any) => 
+            m.name.includes("gemini") && m.supportedGenerationMethods.includes("generateContent")
+        ) || { name: "models/gemini-1.5-flash" }; // 找不到就用預設
+
+        const genUrl = `https://generativelanguage.googleapis.com/v1beta/${targetModel.name}:generateContent?key=${apiKey}`;
+        
+        const response = await fetch(genUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ 
+                    parts: [{ 
+                        text: `你是一位冷靜、犀利的資深財務專家。
+                               請撰寫一則今日理財洞察，用於 IG 限動。
+                               內容要求：
+                               1. 範圍：專注於整個金融市場、投資本質、複利、或人性與金錢的關係。
+                               2. 風格：語氣犀利、邏輯清楚，偶爾可以引用或改編國內外經典理財名言。
+                               3. 限制：60-80 字，不要溫情喊話，要戳中痛點。
+                               4. 格式：務必回傳 JSON 格式如下：{"text": "內容", "author": "金融智庫"}
+                               注意：author 欄位請統一使用「金融智庫」或相關中性稱呼，絕對不要出現「謝民義」。` 
+                    }] 
+                }]
+            })
+        });
+
+        const data: any = await response.json();
+
+        if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+            const rawText = data.candidates[0].content.parts[0].text;
+            const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.status(200).send(jsonMatch ? jsonMatch[0] : rawText);
+        } else {
+            res.status(500).json({ status: "生成失敗", error: data.error?.message });
+        }
+    } catch (err: any) {
+        res.status(500).json({ status: "崩潰", reason: err.message });
     }
-  });
+});
