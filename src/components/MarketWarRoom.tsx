@@ -19,8 +19,10 @@ const MarketWarRoom = ({ user, userName }: { user: any; userName?: any }) => {
   // --- [核心修改] 抓取本地端 AI 數據 ---
   const fetchAIInsight = async () => {
     setIsLoadingAI(true);
-    // 這是你剛剛在終端機看到的本地端網址
-    const LOCAL_API_URL = "http://127.0.0.1:5001/grbt-f87fa/us-central1/getDailyInsight";
+    // 自動判斷環境：如果在 localhost 就用模擬器網址，否則用雲端網址
+const API_URL = window.location.hostname === "localhost" 
+  ? "http://127.0.0.1:5001/grbt-f87fa/us-central1/getDailyInsight"
+  : "https://us-central1-grbt-f87fa.cloudfunctions.net/getDailyInsight";
     
     try {
       const response = await fetch(LOCAL_API_URL);
