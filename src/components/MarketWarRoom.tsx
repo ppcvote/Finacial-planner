@@ -9,18 +9,16 @@ import {
   DollarSign,
   Activity,
   User,
-  Megaphone, 
   Edit3,     
   Check,
   X,
-  Save,
-  Share2 // 新增分享圖示
+  Share2
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { updateProfile } from 'firebase/auth'; 
 import { doc, getDoc, setDoc } from 'firebase/firestore'; 
 import { auth, db } from '../firebase'; 
-import QuickCalculator from './QuickCalculator'; // [新增] 引入獨立的計算機
+import QuickCalculator from './QuickCalculator';
 
 // --- 模擬市場數據 ---
 const MOCK_MARKET_DATA = {
@@ -59,8 +57,7 @@ interface MarketWarRoomProps {
   userName?: string; 
 }
 
-// [具名匯出]
-export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英顧問" }) => {
+const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英顧問" }) => {
   const [marketData, setMarketData] = useState<any>(null);
   const [quote, setQuote] = useState("");
   const [theme, setTheme] = useState<'blue' | 'gold' | 'warm'>('blue'); 
@@ -132,18 +129,16 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
       setIsEditingProfile(true);
   };
 
-  // [修正] 改良版圖片生成與分享邏輯
   const handleDownloadImage = async () => {
     if (!storyRef.current) return;
     setIsGenerating(true);
     try {
         const canvas = await html2canvas(storyRef.current, { 
-            scale: 2, // 保持清晰度
+            scale: 2, 
             useCORS: true, 
             backgroundColor: null 
         });
 
-        // 嘗試將 canvas 轉為 Blob
         canvas.toBlob(async (blob) => {
             if (!blob) {
                 alert("圖片生成失敗");
@@ -153,7 +148,6 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
 
             const file = new File([blob], `Market_Story_${new Date().toISOString().split('T')[0]}.png`, { type: 'image/png' });
 
-            // [核心] 檢測是否支援原生分享 (Mobile First)
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 try {
                     await navigator.share({
@@ -165,7 +159,6 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
                     console.log("分享取消或失敗", err);
                 }
             } else {
-                // 如果不支援分享 (Desktop)，則走下載流程
                 const link = document.createElement('a');
                 link.download = file.name;
                 link.href = URL.createObjectURL(blob);
@@ -202,7 +195,7 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
   return (
     <div className="grid lg:grid-cols-12 gap-6 mb-8 animate-fade-in relative">
       
-      {/* --- 個人資料編輯 Modal --- */}
+      {/* --- 個人資料編輯 Modal (僅名字) --- */}
       {isEditingProfile && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm rounded-2xl h-full">
               <div className="bg-white p-6 rounded-2xl w-full max-w-sm shadow-2xl m-4 animate-in zoom-in-95">
@@ -409,6 +402,4 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
   );
 };
 
-// [重要] 記得這裡要 export default 給 App.tsx 用 (因為 App.tsx 是用 import MarketWarRoom from ...)
-// 但我們上面已經用了 export const，為了相容原本的寫法，我們這裡可以多加一行：
 export default MarketWarRoom;
