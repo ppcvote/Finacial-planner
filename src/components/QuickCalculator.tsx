@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, Home, TrendingUp, RefreshCw, DollarSign, Percent } from 'lucide-react';
+import { Calculator, Home, TrendingUp, RefreshCw, DollarSign, Percent, Zap } from 'lucide-react';
 
 // ----------------------------------------------------------------------
 // 子组件：复利计算器
@@ -52,7 +52,6 @@ const MortgageCalc = () => {
   useEffect(() => {
     const r = rate / 100 / 12;
     const n = years * 12;
-    // 本息平均摊还
     const pmt = (loanAmount * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
     setMonthlyPay(Math.round(pmt || 0));
   }, [loanAmount, rate, years]);
@@ -79,15 +78,12 @@ const MortgageCalc = () => {
 // 子组件：IRR 速算
 // ----------------------------------------------------------------------
 const IRRCalc = () => {
-  const [totalPayment, setTotalPayment] = useState(1000000); // 总缴保费
-  const [cashValue, setCashValue] = useState(1050000); // 期满解约金
+  const [totalPayment, setTotalPayment] = useState(1000000); 
+  const [cashValue, setCashValue] = useState(1050000); 
   const [years, setYears] = useState(6);
   const [irr, setIrr] = useState(0);
 
   useEffect(() => {
-    // 简化 IRR 公式: (FV / PV)^(1/n) - 1
-    // 这是一个近似值，假设单笔投入。如果是分期缴，真实IRR会更高。
-    // 这里为了"闪算"使用 CAGR 概念模拟
     if(totalPayment > 0 && years > 0) {
         const res = (Math.pow(cashValue / totalPayment, 1 / years) - 1) * 100;
         setIrr(res);
@@ -110,9 +106,8 @@ const IRRCalc = () => {
   );
 };
 
-
 // ----------------------------------------------------------------------
-// 通用 Input 组件 (Glassmorphism Style)
+// 通用 Input 组件 (Glassmorphism Style - Fixed Contrast)
 // ----------------------------------------------------------------------
 const InputGroup = ({ label, value, onChange, prefix, suffix, step = 1 }: any) => (
   <div className="flex flex-col gap-1">
@@ -148,10 +143,18 @@ const QuickCalculator = () => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Glassmorphism Container */}
-      <div className="relative flex-1 bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+      {/* FIX: 強制背景色 bg-gray-900，讓白色文字可見 */}
+      <div className="relative flex-1 bg-gray-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
         
-        {/* Header / Tabs */}
+        {/* Header - FIX: 加回標題 */}
+        <div className="p-4 border-b border-white/10 flex items-center gap-2 bg-black/20">
+             <div className="p-1.5 bg-indigo-500/20 rounded text-indigo-400">
+                <Zap size={18} />
+             </div>
+             <h3 className="text-white font-bold tracking-wide">業務閃算機</h3>
+        </div>
+
+        {/* Tabs */}
         <div className="flex border-b border-white/10">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -160,7 +163,7 @@ const QuickCalculator = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-medium transition-all relative
+                className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-all relative
                   ${isActive ? 'text-white bg-white/5' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}
                 `}
               >

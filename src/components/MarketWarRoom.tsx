@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Share2, RefreshCw, TrendingUp, TrendingDown, DollarSign, Activity, Globe } from 'lucide-react';
+import { Download, Share2, RefreshCw, TrendingUp, TrendingDown, DollarSign, Activity, Globe, Edit2, Check } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import QuickCalculator from './QuickCalculator';
 
@@ -43,7 +43,6 @@ const useMarketData = () => {
 
   useEffect(() => {
     fetchData();
-    // 每 5 分钟自动刷新一次
     const interval = setInterval(fetchData, 300000); 
     return () => clearInterval(interval);
   }, []);
@@ -52,7 +51,7 @@ const useMarketData = () => {
 };
 
 // ----------------------------------------------------------------------
-// 2. 每日金句生成器 (Mock AI)
+// 2. 每日金句生成器
 // ----------------------------------------------------------------------
 const getDailyQuote = () => {
   const quotes = [
@@ -62,7 +61,6 @@ const getDailyQuote = () => {
     { text: "不要為錢工作，要讓錢為你工作。", author: "Robert Kiyosaki" },
     { text: "長期而言，股票市場是稱重機；短期而言，它是投票機。", author: "Benjamin Graham" }
   ];
-  // 简单根据日期 Hash 选择一句，确保每天一样
   const dayIndex = new Date().getDate() % quotes.length;
   return quotes[dayIndex];
 };
@@ -70,11 +68,16 @@ const getDailyQuote = () => {
 // ----------------------------------------------------------------------
 // 3. 主组件
 // ----------------------------------------------------------------------
-const MarketWarRoom = ({ user }: { user: any }) => {
+const MarketWarRoom = ({ user, userName }: { user: any; userName?: any }) => {
   const { data, loading, error, lastUpdated, refetch } = useMarketData();
   const storyRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const dailyQuote = getDailyQuote();
+
+  // 这里的 userName 可能是从外部传入的 props，也可以是本地状态
+  // 我们优先使用本地编辑的状态，如果没有则使用 user.displayName
+  const [advisorName, setAdvisorName] = useState(user?.displayName || userName || '專業財務顧問');
+  const [isEditingName, setIsEditingName] = useState(false);
 
   // 格式化函数
   const formatNum = (num: number, isCurrency = false) => {
@@ -83,18 +86,16 @@ const MarketWarRoom = ({ user }: { user: any }) => {
       : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  // 生成限动图片
   const handleDownloadStory = async () => {
     if (!storyRef.current) return;
     setIsGenerating(true);
     try {
       const canvas = await html2canvas(storyRef.current, {
-        scale: 3, // 高清
+        scale: 3,
         useCORS: true,
-        backgroundColor: null, // 保持透明背景或 CSS 背景
+        backgroundColor: null,
         logging: false,
       });
-      
       const link = document.createElement('a');
       link.download = `Ultra_Story_${new Date().toISOString().slice(0,10)}.png`;
       link.href = canvas.toDataURL('image/png');
@@ -107,7 +108,6 @@ const MarketWarRoom = ({ user }: { user: any }) => {
     }
   };
 
-  // 分享功能 (Mobile)
   const handleShareStory = async () => {
     if (!storyRef.current || !navigator.share) return;
     setIsGenerating(true);
@@ -130,13 +130,14 @@ const MarketWarRoom = ({ user }: { user: any }) => {
   };
 
   return (
-    <div className="h-full flex flex-col md:flex-row gap-6 p-4 md:p-8 overflow-y-auto">
+    // FIX: 強制深色背景 (bg-gray-950) 確保文字可見
+    <div className="h-full flex flex-col md:flex-row gap-6 p-4 md:p-8 overflow-y-auto bg-gray-950 text-white min-h-screen">
       
       {/* 左侧：市场仪表板 & 限动预览 */}
       <div className="flex-1 flex flex-col gap-6 max-w-4xl mx-auto w-full">
         
         {/* Header Section */}
-        <div className="flex justify-between items-end mb-2">
+        <div className="flex justify-between items-end mb-2 border-b border-gray-800 pb-4">
           <div>
             <h2 className="text-2xl font-bold text-white flex items-center gap-2">
               <Activity className="text-amber-400" />
@@ -165,7 +166,7 @@ const MarketWarRoom = ({ user }: { user: any }) => {
           {data.map((item) => {
             const isUp = item.change >= 0;
             return (
-              <div key={item.symbol} className="bg-gray-900/50 border border-white/5 p-4 rounded-xl backdrop-blur-sm hover:border-white/20 transition-all group">
+              <div key={item.symbol} className="bg-gray-900 border border-gray-800 p-4 rounded-xl hover:border-gray-700 transition-all group shadow-lg">
                 <div className="flex justify-between items-start mb-2">
                   <span className="text-gray-400 text-xs font-bold tracking-wider uppercase">{item.shortName}</span>
                   {item.symbol === '^TWII' && <Globe size={14} className="text-blue-500 opacity-50" />}
@@ -186,10 +187,43 @@ const MarketWarRoom = ({ user }: { user: any }) => {
           })}
         </div>
 
-        {/* 2. Story Generator 2.0 (Black/Gold Abstract) */}
-        <div className="mt-4">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-white">每日限動產生器 2.0</h3>
+        {/* 2. Story Generator 2.0 */}
+        <div className="mt-8 bg-gray-900/50 p-6 rounded-2xl border border-gray-800">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    每日限動產生器 2.0
+                    <span className="text-xs bg-amber-900/50 text-amber-400 px-2 py-0.5 rounded border border-amber-900">Black Gold Edition</span>
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">自動生成包含市場數據與名片的專業圖卡</p>
+                </div>
+
+                {/* FIX: 恢复昵称修改功能 */}
+                <div className="flex items-center gap-3 bg-black/40 p-2 rounded-lg border border-gray-700">
+                    <div className="text-xs text-gray-400">顯示名稱:</div>
+                    {isEditingName ? (
+                        <div className="flex items-center gap-2">
+                            <input 
+                                type="text" 
+                                value={advisorName} 
+                                onChange={(e) => setAdvisorName(e.target.value)}
+                                className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-sm text-white focus:border-amber-500 outline-none w-32"
+                                autoFocus
+                            />
+                            <button onClick={() => setIsEditingName(false)} className="text-emerald-400 hover:text-emerald-300">
+                                <Check size={16} />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-amber-100">{advisorName}</span>
+                            <button onClick={() => setIsEditingName(true)} className="text-gray-500 hover:text-white transition-colors">
+                                <Edit2 size={14} />
+                            </button>
+                        </div>
+                    )}
+                </div>
+
                 <div className="flex gap-2">
                     <button onClick={handleDownloadStory} className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-amber-900/20">
                         {isGenerating ? '生成中...' : <><Download size={16} /> 下載圖卡</>}
@@ -200,8 +234,8 @@ const MarketWarRoom = ({ user }: { user: any }) => {
                 </div>
             </div>
 
-            {/* The Canvas Area - 隐形容器，用于截图，但也在界面上显示预览 */}
-            <div className="relative w-full max-w-sm mx-auto aspect-[9/16] rounded-2xl overflow-hidden shadow-2xl border border-gray-800 group">
+            {/* The Canvas Area */}
+            <div className="relative w-full max-w-sm mx-auto aspect-[9/16] rounded-2xl overflow-hidden shadow-2xl border border-gray-800 group bg-black">
                 
                 {/* 实际被截图的 DOM */}
                 <div ref={storyRef} className="w-full h-full relative flex flex-col bg-black text-white">
@@ -262,15 +296,15 @@ const MarketWarRoom = ({ user }: { user: any }) => {
                             </div>
                         </div>
 
-                        {/* Bottom: Advisor Brand */}
+                        {/* Bottom: Advisor Brand - 使用 advisorName */}
                         <div className="pb-4">
                             <div className="flex items-center gap-3 bg-gradient-to-r from-gray-900 to-gray-800 p-3 rounded-lg border border-amber-500/20">
                                 <div className="w-10 h-10 rounded-full bg-amber-600 flex items-center justify-center text-white font-bold text-sm shadow-lg">
                                     {/* Initials */}
-                                    {user?.email?.slice(0, 2).toUpperCase() || 'UA'}
+                                    {advisorName.slice(0, 2).toUpperCase()}
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-white">{user?.displayName || '專業財務顧問'}</p>
+                                    <p className="text-sm font-bold text-white">{advisorName}</p>
                                     <p className="text-[10px] text-amber-400/80">為您量身打造的財富計畫</p>
                                 </div>
                             </div>
