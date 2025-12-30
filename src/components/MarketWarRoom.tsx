@@ -9,18 +9,18 @@ import {
   DollarSign,
   Activity,
   User,
-  Calculator, // 計算機圖示
-  Home,       // 房貸圖示
-  Percent,    // 利率圖示
-  Coins,      // 複利圖示
-  Edit3,
+  Megaphone, 
+  Edit3,     
   Check,
-  X
+  X,
+  Save,
+  Share2 // 新增分享圖示
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { updateProfile } from 'firebase/auth'; 
 import { doc, getDoc, setDoc } from 'firebase/firestore'; 
 import { auth, db } from '../firebase'; 
+import QuickCalculator from './QuickCalculator'; // [新增] 引入獨立的計算機
 
 // --- 模擬市場數據 ---
 const MOCK_MARKET_DATA = {
@@ -38,11 +38,7 @@ const DAILY_QUOTES = [
   "風險來自於你不知道自己在做什麼，專業讓風險可控。"
 ];
 
-interface MarketWarRoomProps {
-  userName?: string; 
-}
-
-// --- 子元件：極簡文字頭像 ---
+// --- 極簡文字頭像元件 ---
 const TextAvatar = ({ name, size = "md", className = "" }: { name: string, size?: "sm"|"md"|"lg"|"xl", className?: string }) => {
     const firstChar = name ? name.charAt(0) : "專";
     const sizeClasses = {
@@ -59,107 +55,11 @@ const TextAvatar = ({ name, size = "md", className = "" }: { name: string, size?
     );
 };
 
-// --- 子元件：業務閃算機 ---
-const QuickCalculator = () => {
-    const [mode, setMode] = useState<'compound' | 'loan' | 'irr'>('compound');
-    
-    // 輸入狀態
-    const [val1, setVal1] = useState<number | string>(''); // 本金 / 貸款 / 投入
-    const [val2, setVal2] = useState<number | string>(''); // 年期
-    const [val3, setVal3] = useState<number | string>(''); // 利率 / 回收
+interface MarketWarRoomProps {
+  userName?: string; 
+}
 
-    // 計算結果
-    const [result, setResult] = useState<string>('---');
-
-    const calculate = () => {
-        const v1 = Number(val1);
-        const v2 = Number(val2);
-        const v3 = Number(val3);
-
-        if (!v1 || !v2 || !v3) {
-            setResult('---');
-            return;
-        }
-
-        if (mode === 'compound') {
-            // 複利：本金 * (1+r)^n
-            const r = v3 / 100;
-            const fv = v1 * Math.pow(1 + r, v2);
-            setResult(`${Math.round(fv).toLocaleString()} 萬`);
-        } else if (mode === 'loan') {
-            // 房貸月付 (本息平均攤還)
-            // v1: 總額(萬), v2: 年, v3: 利率(%)
-            const principal = v1 * 10000;
-            const r = v3 / 100 / 12;
-            const n = v2 * 12;
-            const pmt = (principal * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
-            setResult(`$${Math.round(pmt).toLocaleString()} /月`);
-        } else if (mode === 'irr') {
-            // 簡易 IRR (CAGR) : (終值/現值)^(1/n) - 1
-            // v1: 投入, v2: 年期, v3: 回收
-            const cagr = (Math.pow(v3 / v1, 1 / v2) - 1) * 100;
-            setResult(`${cagr.toFixed(2)} %`);
-        }
-    };
-
-    // 當數值改變自動計算
-    useEffect(() => {
-        calculate();
-    }, [val1, val2, val3, mode]);
-
-    return (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col h-full shadow-sm relative overflow-hidden">
-            {/* 裝飾背景 */}
-            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                <Calculator size={100} />
-            </div>
-
-            <div className="flex items-center gap-2 mb-4 z-10">
-                <div className="bg-blue-100 text-blue-600 p-2 rounded-lg">
-                    {mode === 'compound' && <Coins size={20}/>}
-                    {mode === 'loan' && <Home size={20}/>}
-                    {mode === 'irr' && <Percent size={20}/>}
-                </div>
-                <h4 className="font-bold text-slate-800">業務閃算機</h4>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex bg-slate-100 p-1 rounded-xl mb-4 z-10">
-                <button onClick={() => {setMode('compound'); setVal1(''); setVal2(''); setVal3('');}} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${mode === 'compound' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>複利滾存</button>
-                <button onClick={() => {setMode('loan'); setVal1(''); setVal2(''); setVal3('');}} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${mode === 'loan' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>貸款月付</button>
-                <button onClick={() => {setMode('irr'); setVal1(''); setVal2(''); setVal3('');}} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${mode === 'irr' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>年化報酬</button>
-            </div>
-
-            {/* Inputs */}
-            <div className="space-y-3 z-10">
-                <div className="flex items-center gap-2">
-                    <label className="w-16 text-xs font-bold text-slate-500 text-right">
-                        {mode === 'compound' ? '本金(萬)' : mode === 'loan' ? '總額(萬)' : '投入(萬)'}
-                    </label>
-                    <input type="number" value={val1} onChange={e => setVal1(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0"/>
-                </div>
-                <div className="flex items-center gap-2">
-                    <label className="w-16 text-xs font-bold text-slate-500 text-right">年期</label>
-                    <input type="number" value={val2} onChange={e => setVal2(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0"/>
-                </div>
-                <div className="flex items-center gap-2">
-                    <label className="w-16 text-xs font-bold text-slate-500 text-right">
-                        {mode === 'compound' ? '利率(%)' : mode === 'loan' ? '利率(%)' : '回收(萬)'}
-                    </label>
-                    <input type="number" value={val3} onChange={e => setVal3(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0"/>
-                </div>
-            </div>
-
-            {/* Result */}
-            <div className="mt-auto pt-4 text-center z-10">
-                <div className="text-xs text-slate-400 mb-1">試算結果</div>
-                <div className="text-3xl font-black text-blue-600 font-mono tracking-tight">{result}</div>
-            </div>
-        </div>
-    );
-};
-
-
+// [具名匯出]
 export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英顧問" }) => {
   const [marketData, setMarketData] = useState<any>(null);
   const [quote, setQuote] = useState("");
@@ -175,7 +75,6 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
 
   // 初始化
   useEffect(() => {
-    // 1. 金句與市場數據
     const todayIndex = new Date().getDate() % DAILY_QUOTES.length;
     setQuote(DAILY_QUOTES[todayIndex]);
 
@@ -195,11 +94,8 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
         fearGreed: MOCK_MARKET_DATA.fearGreed
     });
 
-    // 2. 載入 Firebase 用戶資料
     if (auth.currentUser) {
         setDisplayName(auth.currentUser.displayName || userName);
-        
-        // 從 Firestore 讀取最新名字
         const fetchData = async () => {
             try {
                 const docRef = doc(db, 'users', auth.currentUser!.uid, 'system', 'dashboard');
@@ -216,7 +112,6 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
     }
   }, [userName]);
 
-  // --- 更新名字 ---
   const handleUpdateProfile = async () => {
       if (!auth.currentUser) return;
       try {
@@ -237,19 +132,52 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
       setIsEditingProfile(true);
   };
 
-  // 下載圖片
+  // [修正] 改良版圖片生成與分享邏輯
   const handleDownloadImage = async () => {
     if (!storyRef.current) return;
     setIsGenerating(true);
     try {
-        const canvas = await html2canvas(storyRef.current, { scale: 2, useCORS: true, backgroundColor: null });
-        const link = document.createElement('a');
-        link.download = `Market_Story_${new Date().toISOString().split('T')[0]}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        const canvas = await html2canvas(storyRef.current, { 
+            scale: 2, // 保持清晰度
+            useCORS: true, 
+            backgroundColor: null 
+        });
+
+        // 嘗試將 canvas 轉為 Blob
+        canvas.toBlob(async (blob) => {
+            if (!blob) {
+                alert("圖片生成失敗");
+                setIsGenerating(false);
+                return;
+            }
+
+            const file = new File([blob], `Market_Story_${new Date().toISOString().split('T')[0]}.png`, { type: 'image/png' });
+
+            // [核心] 檢測是否支援原生分享 (Mobile First)
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: '今日財經戰情',
+                        text: '分享自 Ultra Advisor'
+                    });
+                } catch (err) {
+                    console.log("分享取消或失敗", err);
+                }
+            } else {
+                // 如果不支援分享 (Desktop)，則走下載流程
+                const link = document.createElement('a');
+                link.download = file.name;
+                link.href = URL.createObjectURL(blob);
+                link.click();
+                URL.revokeObjectURL(link.href);
+            }
+            setIsGenerating(false);
+        }, 'image/png');
+
     } catch (err) {
+        console.error(err);
         alert("圖片生成失敗");
-    } finally {
         setIsGenerating(false);
     }
   };
@@ -274,7 +202,7 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
   return (
     <div className="grid lg:grid-cols-12 gap-6 mb-8 animate-fade-in relative">
       
-      {/* --- 個人資料編輯 Modal (僅名字) --- */}
+      {/* --- 個人資料編輯 Modal --- */}
       {isEditingProfile && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm rounded-2xl h-full">
               <div className="bg-white p-6 rounded-2xl w-full max-w-sm shadow-2xl m-4 animate-in zoom-in-95">
@@ -311,7 +239,7 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
                 <button onClick={openProfileEditor} className="relative group">
-                    <TextAvatar name={displayName} size="md" />
+                    <TextAvatar name={displayName} size="md" className="border-2 border-white shadow-sm"/>
                     <div className="absolute bottom-0 right-0 bg-slate-800 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                         <Edit3 size={10} />
                     </div>
@@ -363,7 +291,7 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
              </div>
          </div>
 
-         {/* [新增] 業務閃算機 (填補空白區) */}
+         {/* [新增] 業務閃算機 (從獨立檔案引入) */}
          <div className="flex-1 min-h-[250px]">
              <QuickCalculator />
          </div>
@@ -402,6 +330,7 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
                          <div className="text-2xl font-black tracking-tight">{new Date().toLocaleDateString()}</div>
                          <div className={`text-sm opacity-70`}>{['週日','週一','週二','週三','週四','週五','週六'][new Date().getDay()]}</div>
                      </div>
+                     {/* 改為文字頭像 */}
                      <TextAvatar name={displayName} size="md" className="border-2 border-white/20 shadow-lg"/>
                  </div>
 
@@ -445,9 +374,7 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
                  {/* Footer */}
                  <div className="relative z-10 pt-6 border-t border-white/10 mt-auto">
                      <div className="flex items-center gap-3">
-                         <div className={`p-2 rounded-full ${isLightMode ? 'bg-rose-100 text-rose-600' : 'bg-white/10 text-white'}`}>
-                             <User size={16}/>
-                         </div>
+                         <TextAvatar name={displayName} size="sm" className={isLightMode ? 'bg-rose-100 text-rose-600 border-rose-300' : 'bg-white/10 border-white/30'}/>
                          <div>
                              <div className="text-[10px] opacity-60 uppercase tracking-wider">Your Financial Partner</div>
                              <div className="font-bold text-sm">{displayName}</div>
@@ -470,8 +397,8 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
                         disabled={isGenerating}
                         className={`${currentTheme.btn} text-white px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2`}
                      >
-                        {isGenerating ? <RefreshCw size={16} className="animate-spin"/> : <Download size={16}/>}
-                        下載圖片
+                        {isGenerating ? <RefreshCw size={16} className="animate-spin"/> : navigator.canShare ? <Share2 size={16}/> : <Download size={16}/>}
+                        {navigator.canShare ? "分享" : "下載"}
                      </button>
                  </div>
              </div>
@@ -481,3 +408,7 @@ export const MarketWarRoom: React.FC<MarketWarRoomProps> = ({ userName = "菁英
     </div>
   );
 };
+
+// [重要] 記得這裡要 export default 給 App.tsx 用 (因為 App.tsx 是用 import MarketWarRoom from ...)
+// 但我們上面已經用了 export const，為了相容原本的寫法，我們這裡可以多加一行：
+export default MarketWarRoom;
