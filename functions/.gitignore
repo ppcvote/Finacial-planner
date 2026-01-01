@@ -8,3 +8,17 @@ typings/
 # Node.js dependency directory
 node_modules/
 *.local
+
+# 環境變數檔案（最重要的）
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vercel 的暫存資料夾
+.vercel
+
+# 其他不想上傳的系統檔
+node_modules/
+.DS_Store
