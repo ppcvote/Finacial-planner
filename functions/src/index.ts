@@ -2,10 +2,8 @@ import { onRequest } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 
 export const getDailyInsight = onRequest({ region: "us-central1", cors: true, timeoutSeconds: 60 }, async (req, res): Promise<void> => {
-    // ✅ 修改點：從環境變數讀取，不再寫死金鑰
     const apiKey = process.env.GOOGLE_API_KEY; 
 
-    // 安全檢查：如果沒讀到金鑰，直接回傳錯誤
     if (!apiKey) {
         logger.error("未設定 GOOGLE_API_KEY 環境變數");
         res.status(200).json({
@@ -21,17 +19,38 @@ export const getDailyInsight = onRequest({ region: "us-central1", cors: true, ti
     try {
         const genUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
         
+        // 🚀 升級後的 Prompt：要求 AI 產出導師見解與 SVG 圖表
+        const promptText = `
+你是一位高端財商導師 'Ultra Advisor'。請針對『如何建立資產水庫』的主題，產出一個嚴格的 JSON 格式資料。
+
+要求：
+1. 語氣：專業、有洞見、啟發人心。
+2. 視覺：請產出一個極簡的 SVG 向量圖代碼 (放在 visualChart 欄位)，寬度 300，高度 120。用簡單的線條或長條圖表達增長感，配色使用金色 (#D4AF37) 與深灰色。
+3. 數據：在 chartData 欄位提供 5 個模擬數值。
+
+JSON 格式規範：
+{
+  "title": "標題",
+  "subtitle": "副標題",
+  "visualChart": "SVG 代碼內容",
+  "chartData": [20, 40, 60, 80, 100],
+  "concepts": [
+    {"tag": "標籤1", "content": "深刻洞見1"},
+    {"tag": "標籤2", "content": "深刻洞見2"},
+    {"tag": "標籤3", "content": "深刻洞見3"}
+  ],
+  "conclusion": "結尾金句",
+  "author": "Ultra Advisor"
+}
+注意：只需回傳純 JSON，不要包含 Markdown 標籤。`;
+
         const aiResponse = await fetch(genUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{ 
-                    parts: [{ 
-                        text: "你是一位財商導師。請產出一個 JSON：{\"title\": \"標題\", \"subtitle\": \"副標\", \"concepts\": [{\"tag\": \"1\", \"content\": \"1\"}, {\"tag\": \"2\", \"content\": \"2\"}, {\"tag\": \"3\", \"content\": \"3\"}], \"conclusion\": \"結尾\", \"author\": \"Ultra Advisor\"} 注意：只回傳純 JSON。" 
-                    }] 
-                }],
+                contents: [{ parts: [{ text: promptText }] }],
                 generationConfig: {
-                    temperature: 0.7,
+                    temperature: 0.8,
                     responseMimeType: "application/json"
                 }
             })
@@ -42,13 +61,9 @@ export const getDailyInsight = onRequest({ region: "us-central1", cors: true, ti
         if (!aiResponse.ok) {
             res.status(200).json({
                 title: "AI 連線異常",
-                subtitle: `錯誤代碼: ${aiResponse.status} - 請檢查日誌`,
-                concepts: [
-                    { tag: "!", content: "這可能是 API Key 權限問題" },
-                    { tag: "!", content: "或是 Google 服務在該區域有暫時性問題" },
-                    { tag: "!", content: rawText.substring(0, 50) + "..." }
-                ],
-                conclusion: "請截圖此畫面給開發夥伴協助。",
+                subtitle: `錯誤代碼: ${aiResponse.status}`,
+                concepts: [{ tag: "!", content: "請檢查 API Key 權限" }],
+                conclusion: "連線失敗，請稍後再試。",
                 author: "系統診斷模式"
             });
             return;
@@ -59,18 +74,15 @@ export const getDailyInsight = onRequest({ region: "us-central1", cors: true, ti
 
         if (outputText) {
             res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            // 直接回傳 AI 生成的 JSON 物件
             res.status(200).json(JSON.parse(outputText));
             return;
         } else {
             res.status(200).json({
-                title: "內容被過濾器攔截",
-                subtitle: "AI 拒絕產出此主題內容",
-                concepts: [
-                    { tag: "1", content: "嘗試更換更溫和的指令" },
-                    { tag: "2", content: "或是檢查 Prompt 是否包含敏感字眼" },
-                    { tag: "3", content: "目前 AI 處於保護模式" }
-                ],
-                conclusion: "請嘗試按『換個主題』再試一次。",
+                title: "內容被過濾",
+                subtitle: "AI 拒絕產出內容",
+                concepts: [{ tag: "!", content: "嘗試更換指令" }],
+                conclusion: "請按換個主題再試一次。",
                 author: "安全過濾模式"
             });
             return;
@@ -81,11 +93,8 @@ export const getDailyInsight = onRequest({ region: "us-central1", cors: true, ti
         res.status(200).json({
             title: "程式執行崩潰",
             subtitle: `原因: ${err.message}`,
-            concepts: [
-                { tag: "!", content: "JSON 解析可能失敗了" },
-                { tag: "!", content: "請檢查 AI 回傳的格式是否正確" }
-            ],
-            conclusion: "這通常是格式問題，修復後即可恢復。",
+            concepts: [{ tag: "!", content: "解析失敗" }],
+            conclusion: "格式異常，請重啟測試。",
             author: "崩潰診斷模式"
         });
         return;
