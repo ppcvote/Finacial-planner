@@ -9,16 +9,14 @@ const MarketWarRoom = ({ user, userName }: { user: any; userName?: any }) => {
   const [dailyData, setDailyData] = useState<any>(null);
   const [advisorName, setAdvisorName] = useState(user?.displayName || userName || '專業財務顧問');
 
-  // --- [核心修正] 破除緩存邏輯，確保按鈕每次點擊都有反應 ---
+  // --- [核心修正] 增加陣列檢查與圖表解析 ---
   const fetchAIInsight = async (force = false) => {
     setIsLoadingAI(true);
     
-    // 如果是按按鈕「換個主題」，先清空舊資料，讓使用者看到轉圈圈
     if (force) {
       setDailyData(null);
     }
 
-    // 在網址後加上時間戳記，騙過瀏覽器，強迫它去雲端抓新的 AI 內容
     const BASE_URL = "https://us-central1-grbt-f87fa.cloudfunctions.net/getDailyInsight";
     const API_URL = `${BASE_URL}?t=${new Date().getTime()}`;
     
@@ -26,10 +24,13 @@ const MarketWarRoom = ({ user, userName }: { user: any; userName?: any }) => {
       const response = await fetch(API_URL);
       if (!response.ok) throw new Error("API 請求失敗");
       const data = await response.json();
-      setDailyData(data);
+
+      // ⭐ 修正點 1：自動檢查回傳是否為陣列，如果是就取第一個物件
+      const finalData = Array.isArray(data) ? data[0] : data;
+      setDailyData(finalData);
+
     } catch (error) {
       console.error("AI Fetch Error", error);
-      // 如果萬一斷線，顯示保底文案
       setDailyData({
         title: "複利不是奇蹟，是數學",
         subtitle: "看懂的人在賺錢，看不懂的人在打工",
@@ -58,7 +59,6 @@ const MarketWarRoom = ({ user, userName }: { user: any; userName?: any }) => {
         backgroundColor: "#080808" 
       });
       const link = document.createElement('a');
-      // 檔名加上日期，方便管理
       const dateStr = new Date().toISOString().slice(0,10);
       link.download = `Ultra_Insight_${dateStr}.png`;
       link.href = canvas.toDataURL('image/png');
@@ -93,34 +93,41 @@ const MarketWarRoom = ({ user, userName }: { user: any; userName?: any }) => {
         className="relative w-[360px] aspect-[9/16] bg-[#080808] overflow-hidden flex flex-col p-10 font-sans shadow-[0_0_80px_rgba(0,0,0,0.5)]"
         style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, #1a1a1a 0%, #080808 100%)' }}
       >
-        {/* 背景浮水印 */}
         <div className="absolute inset-0 opacity-[0.02] flex items-center justify-center pointer-events-none">
           <img src="/logo.png" className="w-[85%]" alt="watermark" />
         </div>
 
         {/* 1. 標題與副標題 */}
-        <div className="relative z-10 mt-12">
+        <div className="relative z-10 mt-8">
           <div className="flex items-center gap-2 mb-4">
             <div className="h-[2px] w-8 bg-amber-500"></div>
             <span className="text-amber-500 text-[10px] tracking-[0.4em] font-black uppercase">Ultra Insight</span>
           </div>
-          <h1 className="text-3xl font-black text-white leading-tight mb-2 drop-shadow-2xl">
+          <h1 className="text-2xl font-black text-white leading-tight mb-2 drop-shadow-2xl">
             {dailyData?.title || "AI 正在思考..."}
           </h1>
-          <p className="text-amber-200/50 text-sm font-medium tracking-tight">
+          <p className="text-amber-200/50 text-xs font-medium tracking-tight">
             {dailyData?.subtitle || "智庫正在分析市場觀念..."}
           </p>
         </div>
 
+        {/* ⭐ 修正點 2：渲染 AI 產出的 SVG 圖表 */}
+        {dailyData?.visualChart && (
+          <div 
+            className="relative z-10 my-6 flex justify-center bg-white/5 p-4 rounded-xl border border-white/5"
+            dangerouslySetInnerHTML={{ __html: dailyData.visualChart }}
+          />
+        )}
+
         {/* 2. 核心觀念呈現 */}
-        <div className="relative z-10 flex-1 flex flex-col justify-center gap-7 py-8">
+        <div className="relative z-10 flex-1 flex flex-col justify-center gap-5 py-4">
           {dailyData?.concepts?.map((item: any, idx: number) => (
-            <div key={idx} className="flex gap-5 items-start">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full border border-amber-500/30 flex items-center justify-center text-amber-500 text-[10px] font-black bg-amber-500/5">
+            <div key={idx} className="flex gap-4 items-start">
+              <div className="flex-shrink-0 w-6 h-6 rounded-full border border-amber-500/30 flex items-center justify-center text-amber-500 text-[10px] font-black bg-amber-500/5">
                 {item.tag}
               </div>
-              <div className="flex-1 border-b border-white/5 pb-4">
-                <p className="text-[15px] text-gray-200 font-medium leading-relaxed">
+              <div className="flex-1 border-b border-white/5 pb-2">
+                <p className="text-[13px] text-gray-200 font-medium leading-relaxed">
                   {item.content}
                 </p>
               </div>
@@ -128,9 +135,9 @@ const MarketWarRoom = ({ user, userName }: { user: any; userName?: any }) => {
           ))}
         </div>
 
-        {/* 3. 短內文 / 結語 */}
-        <div className="relative z-10 mb-10 border-l-2 border-amber-600/50 pl-4 py-1">
-          <p className="text-[13px] text-gray-400 leading-relaxed italic">
+        {/* 3. 結語 */}
+        <div className="relative z-10 mb-8 border-l-2 border-amber-600/50 pl-4 py-1">
+          <p className="text-[12px] text-gray-400 leading-relaxed italic">
             "{dailyData?.conclusion}"
           </p>
         </div>
@@ -138,16 +145,16 @@ const MarketWarRoom = ({ user, userName }: { user: any; userName?: any }) => {
         {/* 4. 品牌底部 */}
         <div className="relative z-10 mt-auto pt-6 border-t border-white/10 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-700 rounded-xl flex items-center justify-center shadow-lg">
-              <img src="/logo.png" className="w-6 h-6 invert" alt="logo" />
+            <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-amber-700 rounded-lg flex items-center justify-center shadow-lg">
+              <img src="/logo.png" className="w-5 h-5 invert" alt="logo" />
             </div>
             <div>
-              <p className="text-[14px] font-black text-white tracking-tight leading-none mb-1">{advisorName}</p>
-              <p className="text-[8px] text-gray-500 tracking-widest uppercase font-bold">Wealth Strategy Elite</p>
+              <p className="text-[12px] font-black text-white tracking-tight leading-none mb-1">{advisorName}</p>
+              <p className="text-[7px] text-gray-500 tracking-widest uppercase font-bold">Wealth Strategy Elite</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-[10px] text-amber-600 font-black tracking-tighter italic">#UltraAdvisor</p>
+            <p className="text-[9px] text-amber-600 font-black tracking-tighter italic">#UltraAdvisor</p>
           </div>
         </div>
       </div>
