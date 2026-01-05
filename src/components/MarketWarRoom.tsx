@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, RefreshCw, Loader2, Calculator, Percent, Home, TrendingUp, PieChart, Coins } from 'lucide-react';
+import { Download, RefreshCw, Loader2, Calculator, Percent, Home, TrendingUp, PieChart, Coins, Edit2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 const UltraProDashboard = ({ user, userName }: { user: any; userName?: any }) => {
@@ -93,72 +93,68 @@ const UltraProDashboard = ({ user, userName }: { user: any; userName?: any }) =>
       <div className="w-full max-w-[360px] flex flex-col gap-6">
         <div className="flex gap-3">
           <button onClick={() => fetchAIInsight(true)} className="flex-1 bg-gray-900 border border-gray-700 py-3 rounded-xl flex items-center justify-center gap-2"><RefreshCw size={14} />換主題</button>
-          <button onClick={handleDownload} className="flex-1 bg-amber-600 py-3 rounded-xl font-bold">{isGenerating ? '生成中...' : '儲存高清圖'}</button>
+          <button onClick={handleDownload} className="flex-1 bg-amber-600 py-3 rounded-xl font-bold transition-all active:scale-95">{isGenerating ? '生成中...' : '儲存高清圖'}</button>
         </div>
         
         <div ref={storyRef} className="relative aspect-[9/16] bg-[#080808] p-7 border border-white/5 shadow-2xl overflow-hidden flex flex-col">
           {isLoadingAI && <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center"><Loader2 className="animate-spin text-amber-500" /></div>}
           
           {/* 右上角 Logo - 縮小優化 */}
-          <div className="absolute top-5 right-5 z-20 flex items-center gap-1.5">
+          <div className="absolute top-4 right-5 z-20 flex items-center gap-1.5">
             <span className="text-white/20 text-[6px] uppercase tracking-[0.2em]">Ultra Advisor</span>
-            <div className="w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center">
-              <img src="/logo.png" className="w-2.5 h-2.5 invert" />
+            <div className="w-3.5 h-3.5 bg-amber-500 rounded-full flex items-center justify-center">
+              <img src="/logo.png" className="w-2 h-2 invert" />
             </div>
           </div>
 
-          <div className="absolute inset-0 opacity-[0.02] flex items-center justify-center pointer-events-none">
-            <img src="/logo.png" className="w-[70%]" alt="watermark" />
-          </div>
-
-          {/* 標題區域 - 緊湊化 */}
-          <div className="relative z-10 mt-1">
+          {/* 標題區域 */}
+          <div className="relative z-10 mt-0">
             <div className="flex items-center gap-2 mb-2">
               <div className="h-[1px] w-4 bg-amber-500"></div>
               <span className="text-amber-500 text-[7px] tracking-[0.3em] font-black uppercase">Ultra Insight</span>
             </div>
             <h1 className="text-xl font-black mb-1 leading-tight">{dailyData?.title || " "}</h1>
-            <p className="text-amber-200/40 text-[9px] font-bold tracking-wide">{dailyData?.subtitle || " "}</p>
+            <p className="text-amber-200/40 text-[9px] font-bold tracking-wide leading-relaxed">{dailyData?.subtitle || " "}</p>
           </div>
 
-          {/* 圖表區域 - 穩定空間不被擠壓 */}
+          {/* 圖表區域 - 穩定保護空間 */}
           {dailyData?.visualChart && (
             <div 
-              className="relative z-10 my-3 flex justify-center bg-white/[0.01] p-3 rounded-xl border border-white/5 overflow-hidden min-h-[90px]"
+              className="relative z-10 my-2 flex justify-center bg-white/[0.01] p-2 rounded-xl border border-white/5 overflow-hidden min-h-[100px] items-center"
               dangerouslySetInnerHTML={{ __html: dailyData.visualChart }} 
             />
           )}
 
-          {/* 觀念清單 - 間距縮減 */}
-          <div className="relative z-10 flex-1 flex flex-col justify-start gap-3.5 pt-1 px-1">
+          {/* 觀念清單 - 緊湊排列 */}
+          <div className="relative z-10 flex-1 flex flex-col justify-start gap-3 pt-1 px-1">
             {dailyData?.concepts?.map((c: any, i: number) => (
-              <div key={i} className="flex gap-3 border-b border-white/5 pb-1.5">
+              <div key={i} className="flex gap-3 border-b border-white/5 pb-1.5 last:border-0">
                 <div className="text-amber-500 text-[8px] font-black w-5 flex-shrink-0 pt-0.5">{c.tag || (i+1)}</div>
-                <p className="text-[11.5px] text-gray-300 leading-relaxed font-medium">{c.content}</p>
+                <p className="text-[11px] text-gray-300 leading-relaxed font-medium">{c.content}</p>
               </div>
             ))}
           </div>
 
-          {/* 結語 - 位置優化 */}
-          <div className="relative z-10 mt-2 mb-4 border-l border-amber-600/60 pl-3 py-0.5">
-            <p className="text-[10px] text-gray-500 italic leading-snug">
+          {/* 結語 */}
+          <div className="relative z-10 mt-2 mb-4 border-l border-amber-600/40 pl-3 py-0.5">
+            <p className="text-[9.5px] text-gray-500 italic leading-snug">
               "{dailyData?.conclusion}"
             </p>
           </div>
 
-          {/* ⭐ 修正點：個人資訊縮小並壓低 */}
-          <div className="relative z-10 mt-auto pt-2 border-t border-white/5 flex justify-between items-end">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-gray-800 rounded flex items-center justify-center border border-white/5">
-                <img src="/logo.png" className="w-3 h-3 opacity-60" alt="logo" />
+          {/* 個人資訊 - 縮小並極致壓低 */}
+          <div className="relative z-10 mt-auto pb-1 flex justify-between items-end border-t border-white/5 pt-2">
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 bg-gray-800 rounded flex items-center justify-center border border-white/5">
+                <img src="/logo.png" className="w-2.5 h-2.5 opacity-50" alt="logo" />
               </div>
               <div>
-                <p className="text-[10px] font-black text-white leading-none mb-0.5">{advisorName}</p>
+                <p className="text-[9px] font-black text-white leading-none mb-0.5">{advisorName}</p>
                 <p className="text-[5px] text-gray-600 uppercase tracking-widest font-bold">Wealth Strategy Elite</p>
               </div>
             </div>
             <div className="pb-0.5">
-               <p className="text-[7px] text-amber-700/50 font-black tracking-tighter">#UltraAdvisor</p>
+               <p className="text-[6px] text-amber-900/40 font-black tracking-tighter">#UltraAdvisor</p>
             </div>
           </div>
         </div>
@@ -210,9 +206,27 @@ const UltraProDashboard = ({ user, userName }: { user: any; userName?: any }) =>
           )}
         </div>
 
-        <div className="mt-8 p-5 bg-amber-500/5 rounded-2xl border border-amber-500/10 text-[11px] text-gray-400 leading-relaxed italic shadow-inner">
+        {/* ⭐ 新增：改名字功能區區塊 */}
+        <div className="mt-8 pt-6 border-t border-white/5 space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Edit2 size={14} className="text-amber-500" />
+            <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">圖卡品牌設定</span>
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-400 mb-2 block uppercase font-bold tracking-tighter">顯示顧問姓名</label>
+            <input 
+              type="text" 
+              value={advisorName}
+              onChange={(e) => setAdvisorName(e.target.value)}
+              placeholder="輸入你的姓名或職稱"
+              className="w-full bg-black/30 border border-gray-800 rounded-xl py-2 px-4 text-sm text-white focus:border-amber-500 outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="mt-6 p-4 bg-amber-500/5 rounded-2xl border border-amber-500/10 text-[11px] text-gray-400 leading-relaxed italic shadow-inner">
           💡 <span className="font-black text-amber-600">系統分析：</span>
-          {calcMode === 'irr' ? '實質 IRR 才是判斷保單價值的真理。高於通膨與銀行定存，才是有效的避風港。' : '成功的財務規劃始於精確的計算，而非模糊的感覺。'}
+          {calcMode === 'irr' ? '實質 IRR 才是判斷保單價值的真理。' : '成功的財務規劃始於精確的計算。'}
         </div>
       </div>
     </div>
