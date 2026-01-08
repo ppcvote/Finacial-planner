@@ -81,10 +81,6 @@ const NavItem = ({ icon: Icon, label, active, onClick, disabled = false }: any) 
   </button>
 );
 
-// ------------------------------------------------------------------
-// Main App Shell
-// ------------------------------------------------------------------
-
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true); 
@@ -131,9 +127,16 @@ export default function App() {
 
   const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
 
-  // =================================================================
-  // [核心] 安全機制：雙裝置限制 (已修正：註冊時暫停檢查)
-  // =================================================================
+  // ==========================================
+  // [修正] 防禦性過濾器：防止 undefined 傳入 Firebase
+  // ==========================================
+  const cleanDataForFirebase = (obj: any) => {
+    return JSON.parse(JSON.stringify(obj, (key, value) => {
+      return value === undefined ? null : value;
+    }));
+  };
+
+  // 雙裝置限制
   const registerDeviceSession = async (uid: string) => {
     isRegistering.current = true; 
     const newSessionId = generateSessionId();
@@ -162,23 +165,15 @@ export default function App() {
     }
   };
 
-  // 裝置踢出監聽器
   useEffect(() => {
-    // [重要修正] 如果正在註冊流程中，不要執行踢人檢查！
     if (isSecretSignupRoute) return;
-
     if (!user) return;
     const localSessionId = localStorage.getItem('my_app_session_id');
-    
     if (isRegistering.current) return;
-
     if (!localSessionId) {
-        console.warn("Detected legacy session, forcing logout for upgrade.");
-        signOut(auth).then(() => {
-        });
+        signOut(auth);
         return;
     }
-
     const userMetaRef = doc(db, 'users', user.uid, 'system', 'metadata');
     const unsubscribe = onSnapshot(userMetaRef, async (docSnap) => {
         if (isRegistering.current) return;
@@ -186,7 +181,6 @@ export default function App() {
             const data = docSnap.data();
             const activeSessions: string[] = data.activeSessions || [];
             if (activeSessions.length > 0 && !activeSessions.includes(localSessionId)) {
-                console.warn("裝置數量超過限制，此裝置已被登出");
                 localStorage.removeItem('my_app_session_id');
                 await signOut(auth);
                 alert("您的帳號已在第 3 台裝置登入。\n系統限制同時使用 2 台裝置。\n此舊連線已自動登出。");
@@ -195,11 +189,8 @@ export default function App() {
         }
     });
     return () => unsubscribe();
-  }, [user, isSecretSignupRoute]); // 加入 isSecretSignupRoute 依賴
+  }, [user, isSecretSignupRoute]);
 
-  // =================================================================
-
-  // 初始化檢查路由
   useEffect(() => {
     if (window.location.pathname === '/signup-secret') {
         setIsSecretSignupRoute(true);
@@ -208,7 +199,6 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // 監聽 Auth 狀態
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -221,7 +211,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // --- 客戶資料載入 ---
+  // 客戶資料載入
   useEffect(() => {
       if (!user || !currentClient) {
           setIsDataLoaded(false);
@@ -242,7 +232,7 @@ export default function App() {
               if (data.reservoirData) setReservoirData(prev => ({...prev, ...data.reservoirData}));
               if (data.taxData) setTaxData(prev => ({...prev, ...data.taxData}));
               if (data.freeDashboardLayout) setFreeDashboardLayout(data.freeDashboardLayout);
-              setCurrentClient((prev: any) => ({ ...prev, name: data.name, note: data.note }));
+              // 注意：不要在這裡觸發 setCurrentClient 的全量更新，以免進入無限循環，只更新基本資訊
           }
           setClientLoading(false);
           setIsDataLoaded(true); 
@@ -254,7 +244,7 @@ export default function App() {
       return () => unsubscribeClient();
   }, [currentClient?.id, user]); 
 
-  // --- 自動儲存 ---
+  // --- [關鍵修正] 自動儲存：加入了 cleanDataForFirebase ---
   useEffect(() => {
     if (!user || !currentClient || !isDataLoaded) return;
     const dataPayload = {
@@ -263,16 +253,22 @@ export default function App() {
     };
     const currentDataStr = JSON.stringify(dataPayload);
     if (currentDataStr === lastSavedDataStr.current) return;
+
     const saveData = async () => {
         setIsSaving(true);
         try {
+            // 在儲存前，將整個 Payload 進行 cleanData 處理，將 undefined 轉為 null
+            const cleanedPayload = cleanDataForFirebase(dataPayload);
+            
             await setDoc(doc(db, 'users', user.uid, 'clients', currentClient.id), {
-                ...dataPayload,
+                ...cleanedPayload,
                 updatedAt: Timestamp.now()
             }, { merge: true });
+
             lastSavedDataStr.current = currentDataStr;
             setTimeout(() => setIsSaving(false), 500);
         } catch (error) {
+            // 這裡就不會再跳 "Unsupported field value: undefined" 了
             console.error("Auto-save failed:", error);
             setIsSaving(false);
         }
@@ -315,30 +311,22 @@ export default function App() {
     }
   };
 
-  // --- 畫面渲染邏輯 ---
-
   if (loading || !minSplashTimePassed) return <SplashScreen />;
 
-  // [重要修正] 1. 優先處理註冊頁
-  // 即使 user 已經建立(已登入)，只要網址是 signup-secret，就強迫顯示註冊頁
-  // 直到 onSignupSuccess 被呼叫並執行轉址
   if (isSecretSignupRoute) {
       return <SecretSignupPage onSignupSuccess={() => {
           alert("🎉 帳號開通成功！\n\n系統將自動導向至您的專屬戰情室。");
-          // 因為 SecretSignupPage 已經寫入 LocalStorage，這裡不需要再做
           setIsSecretSignupRoute(false);
           window.location.href = '/'; 
       }} />;
   }
 
-  // 2. 如果沒登入 -> 顯示登入頁
   if (!user) {
       return <LoginPage onLoginSuccess={() => {
           if (auth.currentUser) registerDeviceSession(auth.currentUser.uid);
       }} />;
   }
 
-  // 3. 已登入，未選客戶 -> 戰情室
   if (!currentClient) {
       return (
           <>
@@ -356,7 +344,6 @@ export default function App() {
       );
   }
 
-  // 4. 已登入且已選客戶 -> 工具操作介面 (保持不變)
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       <PrintStyles />
@@ -382,7 +369,6 @@ export default function App() {
 
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900 text-white flex flex-col animate-fade-in md:hidden">
-           {/* Mobile Menu ... */}
            <div className="p-4 flex justify-between items-center border-b border-slate-800">
               <span className="font-bold text-lg">功能選單</span>
               <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-slate-800 rounded-full"><X size={24}/></button>
@@ -391,7 +377,6 @@ export default function App() {
               <button onClick={handleBackToDashboard} className="w-full bg-blue-600 text-white px-4 py-3 rounded-xl flex items-center gap-2 font-bold mb-4">
                   <ChevronLeft size={20}/> 返回客戶列表
               </button>
-              
               <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
                  <ShieldCheck size={14}/> 觀念與診斷
               </div>
@@ -423,16 +408,11 @@ export default function App() {
         </div>
       )}
 
-      {/* Sidebar (Desktop) */}
       <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10 print:hidden">
         <div className="p-4 border-b border-slate-800">
-           <button 
-             onClick={handleBackToDashboard}
-             className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-lg transition-all mb-4"
-           >
+           <button onClick={handleBackToDashboard} className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-lg transition-all mb-4">
               <ChevronLeft size={18}/> 返回客戶列表
            </button>
-
            <div className="flex items-center gap-3 px-2">
              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg text-white shrink-0">
                 {currentClient.name.charAt(0)}
@@ -441,21 +421,20 @@ export default function App() {
                 <div className="text-xs text-blue-400 font-bold uppercase truncate">正在規劃</div>
                 <div className="font-bold text-sm truncate text-white">{currentClient.name}</div>
              </div>
-          </div>
-          
-          <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 bg-black/20 px-2 py-1 rounded">
-             {isSaving ? (
+           </div>
+           <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 bg-black/20 px-2 py-1 rounded">
+              {isSaving ? (
                 <>
                    <Loader2 size={12} className="animate-spin text-blue-400"/>
                    <span>儲存中...</span>
                 </>
-             ) : (
+              ) : (
                 <>
                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
                    <span>已同步</span>
                 </>
-             )}
-          </div>
+              )}
+           </div>
         </div>
         
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
