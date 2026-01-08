@@ -9,10 +9,10 @@ import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, Timestamp, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
-// 具名與組件匯入
+// 具名匯入
 import { LoginPage } from './components/auth/LoginPage';
 import { SecretSignupPage } from './components/auth/SecretSignupPage';
-import LandingPage from './components/LandingPage'; // 官網組件
+import { LandingPage } from './components/LandingPage'; 
 
 import ReportModal from './components/ReportModal';
 import ClientDashboard from './components/ClientDashboard';
@@ -69,11 +69,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, disabled = false }: any) 
     onClick={onClick}
     disabled={disabled}
     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-      disabled 
-      ? 'opacity-50 cursor-not-allowed text-slate-500' 
-      : active 
-        ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
-        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+      disabled ? 'opacity-50 cursor-not-allowed text-slate-500' : active ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
     }`}
   >
     <Icon size={20} />
@@ -87,7 +83,7 @@ export default function App() {
   const [loading, setLoading] = useState(true); 
   const [minSplashTimePassed, setMinSplashTimePassed] = useState(false); 
   
-  // 路由與路徑狀態
+  // 核心路由狀態
   const [isSecretSignupRoute, setIsSecretSignupRoute] = useState(false); 
   const [isLoginRoute, setIsLoginRoute] = useState(false);
 
@@ -102,7 +98,6 @@ export default function App() {
   const lastSavedDataStr = useRef<string>("");
   const isRegistering = useRef(false);
 
-  // Tool Data States
   const defaultStates = {
     golden_safe: { mode: 'time', amount: 60000, years: 10, rate: 6, isLocked: false }, 
     gift: { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 },
@@ -129,45 +124,39 @@ export default function App() {
 
   const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
 
-  // ==========================================
-  // [核心] 防禦性過濾器：防止 undefined 進入 Firebase
-  // ==========================================
   const cleanDataForFirebase = (obj: any) => {
     return JSON.parse(JSON.stringify(obj, (key, value) => {
       return value === undefined ? null : value;
     }));
   };
 
-  // 雙裝置限制註冊
-  const registerDeviceSession = async (uid: string) => {
-    isRegistering.current = true; 
-    const newSessionId = generateSessionId();
-    localStorage.setItem('my_app_session_id', newSessionId); 
-
-    const metaRef = doc(db, 'users', uid, 'system', 'metadata');
-    try {
-        const docSnap = await getDoc(metaRef);
-        let activeSessions: string[] = [];
-        if (docSnap.exists() && docSnap.data().activeSessions) {
-            activeSessions = docSnap.data().activeSessions;
-        }
-        activeSessions.push(newSessionId);
-        if (activeSessions.length > 2) {
-            activeSessions = activeSessions.slice(activeSessions.length - 2);
-        }
-        await setDoc(metaRef, {
-            activeSessions: activeSessions,
-            lastLoginTime: Timestamp.now(),
-            deviceInfo: navigator.userAgent
-        }, { merge: true });
-    } catch (error) {
-        console.error("Session update failed:", error);
-    } finally {
-        setTimeout(() => { isRegistering.current = false; }, 1500); 
-    }
+  // ==========================================
+  // [修正] 導航輔助函數：同步網址與狀態
+  // ==========================================
+  const navigateTo = (path: string, action: () => void) => {
+    window.history.pushState({ path }, '', path);
+    action();
   };
 
-  // 1. 初始化路徑檢查與路由設定
+  // ==========================================
+  // [修正] 歷史紀錄監聽：處理「上一頁」
+  // ==========================================
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      setIsSecretSignupRoute(path === '/signup-secret');
+      setIsLoginRoute(path === '/login');
+      if (path === '/') {
+        setIsSecretSignupRoute(false);
+        setIsLoginRoute(false);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // 1. 初始化路徑檢查
   useEffect(() => {
     const path = window.location.pathname;
     if (path === '/signup-secret') {
@@ -179,7 +168,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // 2. 監聽登入狀態與登出連動
+  // 2. 監聽 Auth 狀態
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -224,7 +213,7 @@ export default function App() {
       return () => unsubscribeClient();
   }, [currentClient?.id, user]); 
 
-  // 自動儲存：加入了防禦性過濾
+  // 自動儲存
   useEffect(() => {
     if (!user || !currentClient || !isDataLoaded) return;
     const dataPayload = {
@@ -237,9 +226,7 @@ export default function App() {
     const saveData = async () => {
         setIsSaving(true);
         try {
-            // 在儲存前，將整個 Payload 進行 cleanData 處理，確保無 undefined
             const cleanedPayload = cleanDataForFirebase(dataPayload);
-            
             await setDoc(doc(db, 'users', user.uid, 'clients', currentClient.id), {
                 ...cleanedPayload,
                 updatedAt: Timestamp.now()
@@ -276,8 +263,6 @@ export default function App() {
   const getCurrentData = () => {
     switch(activeTab) {
       case 'golden_safe': return goldenSafeData; 
-      case 'market_data': return {}; 
-      case 'fund_machine': return {}; 
       case 'gift': return giftData;
       case 'estate': return estateData;
       case 'student': return studentData;
@@ -290,13 +275,9 @@ export default function App() {
     }
   };
 
-  // ==========================================
-  // [渲染邏輯] 官網與系統路徑分流
-  // ==========================================
-
   if (loading || !minSplashTimePassed) return <SplashScreen />;
 
-  // 1. 秘密路徑 (優先於所有內容)
+  // 1. 秘密註冊路徑
   if (isSecretSignupRoute) {
       return <SecretSignupPage onSignupSuccess={() => {
           alert("🎉 帳號開通成功！\n\n系統將自動導向至您的專屬戰情室。");
@@ -305,25 +286,24 @@ export default function App() {
       }} />;
   }
 
-  // 2. 訪客狀態 (未登入)
+  // 2. 訪客狀態 (官網與登入)
   if (!user) {
-      // 只有當使用者持有特定連結 (/login) 時顯示登入
       if (isLoginRoute) {
         return <LoginPage onLoginSuccess={() => {
             setIsLoginRoute(false);
-            if (auth.currentUser) registerDeviceSession(auth.currentUser.uid);
+            window.history.pushState({}, '', '/');
         }} />;
       }
-      // 預設為震撼官網首頁
       return (
         <LandingPage 
-          onStart={() => setIsLoginRoute(true)} 
-          onSignup={() => setIsSecretSignupRoute(true)} 
+          onStart={() => navigateTo('/login', () => setIsLoginRoute(true))} 
+          onSignup={() => navigateTo('/signup-secret', () => setIsSecretSignupRoute(true))}
+          onHome={() => navigateTo('/', () => { setIsLoginRoute(false); setIsSecretSignupRoute(false); })}
         />
       );
   }
 
-  // 3. 已登入，未選客戶 -> 戰情室列表
+  // 3. 已登入，未選客戶
   if (!currentClient) {
       return (
           <>
@@ -341,7 +321,7 @@ export default function App() {
       );
   }
 
-  // 4. 已登入且已選客戶 -> 工具操作主介面
+  // 4. 已登入且已選客戶
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       <PrintStyles />
@@ -364,9 +344,6 @@ export default function App() {
         activeTab={activeTab} 
         data={getCurrentData()} 
       />
-
-      {/* 側邊欄與行動版選單維持原邏輯，此處省略以保持代碼精簡 */}
-      {/* ... (省略 isMobileMenuOpen 與 Sidebar (Desktop) 代碼，這部分與您提供的完全一致) ... */}
 
       <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10 print:hidden">
         <div className="p-4 border-b border-slate-800">
@@ -433,7 +410,20 @@ export default function App() {
       </aside>
 
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        {/* ... (省略 Mobile Header 代碼) ... */}
+        <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center shadow-md shrink-0 print:hidden">
+          <div className="font-bold flex items-center gap-2 uppercase tracking-tighter">
+              <Users size={20} className="text-blue-400"/>
+              <span>{currentClient.name}</span>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => setIsReportOpen(true)} className="p-2 bg-slate-800 rounded-lg active:bg-slate-700">
+              <FileBarChart size={24} />
+            </button>
+            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-slate-800 rounded-lg active:bg-slate-700">
+              <Menu size={24} />
+            </button>
+          </div>
+        </div>
         <div className="flex-1 overflow-y-auto p-4 md:p-8 relative">
            <div className="max-w-5xl mx-auto pb-20 md:pb-0">
              {activeTab === 'market_data' && <MarketDataZone />}
@@ -447,7 +437,14 @@ export default function App() {
              {activeTab === 'reservoir' && <BigSmallReservoirTool data={reservoirData} setData={setReservoirData} />}
              {activeTab === 'pension' && <LaborPensionTool data={pensionData} setData={setPensionData} />}
              {activeTab === 'tax' && <TaxPlannerTool data={taxData} setData={setTaxData} />}
-             {activeTab === 'free_dashboard' && <FreeDashboardTool allData={{goldenSafeData, giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData}} setAllData={{goldenSafeData: setGoldenSafeData, giftData: setGiftData, estateData: setEstateData, studentData: setStudentData, superActiveData: setSuperActiveData, carData: setCarData, pensionData: setPensionData, reservoirData: setReservoirData, taxData: setTaxData}} savedLayout={freeDashboardLayout} onSaveLayout={setFreeDashboardLayout} />}
+             {activeTab === 'free_dashboard' && (
+                <FreeDashboardTool 
+                  allData={{goldenSafeData, giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData}} 
+                  setAllData={{goldenSafeData: setGoldenSafeData, giftData: setGiftData, estateData: setEstateData, studentData: setStudentData, superActiveData: setSuperActiveData, carData: setCarData, pensionData: setPensionData, reservoirData: setReservoirData, taxData: setTaxData}} 
+                  savedLayout={freeDashboardLayout} 
+                  onSaveLayout={setFreeDashboardLayout} 
+                />
+             )}
            </div>
         </div>
       </main>

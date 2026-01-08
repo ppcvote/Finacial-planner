@@ -65,7 +65,7 @@ const MarketTicker = () => {
         }
         .animate-marquee {
           display: inline-flex;
-          animation: marquee 40s linear infinite;
+          animation: marquee 30s linear infinite;
         }
       `}</style>
     </div>
@@ -101,18 +101,22 @@ const SectionHeader = ({ badge, title, subtitle }) => (
   </div>
 );
 
-// --- 主組件：具名匯出 ---
-export function LandingPage({ onStart, onSignup }) {
+// --- 主組件：具名匯出 (加入 onHome prop 以便點擊 Logo 回到官網) ---
+export function LandingPage({ onStart, onSignup, onHome }) {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-blue-600 selection:text-white font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-blue-600 selection:text-white font-sans overflow-x-hidden animate-fade-in">
       
       <MarketTicker />
 
       {/* Navigation */}
       <nav className="border-b border-white/5 backdrop-blur-2xl sticky top-0 z-[100] bg-slate-950/80">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-2xl shadow-blue-600/40">
+          {/* Logo - 加入點擊事件 */}
+          <div 
+            className="flex items-center gap-3 cursor-pointer group" 
+            onClick={onHome}
+          >
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-2xl shadow-blue-600/40 group-hover:scale-110 transition-transform">
               <Activity className="text-white" size={24} />
             </div>
             <span className="text-2xl font-black text-white tracking-tighter italic uppercase">
@@ -150,7 +154,7 @@ export function LandingPage({ onStart, onSignup }) {
       <section className="relative pt-24 pb-40 overflow-hidden text-center">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[800px] bg-blue-600/10 blur-[150px] rounded-full pointer-events-none opacity-50"></div>
         <div className="max-w-7xl mx-auto px-6 relative z-10 space-y-10">
-          <div className="space-y-8 animate-fade-in">
+          <div className="space-y-8">
             <span className="inline-flex items-center gap-3 px-5 py-2 bg-slate-900 border border-slate-800 rounded-full text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] shadow-xl">
               <Zap size={14} className="animate-pulse fill-blue-400" /> 下一代財務顧問的數位武裝
             </span>
@@ -166,9 +170,9 @@ export function LandingPage({ onStart, onSignup }) {
           <div className="flex flex-col md:flex-row items-center justify-center gap-8 pt-12 px-4">
             <button 
               onClick={onSignup}
-              className="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white px-12 py-6 rounded-[2.5rem] font-black text-xl shadow-2xl shadow-blue-600/40 flex items-center justify-center gap-4 group transition-all transform hover:scale-105 active:scale-95"
+              className="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white px-12 py-6 rounded-[2.5rem] font-black text-xl shadow-2xl shadow-blue-600/40 flex items-center justify-center gap-4 group transition-all transform hover:scale-105 active:scale-95 shadow-lg"
             >
-              免費註冊試用 <ArrowRight className="group-hover:translate-x-2 transition-transform" />
+              註冊試用體驗 <ArrowRight className="group-hover:translate-x-2 transition-transform" />
             </button>
           </div>
         </div>
