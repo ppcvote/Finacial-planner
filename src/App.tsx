@@ -16,14 +16,35 @@ import {
 
 /**
  * ============================================================================
- * FIREBASE 初始化與配置
+ * FIREBASE 初始化與配置 (已修正 ReferenceError)
  * ============================================================================
  */
-const firebaseConfig = JSON.parse(__firebase_config);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+// 安全地解析 Firebase 配置
+const getFirebaseConfig = () => {
+  try {
+    if (typeof __firebase_config !== 'undefined') {
+      return JSON.parse(__firebase_config);
+    }
+  } catch (e) {
+    console.error("Firebase config parsing failed:", e);
+  }
+  // 回傳空物件或基本的佔位符以防止初始化崩潰
+  return {
+    apiKey: "",
+    authDomain: "",
+    projectId: "",
+    storageBucket: "",
+    messagingSenderId: "",
+    appId: ""
+  };
+};
+
+const firebaseConfig = getFirebaseConfig();
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 /**
  * ============================================================================
@@ -132,7 +153,7 @@ const LandingPage = ({ onStart, onSignup, onHome }) => {
               <button onClick={() => setShowSignupModal(false)} className="p-2 hover:bg-slate-200 rounded-full group"><X size={24} className="text-slate-400 group-hover:text-slate-900" /></button>
             </div>
             <div className="bg-white flex justify-center py-2 px-4 overflow-y-auto max-h-[80vh]">
-               <iframe src="https://portaly.cc/embed/GinRollBT/product/WsaTvEYOA1yqAQYzVZgy" width="400" height="620" style={{ border: 0, borderRadius: '12px' }} frameBorder="0" loading="lazy" />
+               <iframe src="https://portaly.cc/embed/GinRollBT/product/WsaTvEYOA1yqAQYzVZgy" width="400" height="620" style={{ border: 0, borderRadius: '12px' }} frameBorder="0" loading="lazy" title="Registration" />
             </div>
           </div>
         </div>
@@ -286,10 +307,14 @@ export default function App() {
 
   useEffect(() => {
     const initAuth = async () => {
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        await signInWithCustomToken(auth, __initial_auth_token);
-      } else {
-        await signInAnonymously(auth);
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (err) {
+        console.error("Auth initialization failed:", err);
       }
     };
     initAuth();
@@ -417,7 +442,6 @@ export default function App() {
       <PrintStyles />
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       
-      {/* 手機版側邊欄 */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[200] md:hidden">
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setIsMobileMenuOpen(false)} />
