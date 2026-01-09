@@ -16,43 +16,23 @@ import {
 
 /**
  * ============================================================================
- * FIREBASE 初始化與配置 (已修正 ReferenceError)
+ * FIREBASE 初始化與配置
  * ============================================================================
  */
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-// 安全地解析 Firebase 配置
-const getFirebaseConfig = () => {
-  try {
-    if (typeof __firebase_config !== 'undefined') {
-      return JSON.parse(__firebase_config);
-    }
-  } catch (e) {
-    console.error("Firebase config parsing failed:", e);
-  }
-  // 回傳空物件或基本的佔位符以防止初始化崩潰
-  return {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    storageBucket: "",
-    messagingSenderId: "",
-    appId: ""
-  };
-};
-
-const firebaseConfig = getFirebaseConfig();
+// 嚴格遵循環境規範獲取配置
+const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 /**
  * ============================================================================
- * 模擬組件 (原本在外部檔案，現整合至此以解決解析錯誤)
+ * 模擬組件 (整合至此以解決模組路徑解析問題)
  * ============================================================================
  */
 
-// 1. 模擬工具組件 (實際開發中應填入具體邏輯)
+// 1. 模擬工具組件
 const ToolPlaceholder = ({ title }) => (
   <div className="p-8 bg-slate-900/50 rounded-[2rem] border border-white/5 text-center">
     <div className="w-16 h-16 bg-blue-600/20 rounded-2xl flex items-center justify-center mx-auto mb-6 text-blue-500">
@@ -63,7 +43,6 @@ const ToolPlaceholder = ({ title }) => (
   </div>
 );
 
-// 這些組件在實際情況下應該包含各自的完整代碼
 const FinancialRealEstateTool = ({ data, setData }) => <ToolPlaceholder title="金融房產專案" />;
 const StudentLoanTool = ({ data, setData }) => <ToolPlaceholder title="學貸活化專案" />;
 const SuperActiveSavingTool = ({ data, setData }) => <ToolPlaceholder title="超積極存錢法" />;
