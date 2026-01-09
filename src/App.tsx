@@ -130,17 +130,11 @@ export default function App() {
     }));
   };
 
-  // ==========================================
-  // [修正] 導航輔助函數：同步網址與狀態
-  // ==========================================
   const navigateTo = (path: string, action: () => void) => {
     window.history.pushState({ path }, '', path);
     action();
   };
 
-  // ==========================================
-  // [修正] 歷史紀錄監聽：處理「上一頁」
-  // ==========================================
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname;
@@ -156,7 +150,6 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // 1. 初始化路徑檢查
   useEffect(() => {
     const path = window.location.pathname;
     if (path === '/signup-secret') {
@@ -168,7 +161,6 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // 2. 監聽 Auth 狀態
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -181,7 +173,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 客戶資料載入監聽
   useEffect(() => {
       if (!user || !currentClient) {
           setIsDataLoaded(false);
@@ -213,7 +204,6 @@ export default function App() {
       return () => unsubscribeClient();
   }, [currentClient?.id, user]); 
 
-  // 自動儲存
   useEffect(() => {
     if (!user || !currentClient || !isDataLoaded) return;
     const dataPayload = {
@@ -277,7 +267,6 @@ export default function App() {
 
   if (loading || !minSplashTimePassed) return <SplashScreen />;
 
-  // 1. 秘密註冊路徑
   if (isSecretSignupRoute) {
       return <SecretSignupPage onSignupSuccess={() => {
           alert("🎉 帳號開通成功！\n\n系統將自動導向至您的專屬戰情室。");
@@ -286,7 +275,6 @@ export default function App() {
       }} />;
   }
 
-  // 2. 訪客狀態 (官網與登入)
   if (!user) {
       if (isLoginRoute) {
         return <LoginPage onLoginSuccess={() => {
@@ -303,7 +291,6 @@ export default function App() {
       );
   }
 
-  // 3. 已登入，未選客戶
   if (!currentClient) {
       return (
           <>
@@ -321,7 +308,6 @@ export default function App() {
       );
   }
 
-  // 4. 已登入且已選客戶
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       <PrintStyles />
@@ -345,21 +331,80 @@ export default function App() {
         data={getCurrentData()} 
       />
 
+      {/* --- [新增] 手機版導航選單區塊 --- */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-[150] md:hidden">
+          {/* 背景遮罩 */}
+          <div 
+            className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm animate-fade-in" 
+            onClick={() => setIsMobileMenuOpen(false)} 
+          />
+          {/* 選單內容 */}
+          <aside className="absolute right-0 top-0 h-full w-72 bg-slate-900 text-white flex flex-col shadow-2xl animate-slide-in">
+            <div className="p-4 border-b border-slate-800 flex justify-between items-center">
+              <span className="font-bold">選單</span>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-slate-800 rounded-full">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              <button onClick={handleBackToDashboard} className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-3 rounded-lg mb-4 border border-slate-800">
+                <ChevronLeft size={18}/> 返回客戶列表
+              </button>
+              
+              <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
+                <ShieldCheck size={14}/> 觀念與診斷
+              </div>
+              <NavItem icon={LayoutDashboard} label="自由組合戰情室" active={activeTab === 'free_dashboard'} onClick={() => { setActiveTab('free_dashboard'); setIsMobileMenuOpen(false); }} />
+              <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => { setActiveTab('golden_safe'); setIsMobileMenuOpen(false); }} />
+              <NavItem icon={Activity} label="市場數據戰情室" active={activeTab === 'market_data'} onClick={() => { setActiveTab('market_data'); setIsMobileMenuOpen(false); }} />
+              <NavItem icon={History} label="基金時光機" active={activeTab === 'fund_machine'} onClick={() => { setActiveTab('fund_machine'); setIsMobileMenuOpen(false); }} />
+
+              <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
+                <Rocket size={14}/> 創富：槓桿與套利
+              </div>
+              <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => { setActiveTab('gift'); setIsMobileMenuOpen(false); }} />
+              <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => { setActiveTab('estate'); setIsMobileMenuOpen(false); }} />
+              <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => { setActiveTab('student'); setIsMobileMenuOpen(false); }} />
+              <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => { setActiveTab('super_active'); setIsMobileMenuOpen(false); }} />
+              
+              <div className="text-xs font-bold text-blue-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
+                <ShieldAlert size={14}/> 守富：現金流防禦
+              </div>
+              <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => { setActiveTab('reservoir'); setIsMobileMenuOpen(false); }} />
+              <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => { setActiveTab('car'); setIsMobileMenuOpen(false); }} />
+              <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => { setActiveTab('pension'); setIsMobileMenuOpen(false); }} />
+
+              <div className="text-xs font-bold text-purple-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
+                <Landmark size={14}/> 傳富：稅務與傳承
+              </div>
+              <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => { setActiveTab('tax'); setIsMobileMenuOpen(false); }} />
+            </div>
+            <div className="p-4 border-t border-slate-800">
+              <button onClick={() => { setIsReportOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-3 rounded-xl w-full">
+                <FileBarChart size={18} /> 生成策略報表
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* 桌面版側邊欄 */}
       <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10 print:hidden">
         <div className="p-4 border-b border-slate-800">
-           <button onClick={handleBackToDashboard} className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-lg transition-all mb-4">
+            <button onClick={handleBackToDashboard} className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-lg transition-all mb-4">
               <ChevronLeft size={18}/> 返回客戶列表
-           </button>
-           <div className="flex items-center gap-3 px-2">
-             <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg text-white shrink-0">
+            </button>
+            <div className="flex items-center gap-3 px-2">
+              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg text-white shrink-0">
                 {currentClient.name.charAt(0)}
-             </div>
-             <div className="flex-1 min-w-0">
+              </div>
+              <div className="flex-1 min-w-0">
                 <div className="text-xs text-blue-400 font-bold uppercase truncate">正在規劃</div>
                 <div className="font-bold text-sm truncate text-white">{currentClient.name}</div>
-             </div>
-           </div>
-           <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 bg-black/20 px-2 py-1 rounded">
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 bg-black/20 px-2 py-1 rounded">
               {isSaving ? (
                 <>
                    <Loader2 size={12} className="animate-spin text-blue-400"/>
@@ -371,11 +416,11 @@ export default function App() {
                    <span>已同步</span>
                 </>
               )}
-           </div>
+            </div>
         </div>
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
-             <ShieldCheck size={14}/> 觀念與診斷
+              <ShieldCheck size={14}/> 觀念與診斷
           </div>
           <NavItem icon={LayoutDashboard} label="自由組合戰情室" active={activeTab === 'free_dashboard'} onClick={() => setActiveTab('free_dashboard')} />
           <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => setActiveTab('golden_safe')} />
@@ -383,7 +428,7 @@ export default function App() {
           <NavItem icon={History} label="基金時光機" active={activeTab === 'fund_machine'} onClick={() => setActiveTab('fund_machine')} />
 
           <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
-             <Rocket size={14}/> 創富：槓桿與套利
+              <Rocket size={14}/> 創富：槓桿與套利
           </div>
           <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => setActiveTab('gift')} />
           <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => setActiveTab('estate')} />
@@ -391,14 +436,14 @@ export default function App() {
           <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => setActiveTab('super_active')} />
           
           <div className="text-xs font-bold text-blue-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
-             <ShieldAlert size={14}/> 守富：現金流防禦
+              <ShieldAlert size={14}/> 守富：現金流防禦
           </div>
           <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => setActiveTab('reservoir')} />
           <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => setActiveTab('car')} />
           <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => setActiveTab('pension')} />
 
           <div className="text-xs font-bold text-purple-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
-             <Landmark size={14}/> 傳富：稅務與傳承
+              <Landmark size={14}/> 傳富：稅務與傳承
           </div>
           <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => setActiveTab('tax')} />
         </nav>
@@ -425,29 +470,43 @@ export default function App() {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-4 md:p-8 relative">
-           <div className="max-w-5xl mx-auto pb-20 md:pb-0">
-             {activeTab === 'market_data' && <MarketDataZone />}
-             {activeTab === 'golden_safe' && <GoldenSafeVault data={goldenSafeData} setData={setGoldenSafeData} />}
-             {activeTab === 'fund_machine' && <FundTimeMachine />}
-             {activeTab === 'gift' && <MillionDollarGiftTool data={giftData} setData={setGiftData} />}
-             {activeTab === 'estate' && <FinancialRealEstateTool data={estateData} setData={setEstateData} />}
-             {activeTab === 'student' && <StudentLoanTool data={studentData} setData={setStudentData} />}
-             {activeTab === 'super_active' && <SuperActiveSavingTool data={superActiveData} setData={setSuperActiveData} />}
-             {activeTab === 'car' && <CarReplacementTool data={carData} setData={setCarData} />}
-             {activeTab === 'reservoir' && <BigSmallReservoirTool data={reservoirData} setData={setReservoirData} />}
-             {activeTab === 'pension' && <LaborPensionTool data={pensionData} setData={setPensionData} />}
-             {activeTab === 'tax' && <TaxPlannerTool data={taxData} setData={setTaxData} />}
-             {activeTab === 'free_dashboard' && (
+            <div className="max-w-5xl mx-auto pb-20 md:pb-0">
+              {activeTab === 'market_data' && <MarketDataZone />}
+              {activeTab === 'golden_safe' && <GoldenSafeVault data={goldenSafeData} setData={setGoldenSafeData} />}
+              {activeTab === 'fund_machine' && <FundTimeMachine />}
+              {activeTab === 'gift' && <MillionDollarGiftTool data={giftData} setData={setGiftData} />}
+              {activeTab === 'estate' && <FinancialRealEstateTool data={estateData} setData={setEstateData} />}
+              {activeTab === 'student' && <StudentLoanTool data={studentData} setData={setStudentData} />}
+              {activeTab === 'super_active' && <SuperActiveSavingTool data={superActiveData} setData={setSuperActiveData} />}
+              {activeTab === 'car' && <CarReplacementTool data={carData} setData={setCarData} />}
+              {activeTab === 'reservoir' && <BigSmallReservoirTool data={reservoirData} setData={setReservoirData} />}
+              {activeTab === 'pension' && <LaborPensionTool data={pensionData} setData={setPensionData} />}
+              {activeTab === 'tax' && <TaxPlannerTool data={taxData} setData={setTaxData} />}
+              {activeTab === 'free_dashboard' && (
                 <FreeDashboardTool 
                   allData={{goldenSafeData, giftData, estateData, studentData, superActiveData, carData, pensionData, reservoirData, taxData}} 
                   setAllData={{goldenSafeData: setGoldenSafeData, giftData: setGiftData, estateData: setEstateData, studentData: setStudentData, superActiveData: setSuperActiveData, carData: setCarData, pensionData: setPensionData, reservoirData: setReservoirData, taxData: setTaxData}} 
                   savedLayout={freeDashboardLayout} 
                   onSaveLayout={setFreeDashboardLayout} 
                 />
-             )}
-           </div>
+              )}
+            </div>
         </div>
       </main>
+
+      {/* 選單專用動畫 */}
+      <style>{`
+        @keyframes slide-in {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+        .animate-slide-in {
+          animation: slide-in 0.3s ease-out forwards;
+        }
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 }
