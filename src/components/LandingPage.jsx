@@ -280,16 +280,17 @@ export function LandingPage({ onStart, onHome }) {
               </a>
             </div>
 
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4 md:gap-6">
+              {/* 關鍵修復：移除 hidden sm:block，並調整手機版文字大小 */}
               <button 
                 onClick={onStart} 
-                className="hidden sm:block text-slate-400 hover:text-white font-bold text-sm transition-colors tracking-widest uppercase"
+                className="text-slate-400 hover:text-white font-bold text-[10px] md:text-sm transition-colors tracking-widest uppercase whitespace-nowrap"
               >
                 登入系統
               </button>
               <button 
                 onClick={() => setShowSignupModal(true)}
-                className="bg-white text-slate-950 px-8 py-3 rounded-full font-black text-sm hover:bg-blue-600 hover:text-white transition-all shadow-2xl shadow-white/5 active:scale-95"
+                className="bg-white text-slate-950 px-5 md:px-8 py-2 md:py-3 rounded-full font-black text-[10px] md:text-sm hover:bg-blue-600 hover:text-white transition-all shadow-2xl shadow-white/5 active:scale-95 whitespace-nowrap"
               >
                 立刻開通
               </button>
@@ -319,12 +320,21 @@ export function LandingPage({ onStart, onHome }) {
                   </div>
 
                   <div className="flex flex-col md:flex-row items-center justify-center gap-8 pt-12 px-4">
-                    <button 
-                      onClick={() => setShowSignupModal(true)}
-                      className="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white px-12 py-6 rounded-[2.5rem] font-black text-xl shadow-2xl shadow-blue-600/40 flex items-center justify-center gap-4 group transition-all transform hover:scale-105 active:scale-95 shadow-lg"
-                    >
-                      獲取開通金鑰 <ArrowRight className="group-hover:translate-x-2 transition-transform" />
-                    </button>
+                    <div className="flex flex-col gap-4 items-center">
+                      <button 
+                        onClick={() => setShowSignupModal(true)}
+                        className="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white px-12 py-6 rounded-[2.5rem] font-black text-xl shadow-2xl shadow-blue-600/40 flex items-center justify-center gap-4 group transition-all transform hover:scale-105 active:scale-95 shadow-lg"
+                      >
+                        獲取開通金鑰 <ArrowRight className="group-hover:translate-x-2 transition-transform" />
+                      </button>
+                      {/* 手機版輔助登入連結 */}
+                      <button 
+                        onClick={onStart} 
+                        className="md:hidden text-slate-500 font-bold text-xs hover:text-blue-400 underline underline-offset-4"
+                      >
+                        已有帳號？登入系統
+                      </button>
+                    </div>
                     <button 
                       onClick={() => setView('tools')}
                       className="w-full md:w-auto bg-slate-900 border border-slate-800 text-white px-12 py-6 rounded-[2.5rem] font-black text-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-3"
@@ -408,7 +418,7 @@ export function LandingPage({ onStart, onHome }) {
 
         {/* Footer */}
         <footer className="bg-slate-950 border-t border-white/5 py-24 relative overflow-hidden">
-          <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-16 relative z-10 text-sm px-8">
+          <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-16 relative z-10 text-sm">
             <div className="space-y-8">
               <div className="flex items-center gap-3">
                 <div className="h-8 overflow-hidden rounded">
@@ -427,16 +437,13 @@ export function LandingPage({ onStart, onHome }) {
             <div><h4 className="text-white font-black mb-8 tracking-widest uppercase text-xs opacity-40">數據中心</h4><ul className="space-y-4 text-slate-500 font-bold cursor-pointer"><li onClick={() => setView('data')}>2026 癌症時鐘模型</li><li onClick={() => setView('data')}>醫療通膨實時數據</li><li onClick={() => setView('data')}>勞保破產精算報告</li></ul></div>
             <div><h4 className="text-white font-black mb-8 tracking-widest uppercase text-xs opacity-40">聯繫我們</h4><div className="flex gap-5"><Globe size={20} className="text-slate-500 hover:text-blue-400 cursor-pointer"/><Mail size={20} className="text-slate-500 hover:text-blue-400 cursor-pointer"/><MessageSquare size={20} className="text-slate-500 hover:text-blue-400 cursor-pointer"/></div></div>
           </div>
-          <div className="max-w-7xl mx-auto px-6 mt-24 pt-10 border-t border-white/5 flex justify-between items-center relative z-10 px-8">
+          <div className="max-w-7xl mx-auto px-6 mt-24 pt-10 border-t border-white/5 flex justify-between items-center relative z-10">
             <p className="text-slate-600 text-[10px] font-black uppercase tracking-[0.2em]">© 2026 UltraAdvisor Pro. All rights reserved.</p>
           </div>
         </footer>
       </div>
 
-      {/* --- 註冊試用彈窗 (Iframe) --- 
-          關鍵修復：將此彈窗移出 animate-fade-in 容器
-          確保其相對於 viewport 定位，而不是相對於 transform 容器定位
-      */}
+      {/* --- 註冊試用彈窗 (Iframe) --- */}
       {showSignupModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div 
@@ -499,13 +506,10 @@ const ExternalLinkIcon = ({ size }) => (
 
 /**
  * App 組件
- * 這是此 Canvas 預覽需要的預設匯出
  */
 export default function App() {
-  // 模擬傳入的 onStart 邏輯，實際使用時由外部 App.tsx 管理
   const handleStart = () => {
     console.log("導向登入頁面...");
-    // 這裡可以加入導航邏輯
   };
 
   return <LandingPage onStart={handleStart} />;
