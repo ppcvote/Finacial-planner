@@ -1,203 +1,70 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
   GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2,
-  ChevronLeft, Users, ShieldCheck, Activity, History, LayoutDashboard,
-  TrendingUp, Zap, HeartPulse, ArrowRight, Globe, Mail, MessageSquare, ExternalLink
+  ChevronLeft, Users, ShieldCheck, Activity, History, LayoutDashboard
 } from 'lucide-react';
 
-import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, signOut, onAuthStateChanged, signInAnonymously, signInWithCustomToken 
-} from 'firebase/auth';
-import { 
-  getFirestore, doc, setDoc, onSnapshot, Timestamp, getDoc, collection, query 
-} from 'firebase/firestore';
+import { signOut, onAuthStateChanged } from 'firebase/auth';
+import { doc, setDoc, onSnapshot, Timestamp, getDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
 
-/**
- * ============================================================================
- * FIREBASE 初始化與配置
- * ============================================================================
- */
-// 嚴格遵循環境規範獲取配置
-const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+// 具名匯入
+import { LoginPage } from './components/auth/LoginPage';
+import { SecretSignupPage } from './components/auth/SecretSignupPage';
+import { LandingPage } from './components/LandingPage'; 
 
-/**
- * ============================================================================
- * 模擬組件 (整合至此以解決模組路徑解析問題)
- * ============================================================================
- */
+import ReportModal from './components/ReportModal';
+import ClientDashboard from './components/ClientDashboard';
+import SplashScreen from './components/SplashScreen'; 
 
-// 1. 模擬工具組件
-const ToolPlaceholder = ({ title }) => (
-  <div className="p-8 bg-slate-900/50 rounded-[2rem] border border-white/5 text-center">
-    <div className="w-16 h-16 bg-blue-600/20 rounded-2xl flex items-center justify-center mx-auto mb-6 text-blue-500">
-      <Zap size={32} />
-    </div>
-    <h2 className="text-2xl font-bold text-white mb-4">{title}</h2>
-    <p className="text-slate-400 italic">此模組正在整合數據中...</p>
-  </div>
-);
+import { FinancialRealEstateTool } from './components/FinancialRealEstateTool';
+import { StudentLoanTool } from './components/StudentLoanTool';
+import { SuperActiveSavingTool } from './components/SuperActiveSavingTool';
+import { CarReplacementTool } from './components/CarReplacementTool';
+import { LaborPensionTool } from './components/LaborPensionTool';
+import { BigSmallReservoirTool } from './components/BigSmallReservoirTool';
+import { TaxPlannerTool } from './components/TaxPlannerTool';
+import MillionDollarGiftTool from './components/MillionDollarGiftTool';
+import FreeDashboardTool from './components/FreeDashboardTool';
+import MarketDataZone from './components/MarketDataZone'; 
+import GoldenSafeVault from './components/GoldenSafeVault'; 
+import FundTimeMachine from './components/FundTimeMachine'; 
 
-const FinancialRealEstateTool = ({ data, setData }) => <ToolPlaceholder title="金融房產專案" />;
-const StudentLoanTool = ({ data, setData }) => <ToolPlaceholder title="學貸活化專案" />;
-const SuperActiveSavingTool = ({ data, setData }) => <ToolPlaceholder title="超積極存錢法" />;
-const CarReplacementTool = ({ data, setData }) => <ToolPlaceholder title="五年換車專案" />;
-const LaborPensionTool = ({ data, setData }) => <ToolPlaceholder title="退休缺口試算" />;
-const BigSmallReservoirTool = ({ data, setData }) => <ToolPlaceholder title="大小水庫專案" />;
-const TaxPlannerTool = ({ data, setData }) => <ToolPlaceholder title="稅務傳承專案" />;
-const MillionDollarGiftTool = ({ data, setData }) => <ToolPlaceholder title="百萬禮物專案" />;
-const FreeDashboardTool = ({ allData, setAllData, savedLayout, onSaveLayout }) => <ToolPlaceholder title="自由組合戰情室" />;
-const MarketDataZone = () => <ToolPlaceholder title="市場數據戰情室" />;
-const GoldenSafeVault = ({ data, setData }) => <ToolPlaceholder title="黃金保險箱理論" />;
-const FundTimeMachine = () => <ToolPlaceholder title="基金時光機" />;
-const SplashScreen = () => (
-  <div className="h-screen bg-slate-950 flex items-center justify-center">
-    <div className="text-center animate-pulse">
-      <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-blue-500/50">
-        <Activity className="text-white" size={40} />
-      </div>
-      <h1 className="text-white text-2xl font-black tracking-tighter italic uppercase">UltraAdvisor</h1>
-    </div>
-  </div>
-);
-
-// 2. 登入頁面
-const LoginPage = ({ onLoginSuccess }) => (
-  <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-white text-center">
-     <div className="max-w-md w-full space-y-6">
-        <h2 className="text-3xl font-black">顧問登入</h2>
-        <p className="text-slate-400">進入 UltraAdvisor 數位戰情室</p>
-        <button onClick={() => onLoginSuccess()} className="w-full bg-blue-600 py-4 rounded-2xl font-black shadow-lg hover:bg-blue-500 transition-all">
-          模擬登入 (進入後台)
-        </button>
-     </div>
-  </div>
-);
-
-// 3. 秘密註冊頁面
-const SecretSignupPage = ({ onSignupSuccess }) => (
-  <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-white text-center">
-    <div className="max-w-md w-full space-y-6">
-      <h2 className="text-3xl font-black text-blue-500 tracking-tighter italic">ADMIN ACTIVATION</h2>
-      <button onClick={() => onSignupSuccess()} className="w-full bg-slate-800 py-4 rounded-2xl font-black border border-blue-500/30">
-        點擊啟動管理權限
-      </button>
-    </div>
-  </div>
-);
-
-// 4. 官網 LandingPage
-const LandingPage = ({ onStart, onSignup, onHome }) => {
-  const LOGO_URL = "https://lh3.googleusercontent.com/d/1CEFGRByRM66l-4sMMM78LUBUvAMiAIaJ";
-  const [showSignupModal, setShowSignupModal] = useState(false);
-
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans overflow-x-hidden relative">
-      <nav className="border-b border-white/5 backdrop-blur-2xl sticky top-0 z-[100] bg-slate-950/80">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={onHome}>
-            <div className="h-10 overflow-hidden rounded-lg">
-              <img src={LOGO_URL} alt="Logo" className="h-full w-auto object-contain" />
-            </div>
-            <span className="text-2xl font-black text-white tracking-tighter italic uppercase">Ultra<span className="text-blue-500">Advisor</span></span>
-          </div>
-          <div className="flex items-center gap-6">
-            <button onClick={onStart} className="hidden sm:block text-slate-400 hover:text-white font-bold text-sm uppercase">登入系統</button>
-            <button onClick={() => setShowSignupModal(true)} className="bg-white text-slate-950 px-8 py-3 rounded-full font-black text-sm hover:bg-blue-600 hover:text-white transition-all">立刻開通</button>
-          </div>
-        </div>
-      </nav>
-
-      <section className="relative pt-32 pb-40 text-center px-4">
-        <div className="max-w-7xl mx-auto space-y-10 relative">
-          <h1 className="text-6xl md:text-9xl font-black text-white leading-tight tracking-tighter">讓數據說話 <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-blue-500">讓戰略成真</span></h1>
-          <p className="text-slate-400 max-w-3xl mx-auto text-lg md:text-2xl font-medium">UltraAdvisor 專為頂級金融顧問設計。整合最新數據，轉化為視覺戰報。</p>
-          <div className="flex flex-col md:flex-row items-center justify-center gap-8 pt-12">
-            <button onClick={() => setShowSignupModal(true)} className="bg-blue-600 hover:bg-blue-500 text-white px-12 py-6 rounded-[2.5rem] font-black text-xl flex items-center gap-4 group">獲取開通金鑰 <ArrowRight className="group-hover:translate-x-2 transition-transform"/></button>
-          </div>
-        </div>
-      </section>
-
-      {showSignupModal && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setShowSignupModal(false)} />
-          <div className="relative bg-white rounded-[2rem] shadow-2xl overflow-hidden max-w-[440px] w-full flex flex-col">
-            <div className="flex items-center justify-between p-4 bg-slate-50 border-b border-slate-100">
-              <span className="text-slate-900 font-black text-xs uppercase tracking-widest px-3 py-1 bg-blue-100 rounded-full">立即獲取金鑰</span>
-              <button onClick={() => setShowSignupModal(false)} className="p-2 hover:bg-slate-200 rounded-full group"><X size={24} className="text-slate-400 group-hover:text-slate-900" /></button>
-            </div>
-            <div className="bg-white flex justify-center py-2 px-4 overflow-y-auto max-h-[80vh]">
-               <iframe src="https://portaly.cc/embed/GinRollBT/product/WsaTvEYOA1yqAQYzVZgy" width="400" height="620" style={{ border: 0, borderRadius: '12px' }} frameBorder="0" loading="lazy" title="Registration" />
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// 5. 報表視窗
-const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white w-full max-w-4xl h-[90vh] rounded-[2rem] shadow-2xl flex flex-col overflow-hidden">
-        <div className="p-6 bg-slate-50 border-b flex justify-between items-center">
-          <h2 className="font-black text-xl text-slate-900">戰略規劃報表</h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full"><X /></button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-12 text-slate-800 space-y-8">
-           <div className="border-b-4 border-blue-600 pb-4">
-              <h1 className="text-4xl font-black">UltraAdvisor Report</h1>
-              <p className="font-bold text-slate-500">CLIENT: {client?.name}</p>
-           </div>
-           <p className="text-lg italic">「本報表由 2026 最新財務模型生成，旨在提供最佳資產配置決策。」</p>
-           <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
-              <h3 className="font-bold text-blue-600 mb-2">當前分析模組</h3>
-              <p className="font-black text-2xl">{activeTab}</p>
-           </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/**
- * ============================================================================
- * 通用子組件
- * ============================================================================
- */
+const generateSessionId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
 
 const PrintStyles = () => (
   <style>{`
     @media print {
       aside, main, .no-print, .toast-container, .mobile-header, .print-hidden-bar { display: none !important; }
       body { background: white !important; height: auto !important; overflow: visible !important; }
+      .print-break-inside { break-inside: avoid; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       #report-modal { position: static !important; overflow: visible !important; height: auto !important; width: 100% !important; z-index: 9999; }
+      .absolute { position: static !important; }
+      .print\\:block { display: block !important; }
+      .print\\:grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
+      ::-webkit-scrollbar { display: none; }
     }
   `}</style>
 );
 
-const Toast = ({ message, type = 'success', onClose }) => {
+const Toast = ({ message, type = 'success', onClose }: { message: string, type: string, onClose: () => void }) => {
   useEffect(() => {
     const timer = setTimeout(() => { onClose(); }, 4000); 
     return () => clearTimeout(timer);
   }, [onClose]);
-  const bgColors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
+  const bgColors: Record<string, string> = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
   return (
     <div className={`fixed bottom-6 right-6 ${bgColors[type] || 'bg-blue-600'} text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-bounce-in z-[100] toast-container max-w-[90vw]`}>
+      {type === 'success' && <Check size={20} className="shrink-0" />}
+      {type === 'error' && <ShieldAlert size={20} className="shrink-0" />}
       <span className="font-bold text-sm md:text-base break-words">{message}</span>
     </div>
   );
 };
 
-const NavItem = ({ icon: Icon, label, active, onClick, disabled = false }) => (
+const NavItem = ({ icon: Icon, label, active, onClick, disabled = false }: any) => (
   <button
     onClick={onClick}
     disabled={disabled}
@@ -211,29 +78,25 @@ const NavItem = ({ icon: Icon, label, active, onClick, disabled = false }) => (
   </button>
 );
 
-/**
- * ============================================================================
- * APP 主組件
- * ============================================================================
- */
-
 export default function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true); 
   const [minSplashTimePassed, setMinSplashTimePassed] = useState(false); 
   
+  // 核心路由狀態
   const [isSecretSignupRoute, setIsSecretSignupRoute] = useState(false); 
   const [isLoginRoute, setIsLoginRoute] = useState(false);
 
   const [clientLoading, setClientLoading] = useState(false); 
-  const [currentClient, setCurrentClient] = useState(null);
+  const [currentClient, setCurrentClient] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('golden_safe'); 
-  const [toast, setToast] = useState(null);
+  const [toast, setToast] = useState<{message: string, type: string} | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false); 
   const [isSaving, setIsSaving] = useState(false); 
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const lastSavedDataStr = useRef("");
+  const lastSavedDataStr = useRef<string>("");
+  const isRegistering = useRef(false);
 
   const defaultStates = {
     golden_safe: { mode: 'time', amount: 60000, years: 10, rate: 6, isLocked: false }, 
@@ -257,46 +120,56 @@ export default function App() {
   const [pensionData, setPensionData] = useState(defaultStates.pension);
   const [reservoirData, setReservoirData] = useState(defaultStates.reservoir);
   const [taxData, setTaxData] = useState(defaultStates.tax);
-  const [freeDashboardLayout, setFreeDashboardLayout] = useState(defaultStates.free_dashboard.layout);
+  const [freeDashboardLayout, setFreeDashboardLayout] = useState<(string | null)[]>(defaultStates.free_dashboard.layout);
 
-  const showToast = (message, type = 'success') => { setToast({ message, type }); };
+  const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
 
-  const navigateTo = (path, action) => {
+  const cleanDataForFirebase = (obj: any) => {
+    return JSON.parse(JSON.stringify(obj, (key, value) => {
+      return value === undefined ? null : value;
+    }));
+  };
+
+  // ==========================================
+  // [修正] 導航輔助函數：同步網址與狀態
+  // ==========================================
+  const navigateTo = (path: string, action: () => void) => {
     window.history.pushState({ path }, '', path);
     action();
   };
 
+  // ==========================================
+  // [修正] 歷史紀錄監聽：處理「上一頁」
+  // ==========================================
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname;
       setIsSecretSignupRoute(path === '/signup-secret');
       setIsLoginRoute(path === '/login');
+      if (path === '/') {
+        setIsSecretSignupRoute(false);
+        setIsLoginRoute(false);
+      }
     };
+
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // 1. 初始化路徑檢查
   useEffect(() => {
     const path = window.location.pathname;
-    if (path === '/signup-secret') setIsSecretSignupRoute(true);
-    else if (path === '/login') setIsLoginRoute(true);
-    const timer = setTimeout(() => { setMinSplashTimePassed(true); }, 2000); 
+    if (path === '/signup-secret') {
+        setIsSecretSignupRoute(true);
+    } else if (path === '/login') {
+        setIsLoginRoute(true);
+    }
+    const timer = setTimeout(() => { setMinSplashTimePassed(true); }, 3000); 
     return () => clearTimeout(timer);
   }, []);
 
+  // 2. 監聽 Auth 狀態
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (err) {
-        console.error("Auth initialization failed:", err);
-      }
-    };
-    initAuth();
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
@@ -308,13 +181,14 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // 客戶資料載入監聽
   useEffect(() => {
       if (!user || !currentClient) {
           setIsDataLoaded(false);
           return;
       }
       setClientLoading(true);
-      const clientDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'clients', currentClient.id);
+      const clientDocRef = doc(db, 'users', user.uid, 'clients', currentClient.id);
       const unsubscribeClient = onSnapshot(clientDocRef, (docSnap) => {
           if (docSnap.exists()) {
               const data = docSnap.data();
@@ -339,7 +213,42 @@ export default function App() {
       return () => unsubscribeClient();
   }, [currentClient?.id, user]); 
 
+  // 自動儲存
+  useEffect(() => {
+    if (!user || !currentClient || !isDataLoaded) return;
+    const dataPayload = {
+        goldenSafeData, giftData, estateData, studentData, superActiveData, 
+        carData, pensionData, reservoirData, taxData, freeDashboardLayout 
+    };
+    const currentDataStr = JSON.stringify(dataPayload);
+    if (currentDataStr === lastSavedDataStr.current) return;
+
+    const saveData = async () => {
+        setIsSaving(true);
+        try {
+            const cleanedPayload = cleanDataForFirebase(dataPayload);
+            await setDoc(doc(db, 'users', user.uid, 'clients', currentClient.id), {
+                ...cleanedPayload,
+                updatedAt: Timestamp.now()
+            }, { merge: true });
+
+            lastSavedDataStr.current = currentDataStr;
+            setTimeout(() => setIsSaving(false), 500);
+        } catch (error) {
+            console.error("Auto-save failed:", error);
+            setIsSaving(false);
+        }
+    };
+    const handler = setTimeout(saveData, 1500);
+    return () => clearTimeout(handler);
+  }, [
+    goldenSafeData, giftData, estateData, studentData, superActiveData, 
+    carData, pensionData, reservoirData, taxData, freeDashboardLayout,
+    user, currentClient, isDataLoaded
+  ]);
+
   const handleLogout = async () => { 
+      localStorage.removeItem('my_app_session_id');
       await signOut(auth); 
       setCurrentClient(null);
       setIsDataLoaded(false);
@@ -368,14 +277,17 @@ export default function App() {
 
   if (loading || !minSplashTimePassed) return <SplashScreen />;
 
+  // 1. 秘密註冊路徑
   if (isSecretSignupRoute) {
       return <SecretSignupPage onSignupSuccess={() => {
+          alert("🎉 帳號開通成功！\n\n系統將自動導向至您的專屬戰情室。");
           setIsSecretSignupRoute(false);
           window.location.href = '/'; 
       }} />;
   }
 
-  if (!user || user.isAnonymous) {
+  // 2. 訪客狀態 (官網與登入)
+  if (!user) {
       if (isLoginRoute) {
         return <LoginPage onLoginSuccess={() => {
             setIsLoginRoute(false);
@@ -391,55 +303,37 @@ export default function App() {
       );
   }
 
+  // 3. 已登入，未選客戶
   if (!currentClient) {
       return (
           <>
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-            <div className="flex flex-col h-screen bg-slate-950">
+            <div className="flex flex-col h-screen">
                 <div className="bg-slate-900 text-white p-4 flex justify-between items-center shadow-md shrink-0">
                     <div className="font-bold flex items-center gap-2 uppercase tracking-tighter"><Coins className="text-yellow-400"/> UltraAdvisor 戰情室</div>
                     <button onClick={handleLogout} className="text-sm bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-2">
                         <LogOut size={16}/> 登出
                     </button>
                 </div>
-                <div className="flex-1 flex items-center justify-center p-6">
-                   <div className="bg-slate-900 border border-white/5 p-12 rounded-[3rem] max-w-lg w-full text-center space-y-8 shadow-2xl">
-                      <div className="w-20 h-20 bg-blue-600/20 rounded-3xl flex items-center justify-center mx-auto text-blue-500"><Users size={40}/></div>
-                      <h2 className="text-3xl font-black text-white">選擇要規劃的客戶</h2>
-                      <button onClick={() => setCurrentClient({ id: 'demo-client', name: '王大明' })} className="w-full bg-slate-800 hover:bg-blue-600 text-white p-5 rounded-2xl font-bold transition-all">
-                        王大明 (Demo 客戶)
-                      </button>
-                   </div>
-                </div>
+                <ClientDashboard user={user} onSelectClient={setCurrentClient} />
             </div>
           </>
       );
   }
 
+  // 4. 已登入且已選客戶
   return (
-    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden relative">
+    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       <PrintStyles />
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[200] md:hidden">
-          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setIsMobileMenuOpen(false)} />
-          <aside className="absolute top-0 right-0 w-80 h-full bg-slate-900 p-6 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="flex justify-between items-center mb-8">
-              <span className="font-black text-white italic">MENU</span>
-              <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-slate-800 rounded-lg text-slate-400"><X size={24}/></button>
-            </div>
-            <nav className="space-y-4 overflow-y-auto">
-              <NavItem icon={LayoutDashboard} label="自由組合戰情室" active={activeTab === 'free_dashboard'} onClick={() => {setActiveTab('free_dashboard'); setIsMobileMenuOpen(false);}} />
-              <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => {setActiveTab('golden_safe'); setIsMobileMenuOpen(false);}} />
-              <NavItem icon={Activity} label="市場數據戰情室" active={activeTab === 'market_data'} onClick={() => {setActiveTab('market_data'); setIsMobileMenuOpen(false);}} />
-              <div className="h-px bg-slate-800 my-2"></div>
-              <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => {setActiveTab('gift'); setIsMobileMenuOpen(false);}} />
-              <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => {setActiveTab('estate'); setIsMobileMenuOpen(false);}} />
-              <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => {setActiveTab('student'); setIsMobileMenuOpen(false);}} />
-            </nav>
-          </aside>
-        </div>
+      {clientLoading && (
+          <div className="fixed inset-0 z-[100] bg-white/80 backdrop-blur-sm flex items-center justify-center">
+              <div className="text-center">
+                  <Loader2 className="animate-spin text-blue-600 mx-auto mb-2" size={40}/>
+                  <p className="text-slate-600 font-bold">正在讀取 {currentClient.name} 的檔案...</p>
+              </div>
+          </div>
       )}
 
       <ReportModal 
@@ -453,48 +347,83 @@ export default function App() {
 
       <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10 print:hidden">
         <div className="p-4 border-b border-slate-800">
-            <button onClick={handleBackToDashboard} className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-lg transition-all mb-4">
+           <button onClick={handleBackToDashboard} className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-lg transition-all mb-4">
               <ChevronLeft size={18}/> 返回客戶列表
-            </button>
-            <div className="flex items-center gap-3 px-2">
-              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white shrink-0">{currentClient.name.charAt(0)}</div>
-              <div className="font-bold truncate text-white">{currentClient.name}</div>
-            </div>
+           </button>
+           <div className="flex items-center gap-3 px-2">
+             <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg text-white shrink-0">
+                {currentClient.name.charAt(0)}
+             </div>
+             <div className="flex-1 min-w-0">
+                <div className="text-xs text-blue-400 font-bold uppercase truncate">正在規劃</div>
+                <div className="font-bold text-sm truncate text-white">{currentClient.name}</div>
+             </div>
+           </div>
+           <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 bg-black/20 px-2 py-1 rounded">
+              {isSaving ? (
+                <>
+                   <Loader2 size={12} className="animate-spin text-blue-400"/>
+                   <span>儲存中...</span>
+                </>
+              ) : (
+                <>
+                   <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                   <span>已同步</span>
+                </>
+              )}
+           </div>
         </div>
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
+             <ShieldCheck size={14}/> 觀念與診斷
+          </div>
           <NavItem icon={LayoutDashboard} label="自由組合戰情室" active={activeTab === 'free_dashboard'} onClick={() => setActiveTab('free_dashboard')} />
           <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => setActiveTab('golden_safe')} />
           <NavItem icon={Activity} label="市場數據戰情室" active={activeTab === 'market_data'} onClick={() => setActiveTab('market_data')} />
           <NavItem icon={History} label="基金時光機" active={activeTab === 'fund_machine'} onClick={() => setActiveTab('fund_machine')} />
-          <div className="h-px bg-slate-800 my-4"></div>
+
+          <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
+             <Rocket size={14}/> 創富：槓桿與套利
+          </div>
           <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => setActiveTab('gift')} />
           <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => setActiveTab('estate')} />
           <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => setActiveTab('student')} />
           <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => setActiveTab('super_active')} />
+          
+          <div className="text-xs font-bold text-blue-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
+             <ShieldAlert size={14}/> 守富：現金流防禦
+          </div>
           <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => setActiveTab('reservoir')} />
           <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => setActiveTab('car')} />
           <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => setActiveTab('pension')} />
+
+          <div className="text-xs font-bold text-purple-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
+             <Landmark size={14}/> 傳富：稅務與傳承
+          </div>
           <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => setActiveTab('tax')} />
         </nav>
         <div className="p-4 border-t border-slate-800">
-           <button onClick={() => setIsReportOpen(true)} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-3 rounded-xl w-full shadow-lg shadow-blue-900/50">
+           <button onClick={() => setIsReportOpen(true)} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-3 rounded-xl w-full transition-all shadow-lg shadow-blue-900/50">
              <FileBarChart size={18} /> 生成策略報表
            </button>
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col h-screen overflow-hidden relative bg-slate-950">
-        <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center shadow-md shrink-0 z-20">
+      <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
+        <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center shadow-md shrink-0 print:hidden">
           <div className="font-bold flex items-center gap-2 uppercase tracking-tighter">
               <Users size={20} className="text-blue-400"/>
               <span>{currentClient.name}</span>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setIsReportOpen(true)} className="p-2 bg-slate-800 rounded-lg"><FileBarChart size={24} /></button>
-            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-slate-800 rounded-lg"><Menu size={24} /></button>
+            <button onClick={() => setIsReportOpen(true)} className="p-2 bg-slate-800 rounded-lg active:bg-slate-700">
+              <FileBarChart size={24} />
+            </button>
+            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-slate-800 rounded-lg active:bg-slate-700">
+              <Menu size={24} />
+            </button>
           </div>
         </div>
-
         <div className="flex-1 overflow-y-auto p-4 md:p-8 relative">
            <div className="max-w-5xl mx-auto pb-20 md:pb-0">
              {activeTab === 'market_data' && <MarketDataZone />}
