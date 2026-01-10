@@ -83,29 +83,6 @@ export default function App() {
   const [loading, setLoading] = useState(true); 
   const [minSplashTimePassed, setMinSplashTimePassed] = useState(false); 
   
-  // 新增：控制登入頁面顯示邏輯
-const [needsLoginInteraction, setNeedsLoginInteraction] = useState(() => {
-  // 混合模式邏輯
-  if (!user) return true; // 未登入一定要顯示登入頁
-  
-  // 判斷是否為試用用戶（這裡需要根據你的實際邏輯調整）
-  // 假設試用用戶沒有 subscriptionStatus 或為 'trial'
-  const isTrialUser = !user.subscriptionStatus || user.subscriptionStatus === 'trial';
-  
-  if (isTrialUser) {
-    // 試用用戶：每次都顯示
-    return true;
-  } else {
-    // 付費用戶：檢查 24 小時內是否已顯示過
-    const lastShown = sessionStorage.getItem('last_login_page_shown');
-    const now = Date.now();
-    if (!lastShown) return true;
-    
-    const hoursSinceLastShown = (now - parseInt(lastShown)) / (1000 * 60 * 60);
-    return hoursSinceLastShown > 24; // 超過 24 小時就顯示
-  }
-});
- 
   // 路由與同步狀態
   const [isSecretSignupRoute, setIsSecretSignupRoute] = useState(false); 
   const [isLoginRoute, setIsLoginRoute] = useState(false);
@@ -346,36 +323,21 @@ const [needsLoginInteraction, setNeedsLoginInteraction] = useState(() => {
       }} />;
   }
 
- if (!user || needsLoginInteraction) {
-  // 已登入但需要展示歡迎頁 or 未登入需要登入
-  if (isLoginRoute || user) {
-    return <LoginPage 
-      user={user}  // 傳入用戶資訊（已登入時會有值）
-      onLoginSuccess={() => {
-        // 記錄本次顯示時間
-        sessionStorage.setItem('last_login_page_shown', Date.now().toString());
-        
-        // 標記不再需要顯示登入頁
-        setNeedsLoginInteraction(false);
-        
-        // 如果是新登入（之前沒有 user），註冊裝置
-        if (!user && auth.currentUser) {
-          registerDeviceSession(auth.currentUser.uid);
-        }
-        
-        // 清除登入路由狀態
-        setIsLoginRoute(false);
-        window.history.pushState({}, '', '/');
-      }} 
-    />;
+  if (!user) {
+      if (isLoginRoute) {
+        return <LoginPage onLoginSuccess={() => {
+            setIsLoginRoute(false);
+            if (auth.currentUser) registerDeviceSession(auth.currentUser.uid);
+            window.history.pushState({}, '', '/');
+        }} />;
+      }
+      return <LandingPage 
+        onStart={() => navigateTo('/login', () => setIsLoginRoute(true))} 
+        onSignup={() => navigateTo('/signup-secret', () => setIsSecretSignupRoute(true))}
+        onHome={() => navigateTo('/', () => { setIsLoginRoute(false); setIsSecretSignupRoute(false); })}
+      />;
   }
-  // 未登入且不在登入路由 → 顯示 Landing Page
-  return <LandingPage 
-    onStart={() => navigateTo('/login', () => setIsLoginRoute(true))} 
-    onSignup={() => navigateTo('/signup-secret', () => setIsSecretSignupRoute(true))}
-    onHome={() => navigateTo('/', () => { setIsLoginRoute(false); setIsSecretSignupRoute(false); })}
- />;
-}
+
   if (!currentClient) {
       return (
           <>
