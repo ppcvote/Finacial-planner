@@ -57,6 +57,7 @@ src/components/FundTimeMachine.tsx
 src/components/GiftReport.tsx
 src/components/GoldenSafeVault.tsx
 src/components/LaborPensionTool.tsx
+src/components/LandingPage copy.jsx
 src/components/LandingPage.jsx
 src/components/MarketDataZone.tsx
 src/components/MarketWarRoom.tsx
@@ -2561,6 +2562,525 @@ const GiftReport = ({ data }: { data: any }) => {
 };
 
 export default GiftReport;
+</file>
+
+<file path="src/components/LandingPage copy.jsx">
+import React, { useState, useEffect } from 'react';
+import { 
+  Activity, 
+  TrendingUp, 
+  TrendingDown, 
+  ShieldAlert, 
+  FileBarChart, 
+  Clock, 
+  ChevronRight, 
+  Users, 
+  Rocket, 
+  Target, 
+  ShoppingBag, 
+  Zap, 
+  HeartPulse, 
+  Crosshair, 
+  ShieldCheck, 
+  ArrowRight,
+  Monitor, 
+  Smartphone, 
+  Database, 
+  Lock, 
+  CheckCircle2,
+  Globe, 
+  Mail, 
+  MessageSquare, 
+  PlayCircle, 
+  TriangleAlert,
+  OctagonAlert,
+  Landmark, 
+  ChevronLeft, 
+  Wallet,
+  X,
+  Car,
+  Heart,
+  ExternalLink,
+  LayoutDashboard,
+  BarChart3,
+  FileText
+} from 'lucide-react';
+
+// --- 配置區 ---
+const LOGO_URL = "https://lh3.googleusercontent.com/d/1CEFGRByRM66l-4sMMM78LUBUvAMiAIaJ"; 
+const COMMUNITY_LINK = "https://line.me/ti/g2/9Cca20iCP8J0KrmVRg5GOe1n5dSatYKO8ETTHw?utm_source=invitation&utm_medium=link_copy&utm_campaign=default";
+
+// --- 子組件：頂部跑馬燈 ---
+const MarketTicker = () => {
+  const [seconds, setSeconds] = useState(228); // 3分48秒
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSeconds(prev => (prev <= 1 ? 228 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (s) => {
+    const m = Math.floor(s / 60);
+    const rs = s % 60;
+    return `${m} 分 ${rs < 10 ? '0' : ''}${rs} 秒`;
+  };
+
+  return (
+    <div className="bg-red-600 text-white py-2 overflow-hidden whitespace-nowrap relative z-50 shadow-lg">
+      <div className="flex animate-marquee items-center gap-12 font-black text-[10px] md:text-xs uppercase tracking-widest">
+        <span className="flex items-center gap-2"><Clock size={14}/> 2026 癌症時鐘倒數：{formatTime(seconds)}</span>
+        <span className="flex items-center gap-2"><TriangleAlert size={14}/> 2026 預估醫療通膨：+15.8%</span>
+        <span className="flex items-center gap-2"><TrendingUp size={14}/> 實質體感通膨：4.5% 起</span>
+        <span className="flex items-center gap-2"><ShieldAlert size={14}/> 勞保破產倒數：2031 臨界點</span>
+        <span className="flex items-center gap-2"><Clock size={14}/> 2026 癌症時鐘倒數：{formatTime(seconds)}</span>
+        <span className="flex items-center gap-2"><TriangleAlert size={14}/> 2026 預估醫療通膨：+15.8%</span>
+      </div>
+      <style>{`
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+          display: inline-flex;
+          animation: marquee 30s linear infinite;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+// --- 子組件：戰略卡片 ---
+const FeatureCard = ({ icon: Icon, title, desc, tags, color }) => (
+  <div className="bg-slate-800/40 border border-slate-700/50 p-8 rounded-[2.5rem] hover:border-blue-500/50 transition-all group hover:-translate-y-2 shadow-2xl backdrop-blur-sm">
+    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-8 shadow-2xl ${color} ring-4 ring-white/5`}>
+      <Icon size={32} className="text-white" />
+    </div>
+    <h3 className="text-2xl font-bold text-white mb-4 tracking-tight group-hover:text-blue-400 transition-colors">{title}</h3>
+    <p className="text-slate-400 text-base leading-relaxed mb-8">{desc}</p>
+    <div className="flex flex-wrap gap-2">
+      {tags.map((tag, i) => (
+        <span key={i} className="text-[10px] font-black px-3 py-1 bg-slate-950 text-slate-500 rounded-full border border-slate-800 uppercase tracking-widest">
+          {tag}
+        </span>
+      ))}
+    </div>
+  </div>
+);
+
+// --- 子組件：章節標題 ---
+const SectionHeader = ({ badge, title, subtitle }) => (
+  <div className="text-center mb-20 space-y-6 px-4">
+    <span className="px-4 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-[0.4em] rounded-full shadow-inner">
+      {badge}
+    </span>
+    <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter leading-tight">{title}</h2>
+    <p className="text-slate-400 max-w-2xl mx-auto text-lg md:text-xl font-medium leading-relaxed">{subtitle}</p>
+  </div>
+);
+
+// --- 視圖組件：戰略工具 ---
+const ToolsView = () => (
+  <div className="max-w-7xl mx-auto px-6 py-20">
+    <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-6 px-4">
+      <div className="space-y-4">
+        <span className="text-blue-500 font-black tracking-widest uppercase text-xs">Tactical Arsenal</span>
+        <h2 className="text-5xl font-black text-white">戰略工具箱</h2>
+      </div>
+      <p className="text-slate-400 max-w-md">專業顧問必備的創富與守富工具，將生硬的數字轉化為可執行的計畫。</p>
+    </div>
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 px-4">
+      {[
+        { icon: Rocket, title: "學貸活化系統", desc: "低利資產的二次生命，創造套利空間。", tag: "創富" },
+        { icon: Landmark, title: "房產轉增貸工具", desc: "活化房地產死錢，重新配置高報酬標的。", tag: "槓桿" },
+        { icon: Wallet, title: "超積極存錢法", desc: "精準配置現金流，對抗通膨侵蝕。", tag: "配置" },
+        { icon: ShieldCheck, title: "大小水庫母子系統", desc: "守富防禦的核心，確保風險中資產穩健。", tag: "守富" },
+        { icon: Car, title: "五年換車計畫", desc: "資產配置與夢想實現的平衡點。", tag: "生活" },
+        { icon: HeartPulse, title: "長照尊嚴準備金", desc: "精算未來醫療成本，守護晚年尊嚴。", tag: "醫療" }
+      ].map((tool, i) => (
+        <div key={i} className="bg-slate-900 border border-white/5 p-8 rounded-[2rem] hover:border-blue-500/50 transition-all group shadow-xl">
+          <div className="w-14 h-14 bg-blue-600/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+            <tool.icon className="text-blue-500" size={28} />
+          </div>
+          <div className="flex justify-between items-start mb-4">
+            <h3 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors">{tool.title}</h3>
+            <span className="text-[10px] font-black px-2 py-0.5 bg-slate-800 text-slate-400 rounded uppercase">{tool.tag}</span>
+          </div>
+          <p className="text-slate-500 text-sm leading-relaxed mb-6">{tool.desc}</p>
+          <button className="w-full py-3 bg-slate-800 hover:bg-blue-600 text-white rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2">
+            啟動工具 <ChevronRight size={16} />
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// --- 視圖組件：數據中心 ---
+const DataView = () => (
+  <div className="max-w-7xl mx-auto px-6 py-20">
+    <SectionHeader badge="Global Data Insights" title="智慧數據戰情室" subtitle="整合 2026 全球經濟趨勢與實質通膨熱點。" />
+    <div className="grid lg:grid-cols-3 gap-10 px-4">
+      <div className="lg:col-span-2 space-y-10">
+        <div className="bg-slate-900 border border-white/5 p-8 rounded-[3rem] relative overflow-hidden shadow-2xl">
+          <div className="absolute top-0 right-0 p-8 opacity-10"><BarChart3 size={120} /></div>
+          <h3 className="text-2xl font-black text-white mb-8 flex items-center gap-3"><Globe className="text-blue-500" size={24} /> 2026 全球經濟趨勢追蹤</h3>
+          <div className="h-64 flex items-end gap-3 justify-between">
+            {[60, 40, 80, 50, 90, 70, 85].map((h, i) => (
+              <div key={i} className="flex-1 bg-blue-600/20 rounded-t-lg relative group">
+                <div style={{ height: `${h}%` }} className="bg-blue-600 rounded-t-lg transition-all group-hover:bg-blue-400"></div>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between mt-6 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+            <span>醫療</span><span>科技</span><span>能源</span><span>消費</span><span>基建</span><span>金融</span><span>房產</span>
+          </div>
+        </div>
+      </div>
+      <div className="bg-blue-600/5 border border-blue-500/20 p-8 rounded-[3rem] space-y-8 shadow-2xl">
+        <h3 className="text-xl font-bold text-white flex items-center gap-3"><Zap size={20} className="text-blue-500" /> 智慧決策引擎</h3>
+        <p className="text-sm text-slate-400 leading-relaxed">利用 AI 整合最新市場變數，提供即時數據支撐。</p>
+        <button className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-sm flex items-center justify-center gap-3 shadow-lg shadow-blue-500/30 transition-all active:scale-95">
+          <Zap size={18} /> 獲取即時洞察
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+// --- 視圖組件：戰略報表 ---
+const ReportsView = () => (
+  <div className="max-w-7xl mx-auto px-6 py-20 text-center">
+    <SectionHeader badge="Visual Strategy" title="讓專業被看見" subtitle="將財務計畫轉化為視覺說服力的戰略報表。" />
+    <div className="relative group max-w-4xl mx-auto px-4">
+      <div className="bg-white rounded-[2rem] shadow-[0_0_100px_rgba(59,130,246,0.1)] p-8 md:p-12 text-slate-800 text-left space-y-10 border border-slate-200">
+        <div className="flex justify-between items-center border-b pb-8 border-slate-100">
+          <div>
+            <h4 className="text-3xl font-black italic uppercase tracking-tighter">Ultra<span className="text-blue-600">Report</span></h4>
+            <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Confidential Strategic Analysis</p>
+          </div>
+        </div>
+        <div className="grid md:grid-cols-2 gap-12 text-slate-200">
+          <div className="h-40 bg-slate-50 rounded-2xl flex items-center justify-center"><BarChart3 size={80} /></div>
+          <div className="h-40 bg-slate-50 rounded-2xl flex items-center justify-center"><ShieldCheck size={80} /></div>
+        </div>
+        <div className="p-8 bg-blue-600 rounded-3xl text-white shadow-xl">
+          <p className="text-lg font-medium italic leading-relaxed">「根據 2026 數據，建議啟動學貸套利資產活化計畫。」</p>
+        </div>
+      </div>
+      <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center rounded-[2rem] opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
+        <button className="bg-white text-slate-950 px-10 py-5 rounded-full font-black text-lg flex items-center gap-3">
+          <FileText className="text-blue-600" /> 立即生成報表
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+// --- 主組件 ---
+export function LandingPage({ onStart, onHome }) {
+  const [view, setView] = useState('home');
+  const [showSignupModal, setShowSignupModal] = useState(false);
+  const [logoError, setLogoError] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [view]);
+
+  const communityLink = "https://line.me/ti/g2/9Cca20iCP8J0KrmVRg5GOe1n5dSatYKO8ETTHw?utm_source=invitation&utm_medium=link_copy&utm_campaign=default";
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-blue-600 selection:text-white font-sans overflow-x-hidden relative">
+      
+      {/* 所有的頁面內容放入此動畫容器中 */}
+      <div className="animate-fade-in flex flex-col min-h-screen">
+        <MarketTicker />
+
+        {/* Navigation */}
+        <nav className="border-b border-white/5 backdrop-blur-2xl sticky top-0 z-[100] bg-slate-950/80">
+          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            {/* LOGO 顯示區塊 */}
+            <div 
+              className="flex items-center gap-3 cursor-pointer group" 
+              onClick={() => { setView('home'); if(onHome) onHome(); }}
+            >
+              <div className="h-10 transition-transform group-hover:scale-105 overflow-hidden rounded-lg">
+                <img 
+                  src={logoError ? "https://placehold.co/100x100/3b82f6/white?text=LOGO" : LOGO_URL} 
+                  alt="Logo" 
+                  className="h-full w-auto object-contain"
+                  onError={() => setLogoError(true)}
+                />
+              </div>
+              <span className="text-2xl font-black text-white tracking-tighter italic uppercase">
+                Ultra<span className="text-blue-500">Advisor</span>
+              </span>
+            </div>
+            
+            <div className="hidden lg:flex items-center gap-10">
+              {[
+                { id: 'tools', label: '戰略工具' },
+                { id: 'data', label: '數據中心' },
+                { id: 'reports', label: '智慧報表' }
+              ].map(item => (
+                <button 
+                  key={item.id} 
+                  onClick={() => setView(item.id)}
+                  className={`text-sm font-bold transition-all tracking-tight relative group ${
+                    view === item.id ? 'text-blue-500' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {item.label}
+                  <span className={`absolute -bottom-1 left-0 h-0.5 bg-blue-500 transition-all ${view === item.id ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
+                </button>
+              ))}
+              {/* 顧問社群連結 */}
+              <a 
+                href={communityLink} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm font-bold text-blue-400 hover:text-blue-300 transition-all tracking-tight relative group flex items-center gap-1"
+              >
+                顧問社群
+                <ExternalLink size={12} />
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-400 transition-all group-hover:w-full"></span>
+              </a>
+            </div>
+
+            <div className="flex items-center gap-4 md:gap-6">
+              {/* 關鍵修復：移除 hidden sm:block，並調整手機版文字大小 */}
+              <button 
+                onClick={onStart} 
+                className="text-slate-400 hover:text-white font-bold text-[10px] md:text-sm transition-colors tracking-widest uppercase whitespace-nowrap"
+              >
+                登入系統
+              </button>
+              <button 
+                onClick={() => setShowSignupModal(true)}
+                className="bg-white text-slate-950 px-5 md:px-8 py-2 md:py-3 rounded-full font-black text-[10px] md:text-sm hover:bg-blue-600 hover:text-white transition-all shadow-2xl shadow-white/5 active:scale-95 whitespace-nowrap"
+              >
+                立刻開通
+              </button>
+            </div>
+          </div>
+        </nav>
+
+        {/* 根據 view 渲染不同區塊 */}
+        <main className="flex-grow">
+          {view === 'home' && (
+            <>
+              {/* Hero Section */}
+              <section className="relative pt-24 pb-40 overflow-hidden text-center">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[800px] bg-blue-600/10 blur-[150px] rounded-full pointer-events-none opacity-50"></div>
+                <div className="max-w-7xl mx-auto px-6 relative z-10 space-y-10">
+                  <div className="space-y-8">
+                    <span className="inline-flex items-center gap-3 px-5 py-2 bg-slate-900 border border-slate-800 rounded-full text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] shadow-xl">
+                      <Zap size={14} className="animate-pulse fill-blue-400" /> 下一代財務顧問的數位武裝
+                    </span>
+                    <h1 className="text-6xl md:text-9xl font-black text-white leading-[0.9] tracking-tighter">
+                      讓數據說話 <br />
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-blue-500">讓戰略成真</span>
+                    </h1>
+                    <p className="text-slate-400 max-w-3xl mx-auto text-lg md:text-2xl font-medium leading-relaxed opacity-80">
+                      UltraAdvisor 專為頂級金融顧問設計。整合 2026 最新官方數據，將複雜的財務邏輯轉化為極具視覺衝擊力的決策戰報。
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row items-center justify-center gap-8 pt-12 px-4">
+                    <div className="flex flex-col gap-4 items-center">
+                      <button 
+                        onClick={() => setShowSignupModal(true)}
+                        className="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white px-12 py-6 rounded-[2.5rem] font-black text-xl shadow-2xl shadow-blue-600/40 flex items-center justify-center gap-4 group transition-all transform hover:scale-105 active:scale-95 shadow-lg"
+                      >
+                        獲取開通金鑰 <ArrowRight className="group-hover:translate-x-2 transition-transform" />
+                      </button>
+                      {/* 手機版輔助登入連結 */}
+                      <button 
+                        onClick={onStart} 
+                        className="md:hidden text-slate-500 font-bold text-xs hover:text-blue-400 underline underline-offset-4"
+                      >
+                        已有帳號？登入系統
+                      </button>
+                    </div>
+                    <button 
+                      onClick={() => setView('tools')}
+                      className="w-full md:w-auto bg-slate-900 border border-slate-800 text-white px-12 py-6 rounded-[2.5rem] font-black text-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-3"
+                    >
+                      探索功能區塊 <LayoutDashboard size={20} />
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              {/* 市場數據預警區 */}
+              <section className="py-32 bg-slate-900/40 border-y border-white/5 relative">
+                <div className="max-w-7xl mx-auto px-6 relative z-10">
+                  <SectionHeader 
+                    badge="2026 Crisis Report"
+                    title="數據不會說謊，它會示警"
+                    subtitle="整合 2026 最新官方數據模型，將殘酷的社會趨勢轉化為顧問談案的最強依據。"
+                  />
+                  <div className="grid md:grid-cols-3 gap-10 px-4">
+                    <div className="bg-gradient-to-br from-red-600/10 to-slate-900 border border-red-600/20 p-12 rounded-[4rem] text-center space-y-8 shadow-2xl hover:scale-105 transition-transform group">
+                      <div className="w-24 h-24 bg-red-600 rounded-full flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(220,38,38,0.3)] group-hover:scale-110 transition-transform"><Clock className="text-white" size={48} /></div>
+                      <h3 className="text-2xl font-black text-white tracking-widest uppercase">2026 癌症時鐘</h3>
+                      <div className="text-6xl font-black text-red-500 font-mono tracking-tighter animate-pulse">3分48秒</div>
+                      <p className="text-slate-400 text-sm leading-relaxed italic font-medium">每 3'48" 即有一人罹癌。癌症不再是終點，而是「資產風險」的起點。</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-amber-600/10 to-slate-900 border border-amber-600/20 p-12 rounded-[4rem] text-center space-y-8 shadow-2xl hover:scale-105 transition-transform group">
+                      <div className="w-24 h-24 bg-amber-600 rounded-full flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(217,119,6,0.3)] group-hover:scale-110 transition-transform"><Users className="text-white" size={48} /></div>
+                      <h3 className="text-2xl font-black text-white tracking-widest uppercase">不健康餘命</h3>
+                      <div className="text-6xl font-black text-amber-500 font-mono tracking-tighter">8.4 年</div>
+                      <p className="text-slate-400 text-sm leading-relaxed italic font-medium">生命末期的失能狀態。2026 最新精算，個人平均需準備高昂的尊嚴金。</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-blue-600/10 to-slate-900 border border-blue-600/20 p-12 rounded-[4rem] text-center space-y-8 shadow-2xl hover:scale-105 transition-transform group">
+                      <div className="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(37,99,235,0.3)] group-hover:scale-110 transition-transform"><OctagonAlert className="text-white" size={48} /></div>
+                      <h3 className="text-2xl font-black text-white tracking-widest uppercase">勞保破產倒數</h3>
+                      <div className="text-6xl font-black text-blue-500 font-mono tracking-tighter">2031 年</div>
+                      <p className="text-slate-400 text-sm leading-relaxed italic font-medium">退休即懸崖。規劃必須建立在「沒有勞保也能活」的資產自理前提。</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* 核心工具箱 */}
+              <section className="py-40">
+                <div className="max-w-7xl mx-auto px-6">
+                  <SectionHeader 
+                    badge="Strategic Toolbox"
+                    title="顧問專屬的三大戰略系統"
+                    subtitle="將生硬的數字轉化為可執行的致富計畫。"
+                  />
+                  <div className="grid md:grid-cols-3 gap-10 px-4">
+                    <FeatureCard 
+                      icon={Rocket}
+                      title="創富：槓桿與套利"
+                      desc="學貸活化、房產轉增貸、超積極存錢法。利用 2026 市場利率波動，實現資產階級躍遷。"
+                      tags={['百萬禮物', 'RE活化', '低利套利']}
+                      color="bg-blue-600 shadow-blue-600/30"
+                    />
+                    <FeatureCard 
+                      icon={ShieldCheck}
+                      title="守富：現金流防禦"
+                      desc="建立大小水庫母子系統，規劃五年換車與長照準備。確保資產在風險中依然穩健成長。"
+                      tags={['大小水庫', '尊嚴準備', '退休開口']}
+                      color="bg-emerald-600 shadow-emerald-600/30"
+                    />
+                    <FeatureCard 
+                      icon={Landmark}
+                      title="傳富：稅務與傳承"
+                      desc="針對 2026 最新稅法，進行遺產稅流動性缺口測試，實現財富完美、安全地落地。"
+                      tags={['稅務預估', '缺口測試', '傳承戰略']}
+                      color="bg-purple-600 shadow-purple-600/30"
+                    />
+                  </div>
+                </div>
+              </section>
+            </>
+          )}
+          {view === 'tools' && <ToolsView />}
+          {view === 'data' && <DataView />}
+          {view === 'reports' && <ReportsView />}
+        </main>
+
+        {/* Footer */}
+        <footer className="bg-slate-950 border-t border-white/5 py-24 relative overflow-hidden">
+          <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-16 relative z-10 text-sm">
+            <div className="space-y-8">
+              <div className="flex items-center gap-3">
+                <div className="h-8 overflow-hidden rounded">
+                  <img 
+                    src={logoError ? "https://placehold.co/100x100/3b82f6/white?text=LOGO" : LOGO_URL} 
+                    alt="Logo" 
+                    className="h-full w-auto brightness-110"
+                    onError={() => setLogoError(true)}
+                  />
+                </div>
+                <span className="text-xl font-black text-white tracking-tighter italic uppercase">UltraAdvisor</span>
+              </div>
+              <p className="text-slate-500 font-bold leading-relaxed">下一代顧問的數位戰情室。整合 2026 最強財務模型與戰略系統。</p>
+            </div>
+            <div><h4 className="text-white font-black mb-8 tracking-widest uppercase text-xs opacity-40">核心戰略</h4><ul className="space-y-4 text-slate-500 font-bold cursor-pointer"><li onClick={() => setView('tools')}>創富：槓桿套利系統</li><li onClick={() => setView('tools')}>守富：現金流防禦系統</li><li onClick={() => setView('tools')}>傳富：稅務與傳承系統</li></ul></div>
+            <div><h4 className="text-white font-black mb-8 tracking-widest uppercase text-xs opacity-40">數據中心</h4><ul className="space-y-4 text-slate-500 font-bold cursor-pointer"><li onClick={() => setView('data')}>2026 癌症時鐘模型</li><li onClick={() => setView('data')}>醫療通膨實時數據</li><li onClick={() => setView('data')}>勞保破產精算報告</li></ul></div>
+            <div><h4 className="text-white font-black mb-8 tracking-widest uppercase text-xs opacity-40">聯繫我們</h4><div className="flex gap-5"><Globe size={20} className="text-slate-500 hover:text-blue-400 cursor-pointer"/><Mail size={20} className="text-slate-500 hover:text-blue-400 cursor-pointer"/><MessageSquare size={20} className="text-slate-500 hover:text-blue-400 cursor-pointer"/></div></div>
+          </div>
+          <div className="max-w-7xl mx-auto px-6 mt-24 pt-10 border-t border-white/5 flex justify-between items-center relative z-10">
+            <p className="text-slate-600 text-[10px] font-black uppercase tracking-[0.2em]">© 2026 UltraAdvisor Pro. All rights reserved.</p>
+          </div>
+        </footer>
+      </div>
+
+      {/* --- 註冊試用彈窗 (Iframe) --- */}
+      {showSignupModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300" 
+            onClick={() => setShowSignupModal(false)}
+          />
+          <div className="relative bg-white rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300 max-w-[440px] w-full flex flex-col">
+            <div className="flex items-center justify-between p-4 bg-slate-50 border-b border-slate-100">
+              <span className="text-slate-900 font-black text-xs uppercase tracking-widest px-3 py-1 bg-blue-100 rounded-full">立即獲取金鑰</span>
+              <button 
+                onClick={() => setShowSignupModal(false)}
+                className="p-2 hover:bg-slate-200 rounded-full transition-colors group"
+              >
+                <X size={24} className="text-slate-400 group-hover:text-slate-900" />
+              </button>
+            </div>
+            <div className="bg-white flex justify-center py-2 px-4 overflow-y-auto max-h-[80vh]">
+               <iframe 
+                src="https://portaly.cc/embed/GinRollBT/product/WsaTvEYOA1yqAQYzVZgy" 
+                width="400" 
+                height="620" 
+                style={{ border: 0, borderRadius: '12px' }} 
+                frameBorder="0" 
+                loading="lazy"
+                title="Register"
+              />
+            </div>
+            <div className="p-4 bg-slate-50 text-center">
+               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">完成註冊後即可獲得 2026 戰略工具使用權</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 全域動畫 */}
+      <style>{`
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes zoom-in {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .zoom-in {
+          animation: zoom-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// 輔助組件：外部連結圖示
+const ExternalLinkIcon = ({ size }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+);
+
+/**
+ * App 組件
+ */
+export default function App() {
+  const handleStart = () => {
+    console.log("導向登入頁面...");
+  };
+
+  return <LandingPage onStart={handleStart} />;
+}
 </file>
 
 <file path="src/components/ReportModal.tsx">
@@ -6003,6 +6523,362 @@ export default function App() {
 }
 </file>
 
+<file path="src/components/GoldenSafeVault.tsx">
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Lock, Unlock, ShieldCheck, TrendingUp, Hourglass, 
+  Coins, AlertTriangle, Skull, Activity, Ban
+} from 'lucide-react';
+
+export default function GoldenSafeVault({ data, setData }: any) {
+  // 預設值
+  const safeData = data || { 
+    mode: 'time', 
+    amount: 60000, 
+    years: 10,
+    rate: 6,
+    isLocked: false 
+  };
+
+  const [localLocked, setLocalLocked] = useState(safeData.isLocked);
+  const [animateValue, setAnimateValue] = useState(0);
+  const [activeDisaster, setActiveDisaster] = useState<string | null>(null);
+
+  // 1. 基礎計算 (無風險時的資產)
+  const baseValue = useMemo(() => {
+    const { mode, amount, years, rate } = safeData;
+    const r = rate / 100;
+    let val = 0;
+    if (mode === 'asset') {
+      val = Math.round(amount * Math.pow(1 + r, years));
+    } else {
+      val = Math.round(amount * ((Math.pow(1 + r, years) - 1) / r) * (1+r));
+    }
+    return val;
+  }, [safeData]);
+
+  // 2. 最終價值計算 (考慮鎖定成本 與 災難損失)
+  const finalDisplayValue = useMemo(() => {
+    // A. 如果已上鎖：扣除 10% 成本，但免疫所有災害
+    if (localLocked) {
+      return Math.round(baseValue * 0.9);
+    }
+
+    // B. 如果沒上鎖：根據災害扣血
+    switch (activeDisaster) {
+      case 'medical': // 重大傷病：直接噴 200 萬
+        return Math.max(0, baseValue - 2000000);
+      case 'market': // 市場崩盤：資產縮水 30%
+        return Math.round(baseValue * 0.7);
+      case 'tax': // 遺產稅/債務：扣除 100 萬 (範例)
+        return Math.max(0, baseValue - 1000000);
+      default: // 平安無事
+        return baseValue;
+    }
+  }, [baseValue, localLocked, activeDisaster]);
+
+  const principal = safeData.mode === 'asset' ? safeData.amount : safeData.amount * safeData.years;
+
+  // 動畫效果
+  useEffect(() => {
+    let start = animateValue; // 從當前數值開始，不歸零
+    const end = finalDisplayValue;
+    const change = end - start;
+    const duration = 500;
+    let startTime: number | null = null;
+
+    const animate = (time: number) => {
+      if (!startTime) startTime = time;
+      const progress = Math.min((time - startTime) / duration, 1);
+      // Easing function for smoother animation
+      const ease = 1 - Math.pow(1 - progress, 3); 
+      
+      setAnimateValue(Math.round(start + change * ease));
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+    requestAnimationFrame(animate);
+  }, [finalDisplayValue]);
+
+  // 同步鎖定狀態
+  useEffect(() => {
+     if (localLocked !== safeData.isLocked) {
+        setData({ ...safeData, isLocked: localLocked });
+     }
+     // 上鎖時自動清除災難狀態 (因為免疫)
+     if (localLocked) setActiveDisaster(null);
+  }, [localLocked]);
+
+  const handleUpdate = (key: string, value: any) => {
+    setData({ ...safeData, [key]: value, isLocked: false });
+    setLocalLocked(false);
+    setActiveDisaster(null);
+  };
+
+  const toggleDisaster = (type: string) => {
+    if (localLocked) return; // 上鎖時按災難沒反應 (或顯示防禦特效)
+    setActiveDisaster(activeDisaster === type ? null : type);
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in pb-20 font-sans">
+      
+      {/* Header */}
+      <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-4 opacity-10">
+           <ShieldCheck size={200} />
+        </div>
+        <div className="relative z-10 text-center md:text-left">
+           <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2 text-yellow-500 flex items-center gap-3 justify-center md:justify-start">
+             <Lock size={36}/> 黃金保險箱理論
+           </h1>
+           <p className="text-slate-300 text-lg max-w-2xl mx-auto md:mx-0">
+             存錢沒有奇蹟，只有路徑。最重要的是：您的保險箱上鎖了嗎？
+           </p>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-12 gap-8">
+        
+        {/* Left: Settings */}
+        <div className="lg:col-span-4 space-y-6">
+           {/* 路徑選擇 */}
+           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-2 flex">
+              <button 
+                onClick={() => handleUpdate('mode', 'time')}
+                className={`flex-1 py-4 rounded-xl flex flex-col items-center gap-2 transition-all ${safeData.mode === 'time' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
+              >
+                 <Hourglass size={24}/>
+                 <span className="font-bold text-sm">用時間存錢</span>
+              </button>
+              <button 
+                onClick={() => handleUpdate('mode', 'asset')}
+                className={`flex-1 py-4 rounded-xl flex flex-col items-center gap-2 transition-all ${safeData.mode === 'asset' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
+              >
+                 <Coins size={24}/>
+                 <span className="font-bold text-sm">用資產存錢</span>
+              </button>
+           </div>
+
+           {/* 參數滑桿 */}
+           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+              <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                 <TrendingUp size={18}/> 設定參數
+              </h3>
+              
+              <div>
+                 <label className="text-xs font-bold text-slate-500 mb-1 block">
+                    {safeData.mode === 'time' ? '每年存入金額' : '單筆投入本金'}
+                 </label>
+                 <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-slate-400 font-bold">$</span>
+                    <input 
+                      type="number" 
+                      value={safeData.amount}
+                      onChange={(e) => handleUpdate('amount', Number(e.target.value))}
+                      className="w-full pl-8 p-2 border border-slate-200 rounded-lg font-bold text-xl text-slate-800 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                 </div>
+                 <input 
+                   type="range" min={10000} max={5000000} step={10000}
+                   value={safeData.amount}
+                   onChange={(e) => handleUpdate('amount', Number(e.target.value))}
+                   className="w-full h-2 bg-slate-100 rounded-lg accent-slate-600 mt-2"
+                 />
+              </div>
+
+              <div>
+                 <div className="flex justify-between mb-1">
+                    <label className="text-xs font-bold text-slate-500">滾存時間</label>
+                    <span className="font-bold text-slate-700">{safeData.years} 年</span>
+                 </div>
+                 <input 
+                   type="range" min={5} max={30} step={1}
+                   value={safeData.years}
+                   onChange={(e) => handleUpdate('years', Number(e.target.value))}
+                   className="w-full h-2 bg-slate-100 rounded-lg accent-slate-600"
+                 />
+              </div>
+              
+              <div className="bg-slate-50 p-4 rounded-xl text-center">
+                 <p className="text-xs text-slate-500 mb-1">預估平均年化報酬</p>
+                 <p className="text-2xl font-black text-slate-700">{safeData.rate}%</p>
+              </div>
+           </div>
+        </div>
+
+        {/* Right: The Vault Visual & Risk Test */}
+        <div className="lg:col-span-8 flex flex-col gap-6">
+           
+           {/* Visual Area */}
+           <div className={`relative flex-1 rounded-3xl p-8 flex flex-col items-center justify-center transition-all duration-500 border-4 ${
+               localLocked ? 'bg-slate-900 border-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.3)]' 
+               : activeDisaster ? 'bg-red-50 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)]'
+               : 'bg-white border-slate-200 shadow-sm'
+           }`}>
+              
+              {/* Status Badge */}
+              <div className={`absolute top-6 right-6 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-colors ${
+                  localLocked ? 'bg-yellow-500 text-black' 
+                  : activeDisaster ? 'bg-red-500 text-white animate-pulse'
+                  : 'bg-slate-100 text-slate-400'
+              }`}>
+                 {localLocked ? 'SECURED / 已上鎖' 
+                  : activeDisaster ? 'WARNING / 資產流失中' 
+                  : 'UNSECURED / 風險敞開'}
+              </div>
+
+              {/* Main Icon */}
+              <div className="relative mb-8 mt-4">
+                 <div className={`transition-all duration-700 transform ${localLocked ? 'scale-110' : activeDisaster ? 'scale-90 opacity-80' : 'scale-100'}`}>
+                    {localLocked ? (
+                       <ShieldCheck size={180} className="text-yellow-500" />
+                    ) : activeDisaster ? (
+                       <AlertTriangle size={180} className="text-red-500 animate-bounce" />
+                    ) : (
+                       <Unlock size={180} className="text-slate-300" />
+                    )}
+                 </div>
+                 
+                 {/* 上鎖特效 */}
+                 {localLocked && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-full h-full bg-yellow-400/20 rounded-full animate-ping"></div>
+                    </div>
+                 )}
+              </div>
+
+              {/* Money Display */}
+              <div className="text-center space-y-2 z-10">
+                 <p className={`text-sm font-bold uppercase tracking-widest ${
+                     localLocked ? 'text-yellow-500' : activeDisaster ? 'text-red-500' : 'text-slate-400'
+                 }`}>
+                    {localLocked ? '資產實名制 (已扣除10%保全成本)' : activeDisaster ? '資產遭受重創' : '預估總資產'}
+                 </p>
+                 
+                 <div className={`text-5xl md:text-7xl font-black font-mono tracking-tighter transition-colors duration-300 ${
+                     localLocked ? 'text-white' : activeDisaster ? 'text-red-600' : 'text-slate-700'
+                 }`}>
+                    ${animateValue.toLocaleString()}
+                 </div>
+
+                 {/* 損失金額提示 */}
+                 {activeDisaster && !localLocked && (
+                     <div className="text-red-500 font-bold bg-red-100 px-3 py-1 rounded-full inline-block animate-pulse">
+                        損失: -${(baseValue - finalDisplayValue).toLocaleString()}
+                     </div>
+                 )}
+
+                 <div className="flex items-center justify-center gap-4 mt-2 text-sm font-medium opacity-80">
+                    <span className={localLocked ? 'text-slate-400' : 'text-slate-500'}>
+                       本金: ${principal.toLocaleString()}
+                    </span>
+                    {/* 上鎖後利息當然也變少，因為本體變少了，但這是為了安全 */}
+                 </div>
+              </div>
+           </div>
+
+           {/* --- 壓力測試控制台 --- */}
+           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                 <Activity className="text-rose-500"/> 資產壓力測試 (Stress Test)
+              </h4>
+              
+              <div className="flex flex-col md:flex-row gap-4">
+                 
+                 {/* 災難按鈕群 (左側) */}
+                 <div className="flex-1 grid grid-cols-3 gap-2">
+                    <button 
+                       onClick={() => toggleDisaster('medical')}
+                       disabled={localLocked}
+                       className={`p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all ${
+                           localLocked ? 'opacity-30 cursor-not-allowed border-slate-100' 
+                           : activeDisaster === 'medical' ? 'border-red-500 bg-red-50 text-red-600' 
+                           : 'border-slate-100 hover:border-red-200 text-slate-500 hover:bg-red-50/30'
+                       }`}
+                    >
+                       <Activity size={24}/>
+                       <span className="text-xs font-bold">重大傷病</span>
+                       {!localLocked && <span className="text-[10px] text-red-400">-200萬</span>}
+                    </button>
+
+                    <button 
+                       onClick={() => toggleDisaster('market')}
+                       disabled={localLocked}
+                       className={`p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all ${
+                           localLocked ? 'opacity-30 cursor-not-allowed border-slate-100' 
+                           : activeDisaster === 'market' ? 'border-red-500 bg-red-50 text-red-600' 
+                           : 'border-slate-100 hover:border-red-200 text-slate-500 hover:bg-red-50/30'
+                       }`}
+                    >
+                       <TrendingUp size={24} className="rotate-180"/>
+                       <span className="text-xs font-bold">市場崩盤</span>
+                       {!localLocked && <span className="text-[10px] text-red-400">-30%</span>}
+                    </button>
+
+                    <button 
+                       onClick={() => toggleDisaster('tax')}
+                       disabled={localLocked}
+                       className={`p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all ${
+                           localLocked ? 'opacity-30 cursor-not-allowed border-slate-100' 
+                           : activeDisaster === 'tax' ? 'border-red-500 bg-red-50 text-red-600' 
+                           : 'border-slate-100 hover:border-red-200 text-slate-500 hover:bg-red-50/30'
+                       }`}
+                    >
+                       <Ban size={24}/>
+                       <span className="text-xs font-bold">稅務/債務</span>
+                       {!localLocked && <span className="text-[10px] text-red-400">-100萬</span>}
+                    </button>
+                 </div>
+
+                 {/* 上鎖按鈕 (右側 - 關鍵行動) */}
+                 <button 
+                    onClick={() => setLocalLocked(!localLocked)}
+                    className={`md:w-1/3 px-6 py-4 rounded-xl font-bold text-lg flex flex-col items-center justify-center gap-1 transition-all shadow-xl ${
+                       localLocked 
+                       ? 'bg-slate-100 text-slate-400 border border-slate-200 hover:bg-slate-200' 
+                       : 'bg-gradient-to-r from-yellow-500 to-amber-600 text-white hover:from-yellow-600 hover:to-amber-700 shadow-yellow-200 scale-105'
+                    }`}
+                 >
+                    <div className="flex items-center gap-2">
+                        {localLocked ? <Unlock size={20}/> : <Lock size={20}/>}
+                        <span>{localLocked ? '解除鎖定' : '立即上鎖'}</span>
+                    </div>
+                    {!localLocked && <span className="text-xs opacity-90 font-normal">只需提撥 10% 成本</span>}
+                 </button>
+
+              </div>
+              
+              {/* 互動反饋訊息 */}
+              <div className="mt-4 text-center h-6">
+                 {localLocked ? (
+                    <p className="text-sm font-bold text-emerald-600 flex items-center justify-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+                       <ShieldCheck size={16}/> 
+                       防護網已啟動！無論發生什麼災難，您的 {(Math.round(baseValue * 0.9 / 10000))} 萬資產都將毫髮無傷。
+                    </p>
+                 ) : activeDisaster ? (
+                    <p className="text-sm font-bold text-red-500 flex items-center justify-center gap-2 animate-bounce">
+                       <AlertTriangle size={16}/> 
+                       警報！您的保險箱門戶大開，資產正在流失給醫生或政府！
+                    </p>
+                 ) : (
+                    <p className="text-sm text-slate-400">
+                       試試看點擊左側災難，看看您的資產是否安全？
+                    </p>
+                 )}
+              </div>
+
+           </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+</file>
+
 <file path="src/components/MillionDollarGiftTool.tsx">
 import React, { useState, useEffect } from 'react';
 import { 
@@ -7437,362 +8313,6 @@ const FreeDashboardTool: React.FC<FreeDashboardProps> = ({ allData, setAllData, 
 export default FreeDashboardTool;
 </file>
 
-<file path="src/components/GoldenSafeVault.tsx">
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Lock, Unlock, ShieldCheck, TrendingUp, Hourglass, 
-  Coins, AlertTriangle, Skull, Activity, Ban
-} from 'lucide-react';
-
-export default function GoldenSafeVault({ data, setData }: any) {
-  // 預設值
-  const safeData = data || { 
-    mode: 'time', 
-    amount: 60000, 
-    years: 10,
-    rate: 6,
-    isLocked: false 
-  };
-
-  const [localLocked, setLocalLocked] = useState(safeData.isLocked);
-  const [animateValue, setAnimateValue] = useState(0);
-  const [activeDisaster, setActiveDisaster] = useState<string | null>(null);
-
-  // 1. 基礎計算 (無風險時的資產)
-  const baseValue = useMemo(() => {
-    const { mode, amount, years, rate } = safeData;
-    const r = rate / 100;
-    let val = 0;
-    if (mode === 'asset') {
-      val = Math.round(amount * Math.pow(1 + r, years));
-    } else {
-      val = Math.round(amount * ((Math.pow(1 + r, years) - 1) / r) * (1+r));
-    }
-    return val;
-  }, [safeData]);
-
-  // 2. 最終價值計算 (考慮鎖定成本 與 災難損失)
-  const finalDisplayValue = useMemo(() => {
-    // A. 如果已上鎖：扣除 10% 成本，但免疫所有災害
-    if (localLocked) {
-      return Math.round(baseValue * 0.9);
-    }
-
-    // B. 如果沒上鎖：根據災害扣血
-    switch (activeDisaster) {
-      case 'medical': // 重大傷病：直接噴 200 萬
-        return Math.max(0, baseValue - 2000000);
-      case 'market': // 市場崩盤：資產縮水 30%
-        return Math.round(baseValue * 0.7);
-      case 'tax': // 遺產稅/債務：扣除 100 萬 (範例)
-        return Math.max(0, baseValue - 1000000);
-      default: // 平安無事
-        return baseValue;
-    }
-  }, [baseValue, localLocked, activeDisaster]);
-
-  const principal = safeData.mode === 'asset' ? safeData.amount : safeData.amount * safeData.years;
-
-  // 動畫效果
-  useEffect(() => {
-    let start = animateValue; // 從當前數值開始，不歸零
-    const end = finalDisplayValue;
-    const change = end - start;
-    const duration = 500;
-    let startTime: number | null = null;
-
-    const animate = (time: number) => {
-      if (!startTime) startTime = time;
-      const progress = Math.min((time - startTime) / duration, 1);
-      // Easing function for smoother animation
-      const ease = 1 - Math.pow(1 - progress, 3); 
-      
-      setAnimateValue(Math.round(start + change * ease));
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      }
-    };
-    requestAnimationFrame(animate);
-  }, [finalDisplayValue]);
-
-  // 同步鎖定狀態
-  useEffect(() => {
-     if (localLocked !== safeData.isLocked) {
-        setData({ ...safeData, isLocked: localLocked });
-     }
-     // 上鎖時自動清除災難狀態 (因為免疫)
-     if (localLocked) setActiveDisaster(null);
-  }, [localLocked]);
-
-  const handleUpdate = (key: string, value: any) => {
-    setData({ ...safeData, [key]: value, isLocked: false });
-    setLocalLocked(false);
-    setActiveDisaster(null);
-  };
-
-  const toggleDisaster = (type: string) => {
-    if (localLocked) return; // 上鎖時按災難沒反應 (或顯示防禦特效)
-    setActiveDisaster(activeDisaster === type ? null : type);
-  };
-
-  return (
-    <div className="space-y-6 animate-fade-in pb-20 font-sans">
-      
-      {/* Header */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-4 opacity-10">
-           <ShieldCheck size={200} />
-        </div>
-        <div className="relative z-10 text-center md:text-left">
-           <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2 text-yellow-500 flex items-center gap-3 justify-center md:justify-start">
-             <Lock size={36}/> 黃金保險箱理論
-           </h1>
-           <p className="text-slate-300 text-lg max-w-2xl mx-auto md:mx-0">
-             存錢沒有奇蹟，只有路徑。最重要的是：您的保險箱上鎖了嗎？
-           </p>
-        </div>
-      </div>
-
-      <div className="grid lg:grid-cols-12 gap-8">
-        
-        {/* Left: Settings */}
-        <div className="lg:col-span-4 space-y-6">
-           {/* 路徑選擇 */}
-           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-2 flex">
-              <button 
-                onClick={() => handleUpdate('mode', 'time')}
-                className={`flex-1 py-4 rounded-xl flex flex-col items-center gap-2 transition-all ${safeData.mode === 'time' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
-              >
-                 <Hourglass size={24}/>
-                 <span className="font-bold text-sm">用時間存錢</span>
-              </button>
-              <button 
-                onClick={() => handleUpdate('mode', 'asset')}
-                className={`flex-1 py-4 rounded-xl flex flex-col items-center gap-2 transition-all ${safeData.mode === 'asset' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
-              >
-                 <Coins size={24}/>
-                 <span className="font-bold text-sm">用資產存錢</span>
-              </button>
-           </div>
-
-           {/* 參數滑桿 */}
-           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
-              <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                 <TrendingUp size={18}/> 設定參數
-              </h3>
-              
-              <div>
-                 <label className="text-xs font-bold text-slate-500 mb-1 block">
-                    {safeData.mode === 'time' ? '每年存入金額' : '單筆投入本金'}
-                 </label>
-                 <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-slate-400 font-bold">$</span>
-                    <input 
-                      type="number" 
-                      value={safeData.amount}
-                      onChange={(e) => handleUpdate('amount', Number(e.target.value))}
-                      className="w-full pl-8 p-2 border border-slate-200 rounded-lg font-bold text-xl text-slate-800 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                 </div>
-                 <input 
-                   type="range" min={10000} max={5000000} step={10000}
-                   value={safeData.amount}
-                   onChange={(e) => handleUpdate('amount', Number(e.target.value))}
-                   className="w-full h-2 bg-slate-100 rounded-lg accent-slate-600 mt-2"
-                 />
-              </div>
-
-              <div>
-                 <div className="flex justify-between mb-1">
-                    <label className="text-xs font-bold text-slate-500">滾存時間</label>
-                    <span className="font-bold text-slate-700">{safeData.years} 年</span>
-                 </div>
-                 <input 
-                   type="range" min={5} max={30} step={1}
-                   value={safeData.years}
-                   onChange={(e) => handleUpdate('years', Number(e.target.value))}
-                   className="w-full h-2 bg-slate-100 rounded-lg accent-slate-600"
-                 />
-              </div>
-              
-              <div className="bg-slate-50 p-4 rounded-xl text-center">
-                 <p className="text-xs text-slate-500 mb-1">預估平均年化報酬</p>
-                 <p className="text-2xl font-black text-slate-700">{safeData.rate}%</p>
-              </div>
-           </div>
-        </div>
-
-        {/* Right: The Vault Visual & Risk Test */}
-        <div className="lg:col-span-8 flex flex-col gap-6">
-           
-           {/* Visual Area */}
-           <div className={`relative flex-1 rounded-3xl p-8 flex flex-col items-center justify-center transition-all duration-500 border-4 ${
-               localLocked ? 'bg-slate-900 border-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.3)]' 
-               : activeDisaster ? 'bg-red-50 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)]'
-               : 'bg-white border-slate-200 shadow-sm'
-           }`}>
-              
-              {/* Status Badge */}
-              <div className={`absolute top-6 right-6 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-colors ${
-                  localLocked ? 'bg-yellow-500 text-black' 
-                  : activeDisaster ? 'bg-red-500 text-white animate-pulse'
-                  : 'bg-slate-100 text-slate-400'
-              }`}>
-                 {localLocked ? 'SECURED / 已上鎖' 
-                  : activeDisaster ? 'WARNING / 資產流失中' 
-                  : 'UNSECURED / 風險敞開'}
-              </div>
-
-              {/* Main Icon */}
-              <div className="relative mb-8 mt-4">
-                 <div className={`transition-all duration-700 transform ${localLocked ? 'scale-110' : activeDisaster ? 'scale-90 opacity-80' : 'scale-100'}`}>
-                    {localLocked ? (
-                       <ShieldCheck size={180} className="text-yellow-500" />
-                    ) : activeDisaster ? (
-                       <AlertTriangle size={180} className="text-red-500 animate-bounce" />
-                    ) : (
-                       <Unlock size={180} className="text-slate-300" />
-                    )}
-                 </div>
-                 
-                 {/* 上鎖特效 */}
-                 {localLocked && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-full h-full bg-yellow-400/20 rounded-full animate-ping"></div>
-                    </div>
-                 )}
-              </div>
-
-              {/* Money Display */}
-              <div className="text-center space-y-2 z-10">
-                 <p className={`text-sm font-bold uppercase tracking-widest ${
-                     localLocked ? 'text-yellow-500' : activeDisaster ? 'text-red-500' : 'text-slate-400'
-                 }`}>
-                    {localLocked ? '資產實名制 (已扣除10%保全成本)' : activeDisaster ? '資產遭受重創' : '預估總資產'}
-                 </p>
-                 
-                 <div className={`text-5xl md:text-7xl font-black font-mono tracking-tighter transition-colors duration-300 ${
-                     localLocked ? 'text-white' : activeDisaster ? 'text-red-600' : 'text-slate-700'
-                 }`}>
-                    ${animateValue.toLocaleString()}
-                 </div>
-
-                 {/* 損失金額提示 */}
-                 {activeDisaster && !localLocked && (
-                     <div className="text-red-500 font-bold bg-red-100 px-3 py-1 rounded-full inline-block animate-pulse">
-                        損失: -${(baseValue - finalDisplayValue).toLocaleString()}
-                     </div>
-                 )}
-
-                 <div className="flex items-center justify-center gap-4 mt-2 text-sm font-medium opacity-80">
-                    <span className={localLocked ? 'text-slate-400' : 'text-slate-500'}>
-                       本金: ${principal.toLocaleString()}
-                    </span>
-                    {/* 上鎖後利息當然也變少，因為本體變少了，但這是為了安全 */}
-                 </div>
-              </div>
-           </div>
-
-           {/* --- 壓力測試控制台 --- */}
-           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                 <Activity className="text-rose-500"/> 資產壓力測試 (Stress Test)
-              </h4>
-              
-              <div className="flex flex-col md:flex-row gap-4">
-                 
-                 {/* 災難按鈕群 (左側) */}
-                 <div className="flex-1 grid grid-cols-3 gap-2">
-                    <button 
-                       onClick={() => toggleDisaster('medical')}
-                       disabled={localLocked}
-                       className={`p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all ${
-                           localLocked ? 'opacity-30 cursor-not-allowed border-slate-100' 
-                           : activeDisaster === 'medical' ? 'border-red-500 bg-red-50 text-red-600' 
-                           : 'border-slate-100 hover:border-red-200 text-slate-500 hover:bg-red-50/30'
-                       }`}
-                    >
-                       <Activity size={24}/>
-                       <span className="text-xs font-bold">重大傷病</span>
-                       {!localLocked && <span className="text-[10px] text-red-400">-200萬</span>}
-                    </button>
-
-                    <button 
-                       onClick={() => toggleDisaster('market')}
-                       disabled={localLocked}
-                       className={`p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all ${
-                           localLocked ? 'opacity-30 cursor-not-allowed border-slate-100' 
-                           : activeDisaster === 'market' ? 'border-red-500 bg-red-50 text-red-600' 
-                           : 'border-slate-100 hover:border-red-200 text-slate-500 hover:bg-red-50/30'
-                       }`}
-                    >
-                       <TrendingUp size={24} className="rotate-180"/>
-                       <span className="text-xs font-bold">市場崩盤</span>
-                       {!localLocked && <span className="text-[10px] text-red-400">-30%</span>}
-                    </button>
-
-                    <button 
-                       onClick={() => toggleDisaster('tax')}
-                       disabled={localLocked}
-                       className={`p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all ${
-                           localLocked ? 'opacity-30 cursor-not-allowed border-slate-100' 
-                           : activeDisaster === 'tax' ? 'border-red-500 bg-red-50 text-red-600' 
-                           : 'border-slate-100 hover:border-red-200 text-slate-500 hover:bg-red-50/30'
-                       }`}
-                    >
-                       <Ban size={24}/>
-                       <span className="text-xs font-bold">稅務/債務</span>
-                       {!localLocked && <span className="text-[10px] text-red-400">-100萬</span>}
-                    </button>
-                 </div>
-
-                 {/* 上鎖按鈕 (右側 - 關鍵行動) */}
-                 <button 
-                    onClick={() => setLocalLocked(!localLocked)}
-                    className={`md:w-1/3 px-6 py-4 rounded-xl font-bold text-lg flex flex-col items-center justify-center gap-1 transition-all shadow-xl ${
-                       localLocked 
-                       ? 'bg-slate-100 text-slate-400 border border-slate-200 hover:bg-slate-200' 
-                       : 'bg-gradient-to-r from-yellow-500 to-amber-600 text-white hover:from-yellow-600 hover:to-amber-700 shadow-yellow-200 scale-105'
-                    }`}
-                 >
-                    <div className="flex items-center gap-2">
-                        {localLocked ? <Unlock size={20}/> : <Lock size={20}/>}
-                        <span>{localLocked ? '解除鎖定' : '立即上鎖'}</span>
-                    </div>
-                    {!localLocked && <span className="text-xs opacity-90 font-normal">只需提撥 10% 成本</span>}
-                 </button>
-
-              </div>
-              
-              {/* 互動反饋訊息 */}
-              <div className="mt-4 text-center h-6">
-                 {localLocked ? (
-                    <p className="text-sm font-bold text-emerald-600 flex items-center justify-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-                       <ShieldCheck size={16}/> 
-                       防護網已啟動！無論發生什麼災難，您的 {(Math.round(baseValue * 0.9 / 10000))} 萬資產都將毫髮無傷。
-                    </p>
-                 ) : activeDisaster ? (
-                    <p className="text-sm font-bold text-red-500 flex items-center justify-center gap-2 animate-bounce">
-                       <AlertTriangle size={16}/> 
-                       警報！您的保險箱門戶大開，資產正在流失給醫生或政府！
-                    </p>
-                 ) : (
-                    <p className="text-sm text-slate-400">
-                       試試看點擊左側災難，看看您的資產是否安全？
-                    </p>
-                 )}
-              </div>
-
-           </div>
-        </div>
-
-      </div>
-    </div>
-  );
-}
-</file>
-
 <file path="src/components/LaborPensionTool.tsx">
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
@@ -8555,521 +9075,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ user, onSelectClient 
 export default ClientDashboard;
 </file>
 
-<file path="src/components/LandingPage.jsx">
-import React, { useState, useEffect } from 'react';
-import { 
-  Activity, 
-  TrendingUp, 
-  TrendingDown, 
-  ShieldAlert, 
-  FileBarChart, 
-  Clock, 
-  ChevronRight, 
-  Users, 
-  Rocket, 
-  Target, 
-  ShoppingBag, 
-  Zap, 
-  HeartPulse, 
-  Crosshair, 
-  ShieldCheck, 
-  ArrowRight,
-  Monitor, 
-  Smartphone, 
-  Database, 
-  Lock, 
-  CheckCircle2,
-  Globe, 
-  Mail, 
-  MessageSquare, 
-  PlayCircle, 
-  TriangleAlert,
-  OctagonAlert,
-  Landmark, 
-  ChevronLeft, 
-  Wallet,
-  X,
-  Car,
-  Heart,
-  ExternalLink,
-  LayoutDashboard,
-  BarChart3,
-  FileText
-} from 'lucide-react';
-
-// --- 配置區 ---
-const LOGO_URL = "https://lh3.googleusercontent.com/d/1CEFGRByRM66l-4sMMM78LUBUvAMiAIaJ"; 
-const COMMUNITY_LINK = "https://line.me/ti/g2/9Cca20iCP8J0KrmVRg5GOe1n5dSatYKO8ETTHw?utm_source=invitation&utm_medium=link_copy&utm_campaign=default";
-
-// --- 子組件：頂部跑馬燈 ---
-const MarketTicker = () => {
-  const [seconds, setSeconds] = useState(228); // 3分48秒
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSeconds(prev => (prev <= 1 ? 228 : prev - 1));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const formatTime = (s) => {
-    const m = Math.floor(s / 60);
-    const rs = s % 60;
-    return `${m} 分 ${rs < 10 ? '0' : ''}${rs} 秒`;
-  };
-
-  return (
-    <div className="bg-red-600 text-white py-2 overflow-hidden whitespace-nowrap relative z-50 shadow-lg">
-      <div className="flex animate-marquee items-center gap-12 font-black text-[10px] md:text-xs uppercase tracking-widest">
-        <span className="flex items-center gap-2"><Clock size={14}/> 2026 癌症時鐘倒數：{formatTime(seconds)}</span>
-        <span className="flex items-center gap-2"><TriangleAlert size={14}/> 2026 預估醫療通膨：+15.8%</span>
-        <span className="flex items-center gap-2"><TrendingUp size={14}/> 實質體感通膨：4.5% 起</span>
-        <span className="flex items-center gap-2"><ShieldAlert size={14}/> 勞保破產倒數：2031 臨界點</span>
-        <span className="flex items-center gap-2"><Clock size={14}/> 2026 癌症時鐘倒數：{formatTime(seconds)}</span>
-        <span className="flex items-center gap-2"><TriangleAlert size={14}/> 2026 預估醫療通膨：+15.8%</span>
-      </div>
-      <style>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-marquee {
-          display: inline-flex;
-          animation: marquee 30s linear infinite;
-        }
-      `}</style>
-    </div>
-  );
-};
-
-// --- 子組件：戰略卡片 ---
-const FeatureCard = ({ icon: Icon, title, desc, tags, color }) => (
-  <div className="bg-slate-800/40 border border-slate-700/50 p-8 rounded-[2.5rem] hover:border-blue-500/50 transition-all group hover:-translate-y-2 shadow-2xl backdrop-blur-sm">
-    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-8 shadow-2xl ${color} ring-4 ring-white/5`}>
-      <Icon size={32} className="text-white" />
-    </div>
-    <h3 className="text-2xl font-bold text-white mb-4 tracking-tight group-hover:text-blue-400 transition-colors">{title}</h3>
-    <p className="text-slate-400 text-base leading-relaxed mb-8">{desc}</p>
-    <div className="flex flex-wrap gap-2">
-      {tags.map((tag, i) => (
-        <span key={i} className="text-[10px] font-black px-3 py-1 bg-slate-950 text-slate-500 rounded-full border border-slate-800 uppercase tracking-widest">
-          {tag}
-        </span>
-      ))}
-    </div>
-  </div>
-);
-
-// --- 子組件：章節標題 ---
-const SectionHeader = ({ badge, title, subtitle }) => (
-  <div className="text-center mb-20 space-y-6 px-4">
-    <span className="px-4 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-[0.4em] rounded-full shadow-inner">
-      {badge}
-    </span>
-    <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter leading-tight">{title}</h2>
-    <p className="text-slate-400 max-w-2xl mx-auto text-lg md:text-xl font-medium leading-relaxed">{subtitle}</p>
-  </div>
-);
-
-// --- 視圖組件：戰略工具 ---
-const ToolsView = () => (
-  <div className="max-w-7xl mx-auto px-6 py-20">
-    <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-6 px-4">
-      <div className="space-y-4">
-        <span className="text-blue-500 font-black tracking-widest uppercase text-xs">Tactical Arsenal</span>
-        <h2 className="text-5xl font-black text-white">戰略工具箱</h2>
-      </div>
-      <p className="text-slate-400 max-w-md">專業顧問必備的創富與守富工具，將生硬的數字轉化為可執行的計畫。</p>
-    </div>
-    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 px-4">
-      {[
-        { icon: Rocket, title: "學貸活化系統", desc: "低利資產的二次生命，創造套利空間。", tag: "創富" },
-        { icon: Landmark, title: "房產轉增貸工具", desc: "活化房地產死錢，重新配置高報酬標的。", tag: "槓桿" },
-        { icon: Wallet, title: "超積極存錢法", desc: "精準配置現金流，對抗通膨侵蝕。", tag: "配置" },
-        { icon: ShieldCheck, title: "大小水庫母子系統", desc: "守富防禦的核心，確保風險中資產穩健。", tag: "守富" },
-        { icon: Car, title: "五年換車計畫", desc: "資產配置與夢想實現的平衡點。", tag: "生活" },
-        { icon: HeartPulse, title: "長照尊嚴準備金", desc: "精算未來醫療成本，守護晚年尊嚴。", tag: "醫療" }
-      ].map((tool, i) => (
-        <div key={i} className="bg-slate-900 border border-white/5 p-8 rounded-[2rem] hover:border-blue-500/50 transition-all group shadow-xl">
-          <div className="w-14 h-14 bg-blue-600/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-            <tool.icon className="text-blue-500" size={28} />
-          </div>
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors">{tool.title}</h3>
-            <span className="text-[10px] font-black px-2 py-0.5 bg-slate-800 text-slate-400 rounded uppercase">{tool.tag}</span>
-          </div>
-          <p className="text-slate-500 text-sm leading-relaxed mb-6">{tool.desc}</p>
-          <button className="w-full py-3 bg-slate-800 hover:bg-blue-600 text-white rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2">
-            啟動工具 <ChevronRight size={16} />
-          </button>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
-// --- 視圖組件：數據中心 ---
-const DataView = () => (
-  <div className="max-w-7xl mx-auto px-6 py-20">
-    <SectionHeader badge="Global Data Insights" title="智慧數據戰情室" subtitle="整合 2026 全球經濟趨勢與實質通膨熱點。" />
-    <div className="grid lg:grid-cols-3 gap-10 px-4">
-      <div className="lg:col-span-2 space-y-10">
-        <div className="bg-slate-900 border border-white/5 p-8 rounded-[3rem] relative overflow-hidden shadow-2xl">
-          <div className="absolute top-0 right-0 p-8 opacity-10"><BarChart3 size={120} /></div>
-          <h3 className="text-2xl font-black text-white mb-8 flex items-center gap-3"><Globe className="text-blue-500" size={24} /> 2026 全球經濟趨勢追蹤</h3>
-          <div className="h-64 flex items-end gap-3 justify-between">
-            {[60, 40, 80, 50, 90, 70, 85].map((h, i) => (
-              <div key={i} className="flex-1 bg-blue-600/20 rounded-t-lg relative group">
-                <div style={{ height: `${h}%` }} className="bg-blue-600 rounded-t-lg transition-all group-hover:bg-blue-400"></div>
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-between mt-6 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-            <span>醫療</span><span>科技</span><span>能源</span><span>消費</span><span>基建</span><span>金融</span><span>房產</span>
-          </div>
-        </div>
-      </div>
-      <div className="bg-blue-600/5 border border-blue-500/20 p-8 rounded-[3rem] space-y-8 shadow-2xl">
-        <h3 className="text-xl font-bold text-white flex items-center gap-3"><Zap size={20} className="text-blue-500" /> 智慧決策引擎</h3>
-        <p className="text-sm text-slate-400 leading-relaxed">利用 AI 整合最新市場變數，提供即時數據支撐。</p>
-        <button className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-sm flex items-center justify-center gap-3 shadow-lg shadow-blue-500/30 transition-all active:scale-95">
-          <Zap size={18} /> 獲取即時洞察
-        </button>
-      </div>
-    </div>
-  </div>
-);
-
-// --- 視圖組件：戰略報表 ---
-const ReportsView = () => (
-  <div className="max-w-7xl mx-auto px-6 py-20 text-center">
-    <SectionHeader badge="Visual Strategy" title="讓專業被看見" subtitle="將財務計畫轉化為視覺說服力的戰略報表。" />
-    <div className="relative group max-w-4xl mx-auto px-4">
-      <div className="bg-white rounded-[2rem] shadow-[0_0_100px_rgba(59,130,246,0.1)] p-8 md:p-12 text-slate-800 text-left space-y-10 border border-slate-200">
-        <div className="flex justify-between items-center border-b pb-8 border-slate-100">
-          <div>
-            <h4 className="text-3xl font-black italic uppercase tracking-tighter">Ultra<span className="text-blue-600">Report</span></h4>
-            <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Confidential Strategic Analysis</p>
-          </div>
-        </div>
-        <div className="grid md:grid-cols-2 gap-12 text-slate-200">
-          <div className="h-40 bg-slate-50 rounded-2xl flex items-center justify-center"><BarChart3 size={80} /></div>
-          <div className="h-40 bg-slate-50 rounded-2xl flex items-center justify-center"><ShieldCheck size={80} /></div>
-        </div>
-        <div className="p-8 bg-blue-600 rounded-3xl text-white shadow-xl">
-          <p className="text-lg font-medium italic leading-relaxed">「根據 2026 數據，建議啟動學貸套利資產活化計畫。」</p>
-        </div>
-      </div>
-      <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center rounded-[2rem] opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
-        <button className="bg-white text-slate-950 px-10 py-5 rounded-full font-black text-lg flex items-center gap-3">
-          <FileText className="text-blue-600" /> 立即生成報表
-        </button>
-      </div>
-    </div>
-  </div>
-);
-
-// --- 主組件 ---
-export function LandingPage({ onStart, onHome }) {
-  const [view, setView] = useState('home');
-  const [showSignupModal, setShowSignupModal] = useState(false);
-  const [logoError, setLogoError] = useState(false);
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [view]);
-
-  const communityLink = "https://line.me/ti/g2/9Cca20iCP8J0KrmVRg5GOe1n5dSatYKO8ETTHw?utm_source=invitation&utm_medium=link_copy&utm_campaign=default";
-
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-blue-600 selection:text-white font-sans overflow-x-hidden relative">
-      
-      {/* 所有的頁面內容放入此動畫容器中 */}
-      <div className="animate-fade-in flex flex-col min-h-screen">
-        <MarketTicker />
-
-        {/* Navigation */}
-        <nav className="border-b border-white/5 backdrop-blur-2xl sticky top-0 z-[100] bg-slate-950/80">
-          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-            {/* LOGO 顯示區塊 */}
-            <div 
-              className="flex items-center gap-3 cursor-pointer group" 
-              onClick={() => { setView('home'); if(onHome) onHome(); }}
-            >
-              <div className="h-10 transition-transform group-hover:scale-105 overflow-hidden rounded-lg">
-                <img 
-                  src={logoError ? "https://placehold.co/100x100/3b82f6/white?text=LOGO" : LOGO_URL} 
-                  alt="Logo" 
-                  className="h-full w-auto object-contain"
-                  onError={() => setLogoError(true)}
-                />
-              </div>
-              <span className="text-2xl font-black text-white tracking-tighter italic uppercase">
-                Ultra<span className="text-blue-500">Advisor</span>
-              </span>
-            </div>
-            
-            <div className="hidden lg:flex items-center gap-10">
-              {[
-                { id: 'tools', label: '戰略工具' },
-                { id: 'data', label: '數據中心' },
-                { id: 'reports', label: '智慧報表' }
-              ].map(item => (
-                <button 
-                  key={item.id} 
-                  onClick={() => setView(item.id)}
-                  className={`text-sm font-bold transition-all tracking-tight relative group ${
-                    view === item.id ? 'text-blue-500' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {item.label}
-                  <span className={`absolute -bottom-1 left-0 h-0.5 bg-blue-500 transition-all ${view === item.id ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
-                </button>
-              ))}
-              {/* 顧問社群連結 */}
-              <a 
-                href={communityLink} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-sm font-bold text-blue-400 hover:text-blue-300 transition-all tracking-tight relative group flex items-center gap-1"
-              >
-                顧問社群
-                <ExternalLink size={12} />
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-400 transition-all group-hover:w-full"></span>
-              </a>
-            </div>
-
-            <div className="flex items-center gap-6">
-              <button 
-                onClick={onStart} 
-                className="hidden sm:block text-slate-400 hover:text-white font-bold text-sm transition-colors tracking-widest uppercase"
-              >
-                登入系統
-              </button>
-              <button 
-                onClick={() => setShowSignupModal(true)}
-                className="bg-white text-slate-950 px-8 py-3 rounded-full font-black text-sm hover:bg-blue-600 hover:text-white transition-all shadow-2xl shadow-white/5 active:scale-95"
-              >
-                立刻開通
-              </button>
-            </div>
-          </div>
-        </nav>
-
-        {/* 根據 view 渲染不同區塊 */}
-        <main className="flex-grow">
-          {view === 'home' && (
-            <>
-              {/* Hero Section */}
-              <section className="relative pt-24 pb-40 overflow-hidden text-center">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[800px] bg-blue-600/10 blur-[150px] rounded-full pointer-events-none opacity-50"></div>
-                <div className="max-w-7xl mx-auto px-6 relative z-10 space-y-10">
-                  <div className="space-y-8">
-                    <span className="inline-flex items-center gap-3 px-5 py-2 bg-slate-900 border border-slate-800 rounded-full text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] shadow-xl">
-                      <Zap size={14} className="animate-pulse fill-blue-400" /> 下一代財務顧問的數位武裝
-                    </span>
-                    <h1 className="text-6xl md:text-9xl font-black text-white leading-[0.9] tracking-tighter">
-                      讓數據說話 <br />
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-blue-500">讓戰略成真</span>
-                    </h1>
-                    <p className="text-slate-400 max-w-3xl mx-auto text-lg md:text-2xl font-medium leading-relaxed opacity-80">
-                      UltraAdvisor 專為頂級金融顧問設計。整合 2026 最新官方數據，將複雜的財務邏輯轉化為極具視覺衝擊力的決策戰報。
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col md:flex-row items-center justify-center gap-8 pt-12 px-4">
-                    <button 
-                      onClick={() => setShowSignupModal(true)}
-                      className="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white px-12 py-6 rounded-[2.5rem] font-black text-xl shadow-2xl shadow-blue-600/40 flex items-center justify-center gap-4 group transition-all transform hover:scale-105 active:scale-95 shadow-lg"
-                    >
-                      獲取開通金鑰 <ArrowRight className="group-hover:translate-x-2 transition-transform" />
-                    </button>
-                    <button 
-                      onClick={() => setView('tools')}
-                      className="w-full md:w-auto bg-slate-900 border border-slate-800 text-white px-12 py-6 rounded-[2.5rem] font-black text-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-3"
-                    >
-                      探索功能區塊 <LayoutDashboard size={20} />
-                    </button>
-                  </div>
-                </div>
-              </section>
-
-              {/* 市場數據預警區 */}
-              <section className="py-32 bg-slate-900/40 border-y border-white/5 relative">
-                <div className="max-w-7xl mx-auto px-6 relative z-10">
-                  <SectionHeader 
-                    badge="2026 Crisis Report"
-                    title="數據不會說謊，它會示警"
-                    subtitle="整合 2026 最新官方數據模型，將殘酷的社會趨勢轉化為顧問談案的最強依據。"
-                  />
-                  <div className="grid md:grid-cols-3 gap-10 px-4">
-                    <div className="bg-gradient-to-br from-red-600/10 to-slate-900 border border-red-600/20 p-12 rounded-[4rem] text-center space-y-8 shadow-2xl hover:scale-105 transition-transform group">
-                      <div className="w-24 h-24 bg-red-600 rounded-full flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(220,38,38,0.3)] group-hover:scale-110 transition-transform"><Clock className="text-white" size={48} /></div>
-                      <h3 className="text-2xl font-black text-white tracking-widest uppercase">2026 癌症時鐘</h3>
-                      <div className="text-6xl font-black text-red-500 font-mono tracking-tighter animate-pulse">3分48秒</div>
-                      <p className="text-slate-400 text-sm leading-relaxed italic font-medium">每 3'48" 即有一人罹癌。癌症不再是終點，而是「資產風險」的起點。</p>
-                    </div>
-                    <div className="bg-gradient-to-br from-amber-600/10 to-slate-900 border border-amber-600/20 p-12 rounded-[4rem] text-center space-y-8 shadow-2xl hover:scale-105 transition-transform group">
-                      <div className="w-24 h-24 bg-amber-600 rounded-full flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(217,119,6,0.3)] group-hover:scale-110 transition-transform"><Users className="text-white" size={48} /></div>
-                      <h3 className="text-2xl font-black text-white tracking-widest uppercase">不健康餘命</h3>
-                      <div className="text-6xl font-black text-amber-500 font-mono tracking-tighter">8.4 年</div>
-                      <p className="text-slate-400 text-sm leading-relaxed italic font-medium">生命末期的失能狀態。2026 最新精算，個人平均需準備高昂的尊嚴金。</p>
-                    </div>
-                    <div className="bg-gradient-to-br from-blue-600/10 to-slate-900 border border-blue-600/20 p-12 rounded-[4rem] text-center space-y-8 shadow-2xl hover:scale-105 transition-transform group">
-                      <div className="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(37,99,235,0.3)] group-hover:scale-110 transition-transform"><OctagonAlert className="text-white" size={48} /></div>
-                      <h3 className="text-2xl font-black text-white tracking-widest uppercase">勞保破產倒數</h3>
-                      <div className="text-6xl font-black text-blue-500 font-mono tracking-tighter">2031 年</div>
-                      <p className="text-slate-400 text-sm leading-relaxed italic font-medium">退休即懸崖。規劃必須建立在「沒有勞保也能活」的資產自理前提。</p>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* 核心工具箱 */}
-              <section className="py-40">
-                <div className="max-w-7xl mx-auto px-6">
-                  <SectionHeader 
-                    badge="Strategic Toolbox"
-                    title="顧問專屬的三大戰略系統"
-                    subtitle="將生硬的數字轉化為可執行的致富計畫。"
-                  />
-                  <div className="grid md:grid-cols-3 gap-10 px-4">
-                    <FeatureCard 
-                      icon={Rocket}
-                      title="創富：槓桿與套利"
-                      desc="學貸活化、房產轉增貸、超積極存錢法。利用 2026 市場利率波動，實現資產階級躍遷。"
-                      tags={['百萬禮物', 'RE活化', '低利套利']}
-                      color="bg-blue-600 shadow-blue-600/30"
-                    />
-                    <FeatureCard 
-                      icon={ShieldCheck}
-                      title="守富：現金流防禦"
-                      desc="建立大小水庫母子系統，規劃五年換車與長照準備。確保資產在風險中依然穩健成長。"
-                      tags={['大小水庫', '尊嚴準備', '退休開口']}
-                      color="bg-emerald-600 shadow-emerald-600/30"
-                    />
-                    <FeatureCard 
-                      icon={Landmark}
-                      title="傳富：稅務與傳承"
-                      desc="針對 2026 最新稅法，進行遺產稅流動性缺口測試，實現財富完美、安全地落地。"
-                      tags={['稅務預估', '缺口測試', '傳承戰略']}
-                      color="bg-purple-600 shadow-purple-600/30"
-                    />
-                  </div>
-                </div>
-              </section>
-            </>
-          )}
-          {view === 'tools' && <ToolsView />}
-          {view === 'data' && <DataView />}
-          {view === 'reports' && <ReportsView />}
-        </main>
-
-        {/* Footer */}
-        <footer className="bg-slate-950 border-t border-white/5 py-24 relative overflow-hidden">
-          <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-16 relative z-10 text-sm px-8">
-            <div className="space-y-8">
-              <div className="flex items-center gap-3">
-                <div className="h-8 overflow-hidden rounded">
-                  <img 
-                    src={logoError ? "https://placehold.co/100x100/3b82f6/white?text=LOGO" : LOGO_URL} 
-                    alt="Logo" 
-                    className="h-full w-auto brightness-110"
-                    onError={() => setLogoError(true)}
-                  />
-                </div>
-                <span className="text-xl font-black text-white tracking-tighter italic uppercase">UltraAdvisor</span>
-              </div>
-              <p className="text-slate-500 font-bold leading-relaxed">下一代顧問的數位戰情室。整合 2026 最強財務模型與戰略系統。</p>
-            </div>
-            <div><h4 className="text-white font-black mb-8 tracking-widest uppercase text-xs opacity-40">核心戰略</h4><ul className="space-y-4 text-slate-500 font-bold cursor-pointer"><li onClick={() => setView('tools')}>創富：槓桿套利系統</li><li onClick={() => setView('tools')}>守富：現金流防禦系統</li><li onClick={() => setView('tools')}>傳富：稅務與傳承系統</li></ul></div>
-            <div><h4 className="text-white font-black mb-8 tracking-widest uppercase text-xs opacity-40">數據中心</h4><ul className="space-y-4 text-slate-500 font-bold cursor-pointer"><li onClick={() => setView('data')}>2026 癌症時鐘模型</li><li onClick={() => setView('data')}>醫療通膨實時數據</li><li onClick={() => setView('data')}>勞保破產精算報告</li></ul></div>
-            <div><h4 className="text-white font-black mb-8 tracking-widest uppercase text-xs opacity-40">聯繫我們</h4><div className="flex gap-5"><Globe size={20} className="text-slate-500 hover:text-blue-400 cursor-pointer"/><Mail size={20} className="text-slate-500 hover:text-blue-400 cursor-pointer"/><MessageSquare size={20} className="text-slate-500 hover:text-blue-400 cursor-pointer"/></div></div>
-          </div>
-          <div className="max-w-7xl mx-auto px-6 mt-24 pt-10 border-t border-white/5 flex justify-between items-center relative z-10 px-8">
-            <p className="text-slate-600 text-[10px] font-black uppercase tracking-[0.2em]">© 2026 UltraAdvisor Pro. All rights reserved.</p>
-          </div>
-        </footer>
-      </div>
-
-      {/* --- 註冊試用彈窗 (Iframe) --- 
-          關鍵修復：將此彈窗移出 animate-fade-in 容器
-          確保其相對於 viewport 定位，而不是相對於 transform 容器定位
-      */}
-      {showSignupModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300" 
-            onClick={() => setShowSignupModal(false)}
-          />
-          <div className="relative bg-white rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300 max-w-[440px] w-full flex flex-col">
-            <div className="flex items-center justify-between p-4 bg-slate-50 border-b border-slate-100">
-              <span className="text-slate-900 font-black text-xs uppercase tracking-widest px-3 py-1 bg-blue-100 rounded-full">立即獲取金鑰</span>
-              <button 
-                onClick={() => setShowSignupModal(false)}
-                className="p-2 hover:bg-slate-200 rounded-full transition-colors group"
-              >
-                <X size={24} className="text-slate-400 group-hover:text-slate-900" />
-              </button>
-            </div>
-            <div className="bg-white flex justify-center py-2 px-4 overflow-y-auto max-h-[80vh]">
-               <iframe 
-                src="https://portaly.cc/embed/GinRollBT/product/WsaTvEYOA1yqAQYzVZgy" 
-                width="400" 
-                height="620" 
-                style={{ border: 0, borderRadius: '12px' }} 
-                frameBorder="0" 
-                loading="lazy"
-                title="Register"
-              />
-            </div>
-            <div className="p-4 bg-slate-50 text-center">
-               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">完成註冊後即可獲得 2026 戰略工具使用權</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 全域動畫 */}
-      <style>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        @keyframes zoom-in {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        .zoom-in {
-          animation: zoom-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-      `}</style>
-    </div>
-  );
-}
-
-// 輔助組件：外部連結圖示
-const ExternalLinkIcon = ({ size }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-);
-
-/**
- * App 組件
- * 這是此 Canvas 預覽需要的預設匯出
- */
-export default function App() {
-  // 模擬傳入的 onStart 邏輯，實際使用時由外部 App.tsx 管理
-  const handleStart = () => {
-    console.log("導向登入頁面...");
-    // 這裡可以加入導航邏輯
-  };
-
-  return <LandingPage onStart={handleStart} />;
-}
-</file>
-
 <file path="src/components/QuickCalculator.tsx">
 import React, { useState, useEffect } from 'react';
 import { Calculator, Home, TrendingUp, RefreshCw, DollarSign, Percent, Zap } from 'lucide-react';
@@ -9267,6 +9272,543 @@ const QuickCalculator = () => {
 };
 
 export default QuickCalculator;
+</file>
+
+<file path="src/components/LandingPage.jsx">
+import React, { useState, useEffect } from 'react';
+import { 
+  Activity, TrendingUp, ShieldAlert, Clock, ChevronRight, 
+  Users, Rocket, Zap, HeartPulse, ShieldCheck, ArrowRight,
+  Globe, Mail, MessageSquare, OctagonAlert, Landmark, 
+  Wallet, X, Car, LayoutDashboard, BarChart3, FileText, CheckCircle2
+} from 'lucide-react';
+
+// --- 品牌核心資產 (Brand Assets) ---
+
+// 1. Ultra Advisor Logo 組件 (SVG)
+const UltraLogo = ({ width = 40, height = 50, className = "" }) => (
+  <svg width={width} height={height} viewBox="0 0 320 420" className={className}>
+    <defs>
+      <linearGradient id="gradBlue" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#4DA3FF" />
+        <stop offset="100%" stopColor="#2E6BFF" />
+      </linearGradient>
+      <linearGradient id="gradRed" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#FF6A6A" />
+        <stop offset="100%" stopColor="#FF3A3A" />
+      </linearGradient>
+      <linearGradient id="gradPurpleNode" gradientUnits="userSpaceOnUse" x1="91.5" y1="0" x2="228.5" y2="0">
+        <stop offset="0%" stopColor="#8A5CFF" stopOpacity="0" />
+        <stop offset="20%" stopColor="#CE4DFF" stopOpacity="0.5" />
+        <stop offset="50%" stopColor="#E8E0FF" stopOpacity="1" />
+        <stop offset="80%" stopColor="#CE4DFF" stopOpacity="0.5" />
+        <stop offset="100%" stopColor="#8A5CFF" stopOpacity="0" />
+      </linearGradient>
+      <filter id="glow-blue" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="10" result="blur" />
+        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      </filter>
+    </defs>
+    {/* 藍線 (理性) */}
+    <path stroke="url(#gradBlue)" fill="none" strokeWidth="24" strokeLinecap="round" strokeLinejoin="round"
+          d="M 90,40 C 90,160 130,220 242,380" style={{ filter: 'drop-shadow(0 0 8px rgba(77,163,255,0.5))' }} />
+    {/* 紅線 (感性) */}
+    <path stroke="url(#gradRed)" fill="none" strokeWidth="24" strokeLinecap="round" strokeLinejoin="round"
+          d="M 230,40 C 230,160 190,220 78,380" style={{ filter: 'drop-shadow(0 0 8px rgba(255,106,106,0.5))' }} />
+    {/* 紫線 (洞察) */}
+    <path stroke="url(#gradPurpleNode)" fill="none" strokeWidth="18" strokeLinecap="round"
+          d="M 91.5,314 L 228.5,314" style={{ filter: 'drop-shadow(0 0 10px rgba(206,77,255,0.8))' }} />
+  </svg>
+);
+
+// 2. 戰情室背景樣式
+const bgWarRoomStyle = {
+  backgroundColor: '#050b14',
+  backgroundImage: `
+    linear-gradient(rgba(77, 163, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(77, 163, 255, 0.05) 1px, transparent 1px)
+  `,
+  backgroundSize: '40px 40px'
+};
+
+// --- 子組件：頂部跑馬燈 (Signal Red) ---
+const MarketTicker = () => {
+  const [seconds, setSeconds] = useState(228); 
+  useEffect(() => {
+    const timer = setInterval(() => setSeconds(prev => (prev <= 1 ? 228 : prev - 1)), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (s) => {
+    const m = Math.floor(s / 60);
+    const rs = s % 60;
+    return `${m} 分 ${rs < 10 ? '0' : ''}${rs} 秒`;
+  };
+
+  return (
+    <div className="bg-gradient-to-r from-[#FF6A6A] to-[#FF3A3A] text-white py-2 overflow-hidden whitespace-nowrap relative z-50 shadow-[0_0_20px_rgba(255,58,58,0.3)]">
+      <div className="flex animate-marquee items-center gap-12 font-black text-[10px] md:text-xs uppercase tracking-widest">
+        <span className="flex items-center gap-2"><Clock size={14}/> 2026 癌症時鐘倒數：{formatTime(seconds)}</span>
+        <span className="flex items-center gap-2"><TriangleAlert size={14}/> 2026 預估醫療通膨：+15.8%</span>
+        <span className="flex items-center gap-2"><TrendingUp size={14}/> 實質體感通膨：4.5% 起</span>
+        <span className="flex items-center gap-2"><ShieldAlert size={14}/> 勞保破產倒數：2031 臨界點</span>
+      </div>
+      <style>{`
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .animate-marquee { display: inline-flex; animation: marquee 30s linear infinite; }
+      `}</style>
+    </div>
+  );
+};
+
+// --- 子組件：戰略卡片 (Glassmorphism) ---
+const FeatureCard = ({ icon: Icon, title, desc, tags, colorClass, glowClass }) => (
+  <div className={`group relative bg-[#0f172a]/60 backdrop-blur-md border border-white/10 p-8 rounded-[2rem] hover:border-white/30 transition-all hover:-translate-y-2 overflow-hidden`}>
+    <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 bg-gradient-to-br ${glowClass}`}></div>
+    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-8 shadow-lg ${colorClass} ring-1 ring-white/20 relative z-10`}>
+      <Icon size={32} className="text-white" />
+    </div>
+    <h3 className="text-2xl font-bold text-white mb-4 tracking-tight relative z-10">{title}</h3>
+    <p className="text-slate-400 text-base leading-relaxed mb-8 relative z-10">{desc}</p>
+    <div className="flex flex-wrap gap-2 relative z-10">
+      {tags.map((tag, i) => (
+        <span key={i} className="text-[10px] font-bold px-3 py-1 bg-[#050b14] text-slate-400 rounded-full border border-white/10 uppercase tracking-widest">
+          {tag}
+        </span>
+      ))}
+    </div>
+  </div>
+);
+
+// --- 子組件：章節標題 ---
+const SectionHeader = ({ badge, title, subtitle }) => (
+  <div className="text-center mb-20 space-y-6 px-4">
+    <span className="px-4 py-1.5 bg-[#4DA3FF]/10 border border-[#4DA3FF]/20 text-[#4DA3FF] text-[10px] font-black uppercase tracking-[0.4em] rounded-full shadow-[0_0_15px_rgba(77,163,255,0.2)]">
+      {badge}
+    </span>
+    <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter leading-tight font-display">
+      {title}
+    </h2>
+    <p className="text-slate-400 max-w-2xl mx-auto text-lg md:text-xl font-medium leading-relaxed">
+      {subtitle}
+    </p>
+  </div>
+);
+
+// --- 視圖組件：戰略工具 ---
+const ToolsView = () => (
+  <div className="max-w-7xl mx-auto px-6 py-20 animate-fade-in">
+    <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-6 px-4">
+      <div className="space-y-4">
+        <span className="text-[#4DA3FF] font-black tracking-widest uppercase text-xs">Tactical Arsenal</span>
+        <h2 className="text-5xl font-black text-white">戰略工具箱</h2>
+      </div>
+      <p className="text-slate-400 max-w-md">專業顧問必備的創富與守富工具，將生硬的數字轉化為可執行的計畫。</p>
+    </div>
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 px-4">
+      {[
+        { icon: Rocket, title: "學貸活化系統", desc: "低利資產的二次生命，創造套利空間。", tag: "創富" },
+        { icon: Landmark, title: "房產轉增貸工具", desc: "活化房地產死錢，重新配置高報酬標的。", tag: "槓桿" },
+        { icon: Wallet, title: "超積極存錢法", desc: "精準配置現金流，對抗通膨侵蝕。", tag: "配置" },
+        { icon: ShieldCheck, title: "大小水庫母子系統", desc: "守富防禦的核心，確保風險中資產穩健。", tag: "守富" },
+        { icon: Car, title: "五年換車計畫", desc: "資產配置與夢想實現的平衡點。", tag: "生活" },
+        { icon: HeartPulse, title: "長照尊嚴準備金", desc: "精算未來醫療成本，守護晚年尊嚴。", tag: "醫療" }
+      ].map((tool, i) => (
+        <div key={i} className="bg-[#0f172a]/40 border border-white/5 p-8 rounded-[2rem] hover:border-[#4DA3FF]/50 transition-all group hover:bg-[#0f172a]/60 backdrop-blur-sm">
+          <div className="w-14 h-14 bg-[#4DA3FF]/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+            <tool.icon className="text-[#4DA3FF]" size={28} />
+          </div>
+          <div className="flex justify-between items-start mb-4">
+            <h3 className="text-xl font-bold text-white group-hover:text-[#4DA3FF] transition-colors">{tool.title}</h3>
+            <span className="text-[10px] font-black px-2 py-0.5 bg-[#050b14] text-slate-400 rounded uppercase">{tool.tag}</span>
+          </div>
+          <p className="text-slate-500 text-sm leading-relaxed mb-6">{tool.desc}</p>
+          <button className="w-full py-3 bg-[#050b14] hover:bg-[#2E6BFF] text-white rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 border border-white/5">
+            啟動工具 <ChevronRight size={16} />
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// --- 視圖組件：數據中心 ---
+const DataView = () => (
+  <div className="max-w-7xl mx-auto px-6 py-20 animate-fade-in">
+    <SectionHeader badge="Global Data Insights" title="智慧數據戰情室" subtitle="整合 2026 全球經濟趨勢與實質通膨熱點。" />
+    <div className="grid lg:grid-cols-3 gap-10 px-4">
+      <div className="lg:col-span-2 space-y-10">
+        <div className="bg-[#0f172a]/60 border border-white/5 p-8 rounded-[3rem] relative overflow-hidden backdrop-blur-md">
+          <div className="absolute top-0 right-0 p-8 opacity-5 text-[#4DA3FF]"><BarChart3 size={150} /></div>
+          <h3 className="text-2xl font-black text-white mb-8 flex items-center gap-3"><Globe className="text-[#4DA3FF]" size={24} /> 2026 全球經濟趨勢追蹤</h3>
+          <div className="h-64 flex items-end gap-3 justify-between">
+            {[60, 40, 80, 50, 90, 70, 85].map((h, i) => (
+              <div key={i} className="flex-1 bg-[#4DA3FF]/10 rounded-t-lg relative group overflow-hidden">
+                <div style={{ height: `${h}%` }} className="absolute bottom-0 w-full bg-gradient-to-t from-[#2E6BFF] to-[#4DA3FF] rounded-t-lg transition-all group-hover:brightness-110"></div>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between mt-6 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+            <span>醫療</span><span>科技</span><span>能源</span><span>消費</span><span>基建</span><span>金融</span><span>房產</span>
+          </div>
+        </div>
+      </div>
+      <div className="bg-gradient-to-b from-[#4DA3FF]/10 to-[#050b14] border border-[#4DA3FF]/20 p-8 rounded-[3rem] space-y-8 backdrop-blur-md relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+        <h3 className="text-xl font-bold text-white flex items-center gap-3 relative z-10"><Zap size={20} className="text-[#4DA3FF]" /> 智慧決策引擎</h3>
+        <p className="text-sm text-slate-400 leading-relaxed relative z-10">利用 AI 整合最新市場變數，提供即時數據支撐。</p>
+        <button className="w-full py-4 bg-[#2E6BFF] hover:bg-[#4DA3FF] text-white rounded-2xl font-black text-sm flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(77,163,255,0.4)] transition-all active:scale-95 relative z-10">
+          <Zap size={18} /> 獲取即時洞察
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+// --- 視圖組件：戰略報表 ---
+const ReportsView = () => (
+  <div className="max-w-7xl mx-auto px-6 py-20 text-center animate-fade-in">
+    <SectionHeader badge="Visual Strategy" title="讓專業被看見" subtitle="將財務計畫轉化為視覺說服力的戰略報表。" />
+    <div className="relative group max-w-4xl mx-auto px-4">
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-8 md:p-12 text-left space-y-10 relative overflow-hidden">
+        <div className="flex justify-between items-center border-b pb-8 border-white/10">
+          <div>
+            <h4 className="text-3xl font-black italic uppercase tracking-tighter text-white">Ultra<span className="text-[#4DA3FF]">Report</span></h4>
+            <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-widest">Confidential Strategic Analysis</p>
+          </div>
+        </div>
+        <div className="grid md:grid-cols-2 gap-12 text-slate-400">
+          <div className="h-40 bg-white/5 rounded-2xl flex items-center justify-center border border-white/5"><BarChart3 size={80} className="opacity-50" /></div>
+          <div className="h-40 bg-white/5 rounded-2xl flex items-center justify-center border border-white/5"><ShieldCheck size={80} className="opacity-50" /></div>
+        </div>
+        <div className="p-8 bg-gradient-to-r from-[#2E6BFF] to-[#4DA3FF] rounded-3xl text-white shadow-[0_0_30px_rgba(77,163,255,0.3)]">
+          <p className="text-lg font-medium italic leading-relaxed">「根據 2026 數據，建議啟動學貸套利資產活化計畫。」</p>
+        </div>
+      </div>
+      <div className="absolute inset-0 bg-[#050b14]/60 backdrop-blur-sm flex items-center justify-center rounded-[2rem] opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
+        <button className="bg-white text-[#050b14] px-10 py-5 rounded-full font-black text-lg flex items-center gap-3 hover:scale-105 transition-transform shadow-[0_0_30px_rgba(255,255,255,0.3)]">
+          <FileText className="text-[#2E6BFF]" /> 立即生成報表
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+// --- 主組件 ---
+export function LandingPage({ onStart, onHome }) {
+  const [view, setView] = useState('home');
+  const [showSignupModal, setShowSignupModal] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [view]);
+
+  const communityLink = "https://line.me/ti/g2/9Cca20iCP8J0KrmVRg5GOe1n5dSatYKO8ETTHw";
+
+  return (
+    <div style={bgWarRoomStyle} className="min-h-screen text-slate-200 selection:bg-[#4DA3FF] selection:text-white font-sans overflow-x-hidden relative">
+      
+      <div className="animate-fade-in flex flex-col min-h-screen">
+        <MarketTicker />
+
+        {/* Navigation */}
+        <nav className="border-b border-white/5 backdrop-blur-xl sticky top-0 z-[100] bg-[#050b14]/80">
+          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            {/* Logo 區域 */}
+            <div 
+              className="flex items-center gap-3 cursor-pointer group" 
+              onClick={() => { setView('home'); if(onHome) onHome(); }}
+            >
+              <UltraLogo width={40} height={50} className="group-hover:drop-shadow-[0_0_10px_rgba(138,92,255,0.5)] transition-all duration-500" />
+              <div className="flex flex-col">
+                <span className="text-2xl font-black text-white tracking-tighter italic uppercase leading-none">
+                  Ultra<span className="text-[#4DA3FF]">Advisor</span>
+                </span>
+                <span className="text-[10px] tracking-[0.3em] text-slate-500 uppercase">Strategic AI</span>
+              </div>
+            </div>
+            
+            <div className="hidden lg:flex items-center gap-10">
+              {[
+                { id: 'tools', label: '戰略工具' },
+                { id: 'data', label: '數據中心' },
+                { id: 'reports', label: '智慧報表' }
+              ].map(item => (
+                <button 
+                  key={item.id} 
+                  onClick={() => setView(item.id)}
+                  className={`text-sm font-bold transition-all tracking-tight relative group ${
+                    view === item.id ? 'text-[#4DA3FF]' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {item.label}
+                  <span className={`absolute -bottom-1 left-0 h-0.5 bg-[#4DA3FF] transition-all shadow-[0_0_10px_#4DA3FF] ${view === item.id ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
+                </button>
+              ))}
+              <a 
+                href={communityLink} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm font-bold text-[#4DA3FF] hover:text-[#2E6BFF] transition-all tracking-tight relative group flex items-center gap-1"
+              >
+                顧問社群
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#4DA3FF] transition-all group-hover:w-full"></span>
+              </a>
+            </div>
+
+            <div className="flex items-center gap-4 md:gap-6">
+              <button 
+                onClick={onStart} 
+                className="text-slate-400 hover:text-white font-bold text-[10px] md:text-sm transition-colors tracking-widest uppercase whitespace-nowrap"
+              >
+                登入戰情室
+              </button>
+              <button 
+                onClick={() => setShowSignupModal(true)}
+                className="bg-gradient-to-r from-[#4DA3FF] to-[#2E6BFF] text-white px-5 md:px-8 py-2 md:py-3 rounded-xl font-black text-[10px] md:text-sm hover:shadow-[0_0_20px_rgba(77,163,255,0.6)] transition-all active:scale-95 whitespace-nowrap border border-white/20"
+              >
+                獲取金鑰
+              </button>
+            </div>
+          </div>
+        </nav>
+
+        <main className="flex-grow">
+          {view === 'home' && (
+            <>
+              {/* Hero Section */}
+              <section className="relative pt-24 pb-40 overflow-hidden text-center">
+                {/* 背景光暈 */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[#4DA3FF] blur-[150px] rounded-full pointer-events-none opacity-20 animate-pulse"></div>
+                <div className="absolute bottom-0 right-0 w-[600px] h-[400px] bg-[#8A5CFF] blur-[150px] rounded-full pointer-events-none opacity-10"></div>
+
+                <div className="max-w-7xl mx-auto px-6 relative z-10 space-y-10">
+                  <div className="space-y-8 animate-fade-in">
+                    <span className="inline-flex items-center gap-3 px-5 py-2 bg-[#050b14] border border-[#4DA3FF]/30 rounded-full text-[10px] font-black text-[#4DA3FF] uppercase tracking-[0.2em] shadow-[0_0_15px_rgba(77,163,255,0.2)]">
+                      <Zap size={14} className="animate-pulse fill-[#4DA3FF]" /> 下一代財務顧問的數位武裝
+                    </span>
+                    <h1 className="text-6xl md:text-9xl font-black text-white leading-[0.9] tracking-tighter font-display drop-shadow-2xl">
+                      讓每個顧問都有<br />
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#4DA3FF] via-white to-[#2E6BFF] drop-shadow-[0_0_20px_rgba(77,163,255,0.5)]">
+                        AI 軍師的超級武器
+                      </span>
+                    </h1>
+                    <p className="text-slate-400 max-w-3xl mx-auto text-lg md:text-2xl font-medium leading-relaxed opacity-80">
+                      3 分鐘成交，不再土法煉鋼。整合 2026 最新數據模型，將複雜的財務邏輯轉化為極具視覺衝擊力的「降維打擊」戰報。
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row items-center justify-center gap-8 pt-12 px-4 animate-fade-in" style={{animationDelay: '0.2s'}}>
+                    <div className="flex flex-col gap-4 items-center">
+                      <button 
+                        onClick={() => setShowSignupModal(true)}
+                        className="w-full md:w-auto bg-gradient-to-r from-[#4DA3FF] to-[#2E6BFF] text-white px-12 py-6 rounded-2xl font-black text-xl shadow-[0_0_30px_rgba(77,163,255,0.4)] flex items-center justify-center gap-4 group transition-all transform hover:scale-105 active:scale-95 border border-white/20"
+                      >
+                        免費試用 7 天 <ArrowRight className="group-hover:translate-x-2 transition-transform" />
+                      </button>
+                      <button 
+                        onClick={onStart} 
+                        className="md:hidden text-slate-500 font-bold text-xs hover:text-[#4DA3FF] underline underline-offset-4"
+                      >
+                        已有帳號？登入戰情室
+                      </button>
+                    </div>
+                    <button 
+                      onClick={() => setView('tools')}
+                      className="w-full md:w-auto bg-transparent border border-[#4DA3FF]/30 text-[#4DA3FF] px-12 py-6 rounded-2xl font-black text-xl hover:bg-[#4DA3FF]/10 transition-all flex items-center justify-center gap-3 hover:shadow-[0_0_20px_rgba(77,163,255,0.2)]"
+                    >
+                      觀看戰略演示 <LayoutDashboard size={20} />
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              {/* 市場數據預警區 (Signal Red Theme) */}
+              <section className="py-32 relative border-y border-white/5">
+                <div className="absolute inset-0 bg-[#0f172a]/40 backdrop-blur-sm"></div>
+                <div className="max-w-7xl mx-auto px-6 relative z-10">
+                  <SectionHeader 
+                    badge="2026 Crisis Report"
+                    title="數據不會說謊，它會示警"
+                    subtitle="整合 2026 最新官方數據模型，將殘酷的社會趨勢轉化為顧問談案的最強依據。"
+                  />
+                  <div className="grid md:grid-cols-3 gap-10 px-4">
+                    <div className="bg-gradient-to-br from-[#FF6A6A]/10 to-[#050b14] border border-[#FF6A6A]/20 p-12 rounded-[3rem] text-center space-y-8 shadow-2xl hover:scale-105 transition-transform group relative overflow-hidden">
+                      <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-transparent via-[#FF6A6A] to-transparent opacity-50"></div>
+                      <div className="w-24 h-24 bg-[#FF6A6A] rounded-full flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(255,106,106,0.4)] group-hover:scale-110 transition-transform"><Clock className="text-white" size={48} /></div>
+                      <h3 className="text-2xl font-black text-white tracking-widest uppercase">2026 癌症時鐘</h3>
+                      <div className="text-6xl font-black text-[#FF6A6A] font-mono tracking-tighter animate-pulse shadow-red-glow">3'48"</div>
+                      <p className="text-slate-400 text-sm leading-relaxed italic font-medium">每 3分48秒 即有一人罹癌。這不再是醫療問題，而是資產風險的起點。</p>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-[#F59E0B]/10 to-[#050b14] border border-[#F59E0B]/20 p-12 rounded-[3rem] text-center space-y-8 shadow-2xl hover:scale-105 transition-transform group relative overflow-hidden">
+                      <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-transparent via-[#F59E0B] to-transparent opacity-50"></div>
+                      <div className="w-24 h-24 bg-[#F59E0B] rounded-full flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(245,158,11,0.4)] group-hover:scale-110 transition-transform"><Users className="text-white" size={48} /></div>
+                      <h3 className="text-2xl font-black text-white tracking-widest uppercase">不健康餘命</h3>
+                      <div className="text-6xl font-black text-[#F59E0B] font-mono tracking-tighter">8.4 年</div>
+                      <p className="text-slate-400 text-sm leading-relaxed italic font-medium">生命末期的失能狀態。2026 最新精算，個人平均需準備高昂的尊嚴金。</p>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-[#4DA3FF]/10 to-[#050b14] border border-[#4DA3FF]/20 p-12 rounded-[3rem] text-center space-y-8 shadow-2xl hover:scale-105 transition-transform group relative overflow-hidden">
+                      <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-transparent via-[#4DA3FF] to-transparent opacity-50"></div>
+                      <div className="w-24 h-24 bg-[#2E6BFF] rounded-full flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(46,107,255,0.4)] group-hover:scale-110 transition-transform"><OctagonAlert className="text-white" size={48} /></div>
+                      <h3 className="text-2xl font-black text-white tracking-widest uppercase">勞保破產倒數</h3>
+                      <div className="text-6xl font-black text-[#4DA3FF] font-mono tracking-tighter">2031 年</div>
+                      <p className="text-slate-400 text-sm leading-relaxed italic font-medium">退休即懸崖。規劃必須建立在「沒有勞保也能活」的資產自理前提。</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* 核心工具箱 */}
+              <section className="py-40">
+                <div className="max-w-7xl mx-auto px-6">
+                  <SectionHeader 
+                    badge="Strategic Toolbox"
+                    title="顧問專屬的三大戰略系統"
+                    subtitle="將生硬的數字轉化為可執行的致富計畫。"
+                  />
+                  <div className="grid md:grid-cols-3 gap-10 px-4">
+                    <FeatureCard 
+                      icon={Rocket}
+                      title="創富：槓桿與套利"
+                      desc="學貸活化、房產轉增貸、超積極存錢法。利用 2026 市場利率波動，實現資產階級躍遷。"
+                      tags={['百萬禮物', 'RE活化', '低利套利']}
+                      colorClass="bg-[#2E6BFF]"
+                      glowClass="from-[#4DA3FF] to-transparent"
+                    />
+                    <FeatureCard 
+                      icon={ShieldCheck}
+                      title="守富：現金流防禦"
+                      desc="建立大小水庫母子系統，規劃五年換車與長照準備。確保資產在風險中依然穩健成長。"
+                      tags={['大小水庫', '尊嚴準備', '退休開口']}
+                      colorClass="bg-[#F59E0B]"
+                      glowClass="from-[#F59E0B] to-transparent"
+                    />
+                    <FeatureCard 
+                      icon={Landmark}
+                      title="傳富：稅務與傳承"
+                      desc="針對 2026 最新稅法，進行遺產稅流動性缺口測試，實現財富完美、安全地落地。"
+                      tags={['稅務預估', '缺口測試', '傳承戰略']}
+                      colorClass="bg-[#8A5CFF]"
+                      glowClass="from-[#8A5CFF] to-transparent"
+                    />
+                  </div>
+                </div>
+              </section>
+            </>
+          )}
+          {view === 'tools' && <ToolsView />}
+          {view === 'data' && <DataView />}
+          {view === 'reports' && <ReportsView />}
+        </main>
+
+        {/* Footer */}
+        <footer className="bg-[#050b14] border-t border-white/5 py-24 relative overflow-hidden">
+           {/* 背景裝飾 Logo */}
+           <div className="absolute right-0 bottom-0 opacity-5 pointer-events-none transform translate-x-1/4 translate-y-1/4">
+             <UltraLogo width={600} height={700} />
+           </div>
+
+          <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-16 relative z-10 text-sm">
+            <div className="space-y-8">
+              <div className="flex items-center gap-3">
+                <UltraLogo width={30} height={38} />
+                <span className="text-xl font-black text-white tracking-tighter italic uppercase">UltraAdvisor</span>
+              </div>
+              <p className="text-slate-500 font-bold leading-relaxed">
+                下一代顧問的數位戰情室。<br/>
+                我們相信：數據可以冰冷，但洞察必須有溫度。
+              </p>
+            </div>
+            <div><h4 className="text-white font-black mb-8 tracking-widest uppercase text-xs opacity-40">核心戰略</h4><ul className="space-y-4 text-slate-500 font-bold cursor-pointer"><li onClick={() => setView('tools')} className="hover:text-[#4DA3FF] transition-colors">創富：槓桿套利系統</li><li onClick={() => setView('tools')} className="hover:text-[#4DA3FF] transition-colors">守富：現金流防禦系統</li><li onClick={() => setView('tools')} className="hover:text-[#4DA3FF] transition-colors">傳富：稅務與傳承系統</li></ul></div>
+            <div><h4 className="text-white font-black mb-8 tracking-widest uppercase text-xs opacity-40">數據中心</h4><ul className="space-y-4 text-slate-500 font-bold cursor-pointer"><li onClick={() => setView('data')} className="hover:text-[#4DA3FF] transition-colors">2026 癌症時鐘模型</li><li onClick={() => setView('data')} className="hover:text-[#4DA3FF] transition-colors">醫療通膨實時數據</li><li onClick={() => setView('data')} className="hover:text-[#4DA3FF] transition-colors">勞保破產精算報告</li></ul></div>
+            <div><h4 className="text-white font-black mb-8 tracking-widest uppercase text-xs opacity-40">聯繫我們</h4><div className="flex gap-5"><Globe size={20} className="text-slate-500 hover:text-[#4DA3FF] cursor-pointer"/><Mail size={20} className="text-slate-500 hover:text-[#4DA3FF] cursor-pointer"/><MessageSquare size={20} className="text-slate-500 hover:text-[#4DA3FF] cursor-pointer"/></div></div>
+          </div>
+          <div className="max-w-7xl mx-auto px-6 mt-24 pt-10 border-t border-white/5 flex justify-between items-center relative z-10">
+            <p className="text-slate-600 text-[10px] font-black uppercase tracking-[0.2em]">© 2026 UltraAdvisor Pro. All rights reserved.</p>
+          </div>
+        </footer>
+      </div>
+
+      {/* --- 註冊試用彈窗 (Glassmorphism) --- */}
+      {showSignupModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-[#050b14]/90 backdrop-blur-xl animate-in fade-in duration-300" 
+            onClick={() => setShowSignupModal(false)}
+          />
+          <div className="relative bg-[#0f172a] border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300 max-w-[440px] w-full flex flex-col">
+            <div className="flex items-center justify-between p-4 bg-[#050b14] border-b border-white/5">
+              <span className="text-white font-black text-xs uppercase tracking-widest px-3 py-1 bg-[#4DA3FF]/20 border border-[#4DA3FF]/30 text-[#4DA3FF] rounded-full">
+                立即獲取金鑰
+              </span>
+              <button 
+                onClick={() => setShowSignupModal(false)}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors group"
+              >
+                <X size={24} className="text-slate-400 group-hover:text-white" />
+              </button>
+            </div>
+            <div className="bg-[#0f172a] flex justify-center py-2 px-4 overflow-y-auto max-h-[80vh]">
+               <iframe 
+                src="https://portaly.cc/embed/GinRollBT/product/WsaTvEYOA1yqAQYzVZgy" 
+                width="400" 
+                height="620" 
+                style={{ border: 0, borderRadius: '12px' }} 
+                frameBorder="0" 
+                loading="lazy"
+                title="Register"
+              />
+            </div>
+            <div className="p-4 bg-[#050b14] text-center border-t border-white/5">
+               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">完成註冊後即可獲得 2026 戰略工具使用權</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 全域動畫 */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
+        
+        body { font-family: 'Outfit', sans-serif; }
+        
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes zoom-in {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .zoom-in {
+          animation: zoom-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// 輔助組件：外部連結圖示
+const ExternalLinkIcon = ({ size }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+);
+
+/**
+ * App 組件
+ */
+export default function App() {
+  const handleStart = () => {
+    console.log("導向登入頁面...");
+    // 這裡可以加入導向邏輯，例如 window.location.href = '/login';
+  };
+
+  return <LandingPage onStart={handleStart} />;
+}
 </file>
 
 <file path="src/data/fundData.ts">
@@ -10500,7 +11042,7 @@ import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, Timestamp, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
-// 具名匯入
+// 組件匯入
 import { LoginPage } from './components/auth/LoginPage';
 import { SecretSignupPage } from './components/auth/SecretSignupPage';
 import { LandingPage } from './components/LandingPage'; 
@@ -10547,7 +11089,7 @@ const Toast = ({ message, type = 'success', onClose }: { message: string, type: 
   }, [onClose]);
   const bgColors: Record<string, string> = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
   return (
-    <div className={`fixed bottom-6 right-6 ${bgColors[type] || 'bg-blue-600'} text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-bounce-in z-[100] toast-container max-w-[90vw]`}>
+    <div className={`fixed bottom-6 right-6 ${bgColors[type] || 'bg-blue-600'} text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-bounce-in z-[200] toast-container max-w-[90vw]`}>
       {type === 'success' && <Check size={20} className="shrink-0" />}
       {type === 'error' && <ShieldAlert size={20} className="shrink-0" />}
       <span className="font-bold text-sm md:text-base break-words">{message}</span>
@@ -10574,10 +11116,9 @@ export default function App() {
   const [loading, setLoading] = useState(true); 
   const [minSplashTimePassed, setMinSplashTimePassed] = useState(false); 
   
-  // 核心路由狀態
+  // 路由與同步狀態
   const [isSecretSignupRoute, setIsSecretSignupRoute] = useState(false); 
   const [isLoginRoute, setIsLoginRoute] = useState(false);
-
   const [clientLoading, setClientLoading] = useState(false); 
   const [currentClient, setCurrentClient] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('golden_safe'); 
@@ -10586,9 +11127,11 @@ export default function App() {
   const [isReportOpen, setIsReportOpen] = useState(false); 
   const [isSaving, setIsSaving] = useState(false); 
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  
   const lastSavedDataStr = useRef<string>("");
   const isRegistering = useRef(false);
 
+  // 工具數據狀態
   const defaultStates = {
     golden_safe: { mode: 'time', amount: 60000, years: 10, rate: 6, isLocked: false }, 
     gift: { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 },
@@ -10615,12 +11158,113 @@ export default function App() {
 
   const showToast = (message: string, type = 'success') => { setToast({ message, type }); };
 
-  const cleanDataForFirebase = (obj: any) => {
-    return JSON.parse(JSON.stringify(obj, (key, value) => {
-      return value === undefined ? null : value;
-    }));
+  // ==========================================
+  // 1. 安全機制：雙裝置限制邏輯
+  // ==========================================
+  const registerDeviceSession = async (uid: string) => {
+    isRegistering.current = true;
+    const newSessionId = generateSessionId();
+    localStorage.setItem('my_app_session_id', newSessionId);
+    
+    const metaRef = doc(db, 'users', uid, 'system', 'metadata');
+    try {
+      const docSnap = await getDoc(metaRef);
+      let activeSessions: string[] = [];
+      if (docSnap.exists() && docSnap.data().activeSessions) {
+        activeSessions = docSnap.data().activeSessions;
+      }
+      activeSessions.push(newSessionId);
+      if (activeSessions.length > 2) activeSessions = activeSessions.slice(-2);
+      
+      await setDoc(metaRef, { 
+        activeSessions, 
+        lastLoginTime: Timestamp.now(), 
+        deviceInfo: navigator.userAgent 
+      }, { merge: true });
+    } catch (error) {
+      console.error("Session update failed:", error);
+    } finally {
+      setTimeout(() => { isRegistering.current = false; }, 1500);
+    }
   };
 
+  useEffect(() => {
+    if (isSecretSignupRoute || !user) return;
+    const localSessionId = localStorage.getItem('my_app_session_id');
+    if (isRegistering.current || !localSessionId) return;
+
+    const userMetaRef = doc(db, 'users', user.uid, 'system', 'metadata');
+    const unsubscribe = onSnapshot(userMetaRef, async (docSnap) => {
+      if (isRegistering.current) return;
+      if (docSnap.exists()) {
+        const activeSessions = docSnap.data().activeSessions || [];
+        if (activeSessions.length > 0 && !activeSessions.includes(localSessionId)) {
+          localStorage.removeItem('my_app_session_id');
+          await signOut(auth);
+          alert("裝置數量超過限制：您的帳號已在其他裝置登入，此連線已自動登出。");
+          window.location.reload();
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, [user, isSecretSignupRoute]);
+
+  // ==========================================
+  // 2. 性能優化：Firestore 防抖寫入
+  // ==========================================
+  const cleanDataForFirebase = (obj: any) => {
+    return JSON.parse(JSON.stringify(obj, (key, value) => value === undefined ? null : value));
+  };
+
+  useEffect(() => {
+    if (!user || !currentClient || !isDataLoaded) return;
+
+    const dataPayload = {
+        goldenSafeData, giftData, estateData, studentData, superActiveData, 
+        carData, pensionData, reservoirData, taxData, freeDashboardLayout 
+    };
+    
+    const currentDataStr = JSON.stringify(dataPayload);
+    if (currentDataStr === lastSavedDataStr.current) return;
+
+    const saveData = async () => {
+        setIsSaving(true);
+        try {
+            const cleanedPayload = cleanDataForFirebase(dataPayload);
+            await setDoc(doc(db, 'users', user.uid, 'clients', currentClient.id), {
+                ...cleanedPayload,
+                updatedAt: Timestamp.now()
+            }, { merge: true });
+            lastSavedDataStr.current = currentDataStr;
+            setTimeout(() => setIsSaving(false), 500);
+        } catch (error) {
+            console.error("Auto-save failed:", error);
+            setIsSaving(false);
+        }
+    };
+
+    // 防抖：1.5 秒內無新變動才寫入
+    const handler = setTimeout(saveData, 1500);
+    return () => clearTimeout(handler);
+  }, [
+    goldenSafeData, giftData, estateData, studentData, superActiveData, 
+    carData, pensionData, reservoirData, taxData, freeDashboardLayout,
+    user, currentClient, isDataLoaded
+  ]);
+
+  // ==========================================
+  // 3. UI 修復：手機選單背景滾動鎖定
+  // ==========================================
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [isMobileMenuOpen]);
+
+  // 其他業務邏輯
   const navigateTo = (path: string, action: () => void) => {
     window.history.pushState({ path }, '', path);
     action();
@@ -10631,23 +11275,16 @@ export default function App() {
       const path = window.location.pathname;
       setIsSecretSignupRoute(path === '/signup-secret');
       setIsLoginRoute(path === '/login');
-      if (path === '/') {
-        setIsSecretSignupRoute(false);
-        setIsLoginRoute(false);
-      }
+      if (path === '/') { setIsSecretSignupRoute(false); setIsLoginRoute(false); }
     };
-
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   useEffect(() => {
     const path = window.location.pathname;
-    if (path === '/signup-secret') {
-        setIsSecretSignupRoute(true);
-    } else if (path === '/login') {
-        setIsLoginRoute(true);
-    }
+    if (path === '/signup-secret') setIsSecretSignupRoute(true);
+    else if (path === '/login') setIsLoginRoute(true);
     const timer = setTimeout(() => { setMinSplashTimePassed(true); }, 3000); 
     return () => clearTimeout(timer);
   }, []);
@@ -10656,19 +11293,14 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
-      if (!currentUser) {
-          setCurrentClient(null);
-          setIsDataLoaded(false);
-      }
+      if (!currentUser) { setCurrentClient(null); setIsDataLoaded(false); }
     });
     return () => unsubscribe();
   }, []);
 
+  // 客戶資料監聽
   useEffect(() => {
-      if (!user || !currentClient) {
-          setIsDataLoaded(false);
-          return;
-      }
+      if (!user || !currentClient) { setIsDataLoaded(false); return; }
       setClientLoading(true);
       const clientDocRef = doc(db, 'users', user.uid, 'clients', currentClient.id);
       const unsubscribeClient = onSnapshot(clientDocRef, (docSnap) => {
@@ -10687,46 +11319,9 @@ export default function App() {
           }
           setClientLoading(false);
           setIsDataLoaded(true); 
-      }, (err) => {
-          console.error("Client Load Error:", err);
-          showToast("讀取客戶資料失敗", "error");
-          setClientLoading(false);
       });
       return () => unsubscribeClient();
   }, [currentClient?.id, user]); 
-
-  useEffect(() => {
-    if (!user || !currentClient || !isDataLoaded) return;
-    const dataPayload = {
-        goldenSafeData, giftData, estateData, studentData, superActiveData, 
-        carData, pensionData, reservoirData, taxData, freeDashboardLayout 
-    };
-    const currentDataStr = JSON.stringify(dataPayload);
-    if (currentDataStr === lastSavedDataStr.current) return;
-
-    const saveData = async () => {
-        setIsSaving(true);
-        try {
-            const cleanedPayload = cleanDataForFirebase(dataPayload);
-            await setDoc(doc(db, 'users', user.uid, 'clients', currentClient.id), {
-                ...cleanedPayload,
-                updatedAt: Timestamp.now()
-            }, { merge: true });
-
-            lastSavedDataStr.current = currentDataStr;
-            setTimeout(() => setIsSaving(false), 500);
-        } catch (error) {
-            console.error("Auto-save failed:", error);
-            setIsSaving(false);
-        }
-    };
-    const handler = setTimeout(saveData, 1500);
-    return () => clearTimeout(handler);
-  }, [
-    goldenSafeData, giftData, estateData, studentData, superActiveData, 
-    carData, pensionData, reservoirData, taxData, freeDashboardLayout,
-    user, currentClient, isDataLoaded
-  ]);
 
   const handleLogout = async () => { 
       localStorage.removeItem('my_app_session_id');
@@ -10734,11 +11329,6 @@ export default function App() {
       setCurrentClient(null);
       setIsDataLoaded(false);
       showToast("已安全登出", "info"); 
-  };
-
-  const handleBackToDashboard = () => {
-      setIsDataLoaded(false);
-      setCurrentClient(null);
   };
 
   const getCurrentData = () => {
@@ -10760,7 +11350,7 @@ export default function App() {
 
   if (isSecretSignupRoute) {
       return <SecretSignupPage onSignupSuccess={() => {
-          alert("🎉 帳號開通成功！\n\n系統將自動導向至您的專屬戰情室。");
+          alert("🎉 帳號開通成功！");
           setIsSecretSignupRoute(false);
           window.location.href = '/'; 
       }} />;
@@ -10770,30 +11360,31 @@ export default function App() {
       if (isLoginRoute) {
         return <LoginPage onLoginSuccess={() => {
             setIsLoginRoute(false);
+            if (auth.currentUser) registerDeviceSession(auth.currentUser.uid);
             window.history.pushState({}, '', '/');
         }} />;
       }
-      return (
-        <LandingPage 
-          onStart={() => navigateTo('/login', () => setIsLoginRoute(true))} 
-          onSignup={() => navigateTo('/signup-secret', () => setIsSecretSignupRoute(true))}
-          onHome={() => navigateTo('/', () => { setIsLoginRoute(false); setIsSecretSignupRoute(false); })}
-        />
-      );
+      return <LandingPage 
+        onStart={() => navigateTo('/login', () => setIsLoginRoute(true))} 
+        onSignup={() => navigateTo('/signup-secret', () => setIsSecretSignupRoute(true))}
+        onHome={() => navigateTo('/', () => { setIsLoginRoute(false); setIsSecretSignupRoute(false); })}
+      />;
   }
 
   if (!currentClient) {
       return (
           <>
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-            <div className="flex flex-col h-screen">
+            <div className="flex flex-col h-screen overflow-hidden">
                 <div className="bg-slate-900 text-white p-4 flex justify-between items-center shadow-md shrink-0">
                     <div className="font-bold flex items-center gap-2 uppercase tracking-tighter"><Coins className="text-yellow-400"/> UltraAdvisor 戰情室</div>
                     <button onClick={handleLogout} className="text-sm bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-2">
                         <LogOut size={16}/> 登出
                     </button>
                 </div>
-                <ClientDashboard user={user} onSelectClient={setCurrentClient} />
+                <div className="flex-1 overflow-y-auto">
+                    <ClientDashboard user={user} onSelectClient={setCurrentClient} />
+                </div>
             </div>
           </>
       );
@@ -10822,57 +11413,38 @@ export default function App() {
         data={getCurrentData()} 
       />
 
-      {/* --- [新增] 手機版導航選單區塊 --- */}
+      {/* 手機版側邊選單 */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[150] md:hidden">
-          {/* 背景遮罩 */}
-          <div 
-            className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm animate-fade-in" 
-            onClick={() => setIsMobileMenuOpen(false)} 
-          />
-          {/* 選單內容 */}
+          <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm animate-fade-in" onClick={() => setIsMobileMenuOpen(false)} />
           <aside className="absolute right-0 top-0 h-full w-72 bg-slate-900 text-white flex flex-col shadow-2xl animate-slide-in">
             <div className="p-4 border-b border-slate-800 flex justify-between items-center">
               <span className="font-bold">選單</span>
-              <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-slate-800 rounded-full">
-                <X size={24} />
-              </button>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-slate-800 rounded-full"><X size={24} /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              <button onClick={handleBackToDashboard} className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-3 rounded-lg mb-4 border border-slate-800">
+              <button onClick={() => { setCurrentClient(null); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-3 rounded-lg mb-4 border border-slate-800">
                 <ChevronLeft size={18}/> 返回客戶列表
               </button>
-              
-              <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
-                <ShieldCheck size={14}/> 觀念與診斷
-              </div>
+              <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">觀念與診斷</div>
               <NavItem icon={LayoutDashboard} label="自由組合戰情室" active={activeTab === 'free_dashboard'} onClick={() => { setActiveTab('free_dashboard'); setIsMobileMenuOpen(false); }} />
               <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => { setActiveTab('golden_safe'); setIsMobileMenuOpen(false); }} />
               <NavItem icon={Activity} label="市場數據戰情室" active={activeTab === 'market_data'} onClick={() => { setActiveTab('market_data'); setIsMobileMenuOpen(false); }} />
               <NavItem icon={History} label="基金時光機" active={activeTab === 'fund_machine'} onClick={() => { setActiveTab('fund_machine'); setIsMobileMenuOpen(false); }} />
-
-              <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
-                <Rocket size={14}/> 創富：槓桿與套利
-              </div>
+              <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">創富：槓桿與套利</div>
               <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => { setActiveTab('gift'); setIsMobileMenuOpen(false); }} />
               <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => { setActiveTab('estate'); setIsMobileMenuOpen(false); }} />
               <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => { setActiveTab('student'); setIsMobileMenuOpen(false); }} />
               <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => { setActiveTab('super_active'); setIsMobileMenuOpen(false); }} />
-              
-              <div className="text-xs font-bold text-blue-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
-                <ShieldAlert size={14}/> 守富：現金流防禦
-              </div>
+              <div className="text-xs font-bold text-blue-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">守富：現金流防禦</div>
               <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => { setActiveTab('reservoir'); setIsMobileMenuOpen(false); }} />
               <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => { setActiveTab('car'); setIsMobileMenuOpen(false); }} />
               <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => { setActiveTab('pension'); setIsMobileMenuOpen(false); }} />
-
-              <div className="text-xs font-bold text-purple-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
-                <Landmark size={14}/> 傳富：稅務與傳承
-              </div>
+              <div className="text-xs font-bold text-purple-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">傳富：稅務與傳承</div>
               <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => { setActiveTab('tax'); setIsMobileMenuOpen(false); }} />
             </div>
             <div className="p-4 border-t border-slate-800">
-              <button onClick={() => { setIsReportOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-3 rounded-xl w-full">
+              <button onClick={() => { setIsReportOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-50 text-white font-bold px-4 py-3 rounded-xl w-full">
                 <FileBarChart size={18} /> 生成策略報表
               </button>
             </div>
@@ -10883,7 +11455,7 @@ export default function App() {
       {/* 桌面版側邊欄 */}
       <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10 print:hidden">
         <div className="p-4 border-b border-slate-800">
-            <button onClick={handleBackToDashboard} className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-lg transition-all mb-4">
+            <button onClick={() => setCurrentClient(null)} className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-lg transition-all mb-4">
               <ChevronLeft size={18}/> 返回客戶列表
             </button>
             <div className="flex items-center gap-3 px-2">
@@ -10897,54 +11469,38 @@ export default function App() {
             </div>
             <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 bg-black/20 px-2 py-1 rounded">
               {isSaving ? (
-                <>
-                   <Loader2 size={12} className="animate-spin text-blue-400"/>
-                   <span>儲存中...</span>
-                </>
+                <><Loader2 size={12} className="animate-spin text-blue-400"/><span>儲存中...</span></>
               ) : (
-                <>
-                   <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                   <span>已同步</span>
-                </>
+                <><div className="w-2 h-2 rounded-full bg-green-500"></div><span>已同步</span></>
               )}
             </div>
         </div>
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">
-              <ShieldCheck size={14}/> 觀念與診斷
-          </div>
+          <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider mt-2">觀念與診斷</div>
           <NavItem icon={LayoutDashboard} label="自由組合戰情室" active={activeTab === 'free_dashboard'} onClick={() => setActiveTab('free_dashboard')} />
           <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => setActiveTab('golden_safe')} />
           <NavItem icon={Activity} label="市場數據戰情室" active={activeTab === 'market_data'} onClick={() => setActiveTab('market_data')} />
           <NavItem icon={History} label="基金時光機" active={activeTab === 'fund_machine'} onClick={() => setActiveTab('fund_machine')} />
-
-          <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
-              <Rocket size={14}/> 創富：槓桿與套利
-          </div>
+          <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider mt-4">創富：槓桿與套利</div>
           <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => setActiveTab('gift')} />
           <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => setActiveTab('estate')} />
           <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => setActiveTab('student')} />
           <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => setActiveTab('super_active')} />
-          
-          <div className="text-xs font-bold text-blue-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
-              <ShieldAlert size={14}/> 守富：現金流防禦
-          </div>
+          <div className="text-xs font-bold text-blue-400 px-4 py-2 uppercase tracking-wider mt-4">守富：現金流防禦</div>
           <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => setActiveTab('reservoir')} />
           <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => setActiveTab('car')} />
           <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => setActiveTab('pension')} />
-
-          <div className="text-xs font-bold text-purple-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
-              <Landmark size={14}/> 傳富：稅務與傳承
-          </div>
+          <div className="text-xs font-bold text-purple-400 px-4 py-2 uppercase tracking-wider mt-4">傳富：稅務與傳承</div>
           <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => setActiveTab('tax')} />
         </nav>
         <div className="p-4 border-t border-slate-800">
-           <button onClick={() => setIsReportOpen(true)} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-3 rounded-xl w-full transition-all shadow-lg shadow-blue-900/50">
+           <button onClick={() => setIsReportOpen(true)} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-50 text-white font-bold px-4 py-3 rounded-xl w-full transition-all shadow-lg shadow-blue-900/50">
              <FileBarChart size={18} /> 生成策略報表
            </button>
         </div>
       </aside>
 
+      {/* 主內容區塊 */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center shadow-md shrink-0 print:hidden">
           <div className="font-bold flex items-center gap-2 uppercase tracking-tighter">
@@ -10952,12 +11508,8 @@ export default function App() {
               <span>{currentClient.name}</span>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setIsReportOpen(true)} className="p-2 bg-slate-800 rounded-lg active:bg-slate-700">
-              <FileBarChart size={24} />
-            </button>
-            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-slate-800 rounded-lg active:bg-slate-700">
-              <Menu size={24} />
-            </button>
+            <button onClick={() => setIsReportOpen(true)} className="p-2 bg-slate-800 rounded-lg active:bg-slate-700"><FileBarChart size={24} /></button>
+            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-slate-800 rounded-lg active:bg-slate-700"><Menu size={24} /></button>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-4 md:p-8 relative">
@@ -10985,18 +11537,10 @@ export default function App() {
         </div>
       </main>
 
-      {/* 選單專用動畫 */}
       <style>{`
-        @keyframes slide-in {
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
-        }
-        .animate-slide-in {
-          animation: slide-in 0.3s ease-out forwards;
-        }
-        .animate-fade-in {
-          animation: fade-in 0.2s ease-out forwards;
-        }
+        @keyframes slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        .animate-slide-in { animation: slide-in 0.3s ease-out forwards; }
+        .animate-fade-in { animation: fade-in 0.2s ease-out forwards; }
       `}</style>
     </div>
   );
