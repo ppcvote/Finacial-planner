@@ -1,0 +1,512 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Table,
+  Input,
+  Button,
+  Space,
+  Tag,
+  Modal,
+  Form,
+  InputNumber,
+  message,
+  Popconfirm,
+  Card,
+  Row,
+  Col,
+  Statistic,
+  Select,
+} from 'antd';
+import {
+  SearchOutlined,
+  UserOutlined,
+  DeleteOutlined,
+  ClockCircleOutlined,
+  EyeOutlined,
+  DownloadOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons';
+import {
+  collection,
+  getDocs,
+  doc,
+  updateDoc,
+  deleteDoc,
+  Timestamp,
+  where,
+} from 'firebase/firestore';
+import { deleteUser as deleteAuthUser } from 'firebase/auth';
+import { db, auth } from '../firebase';
+import dayjs from 'dayjs';
+
+const { Search } = Input;
+const { Option } = Select;
+
+const Users = () => {
+  const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [extendModalVisible, setExtendModalVisible] = useState(false);
+  const [stats, setStats] = useState({
+    total: 0,
+    trial: 0,
+    paid: 0,
+    expired: 0,
+  });
+
+  // 載入用戶資料
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  // 搜尋和篩選
+  useEffect(() => {
+    let filtered = users;
+
+    // 搜尋
+    if (searchText) {
+      filtered = filtered.filter(
+        (user) =>
+          user.email.toLowerCase().includes(searchText.toLowerCase()) ||
+          user.id.toLowerCase().includes(searchText.toLowerCase())
+      );
+    }
+
+    // 篩選狀態
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter((user) => user.subscriptionStatus === filterStatus);
+    }
+
+    setFilteredUsers(filtered);
+  }, [users, searchText, filterStatus]);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      // Debug: 檢查 Firebase 配置
+      console.log('=== Firebase 配置檢查 ===');
+      console.log('Project ID:', db.app.options.projectId);
+      console.log('Auth Domain:', db.app.options.authDomain);
+      console.log('當前登入用戶:', auth.currentUser?.email);
+      console.log('當前登入用戶 UID:', auth.currentUser?.uid);
+
+      // 暫時移除 orderBy 以顯示所有用戶（包括沒有 createdAt 的舊用戶）
+      const usersQuery = collection(db, 'users');
+      const snapshot = await getDocs(usersQuery);
+
+      console.log('=== Firestore 查詢結果 ===');
+      console.log('查詢到的文檔數:', snapshot.size);
+
+      const usersList = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        console.log('處理文檔 ID:', doc.id);
+        console.log('  - Email:', data.email);
+        console.log('  - 所有欄位:', Object.keys(data));
+        console.log('  - 完整資料:', data);
+        usersList.push({
+          key: doc.id,
+          id: doc.id,
+          ...data,
+        });
+      });
+
+      console.log('最終 usersList 長度:', usersList.length);
+      console.log('usersList:', usersList);
+
+      setUsers(usersList);
+      setFilteredUsers(usersList);
+
+      // 計算統計
+      const stats = {
+        total: usersList.length,
+        trial: usersList.filter((u) => u.subscriptionStatus === 'trial' && u.isActive).length,
+        paid: usersList.filter((u) => u.subscriptionStatus === 'paid').length,
+        expired: usersList.filter((u) => !u.isActive).length,
+      };
+      setStats(stats);
+
+      message.success('用戶資料載入成功');
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      message.error('載入用戶資料失敗');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 延長試用
+  const handleExtendTrial = async (values) => {
+    try {
+      const userRef = doc(db, 'users', selectedUser.id);
+      const currentExpiry = selectedUser.trialExpiresAt;
+      const newExpiry = Timestamp.fromMillis(
+        currentExpiry.toMillis() + values.days * 24 * 60 * 60 * 1000
+      );
+
+      await updateDoc(userRef, {
+        trialExpiresAt: newExpiry,
+      });
+
+      message.success(`已延長 ${values.days} 天試用期`);
+      setExtendModalVisible(false);
+      fetchUsers(); // 重新載入
+    } catch (error) {
+      console.error('Error extending trial:', error);
+      message.error('延長試用期失敗');
+    }
+  };
+
+  // 刪除用戶
+  const handleDeleteUser = async (userId) => {
+    try {
+      // 刪除 Firestore 資料
+      await deleteDoc(doc(db, 'users', userId));
+
+      message.success('用戶已刪除');
+      fetchUsers(); // 重新載入
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      message.error('刪除用戶失敗');
+    }
+  };
+
+  // 導出用戶資料
+  const handleExport = () => {
+    try {
+      const csvContent = [
+        ['Email', 'UID', '狀態', '註冊時間', '到期時間', 'LINE ID'].join(','),
+        ...filteredUsers.map((user) =>
+          [
+            user.email,
+            user.id,
+            user.subscriptionStatus,
+            user.createdAt ? dayjs(user.createdAt.toDate()).format('YYYY-MM-DD HH:mm') : '',
+            user.trialExpiresAt ? dayjs(user.trialExpiresAt.toDate()).format('YYYY-MM-DD HH:mm') : '',
+            user.lineUserId || '',
+          ].join(',')
+        ),
+      ].join('\n');
+
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `users_${dayjs().format('YYYY-MM-DD')}.csv`;
+      link.click();
+
+      message.success('用戶資料已導出');
+    } catch (error) {
+      console.error('Error exporting users:', error);
+      message.error('導出失敗');
+    }
+  };
+
+  // 表格欄位
+  const columns = [
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+      width: 250,
+      ellipsis: true,
+    },
+    {
+      title: '狀態',
+      dataIndex: 'subscriptionStatus',
+      key: 'status',
+      width: 100,
+      render: (status, record) => {
+        const colors = {
+          trial: record.isActive ? 'blue' : 'default',
+          paid: 'green',
+          expired: 'red',
+        };
+        const texts = {
+          trial: record.isActive ? '試用中' : '試用結束',
+          paid: '已付費',
+          expired: '已過期',
+        };
+        return <Tag color={colors[status]}>{texts[status] || status}</Tag>;
+      },
+    },
+    {
+      title: '註冊時間',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 180,
+      render: (timestamp) => {
+        if (!timestamp) return '-';
+        return dayjs(timestamp.toDate()).format('YYYY-MM-DD HH:mm');
+      },
+    },
+    {
+      title: '到期時間',
+      dataIndex: 'trialExpiresAt',
+      key: 'expiresAt',
+      width: 150,
+      render: (timestamp) => {
+        if (!timestamp) return '-';
+        const daysLeft = Math.ceil((timestamp.toMillis() - Date.now()) / (1000 * 60 * 60 * 24));
+        const color = daysLeft <= 3 ? 'red' : daysLeft <= 7 ? 'orange' : 'green';
+        return (
+          <span style={{ color }}>
+            {daysLeft > 0 ? `${daysLeft} 天後` : '已過期'}
+          </span>
+        );
+      },
+    },
+    {
+      title: 'LINE ID',
+      dataIndex: 'lineUserId',
+      key: 'lineUserId',
+      width: 150,
+      ellipsis: true,
+      render: (lineUserId) => lineUserId || '-',
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 200,
+      fixed: 'right',
+      render: (_, record) => (
+        <Space size="small">
+          <Button
+            type="link"
+            icon={<EyeOutlined />}
+            onClick={() => {
+              setSelectedUser(record);
+              setDetailModalVisible(true);
+            }}
+          >
+            詳情
+          </Button>
+          <Button
+            type="link"
+            icon={<ClockCircleOutlined />}
+            onClick={() => {
+              setSelectedUser(record);
+              setExtendModalVisible(true);
+            }}
+          >
+            延長
+          </Button>
+          <Popconfirm
+            title="確定要刪除此用戶嗎？"
+            description="此操作無法復原"
+            onConfirm={() => handleDeleteUser(record.id)}
+            okText="確定"
+            cancelText="取消"
+          >
+            <Button type="link" danger icon={<DeleteOutlined />}>
+              刪除
+            </Button>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-6">👥 用戶管理</h1>
+
+      {/* 統計卡片 */}
+      <Row gutter={[16, 16]} className="mb-6">
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="總用戶數"
+              value={stats.total}
+              prefix={<UserOutlined />}
+              valueStyle={{ color: '#3b82f6' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="試用中"
+              value={stats.trial}
+              valueStyle={{ color: '#10b981' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="已付費"
+              value={stats.paid}
+              valueStyle={{ color: '#8b5cf6' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="已過期"
+              value={stats.expired}
+              valueStyle={{ color: '#ef4444' }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 搜尋和篩選 */}
+      <Card className="mb-6">
+        <Space className="w-full" direction="vertical" size="middle">
+          <Row gutter={16}>
+            <Col xs={24} md={12}>
+              <Search
+                placeholder="搜尋 Email 或 UID"
+                allowClear
+                enterButton={<SearchOutlined />}
+                size="large"
+                onSearch={setSearchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
+            </Col>
+            <Col xs={24} md={12}>
+              <Space>
+                <Select
+                  value={filterStatus}
+                  onChange={setFilterStatus}
+                  style={{ width: 150 }}
+                  size="large"
+                >
+                  <Option value="all">全部狀態</Option>
+                  <Option value="trial">試用中</Option>
+                  <Option value="paid">已付費</Option>
+                </Select>
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={fetchUsers}
+                  size="large"
+                >
+                  重新載入
+                </Button>
+                <Button
+                  icon={<DownloadOutlined />}
+                  onClick={handleExport}
+                  size="large"
+                >
+                  導出 CSV
+                </Button>
+              </Space>
+            </Col>
+          </Row>
+        </Space>
+      </Card>
+
+      {/* 用戶表格 */}
+      <Card>
+        <Table
+          columns={columns}
+          dataSource={filteredUsers}
+          loading={loading}
+          scroll={{ x: 1200 }}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showTotal: (total) => `共 ${total} 個用戶`,
+          }}
+        />
+      </Card>
+
+      {/* 用戶詳情 Modal */}
+      <Modal
+        title="👤 用戶詳情"
+        open={detailModalVisible}
+        onCancel={() => setDetailModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setDetailModalVisible(false)}>
+            關閉
+          </Button>,
+        ]}
+        width={600}
+      >
+        {selectedUser && (
+          <Space direction="vertical" size="middle" className="w-full">
+            <div>
+              <strong>📧 Email：</strong>
+              <span>{selectedUser.email}</span>
+            </div>
+            <div>
+              <strong>🆔 UID：</strong>
+              <span className="text-xs text-gray-500">{selectedUser.id}</span>
+            </div>
+            <div>
+              <strong>📅 註冊時間：</strong>
+              <span>
+                {selectedUser.createdAt
+                  ? dayjs(selectedUser.createdAt.toDate()).format('YYYY-MM-DD HH:mm:ss')
+                  : '-'}
+              </span>
+            </div>
+            <div>
+              <strong>⏰ 試用到期：</strong>
+              <span>
+                {selectedUser.trialExpiresAt
+                  ? dayjs(selectedUser.trialExpiresAt.toDate()).format('YYYY-MM-DD HH:mm:ss')
+                  : '-'}
+              </span>
+            </div>
+            <div>
+              <strong>📱 LINE User ID：</strong>
+              <span className="text-xs text-gray-500">{selectedUser.lineUserId || '-'}</span>
+            </div>
+            <div>
+              <strong>📊 狀態：</strong>
+              <Tag
+                color={
+                  selectedUser.subscriptionStatus === 'trial'
+                    ? 'blue'
+                    : selectedUser.subscriptionStatus === 'paid'
+                    ? 'green'
+                    : 'red'
+                }
+              >
+                {selectedUser.subscriptionStatus === 'trial'
+                  ? '試用中'
+                  : selectedUser.subscriptionStatus === 'paid'
+                  ? '已付費'
+                  : '已過期'}
+              </Tag>
+            </div>
+          </Space>
+        )}
+      </Modal>
+
+      {/* 延長試用 Modal */}
+      <Modal
+        title="⏱️ 延長試用期"
+        open={extendModalVisible}
+        onCancel={() => setExtendModalVisible(false)}
+        footer={null}
+      >
+        <Form onFinish={handleExtendTrial} layout="vertical">
+          <Form.Item
+            name="days"
+            label="延長天數"
+            rules={[{ required: true, message: '請輸入延長天數' }]}
+            initialValue={7}
+          >
+            <InputNumber min={1} max={365} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                確定延長
+              </Button>
+              <Button onClick={() => setExtendModalVisible(false)}>取消</Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  );
+};
+
+export default Users;

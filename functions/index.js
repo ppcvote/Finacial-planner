@@ -260,7 +260,7 @@ async function createTrialAccount(email, lineUserId) {
     // await sendEmail(email, '🎉 歡迎使用 Ultra Advisor！你的試用帳號已開通', emailHTML);
     console.log('[SKIPPED] Email sending - using LINE only');
 
-    // 7. 發送完整的 LINE 訊息（包含密碼和登入資訊）
+    // 7. 發送 LINE 訊息（Flex Message + 單獨的密碼訊息）
     const loginUrl = `${APP_LOGIN_URL}?email=${encodeURIComponent(email)}`;
     await sendLineMessage(lineUserId, [
       {
@@ -274,7 +274,7 @@ async function createTrialAccount(email, lineUserId) {
             contents: [
               {
                 type: 'text',
-                text: '🎉 帳號開通成功',
+                text: '🎉 帳號開通成功！',
                 size: 'xl',
                 weight: 'bold',
                 color: '#ffffff'
@@ -329,29 +329,6 @@ async function createTrialAccount(email, lineUserId) {
                     contents: [
                       {
                         type: 'text',
-                        text: '密碼',
-                        color: '#64748b',
-                        size: 'sm',
-                        flex: 2
-                      },
-                      {
-                        type: 'text',
-                        text: password,
-                        wrap: true,
-                        color: '#1e293b',
-                        size: 'sm',
-                        flex: 5,
-                        weight: 'bold'
-                      }
-                    ]
-                  },
-                  {
-                    type: 'box',
-                    layout: 'baseline',
-                    spacing: 'sm',
-                    contents: [
-                      {
-                        type: 'text',
                         text: '試用期限',
                         color: '#64748b',
                         size: 'sm',
@@ -392,7 +369,7 @@ async function createTrialAccount(email, lineUserId) {
                 contents: [
                   {
                     type: 'text',
-                    text: '💡 提示：建議登入後先修改密碼',
+                    text: '💡 密碼已在下方訊息中發送',
                     color: '#64748b',
                     size: 'xs',
                     wrap: true
@@ -403,6 +380,10 @@ async function createTrialAccount(email, lineUserId) {
             ]
           }
         }
+      },
+      {
+        type: 'text',
+        text: `🔑 你的登入密碼（長按可複製）：\n\n${password}\n\n💡 建議登入後立即修改密碼`
       }
     ]);
 
@@ -464,7 +445,7 @@ async function handleEvent(event) {
     await sendLineMessage(userId, [
       {
         type: 'text',
-        text: '🎉 歡迎使用 Ultra Advisor！\n\n讓數據為你說話，讓 AI 當你的軍師\n\n請輸入您的 Email 以開通試用帳號：'
+        text: '🎉 歡迎加入 Ultra Advisor！\n\n「讓數據為你說話，讓 AI 當你的軍師」\n\n━━━━━━━━━━━━━━━\n\n✨ 立即開通 7 天免費試用\n\n試用期間可免費使用：\n✅ 18 種專業工具\n✅ 無限客戶檔案\n✅ AI 智能分析\n✅ 專業報表生成\n\n━━━━━━━━━━━━━━━\n\n📧 請輸入您的 Email 開始試用：'
       }
     ]);
     return;
@@ -485,16 +466,8 @@ async function handleEvent(event) {
           }
         ]);
 
-        // 創建試用帳號
+        // 創建試用帳號（已包含發送訊息）
         await createTrialAccount(userMessage, userId);
-
-        // 成功訊息
-        await sendLineMessage(userId, [
-          {
-            type: 'text',
-            text: '✅ 帳號開通成功！\n\n已將登入資訊發送到您的 Email，請查收。\n\n有任何問題隨時在此詢問！'
-          }
-        ]);
 
       } catch (error) {
         console.error('Account creation error:', error);
