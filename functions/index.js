@@ -1,10 +1,8 @@
-// ==========================================
-// 🤖 Ultra Advisor - 試用帳號自動化系統
-// Firebase Cloud Functions
+﻿// ==========================================
+// ?? Ultra Advisor - 閰衣撣唾??芸??頂蝯?// Firebase Cloud Functions
 // ==========================================
 
-// 載入環境變數（開發環境用）
-if (process.env.NODE_ENV !== 'production') {
+// 頛?啣?霈嚗??潛憓嚗?if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
 
@@ -18,13 +16,13 @@ const db = admin.firestore();
 const auth = admin.auth();
 
 // ==========================================
-// 📝 環境變數設定
-// 在 functions 資料夾創建 .env 文件，包含：
+// ?? ?啣?霈閮剖?
+// ??functions 鞈?憭曉撱?.env ?辣嚗??恬?
 // LINE_CHANNEL_SECRET=your_secret
 // LINE_CHANNEL_ACCESS_TOKEN=your_token
 // APP_LOGIN_URL=https://your-app.com/login
 // 
-// 注意：暫時不使用 Email 發送，只用 LINE 通知
+// 瘜冽?嚗??雿輻 Email ?潮??芰 LINE ?
 // ==========================================
 
 const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET;
@@ -32,12 +30,11 @@ const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 const APP_LOGIN_URL = process.env.APP_LOGIN_URL || 'https://ultra-advisor.com/login';
 
 // ==========================================
-// 🔧 工具函數
+// ? 撌亙?賣
 // ==========================================
 
 /**
- * 生成隨機密碼（8-12位，包含大小寫字母和數字）
- */
+ * ???冽?撖Ⅳ嚗?-12雿??憭批?撖怠?瘥??詨?嚗? */
 function generateRandomPassword() {
   const length = 10;
   const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -45,15 +42,14 @@ function generateRandomPassword() {
   for (let i = 0; i < length; i++) {
     password += charset.charAt(Math.floor(Math.random() * charset.length));
   }
-  // 確保至少有一個大寫、一個小寫、一個數字
-  if (!/[A-Z]/.test(password)) password = 'A' + password.slice(1);
+  // 蝣箔??喳????之撖怒???撖怒??摮?  if (!/[A-Z]/.test(password)) password = 'A' + password.slice(1);
   if (!/[a-z]/.test(password)) password = password.slice(0, -1) + 'a';
   if (!/[0-9]/.test(password)) password = password.slice(0, -1) + '1';
   return password;
 }
 
 /**
- * 驗證 Email 格式
+ * 撽? Email ?澆?
  */
 function isValidEmail(email) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -61,7 +57,7 @@ function isValidEmail(email) {
 }
 
 /**
- * 驗證 LINE Webhook 簽章
+ * 撽? LINE Webhook 蝪賜?
  */
 function validateSignature(body, signature) {
   const hash = crypto
@@ -72,7 +68,7 @@ function validateSignature(body, signature) {
 }
 
 /**
- * 發送 LINE 訊息
+ * ?潮?LINE 閮
  */
 async function sendLineMessage(userId, messages) {
   try {
@@ -96,18 +92,15 @@ async function sendLineMessage(userId, messages) {
 }
 
 /**
- * 發送 Email（暫時停用，改用 LINE 發送）
- * 未來可啟用免費 Email 服務
+ * ?潮?Email嚗???剁??寧 LINE ?潮?
+ * ?芯??臬??典?鞎?Email ??
  */
 async function sendEmail(to, subject, html) {
-  // 暫時註解掉 Email 發送功能
-  // 未來可以改用 Resend 或其他免費服務
-  console.log(`[SKIPPED] Email to ${to}: ${subject}`);
-  console.log('目前使用 LINE 發送所有通知');
-  return; // 直接返回，不發送 Email
+  // ?急?閮餉圾??Email ?潮???  // ?芯??臭誑?寧 Resend ?隞?鞎餅???  console.log(`[SKIPPED] Email to ${to}: ${subject}`);
+  console.log('?桀?雿輻 LINE ?潮??');
+  return; // ?湔餈?嚗??潮?Email
   
-  /* 未來啟用時取消註解
-  try {
+  /* ?芯????瘨酉閫?  try {
     await axios.post(
       'https://api.sendgrid.com/v3/mail/send',
       {
@@ -132,7 +125,7 @@ async function sendEmail(to, subject, html) {
 }
 
 /**
- * 生成歡迎 Email HTML
+ * ??甇∟? Email HTML
  */
 function generateWelcomeEmailHTML(email, password, expiresAt) {
   const loginUrl = `${APP_LOGIN_URL}?email=${encodeURIComponent(email)}`;
@@ -157,49 +150,49 @@ function generateWelcomeEmailHTML(email, password, expiresAt) {
     .footer { text-align: center; color: #64748b; font-size: 14px; margin-top: 30px; }
     .checklist { list-style: none; padding: 0; }
     .checklist li { padding: 8px 0; }
-    .checklist li:before { content: "✅ "; }
+    .checklist li:before { content: "??"; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>🎉 歡迎使用 Ultra Advisor！</h1>
-      <p>你的試用帳號已成功開通</p>
+      <h1>?? 甇∟?雿輻 Ultra Advisor嚗?/h1>
+      <p>雿?閰衣撣唾?撌脫?????/p>
     </div>
     
     <div class="content">
-      <h2>你的登入資訊</h2>
+      <h2>雿??餃鞈?</h2>
       
       <div class="info-box">
-        <p><strong>📧 Email:</strong> ${email}</p>
-        <p><strong>🔑 臨時密碼:</strong> <code style="background: #e2e8f0; padding: 4px 8px; border-radius: 4px; font-size: 16px;">${password}</code></p>
-        <p><strong>⏰ 試用期限:</strong> 7 天（至 ${expiresDateStr}）</p>
+        <p><strong>? Email:</strong> ${email}</p>
+        <p><strong>?? ?冽?撖Ⅳ:</strong> <code style="background: #e2e8f0; padding: 4px 8px; border-radius: 4px; font-size: 16px;">${password}</code></p>
+        <p><strong>??閰衣??:</strong> 7 憭抬???${expiresDateStr}嚗?/p>
       </div>
       
       <div style="text-align: center;">
-        <a href="${loginUrl}" class="button">立即登入 Ultra Advisor →</a>
+        <a href="${loginUrl}" class="button">蝡?餃 Ultra Advisor ??/a>
       </div>
       
-      <h3>試用期間你可以：</h3>
+      <h3>閰衣??雿隞伐?</h3>
       <ul class="checklist">
-        <li>無限制使用所有 18 種專業工具</li>
-        <li>建立無限客戶檔案</li>
-        <li>生成專業視覺化報表</li>
-        <li>匯出 PDF 提案文件</li>
-        <li>隨時升級為正式會員</li>
+        <li>?⊿??嗡蝙?冽???18 蝔桀?璆剖極??/li>
+        <li>撱箇??⊿?摰Ｘ瑼?</li>
+        <li>??撠平閬死?銵?/li>
+        <li>?臬 PDF ???辣</li>
+        <li>?冽????箸迤撘???/li>
       </ul>
       
       <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
-        <p style="margin: 0;"><strong>💡 小提示：</strong>建議登入後先修改密碼（個人設定 > 安全性）</p>
+        <p style="margin: 0;"><strong>? 撠?蝷綽?</strong>撱箄降?餃敺?靽格撖Ⅳ嚗犖閮剖? > 摰?改?</p>
       </div>
     </div>
     
     <div class="footer">
-      <p><strong>有任何問題？</strong></p>
-      <p>💬 LINE 官方帳號即時支援<br>
-      📖 使用教學：<a href="https://docs.ultraadvisor.com">docs.ultraadvisor.com</a></p>
-      <p style="margin-top: 20px;">Ultra Advisor 團隊<br>
-      讓數據為你說話，讓 AI 當你的軍師</p>
+      <p><strong>?遙雿?憿?</strong></p>
+      <p>? LINE 摰撣唾??單??舀<br>
+      ?? 雿輻?飛嚗?a href="https://docs.ultraadvisor.com">docs.ultraadvisor.com</a></p>
+      <p style="margin-top: 20px;">Ultra Advisor ??<br>
+      霈?雿牧閰梧?霈?AI ?嗡???撣?/p>
     </div>
   </div>
 </body>
@@ -208,24 +201,23 @@ function generateWelcomeEmailHTML(email, password, expiresAt) {
 }
 
 // ==========================================
-// 🎯 主要功能
+// ? 銝餉??
 // ==========================================
 
 /**
- * 創建試用帳號
+ * ?萄遣閰衣撣唾?
  */
 async function createTrialAccount(email, lineUserId) {
   try {
-    // 1. 檢查 Email 是否已存在
-    const existingUsers = await auth.getUserByEmail(email).catch(() => null);
+    // 1. 瑼Ｘ Email ?臬撌脣???    const existingUsers = await auth.getUserByEmail(email).catch(() => null);
     if (existingUsers) {
-      throw new Error('此 Email 已註冊');
+      throw new Error('甇?Email 撌脰酉??);
     }
 
-    // 2. 生成隨機密碼
+    // 2. ???冽?撖Ⅳ
     const password = generateRandomPassword();
 
-    // 3. 創建 Firebase Auth 用戶
+    // 3. ?萄遣 Firebase Auth ?冽
     const userRecord = await auth.createUser({
       email: email,
       password: password,
@@ -233,13 +225,12 @@ async function createTrialAccount(email, lineUserId) {
       disabled: false
     });
 
-    // 4. 計算試用到期時間（7 天後）
-    const now = admin.firestore.Timestamp.now();
+    // 4. 閮?閰衣?唳???嚗? 憭拙?嚗?    const now = admin.firestore.Timestamp.now();
     const expiresAt = admin.firestore.Timestamp.fromMillis(
       now.toMillis() + 7 * 24 * 60 * 60 * 1000
     );
 
-    // 5. 寫入 Firestore
+    // 5. 撖怠 Firestore
     await db.collection('users').doc(userRecord.uid).set({
       email: email,
       createdAt: now,
@@ -254,18 +245,17 @@ async function createTrialAccount(email, lineUserId) {
       }
     });
 
-    // 6. 暫時不發送 Email（SendGrid 問題）
-    // 未來可以改用免費服務（Resend, Brevo 等）
+    // 6. ?急?銝??Email嚗endGrid ??嚗?    // ?芯??臭誑?寧?祥??嚗esend, Brevo 蝑?
     // const emailHTML = generateWelcomeEmailHTML(email, password, expiresAt.toMillis());
-    // await sendEmail(email, '🎉 歡迎使用 Ultra Advisor！你的試用帳號已開通', emailHTML);
+    // await sendEmail(email, '?? 甇∟?雿輻 Ultra Advisor嚗??岫?典董?歇??, emailHTML);
     console.log('[SKIPPED] Email sending - using LINE only');
 
-    // 7. 發送 LINE 訊息（Flex Message + 單獨的密碼訊息）
+    // 7. ?潮?LINE 閮嚗lex Message + ?桃??蝣潸??荔?
     const loginUrl = `${APP_LOGIN_URL}?email=${encodeURIComponent(email)}`;
     await sendLineMessage(lineUserId, [
       {
         type: 'flex',
-        altText: '🎉 你的試用帳號已開通！',
+        altText: '?? 雿?閰衣撣唾?撌脤???',
         contents: {
           type: 'bubble',
           hero: {
@@ -274,7 +264,7 @@ async function createTrialAccount(email, lineUserId) {
             contents: [
               {
                 type: 'text',
-                text: '🎉 帳號開通成功！',
+                text: '?? 撣唾?????',
                 size: 'xl',
                 weight: 'bold',
                 color: '#ffffff'
@@ -289,7 +279,7 @@ async function createTrialAccount(email, lineUserId) {
             contents: [
               {
                 type: 'text',
-                text: '登入資訊',
+                text: '?餃鞈?',
                 weight: 'bold',
                 size: 'md',
                 margin: 'md'
@@ -329,14 +319,14 @@ async function createTrialAccount(email, lineUserId) {
                     contents: [
                       {
                         type: 'text',
-                        text: '試用期限',
+                        text: '閰衣??',
                         color: '#64748b',
                         size: 'sm',
                         flex: 2
                       },
                       {
                         type: 'text',
-                        text: '7 天',
+                        text: '7 憭?,
                         wrap: true,
                         color: '#1e293b',
                         size: 'sm',
@@ -359,7 +349,7 @@ async function createTrialAccount(email, lineUserId) {
                 height: 'sm',
                 action: {
                   type: 'uri',
-                  label: '立即登入',
+                  label: '蝡?餃',
                   uri: loginUrl
                 }
               },
@@ -369,7 +359,7 @@ async function createTrialAccount(email, lineUserId) {
                 contents: [
                   {
                     type: 'text',
-                    text: '💡 密碼已在下方訊息中發送',
+                    text: '? 撖Ⅳ撌脣銝閮銝剔??,
                     color: '#64748b',
                     size: 'xs',
                     wrap: true
@@ -383,7 +373,7 @@ async function createTrialAccount(email, lineUserId) {
       },
       {
         type: 'text',
-        text: `🔑 你的登入密碼（長按可複製）：\n\n${password}\n\n💡 建議登入後立即修改密碼`
+        text: `?? 雿??餃撖Ⅳ嚗?銴ˊ嚗?\n\n${password}\n\n? 撱箄降?餃敺??喃耨?孵?蝣嬋
       }
     ]);
 
@@ -402,19 +392,18 @@ async function createTrialAccount(email, lineUserId) {
 }
 
 // ==========================================
-// 🌐 HTTP Endpoints
+// ?? HTTP Endpoints
 // ==========================================
 
 /**
- * LINE Webhook 接收器
- */
+ * LINE Webhook ?交?? */
 exports.lineWebhook = functions.https.onRequest(async (req, res) => {
-  // 只接受 POST
+  // ?芣??POST
   if (req.method !== 'POST') {
     return res.status(405).send('Method Not Allowed');
   }
 
-  // 驗證簽章
+  // 撽?蝪賜?
   const signature = req.headers['x-line-signature'];
   const body = JSON.stringify(req.body);
   
@@ -435,46 +424,43 @@ exports.lineWebhook = functions.https.onRequest(async (req, res) => {
 });
 
 /**
- * 處理 LINE 事件
+ * ?? LINE 鈭辣
  */
 async function handleEvent(event) {
   const userId = event.source.userId;
 
-  // 1. 處理「加入好友」事件
-  if (event.type === 'follow') {
+  // 1. ?????亙末??隞?  if (event.type === 'follow') {
     await sendLineMessage(userId, [
       {
         type: 'text',
-        text: '🎉 歡迎加入 Ultra Advisor！\n\n「讓數據為你說話，讓 AI 當你的軍師」\n\n━━━━━━━━━━━━━━━\n\n✨ 立即開通 7 天免費試用\n\n試用期間可免費使用：\n✅ 18 種專業工具\n✅ 無限客戶檔案\n✅ AI 智能分析\n✅ 專業報表生成\n\n━━━━━━━━━━━━━━━\n\n📧 請輸入您的 Email 開始試用：'
+        text: '?? 甇∟?? Ultra Advisor嚗n\n???豢??箔?隤芾店嚗? AI ?嗡???撣怒n\n???????????????n\n??蝡??7 憭拙?鞎餉岫?沔n\n閰衣???臬?鞎颱蝙?剁?\n??18 蝔桀?璆剖極?愧n???⊿?摰Ｘ瑼?\n??AI ?箄??\n??撠平?梯”??\n\n???????????????n\n? 隢撓?交??Email ??閰衣嚗?
       }
     ]);
     return;
   }
 
-  // 2. 處理「訊息」事件
-  if (event.type === 'message' && event.message.type === 'text') {
+  // 2. ?????胯?隞?  if (event.type === 'message' && event.message.type === 'text') {
     const userMessage = event.message.text.trim();
 
-    // 檢查是否為 Email
+    // 瑼Ｘ?臬??Email
     if (isValidEmail(userMessage)) {
       try {
-        // 先回覆「處理中」
-        await sendLineMessage(userId, [
+        // ??閬??葉??        await sendLineMessage(userId, [
           {
             type: 'text',
-            text: '⏳ 正在為您開通試用帳號，請稍候...'
+            text: '??甇??箸?岫?典董??隢???..'
           }
         ]);
 
-        // 創建試用帳號（已包含發送訊息）
+        // ?萄遣閰衣撣唾?嚗歇??潮??荔?
         await createTrialAccount(userMessage, userId);
 
       } catch (error) {
         console.error('Account creation error:', error);
         
-        let errorMessage = '❌ 開通失敗，請稍後再試。';
-        if (error.message.includes('已註冊')) {
-          errorMessage = '❌ 此 Email 已註冊過試用帳號。\n\n如需協助請聯繫客服。';
+        let errorMessage = '???仃??隢?敺?閰艾?;
+        if (error.message.includes('撌脰酉??)) {
+          errorMessage = '??甇?Email 撌脰酉??閰衣撣唾??n\n憒??隢蝜怠恥??;
         }
 
         await sendLineMessage(userId, [
@@ -485,11 +471,11 @@ async function handleEvent(event) {
         ]);
       }
     } else {
-      // 不是 Email 格式
+      // 銝 Email ?澆?
       await sendLineMessage(userId, [
         {
           type: 'text',
-          text: '❌ Email 格式不正確，請重新輸入。\n\n範例：your@email.com'
+          text: '??Email ?澆?銝迤蝣綽?隢??啗撓?乓n\n蝭?嚗our@email.com'
         }
       ]);
     }
@@ -497,12 +483,10 @@ async function handleEvent(event) {
 }
 
 // ==========================================
-// ⏰ 定時任務（Cron Jobs）
-// ==========================================
+// ??摰?隞餃?嚗ron Jobs嚗?// ==========================================
 
 /**
- * 每日檢查試用到期（每天早上 9:00 執行）
- */
+ * 瘥瑼Ｘ閰衣?唳?嚗?憭拇銝?9:00 ?瑁?嚗? */
 exports.checkTrialExpiration = functions.pubsub
   .schedule('0 9 * * *')
   .timeZone('Asia/Taipei')
@@ -518,8 +502,7 @@ exports.checkTrialExpiration = functions.pubsub
     );
 
     try {
-      // 1. 查詢即將到期（剩 3 天）的試用用戶
-      const threeDaysSnapshot = await db.collection('users')
+      // 1. ?亥岷?喳??唳?嚗 3 憭抬??岫?函??      const threeDaysSnapshot = await db.collection('users')
         .where('subscriptionStatus', '==', 'trial')
         .where('trialExpiresAt', '<=', threeDaysLater)
         .where('trialExpiresAt', '>', now)
@@ -532,27 +515,27 @@ exports.checkTrialExpiration = functions.pubsub
         );
 
         if (daysRemaining === 3) {
-          // 發送 LINE 提醒（剩 3 天）
+          // ?潮?LINE ??嚗 3 憭抬?
           if (userData.lineUserId) {
             await sendLineMessage(userData.lineUserId, [
               {
                 type: 'text',
-                text: '⏰ 試用剩餘 3 天\n\n你的 Ultra Advisor 試用帳號將在 3 天後到期。\n\n立即升級保留所有資料：\nhttps://portaly.cc/GinRollBT'
+                text: '??閰衣?拚? 3 憭坼n\n雿? Ultra Advisor 閰衣撣唾?撠 3 憭拙??唳??n\n蝡??靽??????\nhttps://portaly.cc/GinRollBT'
               }
             ]);
           }
           
-          // 暫時不發送 Email
-          // 未來可以改用免費 Email 服務
+          // ?急?銝??Email
+          // ?芯??臭誑?寧?祥 Email ??
           console.log(`[SKIPPED] Email reminder for ${userData.email}`);
         }
 
         if (daysRemaining === 1 && userData.lineUserId) {
-          // 發送 LINE 提醒（剩 1 天）
+          // ?潮?LINE ??嚗 1 憭抬?
           await sendLineMessage(userData.lineUserId, [
             {
               type: 'text',
-              text: '⏰ 試用剩餘 1 天\n\n你的 Ultra Advisor 試用帳號明天到期。\n\n立即升級保留所有資料：\nhttps://portaly.cc/GinRollBT'
+              text: '??閰衣?拚? 1 憭坼n\n雿? Ultra Advisor 閰衣撣唾??予?唳??n\n蝡??靽??????\nhttps://portaly.cc/GinRollBT'
             }
           ]);
         }
@@ -568,8 +551,7 @@ exports.checkTrialExpiration = functions.pubsub
   });
 
 /**
- * 每日刪除過期帳號（每天凌晨 2:00 執行）
- */
+ * 瘥?芷??撣唾?嚗?憭拙???2:00 ?瑁?嚗? */
 exports.deleteExpiredAccounts = functions.pubsub
   .schedule('0 2 * * *')
   .timeZone('Asia/Taipei')
@@ -582,8 +564,7 @@ exports.deleteExpiredAccounts = functions.pubsub
     );
 
     try {
-      // 查詢 3 天前到期的試用用戶
-      const expiredSnapshot = await db.collection('users')
+      // ?亥岷 3 憭拙??唳??岫?函??      const expiredSnapshot = await db.collection('users')
         .where('subscriptionStatus', '==', 'trial')
         .where('trialExpiresAt', '<=', threeDaysAgo)
         .get();
@@ -593,7 +574,7 @@ exports.deleteExpiredAccounts = functions.pubsub
         const uid = doc.id;
 
         try {
-          // 1. 備份用戶資料（保留 30 天）
+          // 1. ?遢?冽鞈?嚗???30 憭抬?
           const backupExpiresAt = admin.firestore.Timestamp.fromMillis(
             now.toMillis() + 30 * 24 * 60 * 60 * 1000
           );
@@ -604,23 +585,23 @@ exports.deleteExpiredAccounts = functions.pubsub
             userData: userData
           });
 
-          // 2. 刪除 Firestore 用戶資料
+          // 2. ?芷 Firestore ?冽鞈?
           await doc.ref.delete();
 
-          // 3. 刪除 Firebase Auth 帳號
+          // 3. ?芷 Firebase Auth 撣唾?
           await auth.deleteUser(uid);
 
-          // 4. 發送「試用結束」LINE 訊息
+          // 4. ?潮岫?函??INE 閮
           if (userData.lineUserId) {
             await sendLineMessage(userData.lineUserId, [
               {
                 type: 'text',
-                text: '試用期已結束\n\n感謝你試用 Ultra Advisor！\n\n你的帳號已被停用，但我們為你保留了 30 天的資料備份。\n\n在此期間升級為正式會員，即可恢復所有試算資料：\nhttps://portaly.cc/GinRollBT\n\n備份將於 30 天後自動刪除。'
+                text: '閰衣?歇蝯?\n\n??雿岫??Ultra Advisor嚗n\n雿?撣唾?撌脰◤?嚗??雿??? 30 憭拍?鞈??遢?n\n?冽迨?????箸迤撘??∴??喳?Ｗ儔??岫蝞???\nhttps://portaly.cc/GinRollBT\n\n?遢撠 30 憭拙??芸??芷??
               }
             ]);
           }
           
-          // 暫時不發送 Email
+          // ?急?銝??Email
           console.log(`[SKIPPED] Trial end email for ${userData.email}`);
 
           console.log(`Deleted expired account: ${userData.email}`);
@@ -640,8 +621,7 @@ exports.deleteExpiredAccounts = functions.pubsub
   });
 
 /**
- * 每日清理過期備份（每天凌晨 3:00 執行）
- */
+ * 瘥皜????遢嚗?憭拙???3:00 ?瑁?嚗? */
 exports.cleanupExpiredBackups = functions.pubsub
   .schedule('0 3 * * *')
   .timeZone('Asia/Taipei')
