@@ -6,9 +6,9 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
 
 // Pages
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Users from './pages/Users';
+import Login from './pages/Login.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import Users from './pages/Users.jsx';
 import MainLayout from './components/Layout';
 
 // 受保護的路由（需要登入）
