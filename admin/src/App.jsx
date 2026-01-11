@@ -1,104 +1,126 @@
+// ==========================================
+// 📁 admin/src/App.jsx
+// ✅ 已加入官網內容編輯器路由
+// ==========================================
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ConfigProvider } from 'antd';
-import zhTW from 'antd/locale/zh_TW';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
 
-// Pages
-import Login from './pages/Login.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import Users from './pages/Users.jsx';
-import MainLayout from './components/Layout';
+// 頁面組件
+import Layout from './components/Layout';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Users from './pages/Users';
+import SiteEditor from './pages/SiteEditor';  // ✅ 新增：官網內容編輯器
 
-// 受保護的路由（需要登入）
-const ProtectedRoute = ({ children }) => {
+// 載入畫面
+const LoadingScreen = () => (
+  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="text-center">
+      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent 
+                     rounded-full animate-spin mx-auto mb-4"></div>
+      <p className="text-gray-600 font-medium">載入中...</p>
+    </div>
+  </div>
+);
+
+// 受保護路由
+const ProtectedRoute = ({ children, user, isAdmin, loading }) => {
+  if (loading) return <LoadingScreen />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md text-center">
+          <div className="text-6xl mb-4">🚫</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">權限不足</h2>
+          <p className="text-gray-600 mb-6">您沒有管理員權限，無法存取此頁面。</p>
+          <button
+            onClick={() => auth.signOut()}
+            className="px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg 
+                     font-medium transition-colors"
+          >
+            返回登入
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return children;
+};
+
+function App() {
   const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      
+      if (currentUser) {
+        // 檢查是否為管理員
+        try {
+          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setIsAdmin(userData.role === 'admin' || userData.isAdmin === true);
+          } else {
+            setIsAdmin(false);
+          }
+        } catch (error) {
+          console.error('檢查管理員權限失敗:', error);
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+      
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl text-gray-500">載入中...</div>
-      </div>
-    );
-  }
+  if (loading) return <LoadingScreen />;
 
-  if (!user) {
-    return <Navigate to="/secret-admin-ultra-2026" replace />;
-  }
-
-  return children;
-};
-
-function App() {
   return (
-    <ConfigProvider locale={zhTW}>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Routes>
-          {/* ✅ 首頁：已登入的管理員 → 儀表板；未登入 → 登入頁 */}
-          <Route 
-            path="/" 
-            element={
-              <ProtectedRoute>
-                <Navigate to="/admin/dashboard" replace />
-              </ProtectedRoute>
-            } 
-          />
-
-          {/* ✅ 秘密後台登入入口（只有管理員知道）*/}
-          <Route path="/secret-admin-ultra-2026" element={<Login />} />
-
-          {/* ✅ 受保護的後台管理路由 */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <MainLayout />
-              </ProtectedRoute>
-            }
-          >
-            {/* 預設重定向到儀表板 */}
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            
-            {/* 儀表板 */}
-            <Route path="dashboard" element={<Dashboard />} />
-
-            {/* 用戶管理 */}
-            <Route path="users" element={<Users />} />
-
-            {/* 內容管理 */}
-            <Route path="content" element={<div>內容管理（即將推出）</div>} />
-
-            {/* LINE Bot 設定 */}
-            <Route path="linebot" element={<div>LINE Bot 設定（即將推出）</div>} />
-
-            {/* 統計分析 */}
-            <Route path="stats" element={<div>統計分析（即將推出）</div>} />
-
-            {/* 系統設定 */}
-            <Route path="settings" element={<div>系統設定（即將推出）</div>} />
-          </Route>
-
-          {/* ✅ 舊路徑重定向（向後兼容）*/}
-          <Route path="/dashboard" element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="/users" element={<Navigate to="/admin/users" replace />} />
-          <Route path="/login" element={<Navigate to="/secret-admin-ultra-2026" replace />} />
-
-          {/* ✅ 404 - 重定向到登入頁 */}
-          <Route path="*" element={<Navigate to="/secret-admin-ultra-2026" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </ConfigProvider>
+    <BrowserRouter>
+      <Routes>
+        {/* 登入頁 */}
+        <Route 
+          path="/login" 
+          element={
+            user && isAdmin ? <Navigate to="/" replace /> : <Login />
+          } 
+        />
+        
+        {/* 受保護的後台頁面 */}
+        <Route 
+          path="/" 
+          element={
+            <ProtectedRoute user={user} isAdmin={isAdmin} loading={loading}>
+              <Layout user={user} />
+            </ProtectedRoute>
+          }
+        >
+          {/* 總覽 */}
+          <Route index element={<Dashboard />} />
+          
+          {/* 用戶管理 */}
+          <Route path="users" element={<Users />} />
+          
+          {/* ✅ 新增：官網內容編輯器 */}
+          <Route path="site-editor" element={<SiteEditor />} />
+        </Route>
+        
+        {/* 404 導向首頁 */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

@@ -1,7 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
-import { 
+import React, { useState, useEffect, useRef } from 'react';import { 
   Activity, TrendingUp, TrendingDown, ShieldAlert, FileBarChart, Clock, 
   ChevronRight, Users, Rocket, Target, ShoppingBag, Zap, HeartPulse, 
   Crosshair, ShieldCheck, ArrowRight, Monitor, Smartphone, Database, 
@@ -12,96 +9,23 @@ import {
   PieChart, DollarSign, Gift, Shield, LineChart, Home, LogIn
 } from 'lucide-react';
 
+// 在其他 import 之後加入
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+
 // ==========================================
-// 🎯 整合版本：
-// 1. ✅ 保留原本所有精心設計的內容
-// 2. ✅ 加入動態公告橫幅（從 Firestore 讀取）
-// 3. ✅ 加入動態影片嵌入（從 Firestore 讀取）
-// 4. ✅ Logo "ULTRA" 使用 style 屬性確保紅色顯示
-// 5. ✅ Header 加入「登入系統」按鈕
+// 🎯 最終修正：
+// 1. ✅ Logo "ULTRA" 使用 style 屬性確保紅色顯示
+// 2. ✅ Header 加入「登入系統」按鈕
+// 3. ✅ 整合 onStart prop（連接到 App.tsx 的登入流程）
 // ==========================================
 
 const LOGO_URL = "https://lh3.googleusercontent.com/d/1CEFGRByRM66l-4sMMM78LUBUvAMiAIaJ";
 const COMMUNITY_LINK = "https://line.me/ti/g2/9Cca20iCP8J0KrmVRg5GOe1n5dSatYKO8ETTHw?utm_source=invitation&utm_medium=link_copy&utm_campaign=default";
-const LINE_OFFICIAL_ACCOUNT = "https://lin.ee/RFE8A5A";
+const LINE_OFFICIAL_ACCOUNT = "https://lin.ee/RFE8A5A"; // Ultra888 金鑰發放官方帳號
 
 // 🔥 管理員後台網址
 const ADMIN_URL = "https://admin.ultra-advisor.tw/secret-admin-ultra-2026";
-
-// ==========================================
-// 🔔 動態公告橫幅組件
-// ==========================================
-const AnnouncementBar = ({ data, onClose }) => {
-  if (!data?.enabled) return null;
-  
-  const typeStyles = {
-    info: 'bg-blue-600',
-    success: 'bg-emerald-600',
-    warning: 'bg-amber-500 text-black',
-    promo: 'bg-gradient-to-r from-purple-600 via-pink-500 to-red-500'
-  };
-  
-  return (
-    <div className={`${typeStyles[data.type] || typeStyles.info} text-white py-2.5 px-4 text-center text-sm font-bold relative z-[60]`}>
-      <span>{data.message}</span>
-      {data.link && data.linkText && (
-        <a 
-          href={data.link} 
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ml-2 underline hover:no-underline font-black"
-        >
-          {data.linkText} →
-        </a>
-      )}
-      {data.dismissible !== false && (
-        <button 
-          onClick={onClose} 
-          className="absolute right-4 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity"
-        >
-          <X size={16} />
-        </button>
-      )}
-    </div>
-  );
-};
-
-// ==========================================
-// 🎬 影片彈窗組件
-// ==========================================
-const VideoModal = ({ isOpen, onClose, videoData }) => {
-  if (!isOpen || !videoData) return null;
-  
-  return (
-    <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4">
-      <button
-        onClick={onClose}
-        className="absolute top-6 right-6 text-white hover:text-gray-300 transition-colors"
-      >
-        <X size={32} />
-      </button>
-      <div className="w-full max-w-5xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl">
-        {videoData.videoType === 'youtube' && videoData.videoUrl && (
-          <iframe
-            src={videoData.videoUrl}
-            className="w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            title="產品介紹影片"
-          />
-        )}
-        {videoData.videoType === 'html' && videoData.htmlVideoUrl && (
-          <iframe
-            src={videoData.htmlVideoUrl}
-            className="w-full h-full"
-            allowFullScreen
-            title="產品動畫展示"
-          />
-        )}
-      </div>
-    </div>
-  );
-};
 
 // ==========================================
 // 🔥 內測倒數計時器
@@ -130,7 +54,7 @@ const BetaCountdown = () => {
 // ==========================================
 // 🎨 優化後的 Hero Section
 // ==========================================
-const OptimizedHeroSection = ({ onFreeTrial, onWatchDemo, hasVideo }) => {
+const OptimizedHeroSection = ({ onFreeTrial, onWatchDemo }) => {
   return (
     <section className="relative min-h-screen bg-[#050b14] 
                         bg-[linear-gradient(rgba(77,163,255,0.05)_1px,transparent_1px),
@@ -196,10 +120,9 @@ const OptimizedHeroSection = ({ onFreeTrial, onWatchDemo, hasVideo }) => {
 
           <button 
             onClick={onWatchDemo}
-            className={`px-10 py-5 bg-transparent border-2 border-blue-400 text-blue-300 
+            className="px-10 py-5 bg-transparent border-2 border-blue-400 text-blue-300 
                      rounded-2xl font-bold text-lg hover:bg-blue-400/10 transition-all
-                     flex items-center gap-3 ${hasVideo ? '' : 'opacity-50'}`}
-          >
+                     flex items-center gap-3">
             <PlayCircle size={20} />
             觀看 60 秒示範
           </button>
@@ -465,9 +388,9 @@ const ProductShowcase = () => {
   );
 };
 
-// ==========================================
-// 📊 社會證明區塊
-// ==========================================
+// 其他組件（RealSocialProof, RealTestimonials, PricingSection）保持不變...
+// [為節省空間，這裡省略，實際使用時請從前一個版本複製]
+
 const RealSocialProof = () => {
   return (
     <section className="py-32 bg-slate-950">
@@ -576,9 +499,6 @@ const RealSocialProof = () => {
   );
 };
 
-// ==========================================
-// 💬 用戶見證區塊
-// ==========================================
 const RealTestimonials = () => {
   const testimonials = [
     {
@@ -679,9 +599,6 @@ const RealTestimonials = () => {
   );
 };
 
-// ==========================================
-// 💰 定價區塊
-// ==========================================
 const PricingSection = ({ onSelectPlan }) => {
   return (
     <section id="pricing" className="py-32 bg-slate-950">
@@ -843,64 +760,38 @@ const PricingSection = ({ onSelectPlan }) => {
 };
 
 // ==========================================
-// 🚀 主組件
+// 🚀 主組件（✅ 加入登入按鈕）
 // ==========================================
 export function LandingPage({ onStart, onSignup, onHome }) {
   const [view, setView] = useState('home');
   const [logoError, setLogoError] = useState(false);
 
-  // ✅ 動態內容狀態
-  const [dynamicContent, setDynamicContent] = useState({
-    announcement: null,
-    heroVideo: null,
-    contact: null
-  });
-  const [showAnnouncement, setShowAnnouncement] = useState(true);
-  const [showVideoModal, setShowVideoModal] = useState(false);
-
   // ✅ 管理员入口：连点 Logo 5 次
   const [clickCount, setClickCount] = useState(0);
   const clickTimerRef = useRef(null);
 
-  // ✅ 載入動態內容
-  useEffect(() => {
-    const loadDynamicContent = async () => {
-      try {
-        // 載入公告
-        const announcementDoc = await getDoc(doc(db, 'siteContent', 'announcement'));
-        // 載入 Hero 影片設定
-        const heroDoc = await getDoc(doc(db, 'siteContent', 'hero'));
-        // 載入聯絡資訊
-        const contactDoc = await getDoc(doc(db, 'siteContent', 'contact'));
-        
-        setDynamicContent({
-          announcement: announcementDoc.exists() ? announcementDoc.data() : null,
-          heroVideo: heroDoc.exists() ? heroDoc.data() : null,
-          contact: contactDoc.exists() ? contactDoc.data() : null
-        });
-      } catch (error) {
-        console.log('動態內容載入失敗，使用預設值:', error);
-      }
-    };
-    
-    loadDynamicContent();
-  }, []);
-
   // ✅ 管理员入口：处理 Logo 点击
   const handleLogoClick = () => {
+    // 先执行原本的回首页功能
     setView('home');
+    
+    // 管理员入口逻辑
     setClickCount(prev => prev + 1);
     
+    // 清除之前的计时器
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
     }
     
+    // 检查是否达到 5 次
     if (clickCount + 1 >= 5) {
+      // 跳转到管理后台
       window.location.href = ADMIN_URL;
       setClickCount(0);
       return;
     }
     
+    // 5 秒后重置计数
     clickTimerRef.current = setTimeout(() => {
       setClickCount(0);
     }, 5000);
@@ -916,28 +807,20 @@ export function LandingPage({ onStart, onSignup, onHome }) {
   }, []);
 
   const handleFreeTrial = () => {
+    // 導向 LINE 官方帳號取得 Ultra888 金鑰
     window.open(LINE_OFFICIAL_ACCOUNT, '_blank');
   };
 
-  // ✅ 修改：檢查是否有影片可以播放
   const handleWatchDemo = () => {
-    const videoData = dynamicContent.heroVideo;
-    if (videoData?.videoType !== 'none' && 
-        (videoData?.videoUrl || videoData?.htmlVideoUrl)) {
-      setShowVideoModal(true);
-    } else {
-      alert('Demo 影片功能開發中...\n\n建議：先拍攝一支 60 秒的產品展示影片');
-    }
+    alert('Demo 影片功能開發中...\n\n建議：先拍攝一支 60 秒的產品展示影片');
   };
-
-  // ✅ 檢查是否有影片
-  const hasVideo = dynamicContent.heroVideo?.videoType !== 'none' && 
-                   (dynamicContent.heroVideo?.videoUrl || dynamicContent.heroVideo?.htmlVideoUrl);
 
   const handleSelectPlan = (plan) => {
     if (plan === 'free') {
+      // 導向 LINE 官方帳號取得免費試用金鑰
       window.open(LINE_OFFICIAL_ACCOUNT, '_blank');
     } else {
+      // 導向年繳購買頁
       window.open('https://portaly.cc/GinRollBT', '_blank');
     }
   };
@@ -984,29 +867,20 @@ export function LandingPage({ onStart, onSignup, onHome }) {
   return (
     <div className="min-h-screen bg-[#050b14] text-white font-sans">
       
-      {/* ✅ 動態公告橫幅 */}
-      {showAnnouncement && dynamicContent.announcement?.enabled && (
-        <AnnouncementBar 
-          data={dynamicContent.announcement} 
-          onClose={() => setShowAnnouncement(false)} 
-        />
-      )}
-
       <MarketTicker />
 
-      {/* ✅ Header */}
+      {/* ✅ Header（修正 Logo 顏色 + 加入登入按鈕）*/}
       <header className="sticky top-0 z-40 bg-[#050b14]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3 cursor-pointer relative" 
-               onClick={handleLogoClick}
-               title={clickCount > 0 ? `再點 ${5 - clickCount} 次進入管理後台` : ''}>
-            <img 
+<div className="flex items-center gap-3 cursor-pointer relative" 
+     onClick={handleLogoClick}
+     title={clickCount > 0 ? `再点 ${5 - clickCount} 5入管理后台` : ''}>            <img 
               src={logoError ? "https://placehold.co/40x40/3b82f6/white?text=UA" : LOGO_URL}
               alt="Ultra Advisor"
               className="h-10 w-auto"
               onError={() => setLogoError(true)}
             />
-            <span className="text-xl font-black tracking-tight">
+<span className="text-xl font-black tracking-tight">
               <span style={{color: '#FF3A3A'}}>Ultra</span>
               <span className="text-blue-400">Advisor</span>
             </span>
@@ -1021,7 +895,6 @@ export function LandingPage({ onStart, onSignup, onHome }) {
               </div>
             )}
           </div>
-          
           <nav className="hidden md:flex items-center gap-8">
             <button 
               onClick={() => {
@@ -1042,7 +915,7 @@ export function LandingPage({ onStart, onSignup, onHome }) {
               社群
             </a>
             
-            {/* ✅ 登入按鈕 */}
+            {/* ✅ 加入登入按鈕 */}
             <button 
               onClick={onStart}
               className="flex items-center gap-2 text-slate-400 hover:text-white font-bold transition-colors">
@@ -1079,7 +952,6 @@ export function LandingPage({ onStart, onSignup, onHome }) {
         <OptimizedHeroSection 
           onFreeTrial={handleFreeTrial}
           onWatchDemo={handleWatchDemo}
-          hasVideo={hasVideo}
         />
 
         <ProductShowcase />
@@ -1126,13 +998,6 @@ export function LandingPage({ onStart, onSignup, onHome }) {
         </div>
       </footer>
 
-      {/* ✅ 影片彈窗 */}
-      <VideoModal 
-        isOpen={showVideoModal}
-        onClose={() => setShowVideoModal(false)}
-        videoData={dynamicContent.heroVideo}
-      />
-
       <style>{`
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(20px); }
@@ -1146,5 +1011,3 @@ export function LandingPage({ onStart, onSignup, onHome }) {
     </div>
   );
 }
-
-export default LandingPage;

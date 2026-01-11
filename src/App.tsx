@@ -227,7 +227,7 @@ export default function App() {
         }
     };
 
-    const handler = setTimeout(saveData, 1500);
+    const handler = setTimeout(saveData, 10000);
     return () => clearTimeout(handler);
   }, [
     goldenSafeData, giftData, estateData, studentData, superActiveData, 
