@@ -30,6 +30,9 @@ import FreeDashboardTool from './components/FreeDashboardTool';
 import MarketDataZone from './components/MarketDataZone'; 
 import GoldenSafeVault from './components/GoldenSafeVault'; 
 import FundTimeMachine from './components/FundTimeMachine'; 
+import AccountSettings from './pages/AccountSettings';
+
+// 在路由配置中加入
 
 const generateSessionId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
 

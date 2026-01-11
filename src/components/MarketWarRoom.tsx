@@ -1,59 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Download, RefreshCw, Loader2, Calculator, Percent, Home, TrendingUp, PieChart, Coins, Edit2, Info } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import React, { useState } from 'react';
+import { 
+  Calculator, Lock, Star, Sparkles, Home, TrendingUp, Coins, 
+  AlertCircle, Check, Eye, EyeOff, Info, Zap
+} from 'lucide-react';
+import { getAuth, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 
-// 🚀 數據驅動的動態渲染引擎 (保持不變)
-const DynamicChart = ({ data }: { data: any }) => {
-  if (!data || !data.values) return <div className="h-[110px]" />;
-  const { type, values } = data;
-  const width = 300;
-  const height = 100;
-  const padding = 20;
-
-  const points = values.map((v: number, i: number) => ({
-    x: padding + (i * (width - padding * 2)) / (values.length - 1),
-    y: height - padding - (v / 100) * (height - padding * 2)
-  }));
-
-  const getPath = () => {
-    let d = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 0; i < points.length - 1; i++) {
-      const curr = points[i];
-      const next = points[i + 1];
-      const cpX = (curr.x + next.x) / 2;
-      d += ` C ${cpX} ${curr.y}, ${cpX} ${next.y}, ${next.x} ${next.y}`;
-    }
-    return d;
-  };
-
-  return (
-    <div className="relative w-full h-[130px] flex items-center justify-center bg-white/[0.01] rounded-2xl border border-white/5 overflow-hidden">
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="z-10">
-        {type === 'structure' ? (
-          values.map((v: number, i: number) => (
-            <rect key={i} x={points[i].x - 12} y={points[i].y} width="24" height={height - padding - points[i].y} fill={i === values.length - 1 ? "#D4AF37" : "#444444"} rx="3" />
-          ))
-        ) : (
-          <>
-            <path d={getPath()} stroke="#D4AF37" strokeWidth="4" fill="none" strokeLinecap="round" />
-            <circle cx={points[points.length-1].x} cy={points[points.length-1].y} r="3" fill="#D4AF37" className="animate-pulse" />
-          </>
-        )}
-      </svg>
-      <div className="absolute bottom-4 w-[85%] h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-    </div>
-  );
-};
-
-const UltraProDashboard = ({ user, userName }: { user: any; userName?: any }) => {
-  const storyRef = useRef<HTMLDivElement>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isLoadingAI, setIsLoadingAI] = useState(true);
-  const [dailyData, setDailyData] = useState<any>(null);
-  const [advisorName, setAdvisorName] = useState(user?.displayName || userName || '專業財務顧問');
+// 與官網一致的深色科技風格
+const MarketWarRoom = ({ user, userName }: { user: any; userName?: any }) => {
+  const [activeTab, setActiveTab] = useState<'calculator' | 'password' | 'feature1' | 'feature2'>('calculator');
   const [calcMode, setCalcMode] = useState<'loan' | 'savings' | 'irr'>('loan');
+  
+  // 密碼修改狀態
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
 
-  // --- 試算數據狀態 ---
+  // 快速試算狀態
   const [loanAmount, setLoanAmount] = useState<number>(10000000);
   const [loanRate, setLoanRate] = useState<number>(2.2);
   const [loanYears, setLoanYears] = useState<number>(30);
@@ -67,22 +34,7 @@ const UltraProDashboard = ({ user, userName }: { user: any; userName?: any }) =>
   const [maturityValue, setMaturityValue] = useState<number>(1350000);
   const [irrYears, setIrrYears] = useState<number>(10);
 
-  const fetchAIInsight = async (force = false) => {
-    setIsLoadingAI(true);
-    if (force) setDailyData(null);
-    const API_URL = `https://us-central1-grbt-f87fa.cloudfunctions.net/getDailyInsight?t=${Date.now()}`;
-    try {
-      const response = await fetch(API_URL);
-      const data = await response.json();
-      setDailyData(Array.isArray(data) ? data[0] : data);
-    } catch (error) {
-      console.error(error);
-    } finally { setIsLoadingAI(false); }
-  };
-
-  useEffect(() => { fetchAIInsight(); }, []);
-
-  // --- 計算邏輯：貸款 ---
+  // 計算邏輯
   const getLoanResult = () => {
     const i = loanRate / 100 / 12;
     const n = loanYears * 12;
@@ -92,7 +44,6 @@ const UltraProDashboard = ({ user, userName }: { user: any; userName?: any }) =>
     return { monthly: Math.round(m), totalInterest: Math.round(totalInterest) };
   };
 
-  // --- 計算邏輯：複利 ---
   const getSavingsResult = () => {
     const r = expectedRate / 100 / 12;
     const n = investYears * 12;
@@ -103,165 +54,566 @@ const UltraProDashboard = ({ user, userName }: { user: any; userName?: any }) =>
     return { total: Math.round(totalMaturity), profit: Math.round(totalMaturity - totalCost) };
   };
 
-  // --- 計算邏輯：IRR ---
   const getIrrResult = () => {
     if (totalPremium <= 0 || maturityValue <= 0 || irrYears <= 0) return "0.00";
     return ((Math.pow(maturityValue / totalPremium, 1 / irrYears) - 1) * 100).toFixed(2);
   };
 
-  const handleDownload = async () => {
-    if (!storyRef.current) return;
-    setIsGenerating(true);
-    const canvas = await html2canvas(storyRef.current, { scale: 3, useCORS: true, backgroundColor: "#080808" });
-    const link = document.createElement('a');
-    link.download = `Ultra_Insight_${Date.now()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-    setIsGenerating(false);
+  // 密碼驗證
+  const validatePassword = (password: string) => {
+    const regex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+    return regex.test(password);
   };
 
-  return (
-    <div className="flex flex-col lg:flex-row items-start justify-center gap-10 p-6 lg:p-12 bg-black min-h-screen text-white font-sans selection:bg-amber-500/30">
+  // 修改密碼
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessage({ type: '', text: '' });
+
+    if (!validatePassword(newPassword)) {
+      setMessage({ 
+        type: 'error', 
+        text: '密碼必須至少 8 位，包含英文和數字' 
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: 'error', text: '新密碼與確認密碼不符' });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
+
+      if (!currentUser || !currentUser.email) {
+        throw new Error('未登入');
+      }
+
+      const credential = EmailAuthProvider.credential(
+        currentUser.email,
+        oldPassword
+      );
+      await reauthenticateWithCredential(currentUser, credential);
+      await updatePassword(currentUser, newPassword);
+
+      setMessage({ 
+        type: 'success', 
+        text: '密碼修改成功！3 秒後將重新登入' 
+      });
+
+      setTimeout(() => {
+        auth.signOut();
+        window.location.href = '/login';
+      }, 3000);
+
+    } catch (error: any) {
+      console.error('修改密碼失敗:', error);
       
-      {/* 左側：智庫圖卡 */}
-      <div className="w-full max-w-[360px] flex flex-col gap-6">
-        <div className="flex gap-3">
-          <button onClick={() => fetchAIInsight(true)} className="flex-1 bg-gray-900 border border-gray-700 py-3 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-gray-800 focus:ring-1 focus:ring-amber-500"><RefreshCw size={14} /><span className="text-xs font-bold">換個洞見</span></button>
-          <button onClick={handleDownload} className="flex-1 bg-amber-600 py-3 rounded-xl font-bold shadow-lg shadow-amber-900/20 active:scale-95 transition-all hover:bg-amber-500">{isGenerating ? '生成中...' : '儲存高清圖'}</button>
-        </div>
-        
-        <div ref={storyRef} className="relative aspect-[9/16] bg-[#080808] p-8 border border-white/5 shadow-2xl overflow-hidden flex flex-col">
-          {isLoadingAI && <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center"><Loader2 className="animate-spin text-amber-500" /></div>}
-          <div className="absolute top-5 right-6 z-20 flex items-center gap-1.5 opacity-40">
-            <span className="text-white/30 text-[7px] uppercase tracking-[0.2em]">Ultra Advisor</span>
-            <div className="w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center p-[1px]"><img src="/logo.png" className="w-2.5 h-2.5 invert" alt="logo" /></div>
-          </div>
-          <div className="relative z-10 mt-1">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="h-[1px] w-5 bg-amber-500"></div>
-              <span className="text-amber-500 text-[8px] tracking-[0.4em] font-black uppercase">Ultra Insight</span>
+      let errorMessage = '修改失敗，請稍後再試';
+      if (error.code === 'auth/wrong-password') {
+        errorMessage = '目前密碼錯誤';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = '新密碼強度不足';
+      }
+      
+      setMessage({ type: 'error', text: errorMessage });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Tab 配置
+  const tabs = [
+    { id: 'calculator' as const, label: '快速試算', icon: <Calculator size={18} /> },
+    { id: 'password' as const, label: '密碼修改', icon: <Lock size={18} /> },
+    { id: 'feature1' as const, label: '敬請期待', icon: <Star size={18} /> },
+    { id: 'feature2' as const, label: '敬請期待', icon: <Sparkles size={18} /> }
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#050b14] 
+                    bg-[linear-gradient(rgba(77,163,255,0.05)_1px,transparent_1px),
+                       linear-gradient(90deg,rgba(77,163,255,0.05)_1px,transparent_1px)]
+                    bg-[length:40px_40px] text-white">
+      
+      {/* Header */}
+      <div className="border-b border-white/10 bg-[#050b14]/80 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-blue-600/10 rounded-2xl flex items-center justify-center border border-blue-500/20">
+              <Zap className="text-blue-400" size={24} />
             </div>
-            <h1 className="text-2xl font-black mb-1.5 leading-tight tracking-tight text-white">{dailyData?.title}</h1>
-            <p className="text-amber-200/30 text-[10px] font-bold tracking-wide italic">{dailyData?.subtitle}</p>
-          </div>
-          <div className="my-5"><DynamicChart data={dailyData?.visualData} /></div>
-          <div className="relative z-10 flex-1 flex flex-col justify-start gap-4 px-1">
-            {dailyData?.concepts?.map((c: any, i: number) => (
-              <div key={i} className="flex gap-4 items-start border-b border-white/5 pb-2 last:border-0">
-                <div className="flex-shrink-0 w-6 h-6 rounded-full border border-amber-500/40 flex items-center justify-center text-amber-500 text-[9px] font-black bg-amber-500/5">{c.tag}</div>
-                <p className="text-[12px] text-gray-300 font-medium leading-relaxed">{c.content}</p>
-              </div>
-            ))}
-          </div>
-          <div className="relative z-10 mt-4 mb-6 border-l border-amber-600/40 pl-3 py-0.5"><p className="text-[10px] text-gray-500 italic leading-snug">"{dailyData?.conclusion}"</p></div>
-          <div className="relative z-10 mt-auto pt-3 border-t border-white/10 flex justify-between items-end opacity-80">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-gray-800 rounded flex items-center justify-center border border-white/10"><img src="/logo.png" className="w-3 h-3 opacity-50" alt="logo" /></div>
-              <div><p className="text-[10px] font-black text-white leading-none mb-1 tracking-tight">{advisorName}</p><p className="text-[5px] text-gray-600 uppercase font-bold tracking-tighter">Wealth Strategy Elite</p></div>
+            <div>
+              <h1 className="text-2xl font-black tracking-tight">
+                Ultra <span className="text-blue-400">戰情室</span>
+              </h1>
+              <p className="text-slate-500 text-sm">
+                {user?.email || userName || '專業財務顧問工具'}
+              </p>
             </div>
-            <p className="text-[6px] text-amber-900/40 font-black tracking-tighter uppercase">#UltraAdvisor</p>
           </div>
         </div>
       </div>
 
-      {/* --- 右側：專業財務閃算機 --- */}
-      <div className="w-full max-w-[420px] bg-gray-900/30 p-8 rounded-[2.5rem] border border-gray-800 backdrop-blur-xl shadow-2xl flex flex-col gap-8">
-        
-        {/* Tab 選擇器 */}
-        <div className="flex bg-black/40 p-1 rounded-2xl">
-          {[
-            {id:'loan', n:'貸款月付', i:<Home size={14}/>},
-            {id:'savings', n:'複利增值', i:<TrendingUp size={14}/>},
-            {id:'irr', n:'儲蓄年化', i:<Coins size={14}/>}
-          ].map(t => (
-            <button key={t.id} onClick={() => setCalcMode(t.id as any)} className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-xl transition-all ${calcMode === t.id ? 'bg-amber-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>
-              {t.i} <span className="text-[11px] font-black uppercase tracking-wider">{t.n}</span>
+      {/* Tab Navigation */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="flex flex-wrap gap-3 mb-8">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all
+                ${activeTab === tab.id
+                  ? 'bg-blue-600 text-white shadow-[0_0_30px_rgba(59,130,246,0.4)]'
+                  : 'bg-slate-900/50 text-slate-400 hover:bg-slate-800 border border-slate-800'
+                }`}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>
 
-        {/* 輸入與輸出區塊 */}
-        <div className="flex-1 space-y-6">
-          {calcMode === 'loan' && (
-            <>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[10px] text-gray-500 font-black mb-2 block tracking-widest uppercase">貸款總額 (TWD)</label>
-                  <input type="number" value={loanAmount} onChange={e=>setLoanAmount(Number(e.target.value))} className="w-full bg-black/50 border border-gray-700 rounded-xl py-3 px-4 text-amber-500 font-black focus:border-amber-500 outline-none transition-all" />
+        {/* Tab Content */}
+        <div className="animate-fade-in">
+          
+          {/* Tab 1: 快速試算 */}
+          {activeTab === 'calculator' && (
+            <div className="space-y-6">
+              
+              {/* 計算模式選擇 */}
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { id: 'loan' as const, name: '貸款月付', icon: <Home size={16} /> },
+                  { id: 'savings' as const, name: '複利增值', icon: <TrendingUp size={16} /> },
+                  { id: 'irr' as const, name: '儲蓄年化', icon: <Coins size={16} /> }
+                ].map(mode => (
+                  <button
+                    key={mode.id}
+                    onClick={() => setCalcMode(mode.id)}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all
+                      ${calcMode === mode.id
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-slate-900/50 text-slate-400 hover:text-white border border-slate-800'
+                      }`}
+                  >
+                    {mode.icon}
+                    <span>{mode.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* 計算器內容 */}
+              <div className="grid md:grid-cols-2 gap-6">
+                
+                {/* 輸入區 */}
+                <div className="bg-slate-900/50 rounded-[2rem] p-8 border border-slate-800">
+                  <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                    <Calculator size={20} className="text-blue-400" />
+                    輸入參數
+                  </h3>
+
+                  {calcMode === 'loan' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm text-slate-400 font-bold mb-2 block">
+                          貸款總額 (TWD)
+                        </label>
+                        <input
+                          type="number"
+                          value={loanAmount}
+                          onChange={e => setLoanAmount(Number(e.target.value))}
+                          className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4
+                                   text-white font-bold focus:border-blue-500 outline-none transition-all"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm text-slate-400 font-bold mb-2 block">
+                            年利率 (%)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={loanRate}
+                            onChange={e => setLoanRate(Number(e.target.value))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4
+                                     outline-none focus:border-blue-500 transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm text-slate-400 font-bold mb-2 block">
+                            貸款年期
+                          </label>
+                          <input
+                            type="number"
+                            value={loanYears}
+                            onChange={e => setLoanYears(Number(e.target.value))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4
+                                     outline-none focus:border-blue-500 transition-all"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {calcMode === 'savings' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm text-slate-400 font-bold mb-2 block">
+                            單筆本金
+                          </label>
+                          <input
+                            type="number"
+                            value={initialCapital}
+                            onChange={e => setInitialCapital(Number(e.target.value))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4
+                                     outline-none focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm text-slate-400 font-bold mb-2 block">
+                            每月投入
+                          </label>
+                          <input
+                            type="number"
+                            value={monthlyInvest}
+                            onChange={e => setMonthlyInvest(Number(e.target.value))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4
+                                     outline-none focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm text-slate-400 font-bold mb-2 block">
+                            年報酬率 (%)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={expectedRate}
+                            onChange={e => setExpectedRate(Number(e.target.value))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4
+                                     outline-none focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm text-slate-400 font-bold mb-2 block">
+                            投資年期
+                          </label>
+                          <input
+                            type="number"
+                            value={investYears}
+                            onChange={e => setInvestYears(Number(e.target.value))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4
+                                     outline-none focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {calcMode === 'irr' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm text-slate-400 font-bold mb-2 block">
+                          累積繳交保費
+                        </label>
+                        <input
+                          type="number"
+                          value={totalPremium}
+                          onChange={e => setTotalPremium(Number(e.target.value))}
+                          className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4
+                                   outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm text-slate-400 font-bold mb-2 block">
+                            滿期領回
+                          </label>
+                          <input
+                            type="number"
+                            value={maturityValue}
+                            onChange={e => setMaturityValue(Number(e.target.value))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4
+                                     text-blue-400 font-bold outline-none focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm text-slate-400 font-bold mb-2 block">
+                            總年期
+                          </label>
+                          <input
+                            type="number"
+                            value={irrYears}
+                            onChange={e => setIrrYears(Number(e.target.value))}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4
+                                     outline-none focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><label className="text-[10px] text-gray-500 block mb-2 font-bold uppercase">年利率 %</label><input type="number" value={loanRate} onChange={e=>setLoanRate(Number(e.target.value))} className="w-full bg-black/50 border border-gray-700 rounded-xl py-3 px-4 outline-none focus:border-amber-500 transition-all" /></div>
-                  <div><label className="text-[10px] text-gray-500 block mb-2 font-bold uppercase">年期</label><input type="number" value={loanYears} onChange={e=>setLoanYears(Number(e.target.value))} className="w-full bg-black/50 border border-gray-700 rounded-xl py-3 px-4 outline-none focus:border-amber-500 transition-all" /></div>
+
+                {/* 結果區 */}
+                <div className="bg-slate-900/50 rounded-[2rem] p-8 border border-slate-800">
+                  <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                    <TrendingUp size={20} className="text-emerald-400" />
+                    計算結果
+                  </h3>
+
+                  {calcMode === 'loan' && (
+                    <div className="space-y-6">
+                      <div className="bg-blue-600/10 border border-blue-500/20 rounded-2xl p-6">
+                        <p className="text-slate-400 text-sm font-bold mb-2">預估月付金</p>
+                        <p className="text-4xl font-black text-blue-400">
+                          {getLoanResult().monthly.toLocaleString()}
+                          <span className="text-lg text-slate-500 ml-2">TWD</span>
+                        </p>
+                      </div>
+                      <div className="border-t border-slate-800 pt-6">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 font-bold">累積利息支出</span>
+                          <span className="text-xl font-bold text-white">
+                            {getLoanResult().totalInterest.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {calcMode === 'savings' && (
+                    <div className="space-y-6">
+                      <div className="bg-emerald-600/10 border border-emerald-500/20 rounded-2xl p-6">
+                        <p className="text-slate-400 text-sm font-bold mb-2">滿期資產總額</p>
+                        <p className="text-4xl font-black text-emerald-400">
+                          {getSavingsResult().total.toLocaleString()}
+                          <span className="text-lg text-slate-500 ml-2">TWD</span>
+                        </p>
+                      </div>
+                      <div className="border-t border-slate-800 pt-6">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 font-bold">累積淨回報</span>
+                          <span className="text-xl font-bold text-emerald-400">
+                            +{getSavingsResult().profit.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {calcMode === 'irr' && (
+                    <div className="bg-blue-600/10 border border-blue-500/20 rounded-2xl p-8">
+                      <p className="text-slate-400 text-xs font-bold mb-3 uppercase tracking-widest text-center">
+                        實質年化報酬率 (IRR)
+                      </p>
+                      <p className="text-6xl font-black text-blue-400 text-center">
+                        {getIrrResult()}
+                        <span className="text-2xl ml-2">%</span>
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 提示區 */}
+                  <div className="mt-6 p-4 bg-slate-950 rounded-xl border border-slate-800">
+                    <div className="flex gap-3 items-start">
+                      <Info size={16} className="text-blue-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        數據僅供參考，實際數值請以合約或各金融機構最終核定為準。
+                        此工具能幫助您在面談現場快速試算。
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="pt-6 border-t border-white/5 space-y-4">
-                <div className="flex justify-between items-end"><span className="text-gray-400 text-xs font-bold">預估月付金</span><span className="text-3xl font-black text-white">{getLoanResult().monthly.toLocaleString()}<small className="text-[10px] text-amber-600 ml-1">TWD</small></span></div>
-                <div className="flex justify-between items-end"><span className="text-gray-400 text-xs">累積利息支出</span><span className="text-lg font-bold text-gray-300">{getLoanResult().totalInterest.toLocaleString()}</span></div>
-              </div>
-            </>
+            </div>
           )}
 
-          {calcMode === 'savings' && (
-            <>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div><label className="text-[10px] text-gray-500 font-black mb-2 block uppercase">單筆本金</label><input type="number" value={initialCapital} onChange={e=>setInitialCapital(Number(e.target.value))} className="w-full bg-black/50 border border-gray-700 rounded-xl py-3 px-4 outline-none focus:border-amber-500" /></div>
-                  <div><label className="text-[10px] text-gray-500 font-black mb-2 block uppercase">每月投入</label><input type="number" value={monthlyInvest} onChange={e=>setMonthlyInvest(Number(e.target.value))} className="w-full bg-black/50 border border-gray-700 rounded-xl py-3 px-4 outline-none focus:border-amber-500" /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><label className="text-[10px] text-gray-500 font-black mb-2 block uppercase">年報酬 %</label><input type="number" value={expectedRate} onChange={e=>setExpectedRate(Number(e.target.value))} className="w-full bg-black/50 border border-gray-700 rounded-xl py-3 px-4 outline-none focus:border-amber-500" /></div>
-                  <div><label className="text-[10px] text-gray-500 font-black mb-2 block uppercase">年期</label><input type="number" value={investYears} onChange={e=>setInvestYears(Number(e.target.value))} className="w-full bg-black/50 border border-gray-700 rounded-xl py-3 px-4 outline-none focus:border-amber-500" /></div>
+          {/* Tab 2: 密碼修改 */}
+          {activeTab === 'password' && (
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-slate-900/50 rounded-[2rem] p-8 border border-slate-800">
+                <h3 className="text-2xl font-bold mb-2 flex items-center gap-2">
+                  <Lock className="text-blue-400" />
+                  修改密碼
+                </h3>
+                <p className="text-slate-400 text-sm mb-8">
+                  為了您的帳戶安全，請定期更換密碼
+                </p>
+
+                <form onSubmit={handleChangePassword} className="space-y-6">
+                  
+                  {/* 目前密碼 */}
+                  <div>
+                    <label className="text-sm text-slate-400 font-bold mb-2 block">
+                      目前密碼
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showOldPassword ? 'text' : 'password'}
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 pr-12
+                                 outline-none focus:border-blue-500 transition-all"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowOldPassword(!showOldPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      >
+                        {showOldPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 新密碼 */}
+                  <div>
+                    <label className="text-sm text-slate-400 font-bold mb-2 block">
+                      新密碼
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 pr-12
+                                 outline-none focus:border-blue-500 transition-all"
+                        placeholder="至少 8 位，包含英文和數字"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      >
+                        {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 確認密碼 */}
+                  <div>
+                    <label className="text-sm text-slate-400 font-bold mb-2 block">
+                      確認新密碼
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 pr-12
+                                 outline-none focus:border-blue-500 transition-all"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      >
+                        {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 訊息提示 */}
+                  {message.text && (
+                    <div className={`p-4 rounded-xl flex items-center gap-3 ${
+                      message.type === 'success' 
+                        ? 'bg-emerald-600/10 border border-emerald-500/20 text-emerald-400' 
+                        : 'bg-red-600/10 border border-red-500/20 text-red-400'
+                    }`}>
+                      {message.type === 'success' ? (
+                        <Check size={20} />
+                      ) : (
+                        <AlertCircle size={20} />
+                      )}
+                      <span className="font-bold">{message.text}</span>
+                    </div>
+                  )}
+
+                  {/* 送出按鈕 */}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg
+                             hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed
+                             shadow-[0_0_30px_rgba(59,130,246,0.3)] hover:shadow-[0_0_50px_rgba(59,130,246,0.5)]
+                             transition-all"
+                  >
+                    {loading ? '處理中...' : '修改密碼'}
+                  </button>
+                </form>
+
+                {/* 安全提示 */}
+                <div className="mt-8 p-6 bg-slate-950 rounded-xl border border-slate-800">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Lock className="text-blue-400" size={18} />
+                    <p className="text-sm font-bold text-slate-300">安全提示</p>
+                  </div>
+                  <ul className="text-sm text-slate-400 space-y-2">
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-400 mt-1">•</span>
+                      <span>密碼長度至少 8 位</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-400 mt-1">•</span>
+                      <span>必須包含英文字母和數字</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-400 mt-1">•</span>
+                      <span>不要使用容易猜測的密碼</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-400 mt-1">•</span>
+                      <span>定期更換密碼以確保安全</span>
+                    </li>
+                  </ul>
                 </div>
               </div>
-              <div className="pt-6 border-t border-white/5 space-y-4">
-                <div className="flex justify-between items-end"><span className="text-gray-400 text-xs font-bold">滿期資產總額</span><span className="text-3xl font-black text-amber-500">{getSavingsResult().total.toLocaleString()}<small className="text-[10px] ml-1">TWD</small></span></div>
-                <div className="flex justify-between items-end"><span className="text-gray-400 text-xs font-medium">累積淨回報</span><span className="text-lg font-bold text-white">+{getSavingsResult().profit.toLocaleString()}</span></div>
-              </div>
-            </>
+            </div>
           )}
 
-          {calcMode === 'irr' && (
-            <>
-              <div className="space-y-4">
-                <div><label className="text-[10px] text-gray-500 font-black mb-2 block uppercase">累積繳交保費</label><input type="number" value={totalPremium} onChange={e=>setTotalPremium(Number(e.target.value))} className="w-full bg-black/50 border border-gray-700 rounded-xl py-3 px-4 text-white font-bold outline-none focus:border-amber-500" /></div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><label className="text-[10px] text-gray-500 font-black mb-2 block uppercase">滿期領回</label><input type="number" value={maturityValue} onChange={e=>setMaturityValue(Number(e.target.value))} className="w-full bg-black/50 border border-gray-700 rounded-xl py-3 px-4 text-amber-500 font-black outline-none focus:border-amber-500" /></div>
-                  <div><label className="text-[10px] text-gray-500 font-black mb-2 block uppercase">總年期</label><input type="number" value={irrYears} onChange={e=>setIrrYears(Number(e.target.value))} className="w-full bg-black/50 border border-gray-700 rounded-xl py-3 px-4 outline-none focus:border-amber-500" /></div>
+          {/* Tab 3 & 4: 敬請期待 */}
+          {(activeTab === 'feature1' || activeTab === 'feature2') && (
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-slate-900/50 rounded-[2rem] p-16 border border-slate-800 text-center">
+                <div className="w-20 h-20 bg-blue-600/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-500/20">
+                  <Sparkles className="text-blue-400" size={40} />
+                </div>
+                <h3 className="text-3xl font-black mb-4">新功能開發中</h3>
+                <p className="text-slate-400 text-lg mb-8">
+                  我們正在努力開發更多強大功能，敬請期待！
+                </p>
+                <div className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600/10 border border-blue-500/20 rounded-xl text-blue-400 font-bold">
+                  <Info size={18} />
+                  <span>預計 Phase 2 推出</span>
                 </div>
               </div>
-              <div className="pt-6 border-t border-white/5">
-                <div className="flex flex-col items-center py-4 bg-amber-500/5 rounded-2xl border border-amber-500/10">
-                  <span className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">實質年化報酬率 (IRR)</span>
-                  <span className="text-5xl font-black text-amber-500">{getIrrResult()}<small className="text-lg ml-1">%</small></span>
-                </div>
-              </div>
-            </>
+            </div>
           )}
-        </div>
-
-        {/* 底部：個人化設定與提示 */}
-        <div className="space-y-4 border-t border-white/5 pt-6">
-          <div className="flex items-center gap-2 mb-2">
-            <Edit2 size={14} className="text-amber-500" />
-            <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">顧問品牌設定</span>
-          </div>
-          <input 
-            type="text" 
-            value={advisorName} 
-            onChange={(e) => setAdvisorName(e.target.value)} 
-            placeholder="輸入顧問姓名"
-            className="w-full bg-black/30 border border-gray-800 rounded-xl py-2 px-4 text-sm text-white focus:border-amber-500 outline-none transition-all placeholder:text-gray-700" 
-          />
-          <div className="p-3 bg-amber-500/5 rounded-xl border border-amber-500/10 flex gap-3 items-start">
-             <Info size={14} className="text-amber-500 flex-shrink-0 mt-0.5" />
-             <p className="text-[10px] text-gray-400 leading-relaxed italic">
-               數據僅供參考。實際數值請以合約或各金融機構最終核定為準。這台閃算機能幫你在面談現場快速擊破客戶的模糊感。
-             </p>
-          </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 };
 
-export default UltraProDashboard;
+export default MarketWarRoom;
