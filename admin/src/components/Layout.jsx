@@ -1,6 +1,7 @@
 // ==========================================
 // 📁 admin/src/components/Layout.jsx
 // ✅ 已加入「官網內容」選單項目
+// ✅ 路徑修正為 /admin/xxx
 // ==========================================
 
 import React, { useState } from 'react';
@@ -10,7 +11,7 @@ import { auth } from '../firebase';
 import { 
   LayoutDashboard, 
   Users, 
-  Globe,      // ✅ 新增：官網圖示
+  Globe,
   LogOut, 
   Menu, 
   X,
@@ -26,27 +27,26 @@ export default function Layout({ user }) {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      navigate('/login');
+      navigate('/secret-admin-ultra-2026');
     } catch (error) {
       console.error('登出失敗:', error);
     }
   };
 
-  // 選單項目
+  // ✅ 選單項目 - 路徑改為 /admin/xxx
   const menuItems = [
     {
-      path: '/',
+      path: '/admin/dashboard',
       icon: LayoutDashboard,
-      label: '總覽',
-      end: true
+      label: '總覽'
     },
     {
-      path: '/users',
+      path: '/admin/users',
       icon: Users,
       label: '用戶管理'
     },
     {
-      path: '/site-editor',  // ✅ 新增
+      path: '/admin/site-editor',  // ✅ 新增：官網內容
       icon: Globe,
       label: '官網內容'
     }
@@ -86,7 +86,6 @@ export default function Layout({ user }) {
             <NavLink
               key={item.path}
               to={item.path}
-              end={item.end}
               className={navLinkClass}
             >
               <item.icon size={20} />
@@ -156,7 +155,6 @@ export default function Layout({ user }) {
                 <NavLink
                   key={item.path}
                   to={item.path}
-                  end={item.end}
                   onClick={() => setSidebarOpen(false)}
                   className={navLinkClass}
                 >

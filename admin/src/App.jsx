@@ -1,126 +1,118 @@
-// ==========================================
-// 📁 admin/src/App.jsx
-// ✅ 已加入官網內容編輯器路由
-// ==========================================
-
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { ConfigProvider } from 'antd';
+import zhTW from 'antd/locale/zh_TW';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { auth } from './firebase';
 
-// 頁面組件
-import Layout from './components/Layout';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Users from './pages/Users';
-import SiteEditor from './pages/SiteEditor';  // ✅ 新增：官網內容編輯器
+// Pages
+import Login from './pages/Login.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import Users from './pages/Users.jsx';
+import SiteEditor from './pages/SiteEditor.jsx';
+import MainLayout from './components/Layout';
 
-// 載入畫面
-const LoadingScreen = () => (
-  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-    <div className="text-center">
-      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent 
-                     rounded-full animate-spin mx-auto mb-4"></div>
-      <p className="text-gray-600 font-medium">載入中...</p>
-    </div>
-  </div>
-);
+// ✅ Debug 組件：顯示當前路由
+const DebugRoute = () => {
+  const location = useLocation();
+  console.log('📍 當前路由:', location.pathname);
+  return null;
+};
 
-// 受保護路由
-const ProtectedRoute = ({ children, user, isAdmin, loading }) => {
-  if (loading) return <LoadingScreen />;
-  if (!user) return <Navigate to="/login" replace />;
-  if (!isAdmin) {
+// ✅ 受保護的路由
+const ProtectedRoute = ({ children }) => {
+  const [user, setUser] = useState(undefined); // undefined = 載入中, null = 未登入
+  const location = useLocation();
+
+  useEffect(() => {
+    console.log('🔄 ProtectedRoute useEffect 啟動');
+    
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      console.log('🔥 onAuthStateChanged 觸發:', currentUser ? `已登入 (${currentUser.email})` : '未登入');
+      console.log('🔥 User UID:', currentUser?.uid);
+      setUser(currentUser);
+    });
+
+    return () => {
+      console.log('🧹 ProtectedRoute cleanup');
+      unsubscribe();
+    };
+  }, []);
+
+  console.log('🎯 ProtectedRoute render, user:', user === undefined ? 'loading' : (user ? user.email : 'null'));
+  console.log('🎯 當前路徑:', location.pathname);
+
+  // 載入中
+  if (user === undefined) {
+    console.log('⏳ 顯示載入畫面');
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md text-center">
-          <div className="text-6xl mb-4">🚫</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">權限不足</h2>
-          <p className="text-gray-600 mb-6">您沒有管理員權限，無法存取此頁面。</p>
-          <button
-            onClick={() => auth.signOut()}
-            className="px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg 
-                     font-medium transition-colors"
-          >
-            返回登入
-          </button>
+      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-xl text-slate-400">載入中...</div>
+          <div className="text-sm text-slate-500 mt-2">檢查登入狀態</div>
         </div>
       </div>
     );
   }
+
+  // 未登入
+  if (user === null) {
+    console.log('🚫 未登入，重定向到登入頁');
+    return <Navigate to="/secret-admin-ultra-2026" replace />;
+  }
+
+  // 已登入
+  console.log('✅ 已登入，顯示內容');
   return children;
 };
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      
-      if (currentUser) {
-        // 檢查是否為管理員
-        try {
-          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            setIsAdmin(userData.role === 'admin' || userData.isAdmin === true);
-          } else {
-            setIsAdmin(false);
-          }
-        } catch (error) {
-          console.error('檢查管理員權限失敗:', error);
-          setIsAdmin(false);
-        }
-      } else {
-        setIsAdmin(false);
-      }
-      
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  if (loading) return <LoadingScreen />;
+  console.log('🚀 App 組件渲染');
 
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* 登入頁 */}
-        <Route 
-          path="/login" 
-          element={
-            user && isAdmin ? <Navigate to="/" replace /> : <Login />
-          } 
-        />
-        
-        {/* 受保護的後台頁面 */}
-        <Route 
-          path="/" 
-          element={
-            <ProtectedRoute user={user} isAdmin={isAdmin} loading={loading}>
-              <Layout user={user} />
-            </ProtectedRoute>
-          }
-        >
-          {/* 總覽 */}
-          <Route index element={<Dashboard />} />
-          
-          {/* 用戶管理 */}
-          <Route path="users" element={<Users />} />
-          
-          {/* ✅ 新增：官網內容編輯器 */}
-          <Route path="site-editor" element={<SiteEditor />} />
-        </Route>
-        
-        {/* 404 導向首頁 */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <ConfigProvider locale={zhTW}>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <DebugRoute />
+        <Routes>
+          {/* 首頁 */}
+          <Route 
+            path="/" 
+            element={
+              <ProtectedRoute>
+                <Navigate to="/admin/dashboard" replace />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* 登入頁 */}
+          <Route path="/secret-admin-ultra-2026" element={<Login />} />
+
+          {/* 後台路由 */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <MainLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="users" element={<Users />} />
+            <Route path="site-editor" element={<SiteEditor />} />
+          </Route>
+
+          {/* 舊路徑重定向 */}
+          <Route path="/dashboard" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/users" element={<Navigate to="/admin/users" replace />} />
+          <Route path="/login" element={<Navigate to="/secret-admin-ultra-2026" replace />} />
+
+          {/* 404 */}
+          <Route path="*" element={<Navigate to="/secret-admin-ultra-2026" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ConfigProvider>
   );
 }
 
