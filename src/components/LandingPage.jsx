@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { 
+import React, { useState, useEffect, useRef } from 'react';import { 
   Activity, TrendingUp, TrendingDown, ShieldAlert, FileBarChart, Clock, 
   ChevronRight, Users, Rocket, Target, ShoppingBag, Zap, HeartPulse, 
   Crosshair, ShieldCheck, ArrowRight, Monitor, Smartphone, Database, 
@@ -20,6 +19,9 @@ import {
 const LOGO_URL = "https://lh3.googleusercontent.com/d/1CEFGRByRM66l-4sMMM78LUBUvAMiAIaJ";
 const COMMUNITY_LINK = "https://line.me/ti/g2/9Cca20iCP8J0KrmVRg5GOe1n5dSatYKO8ETTHw?utm_source=invitation&utm_medium=link_copy&utm_campaign=default";
 const LINE_OFFICIAL_ACCOUNT = "https://lin.ee/RFE8A5A"; // Ultra888 金鑰發放官方帳號
+
+// 🔥 管理員後台網址
+const ADMIN_URL = "https://admin.ultra-advisor.tw/secret-admin-ultra-2026";
 
 // ==========================================
 // 🔥 內測倒數計時器
@@ -760,6 +762,46 @@ export function LandingPage({ onStart, onSignup, onHome }) {
   const [view, setView] = useState('home');
   const [logoError, setLogoError] = useState(false);
 
+  // ✅ 管理员入口：连点 Logo 5 次
+  const [clickCount, setClickCount] = useState(0);
+  const clickTimerRef = useRef(null);
+
+  // ✅ 管理员入口：处理 Logo 点击
+  const handleLogoClick = () => {
+    // 先执行原本的回首页功能
+    setView('home');
+    
+    // 管理员入口逻辑
+    setClickCount(prev => prev + 1);
+    
+    // 清除之前的计时器
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+    }
+    
+    // 检查是否达到 5 次
+    if (clickCount + 1 >= 5) {
+      // 跳转到管理后台
+      window.location.href = ADMIN_URL;
+      setClickCount(0);
+      return;
+    }
+    
+    // 5 秒后重置计数
+    clickTimerRef.current = setTimeout(() => {
+      setClickCount(0);
+    }, 5000);
+  };
+
+  // ✅ 清理计时器
+  useEffect(() => {
+    return () => {
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleFreeTrial = () => {
     // 導向 LINE 官方帳號取得 Ultra888 金鑰
     window.open(LINE_OFFICIAL_ACCOUNT, '_blank');
@@ -826,20 +868,29 @@ export function LandingPage({ onStart, onSignup, onHome }) {
       {/* ✅ Header（修正 Logo 顏色 + 加入登入按鈕）*/}
       <header className="sticky top-0 z-40 bg-[#050b14]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('home')}>
-            <img 
+<div className="flex items-center gap-3 cursor-pointer relative" 
+     onClick={handleLogoClick}
+     title={clickCount > 0 ? `再点 ${5 - clickCount} 5入管理后台` : ''}>            <img 
               src={logoError ? "https://placehold.co/40x40/3b82f6/white?text=UA" : LOGO_URL}
               alt="Ultra Advisor"
               className="h-10 w-auto"
               onError={() => setLogoError(true)}
             />
-            <span className="text-xl font-black tracking-tight">
-              {/* ✅ 使用 style 屬性確保紅色顯示 */}
+<span className="text-xl font-black tracking-tight">
               <span style={{color: '#FF3A3A'}}>Ultra</span>
               <span className="text-blue-400">Advisor</span>
             </span>
+            
+            {/* ✅ 点击进度指示器 */}
+            {clickCount > 0 && (
+              <div className="absolute -bottom-1 left-0 right-0 h-1 bg-slate-800 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-blue-500 transition-all duration-300"
+                  style={{ width: `${(clickCount / 5) * 100}%` }}
+                />
+              </div>
+            )}
           </div>
-
           <nav className="hidden md:flex items-center gap-8">
             <button 
               onClick={() => {
