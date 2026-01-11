@@ -11,6 +11,7 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -25,32 +26,37 @@ const MainLayout = () => {
   // 選單項目
   const menuItems = [
     {
-      key: '/dashboard',
+      key: '/admin/dashboard',
       icon: <DashboardOutlined />,
       label: '儀表板',
     },
     {
-      key: '/users',
+      key: '/admin/users',
       icon: <UserOutlined />,
       label: '用戶管理',
     },
     {
-      key: '/content',
+      key: '/admin/data-migration',
+      icon: <SyncOutlined />,
+      label: '資料遷移',
+    },
+    {
+      key: '/admin/content',
       icon: <FileTextOutlined />,
       label: '內容管理',
     },
     {
-      key: '/linebot',
+      key: '/admin/linebot',
       icon: <RobotOutlined />,
       label: 'LINE Bot',
     },
     {
-      key: '/stats',
+      key: '/admin/stats',
       icon: <BarChartOutlined />,
       label: '統計分析',
     },
     {
-      key: '/settings',
+      key: '/admin/settings',
       icon: <SettingOutlined />,
       label: '系統設定',
     },

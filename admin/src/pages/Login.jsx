@@ -1,7 +1,8 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 
@@ -12,9 +13,24 @@ const Login = () => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
+      // 1. 登入 Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+
+      // 2. 檢查是否為管理員
+      const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+      
+      if (!adminDoc.exists()) {
+        // 不是管理員，登出並拒絕
+        await auth.signOut();
+        message.error('此帳號沒有管理員權限');
+        setLoading(false);
+        return;
+      }
+
+      // 3. 是管理員，允許登入
       message.success('登入成功！');
-      navigate('/dashboard');
+      navigate('/admin/dashboard');
     } catch (error) {
       console.error('Login error:', error);
       if (error.code === 'auth/invalid-credential') {
