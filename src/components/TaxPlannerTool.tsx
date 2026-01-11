@@ -1,15 +1,27 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Landmark, 
   Calculator, 
   Scale, 
   AlertTriangle, 
-  FileText, 
   Siren, 
   CheckCircle2, 
   ShieldCheck,
   Activity,
-  Info
+  Heart,
+  TrendingUp,
+  TrendingDown,
+  Zap,
+  ArrowRight,
+  Sparkles,
+  Clock,
+  Banknote,
+  Target,
+  Award,
+  ChevronRight,
+  Calendar,
+  PiggyBank,
+  Shield
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -17,10 +29,18 @@ import {
   PolarGrid, 
   PolarAngleAxis, 
   PolarRadiusAxis, 
-  Radar
+  Radar,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Cell,
+  LabelList
 } from 'recharts';
 
-// --- 輔助函式：金額格式化 (萬 -> 億) ---
+// ============================================================
+// 輔助函式
+// ============================================================
 const formatMoney = (val: number) => {
   if (val >= 10000) {
     const yi = Math.floor(val / 10000);
@@ -30,558 +50,1132 @@ const formatMoney = (val: number) => {
   return `${Math.round(val).toLocaleString()}萬`;
 };
 
+const formatMoneyShort = (val: number) => {
+  if (val >= 10000) return `${(val / 10000).toFixed(1)}億`;
+  return `${Math.round(val)}萬`;
+};
+
+// ============================================================
+// 稅務常數 (114-115年適用)
+// ============================================================
+const TAX_CONSTANTS = {
+  EXEMPTION: 1333,
+  DEDUCT_SPOUSE: 553,
+  DEDUCT_CHILD: 56,
+  DEDUCT_PARENT: 138,
+  DEDUCT_HANDICAPPED: 693,
+  DEDUCT_FUNERAL: 138,
+  BRACKET_1: 5621,
+  BRACKET_2: 11242,
+  DIFF_15: 281.05,
+  DIFF_20: 843.15,
+  AMT_THRESHOLD: 3740,
+  APPLICABLE_YEARS: '114-115',
+};
+
+// ============================================================
+// 主元件
+// ============================================================
 export const TaxPlannerTool = ({ data, setData }: any) => {
+  // --- 隱藏小抄狀態 ---
+  const [showCheatSheet, setShowCheatSheet] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
+  const clickTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSecretClick = () => {
+    setClickCount(prev => prev + 1);
+    if (clickTimer.current) clearTimeout(clickTimer.current);
+    clickTimer.current = setTimeout(() => setClickCount(0), 800);
+    if (clickCount >= 2) {
+      setShowCheatSheet(true);
+      setClickCount(0);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowCheatSheet(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // --- 資料初始化 ---
   const safeData = {
-    // 家庭成員
-    spouse: Boolean(data?.spouse), // 有無配偶
+    spouse: data?.spouse !== undefined ? Boolean(data.spouse) : true,
     children: data?.children !== undefined ? Number(data.children) : 2, 
-    minorYearsTotal: Number(data?.minorYearsTotal) || 0, // 新增：所有未成年子女距離18歲的年數總和
-    parents: Number(data?.parents) || 0, // 父母人數
-    handicapped: Number(data?.handicapped) || 0, // 重度身障人數 (扣除額 693萬)
+    minorYearsTotal: Number(data?.minorYearsTotal) || 0,
+    parents: Number(data?.parents) || 0,
+    handicapped: Number(data?.handicapped) || 0,
     
-    // 資產配置 (萬)
-    cash: Number(data?.cash) || 3000, 
-    realEstateMarket: Number(data?.realEstateMarket) || 4000, 
-    stocks: Number(data?.stocks) || 1000, 
+    cash: Number(data?.cash) || 5000, 
+    realEstateMarket: Number(data?.realEstateMarket) || 6000,
+    realEstateRatio: Number(data?.realEstateRatio) || 70,
+    stocks: Number(data?.stocks) || 2000, 
     otherAssets: Number(data?.otherAssets) || 0, 
     
-    // 規劃參數
-    insurancePlan: Number(data?.insurancePlan) || 0, 
+    spouseAssets: Number(data?.spouseAssets) || 1500,
     
-    // 風險評估參數
-    age: Number(data?.age) || 60, 
-    healthStatus: data?.healthStatus || 'normal', 
-    paymentType: data?.paymentType || 'installment', 
+    // 【v3 新增】規劃模式與參數
+    planMode: data?.planMode || 'none',  // 'none' | 'lumpSum' | 'installment'
+    
+    // 躉繳參數
+    lumpSumAmount: Number(data?.lumpSumAmount) || 0,
+    lumpSumLeverage: Number(data?.lumpSumLeverage) || 1.1,
+    
+    // 分期參數
+    annualPremium: Number(data?.annualPremium) || 100,
+    paymentYears: Number(data?.paymentYears) || 10,
+    installmentLeverage: Number(data?.installmentLeverage) || 2.0,
+    
+    // 風險評估
+    age: Number(data?.age) || 55,
+    healthStatus: data?.healthStatus || 'normal',
+    recentPolicies: Number(data?.recentPolicies) || 0,
   };
 
   const { 
     spouse, children, minorYearsTotal, parents, handicapped,
-    cash, realEstateMarket, stocks, otherAssets,
-    insurancePlan,
-    age, healthStatus, paymentType
+    cash, realEstateMarket, realEstateRatio, stocks, otherAssets,
+    spouseAssets,
+    planMode, lumpSumAmount, lumpSumLeverage,
+    annualPremium, paymentYears, installmentLeverage,
+    age, healthStatus, recentPolicies
   } = safeData;
 
   const [showRiskDetail, setShowRiskDetail] = useState(false);
 
-  // --- Local State for Inputs (解決輸入卡頓問題) ---
+  // --- Local State for Inputs ---
   const [tempCash, setTempCash] = useState(cash);
   const [tempRealEstate, setTempRealEstate] = useState(realEstateMarket);
   const [tempStocks, setTempStocks] = useState(stocks);
-  const [tempInsurance, setTempInsurance] = useState(insurancePlan);
+  const [tempSpouseAssets, setTempSpouseAssets] = useState(spouseAssets);
   const [tempAge, setTempAge] = useState(age);
-  const [tempMinorYears, setTempMinorYears] = useState(minorYearsTotal);
+  const [tempLumpSum, setTempLumpSum] = useState(lumpSumAmount);
+  const [tempAnnualPremium, setTempAnnualPremium] = useState(annualPremium);
 
-  // 同步外部數據
   useEffect(() => { setTempCash(cash); }, [cash]);
   useEffect(() => { setTempRealEstate(realEstateMarket); }, [realEstateMarket]);
   useEffect(() => { setTempStocks(stocks); }, [stocks]);
-  useEffect(() => { setTempInsurance(insurancePlan); }, [insurancePlan]);
+  useEffect(() => { setTempSpouseAssets(spouseAssets); }, [spouseAssets]);
   useEffect(() => { setTempAge(age); }, [age]);
-  useEffect(() => { setTempMinorYears(minorYearsTotal); }, [minorYearsTotal]);
+  useEffect(() => { setTempLumpSum(lumpSumAmount); }, [lumpSumAmount]);
+  useEffect(() => { setTempAnnualPremium(annualPremium); }, [annualPremium]);
 
-  // --- 計算核心 (2025年/114年起適用新制) ---
+  // ============================================================
+  // 核心計算引擎
+  // ============================================================
   const calculations = useMemo(() => {
-      // 0. 不動產計稅價值估算 (市價 70%)
-      const estimatedOfficialRealEstate = Math.round(realEstateMarket * 0.7);
+    const T = TAX_CONSTANTS;
+    
+    const estimatedOfficialRealEstate = Math.round(realEstateMarket * (realEstateRatio / 100));
+    const totalEstateBefore = cash + estimatedOfficialRealEstate + stocks + otherAssets;
+    
+    // 配偶剩餘財產請求權
+    const spousalRightDeduction = spouse 
+      ? Math.max(0, Math.floor((totalEstateBefore - spouseAssets) / 2))
+      : 0;
+    
+    const estateAfterSpousalRight = totalEstateBefore - spousalRightDeduction;
 
-      // 1. 遺產總額
-      const totalEstateBefore = cash + estimatedOfficialRealEstate + stocks + otherAssets;
-      const totalEstateAfter = Math.max(0, cash - insurancePlan) + estimatedOfficialRealEstate + stocks + otherAssets;
+    // 免稅額與扣除額
+    const exemption = T.EXEMPTION;
+    const deductSpouse = spouse ? T.DEDUCT_SPOUSE : 0;
+    const deductChildren = (children * T.DEDUCT_CHILD) + (minorYearsTotal * T.DEDUCT_CHILD);
+    const deductParents = parents * T.DEDUCT_PARENT;
+    const deductHandicapped = handicapped * T.DEDUCT_HANDICAPPED;
+    const deductFuneral = T.DEDUCT_FUNERAL;
+    
+    const totalDeductions = exemption + deductSpouse + deductChildren + deductParents + deductHandicapped + deductFuneral;
 
-      // 2. 扣除額與免稅額 (單位：萬)
-      const exemption = 1333; // 免稅額
-      const deductSpouse = spouse ? 553 : 0; // 配偶
-      const deductParents = parents * 138; // 父母
-      const deductHandicapped = handicapped * 693; // 重度身障
-      const deductFuneral = 138; // 喪葬費
+    // 課稅遺產淨額（未規劃）
+    const netEstateBefore = Math.max(0, estateAfterSpousalRight - totalDeductions);
+
+    // 稅率級距判定
+    const getTaxBracket = (net: number) => {
+      if (net <= 0) return { rate: 0, label: '免稅', color: 'green' };
+      if (net <= T.BRACKET_1) return { rate: 10, label: '10%', color: 'yellow' };
+      if (net <= T.BRACKET_2) return { rate: 15, label: '15%', color: 'orange' };
+      return { rate: 20, label: '20%', color: 'red' };
+    };
+    
+    const bracketBefore = getTaxBracket(netEstateBefore);
+
+    // 稅額計算
+    const calculateTax = (net: number) => {
+      if (net <= 0) return 0;
+      if (net <= T.BRACKET_1) return net * 0.10;
+      if (net <= T.BRACKET_2) return (net * 0.15) - T.DIFF_15;
+      return (net * 0.20) - T.DIFF_20;
+    };
+
+    const taxBefore = calculateTax(netEstateBefore);
+
+    // ============================================================
+    // 【躉繳方案計算】
+    // ============================================================
+    const lumpSum = {
+      premium: lumpSumAmount,  // 一次繳保費
+      benefit: lumpSumAmount * lumpSumLeverage,  // 理賠金
+      estateReduction: lumpSumAmount,  // 遺產減少金額
       
-      // 子女扣除額：每人 56 萬 + 未成年加扣 (距離 18 歲每年加扣 56 萬)
-      const deductChildren = (children * 56) + (minorYearsTotal * 56); 
+      // 規劃後遺產
+      totalEstateAfter: Math.max(0, cash - lumpSumAmount) + estimatedOfficialRealEstate + stocks + otherAssets,
+      spousalRightAfter: 0,
+      netEstateAfter: 0,
+      taxAfter: 0,
+      taxSaved: 0,
+      bracketAfter: { rate: 0, label: '', color: '' },
       
-      const totalDeductions = exemption + deductSpouse + deductChildren + deductParents + deductHandicapped + deductFuneral;
-
-      // 3. 課稅遺產淨額
-      const netEstateBefore = Math.max(0, totalEstateBefore - totalDeductions);
-      const netEstateAfter = Math.max(0, totalEstateAfter - totalDeductions);
-
-      // 4. 遺產稅計算 (2025新級距)
-      const calculateTax = (net: number) => {
-          if (net <= 5621) return net * 0.10;
-          if (net <= 11242) return (net * 0.15) - 281.05;
-          return (net * 0.20) - 843.15;
-      };
-
-      const taxBefore = calculateTax(netEstateBefore);
-      const taxAfter = calculateTax(netEstateAfter);
-      const taxSaved = taxBefore - taxAfter;
-
-      // 5. 流動性風險
-      const liquidityGapBefore = taxBefore - cash; 
-      const liquidityAvailableAfter = Math.max(0, cash - insurancePlan) + insurancePlan; 
-      const liquidityGapAfter = taxAfter - liquidityAvailableAfter;
-
-      // 6. 最低稅負制
-      const isAmtRisk = insurancePlan > 3740;
-
-      // 7. 風險評分
-      let riskScore = 0;
-      if (age > 80) riskScore += 40;
-      else if (age > 70) riskScore += 25;
-      else if (age > 65) riskScore += 10;
-      if (healthStatus === 'critical') riskScore += 50;
-      else if (healthStatus === 'ill') riskScore += 30;
-      if (paymentType === 'lumpSum') riskScore += 20;
+      // 流動性
+      liquidityAvailable: 0,
       
-      const riskLevel = riskScore >= 50 ? 'High' : riskScore >= 25 ? 'Medium' : 'Low';
+      // 風險評分
+      riskScore: 0,
+      riskLevel: 'Low' as 'Low' | 'Medium' | 'High',
+    };
+    
+    // 躉繳規劃後計算
+    lumpSum.spousalRightAfter = spouse 
+      ? Math.max(0, Math.floor((lumpSum.totalEstateAfter - spouseAssets) / 2))
+      : 0;
+    lumpSum.netEstateAfter = Math.max(0, lumpSum.totalEstateAfter - lumpSum.spousalRightAfter - totalDeductions);
+    lumpSum.taxAfter = calculateTax(lumpSum.netEstateAfter);
+    lumpSum.taxSaved = taxBefore - lumpSum.taxAfter;
+    lumpSum.bracketAfter = getTaxBracket(lumpSum.netEstateAfter);
+    lumpSum.liquidityAvailable = Math.max(0, cash - lumpSumAmount) + lumpSum.benefit;
+    
+    // 躉繳風險評分（較高）
+    let lumpSumRisk = 20;  // 躉繳基礎風險
+    if (age > 75) lumpSumRisk += 40;
+    else if (age > 65) lumpSumRisk += 20;
+    if (healthStatus === 'critical') lumpSumRisk += 50;
+    else if (healthStatus === 'ill') lumpSumRisk += 25;
+    if (lumpSumAmount > 3000) lumpSumRisk += 15;
+    lumpSum.riskScore = lumpSumRisk;
+    lumpSum.riskLevel = lumpSumRisk >= 50 ? 'High' : lumpSumRisk >= 30 ? 'Medium' : 'Low';
 
-      return {
-          estimatedOfficialRealEstate,
-          totalEstateBefore,
-          totalDeductions,
-          netEstateBefore,
-          taxBefore,
-          taxAfter,
-          taxSaved,
-          isAmtRisk,
-          liquidityGapBefore,
-          riskScore,
-          riskLevel
-      };
-  }, [spouse, children, minorYearsTotal, parents, handicapped, cash, realEstateMarket, stocks, otherAssets, insurancePlan, age, healthStatus, paymentType]);
+    // ============================================================
+    // 【分期繳方案計算】
+    // ============================================================
+    const totalPremiumPaid = annualPremium * paymentYears;  // 總繳保費
+    const installmentBenefit = annualPremium * paymentYears * installmentLeverage;  // 理賠金
+    
+    const installment = {
+      annualPremium: annualPremium,
+      years: paymentYears,
+      totalPremium: totalPremiumPaid,
+      benefit: installmentBenefit,
+      leverage: installmentLeverage,
+      
+      // 規劃後遺產（假設繳完全部保費）
+      totalEstateAfter: Math.max(0, cash - totalPremiumPaid) + estimatedOfficialRealEstate + stocks + otherAssets,
+      spousalRightAfter: 0,
+      netEstateAfter: 0,
+      taxAfter: 0,
+      taxSaved: 0,
+      bracketAfter: { rate: 0, label: '', color: '' },
+      
+      // 流動性
+      liquidityAvailable: 0,
+      
+      // 風險評分
+      riskScore: 0,
+      riskLevel: 'Low' as 'Low' | 'Medium' | 'High',
+      
+      // 【關鍵】第一年即身故的效益
+      year1Benefit: annualPremium * installmentLeverage,  // 只繳一年就身故
+      year1ROI: ((annualPremium * installmentLeverage) / annualPremium - 1) * 100,  // 第一年 ROI
+    };
+    
+    // 分期規劃後計算
+    installment.spousalRightAfter = spouse 
+      ? Math.max(0, Math.floor((installment.totalEstateAfter - spouseAssets) / 2))
+      : 0;
+    installment.netEstateAfter = Math.max(0, installment.totalEstateAfter - installment.spousalRightAfter - totalDeductions);
+    installment.taxAfter = calculateTax(installment.netEstateAfter);
+    installment.taxSaved = taxBefore - installment.taxAfter;
+    installment.bracketAfter = getTaxBracket(installment.netEstateAfter);
+    installment.liquidityAvailable = Math.max(0, cash - totalPremiumPaid) + installmentBenefit;
+    
+    // 分期風險評分（較低）
+    let installmentRisk = 0;
+    if (age > 75) installmentRisk += 25;
+    else if (age > 65) installmentRisk += 10;
+    if (healthStatus === 'critical') installmentRisk += 40;
+    else if (healthStatus === 'ill') installmentRisk += 20;
+    if (recentPolicies >= 3) installmentRisk += 15;
+    installment.riskScore = installmentRisk;
+    installment.riskLevel = installmentRisk >= 50 ? 'High' : installmentRisk >= 30 ? 'Medium' : 'Low';
 
-  const riskData = [
-    { subject: '高齡投保', A: Math.min(100, (age - 50) * 2), fullMark: 100 },
-    { subject: '健康狀況', A: healthStatus === 'critical' ? 100 : healthStatus === 'ill' ? 60 : 10, fullMark: 100 },
-    { subject: '繳費型態', A: paymentType === 'lumpSum' ? 90 : 20, fullMark: 100 },
-    { subject: '鉅額投保', A: Math.min(100, (insurancePlan / 1000) * 20), fullMark: 100 },
-    { subject: '密集投保', A: 10, fullMark: 100 },
-  ];
+    // ============================================================
+    // 【智能推薦引擎】
+    // ============================================================
+    type RecommendationType = 'lumpSum' | 'installment' | 'both';
+    let recommendation: RecommendationType = 'installment';
+    let recommendationReasons: string[] = [];
+    
+    // 推薦邏輯
+    if (age >= 70) {
+      recommendation = 'lumpSum';
+      recommendationReasons.push('年齡較高，建議把握時間立即規劃');
+    } else if (age <= 55) {
+      recommendation = 'installment';
+      recommendationReasons.push('年齡優勢，分期繳可獲得更高槓桿');
+    }
+    
+    if (healthStatus === 'critical' || healthStatus === 'ill') {
+      recommendation = 'lumpSum';
+      recommendationReasons.push('健康因素，建議儘速完成規劃');
+    }
+    
+    if (cash > taxBefore * 3) {
+      if (recommendation !== 'lumpSum') recommendation = 'both';
+      recommendationReasons.push('現金充裕，可考慮躉繳立即壓縮遺產');
+    }
+    
+    if (bracketBefore.rate >= 15) {
+      recommendationReasons.push(`目前稅率 ${bracketBefore.label}，規劃效益顯著`);
+    }
+    
+    // 計算「最佳躉繳金額」：剛好降一級距
+    let optimalLumpSum = 0;
+    if (bracketBefore.rate === 20) {
+      // 目標：降到 15%，淨額需 ≤ 11,242
+      optimalLumpSum = Math.max(0, netEstateBefore - T.BRACKET_2 + 100);
+    } else if (bracketBefore.rate === 15) {
+      // 目標：降到 10%，淨額需 ≤ 5,621
+      optimalLumpSum = Math.max(0, netEstateBefore - T.BRACKET_1 + 100);
+    } else if (bracketBefore.rate === 10) {
+      // 目標：免稅
+      optimalLumpSum = Math.max(0, netEstateBefore + 100);
+    }
+    optimalLumpSum = Math.min(optimalLumpSum, cash);  // 不超過現金
+
+    return {
+      // 基礎數據
+      estimatedOfficialRealEstate,
+      totalEstateBefore,
+      spousalRightDeduction,
+      totalDeductions,
+      netEstateBefore,
+      taxBefore,
+      bracketBefore,
+      
+      // 兩種方案
+      lumpSum,
+      installment,
+      
+      // 推薦
+      recommendation,
+      recommendationReasons,
+      optimalLumpSum,
+      
+      // 流動性缺口（未規劃）
+      liquidityGap: taxBefore - cash,
+    };
+  }, [
+    spouse, children, minorYearsTotal, parents, handicapped,
+    cash, realEstateMarket, realEstateRatio, stocks, otherAssets,
+    spouseAssets, lumpSumAmount, lumpSumLeverage,
+    annualPremium, paymentYears, installmentLeverage,
+    age, healthStatus, recentPolicies
+  ]);
+
+  // 雷達圖資料
+  const getRiskData = (mode: 'lumpSum' | 'installment') => {
+    const isLumpSum = mode === 'lumpSum';
+    return [
+      { subject: '高齡', A: Math.min(100, Math.max(0, (age - 50) * 2)), fullMark: 100 },
+      { subject: '健康', A: healthStatus === 'critical' ? 100 : healthStatus === 'ill' ? 60 : 10, fullMark: 100 },
+      { subject: '繳費方式', A: isLumpSum ? 90 : 20, fullMark: 100 },
+      { subject: '金額', A: Math.min(100, ((isLumpSum ? lumpSumAmount : annualPremium * paymentYears) / 1000) * 20), fullMark: 100 },
+      { subject: '密集投保', A: Math.min(100, recentPolicies * 30), fullMark: 100 },
+    ];
+  };
 
   // --- UI Handlers ---
-  const updateField = (field: string, value: any) => { setData({ ...safeData, [field]: value }); };
-  
-  // 通用數字輸入處理
-  const handleNumInput = (setter: React.Dispatch<React.SetStateAction<number>>, val: string) => {
-      setter(val === '' ? 0 : Number(val));
+  const updateField = (field: string, value: any) => { 
+    setData({ ...data, [field]: value }); 
   };
+  
+  // 支援多欄位同時更新，避免 race condition
+  const updateFields = (updates: Record<string, any>) => {
+    setData({ ...data, ...updates });
+  };
+  
+  const handleNumInput = (setter: React.Dispatch<React.SetStateAction<number>>, val: string) => {
+    setter(val === '' ? 0 : Number(val));
+  };
+  
   const commitNumInput = (field: string, val: number) => {
-      updateField(field, Number(val));
+    updateField(field, Number(val));
   };
 
+  // 快速設定最佳方案
+  const applyOptimalPlan = () => {
+    if (calculations.recommendation === 'lumpSum' || calculations.recommendation === 'both') {
+      updateFields({ planMode: 'lumpSum', lumpSumAmount: calculations.optimalLumpSum });
+    } else {
+      updateField('planMode', 'installment');
+    }
+  };
+
+  // ============================================================
+  // UI 渲染
+  // ============================================================
   return (
-    <div className="space-y-8 animate-fade-in font-sans text-slate-800">
+    <div className="space-y-6 animate-fade-in font-sans text-slate-800">
       
-      {/* Header Section */}
-      <div className="bg-gradient-to-r from-slate-700 to-zinc-800 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden print-break-inside">
-        <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-          <Landmark size={180} />
+      {/* Header */}
+      <div className="bg-gradient-to-r from-slate-800 to-zinc-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+          <Landmark size={160} />
         </div>
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-3">
-            <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase backdrop-blur-sm">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span className="bg-white/15 px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase">
               Estate Tax Planning
             </span>
-            <span className="bg-yellow-400/20 text-yellow-100 px-3 py-1 rounded-full text-xs font-bold tracking-wider backdrop-blur-sm border border-yellow-400/30">
-              預留稅源・資產保全
+            <span 
+              onClick={handleSecretClick}
+              className="bg-emerald-500/25 text-emerald-200 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 cursor-default select-none"
+            >
+              <CheckCircle2 size={12} />
+              {TAX_CONSTANTS.APPLICABLE_YEARS}年適用
             </span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold mb-2 tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight">
             稅務傳承專案
           </h1>
-          <p className="text-slate-300 text-lg opacity-90 max-w-2xl">
-            富過三代的秘密。合法運用免稅額度與保險工具，避免辛苦打拼的資產被稅金與流動性風險吞噬。
+          <p className="text-slate-400 text-sm">
+            壓縮遺產 + 預留稅源，雙效節稅方案規劃
           </p>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-12 gap-8">
-        {/* 左側：資產盤點與參數 */}
-        <div className="lg:col-span-4 space-y-6 print-break-inside">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 no-print">
-            <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2">
-              <Calculator size={20} className="text-slate-600"/> 
-              資產掃描器
-            </h4>
-            <div className="space-y-6">
-               
-               {/* 1. 家庭成員 */}
-               <div className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                   <h5 className="text-xs font-bold text-slate-500 uppercase">繼承人結構 (扣除額)</h5>
-                   
-                   <div className="flex items-center justify-between">
-                       <span className="text-sm font-medium text-slate-600">配偶健在 (扣553萬)</span>
-                       <input type="checkbox" checked={spouse} onChange={(e) => updateField('spouse', e.target.checked)} className="w-5 h-5 accent-blue-600 rounded" />
-                   </div>
-                   
-                   <div className="flex items-center justify-between">
-                       <span className="text-sm font-medium text-slate-600">子女人數 (扣56萬/人)</span>
-                       <div className="flex items-center gap-2">
-                           <button onClick={() => updateField('children', Math.max(0, children-1))} className="w-6 h-6 rounded bg-slate-200 text-slate-600 flex items-center justify-center font-bold">-</button>
-                           <span className="w-4 text-center font-bold">{children}</span>
-                           <button onClick={() => updateField('children', children+1)} className="w-6 h-6 rounded bg-slate-200 text-slate-600 flex items-center justify-center font-bold">+</button>
-                       </div>
-                   </div>
+      {/* ============================================================ */}
+      {/* 第一區：資產現況 + 稅務試算 */}
+      {/* ============================================================ */}
+      <div className="grid lg:grid-cols-3 gap-4">
+        
+        {/* 資產輸入 */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+          <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2 text-sm">
+            <Calculator size={16}/> 資產概況
+          </h4>
+          
+          <div className="space-y-3">
+            {/* 家庭結構 */}
+            <div className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
+              <span className="text-xs text-slate-600">配偶</span>
+              <input 
+                type="checkbox" 
+                checked={spouse} 
+                onChange={(e) => updateField('spouse', e.target.checked)} 
+                className="w-4 h-4 accent-blue-600" 
+              />
+            </div>
+            
+            {spouse && (
+              <div className="p-2 bg-purple-50 rounded-lg">
+                <label className="text-[10px] text-purple-600 block mb-1">配偶資產 (萬)</label>
+                <input 
+                  type="number" 
+                  value={tempSpouseAssets}
+                  onChange={(e) => handleNumInput(setTempSpouseAssets, e.target.value)}
+                  onBlur={() => commitNumInput('spouseAssets', tempSpouseAssets)}
+                  className="w-full p-1.5 border border-purple-200 rounded text-sm font-bold text-purple-700"
+                />
+              </div>
+            )}
 
-                   {/* 未成年子女加扣 */}
-                   {children > 0 && (
-                       <div className="bg-blue-50/50 p-2 rounded-lg border border-blue-100">
-                           <div className="flex justify-between items-center mb-1">
-                               <span className="text-xs font-bold text-blue-700 flex items-center gap-1">
-                                   <Info size={12}/> 未成年加扣 (56萬/年)
-                               </span>
-                           </div>
-                           <div className="flex items-center gap-2">
-                               <input 
-                                   type="number" 
-                                   value={tempMinorYears} 
-                                   onChange={(e) => handleNumInput(setTempMinorYears, e.target.value)}
-                                   onBlur={() => commitNumInput('minorYearsTotal', tempMinorYears)}
-                                   className="w-16 p-1 text-center border border-blue-200 rounded text-sm font-bold text-blue-600"
-                               />
-                               <span className="text-xs text-blue-500">距18歲總年數</span>
-                           </div>
-                           <p className="text-[10px] text-blue-400 mt-1">例如：10歲子女還有8年，填8</p>
-                       </div>
-                   )}
+            <div className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
+              <span className="text-xs text-slate-600">子女</span>
+              <div className="flex items-center gap-1">
+                <button onClick={() => updateField('children', Math.max(0, children-1))} className="w-6 h-6 rounded bg-slate-200 text-xs font-bold">-</button>
+                <span className="w-5 text-center font-bold text-sm">{children}</span>
+                <button onClick={() => updateField('children', children+1)} className="w-6 h-6 rounded bg-slate-200 text-xs font-bold">+</button>
+              </div>
+            </div>
 
-                   <div className="flex items-center justify-between">
-                       <span className="text-sm font-medium text-slate-600">父母人數 (扣138萬/人)</span>
-                       <div className="flex items-center gap-2">
-                           <button onClick={() => updateField('parents', Math.max(0, parents-1))} className="w-6 h-6 rounded bg-slate-200 text-slate-600 flex items-center justify-center font-bold">-</button>
-                           <span className="w-4 text-center font-bold">{parents}</span>
-                           <button onClick={() => updateField('parents', parents+1)} className="w-6 h-6 rounded bg-slate-200 text-slate-600 flex items-center justify-center font-bold">+</button>
-                       </div>
-                   </div>
-               </div>
-
-               {/* 2. 資產輸入 */}
-               <div className="space-y-4">
-                   {[
-                       { label: '現金存款 (萬)', val: tempCash, set: setTempCash, field: 'cash' },
-                       { label: '不動產 (市價)', val: tempRealEstate, set: setTempRealEstate, field: 'realEstateMarket', hint: '* 自動以70%估算公告現值' },
-                       { label: '股票/基金 (萬)', val: tempStocks, set: setTempStocks, field: 'stocks' },
-                   ].map((item, idx) => (
-                       <div key={idx}>
-                           <label className="text-xs font-bold text-slate-500 mb-1 block">{item.label}</label>
-                           <input 
-                               type="number" 
-                               value={item.val} 
-                               onChange={(e) => handleNumInput(item.set, e.target.value)}
-                               onBlur={() => commitNumInput(item.field, item.val)}
-                               onKeyDown={(e) => e.key === 'Enter' && commitNumInput(item.field, item.val)}
-                               className="w-full p-2 border rounded-lg font-bold text-slate-700 bg-slate-50 border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" 
-                           />
-                           {item.hint && <p className="text-[10px] text-slate-400 mt-1">{item.hint}</p>}
-                       </div>
-                   ))}
-               </div>
-
-               {/* 3. 保險規劃 */}
-               <div className="pt-4 border-t border-slate-100">
-                   <div className="flex justify-between items-center mb-2">
-                       <label className="text-sm font-bold text-emerald-600 flex items-center gap-1"><ShieldCheck size={16}/> 保險規劃 (挪移現金)</label>
-                       <span className="font-mono font-bold text-emerald-600 text-lg">{formatMoney(insurancePlan)}</span>
-                   </div>
-                   <input 
-                      type="range" 
-                      min={0} 
-                      max={cash} 
-                      step={100} 
-                      value={insurancePlan} 
-                      onChange={(e) => updateField('insurancePlan', Number(e.target.value))} 
-                      className="w-full h-2 bg-emerald-100 rounded-lg appearance-none cursor-pointer accent-emerald-500" 
-                   />
-                   
-                   {/* 保險金額輸入框 */}
-                   <div className="mt-2 relative">
-                        <input 
-                            type="number"
-                            value={tempInsurance}
-                            onChange={(e) => handleNumInput(setTempInsurance, e.target.value)}
-                            onBlur={() => commitNumInput('insurancePlan', tempInsurance)}
-                            className="w-full p-2 border border-emerald-200 rounded-lg font-bold text-emerald-700 text-right pr-8"
-                        />
-                        <span className="absolute right-3 top-2.5 text-emerald-500 font-bold text-sm">萬</span>
-                   </div>
-               </div>
-
+            {/* 資產 */}
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              {[
+                { label: '現金', val: tempCash, set: setTempCash, field: 'cash' },
+                { label: '不動產市價', val: tempRealEstate, set: setTempRealEstate, field: 'realEstateMarket' },
+                { label: '股票基金', val: tempStocks, set: setTempStocks, field: 'stocks' },
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <label className="text-xs text-slate-500">{item.label}</label>
+                  <div className="flex items-center gap-1">
+                    <input 
+                      type="number" 
+                      value={item.val}
+                      onChange={(e) => handleNumInput(item.set, e.target.value)}
+                      onBlur={() => commitNumInput(item.field, item.val)}
+                      className="w-20 p-1.5 border rounded text-sm font-bold text-right"
+                    />
+                    <span className="text-xs text-slate-400">萬</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {/* 年齡 */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+              <label className="text-xs text-slate-500">投保年齡</label>
+              <div className="flex items-center gap-1">
+                <input 
+                  type="number" 
+                  value={tempAge}
+                  onChange={(e) => handleNumInput(setTempAge, e.target.value)}
+                  onBlur={() => commitNumInput('age', tempAge)}
+                  className="w-16 p-1.5 border rounded text-sm font-bold text-center"
+                />
+                <span className="text-xs text-slate-400">歲</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* 右側：稅務分析儀表板 */}
-        <div className="lg:col-span-8 space-y-6">
-          
-          {/* 1. 稅金與流動性分析 */}
-          <div className="grid md:grid-cols-2 gap-6">
-              
-              {/* 遺產稅計算結果 */}
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-4 opacity-5">
-                      <FileText size={100} className="text-slate-900"/>
-                  </div>
-                  <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2"><Scale size={18} className="text-blue-500"/> 應納稅額分析</h4>
-                  
-                  <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-500">遺產總額 <span className="text-xs opacity-60">(含不動產估值)</span></span>
-                          <span className="font-mono font-bold text-slate-700">{formatMoney(calculations.totalEstateBefore)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                          <span className="text-sm text-slate-500">免稅+扣除額</span>
-                          <span className="font-mono font-bold text-green-600">-{formatMoney(calculations.totalDeductions)}</span>
-                      </div>
-                      <div className="h-px bg-slate-100 my-2"></div>
-                      
-                      {/* 未規劃稅金警示區塊 */}
-                      <div className={`rounded-xl p-4 text-center border-2 transition-all ${calculations.taxBefore > 0 ? 'bg-red-50 border-red-200 animate-pulse-soft' : 'bg-slate-50 border-slate-100'}`}>
-                          <p className={`text-xs font-bold mb-1 ${calculations.taxBefore > 0 ? 'text-red-500' : 'text-slate-500'}`}>
-                              {calculations.taxBefore > 0 ? '⚠️ 未規劃需繳稅金 (警訊)' : '未規劃需繳稅金'}
-                          </p>
-                          <p className={`text-3xl font-black font-mono ${calculations.taxBefore > 0 ? 'text-red-600' : 'text-slate-700'}`}>
-                              {formatMoney(calculations.taxBefore)}
-                          </p>
-                          {calculations.taxBefore > 0 && (
-                              <div className="mt-2 text-xs text-red-500 bg-white/60 py-1 px-2 rounded inline-block font-bold">
-                                  別讓家人變賣資產繳稅！
-                              </div>
-                          )}
-                      </div>
-
-                      {insurancePlan > 0 && (
-                          <div className="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100 animate-in fade-in slide-in-from-bottom-2">
-                              <p className="text-xs text-emerald-800 mb-1">規劃後 預估稅金</p>
-                              <div className="flex justify-center items-baseline gap-2">
-                                  <p className="text-2xl font-black text-emerald-600 font-mono">{formatMoney(calculations.taxAfter)}</p>
-                                  <span className="text-xs text-emerald-500 font-bold bg-white px-1.5 rounded">省 {formatMoney(calculations.taxSaved)}</span>
-                              </div>
-                          </div>
-                      )}
-                  </div>
-              </div>
-
-              {/* 流動性風險分析 */}
-              <div className={`p-6 rounded-2xl shadow-sm border relative overflow-hidden flex flex-col justify-between ${calculations.liquidityGapBefore > 0 ? 'bg-rose-50 border-rose-200' : 'bg-blue-50 border-blue-200'}`}>
-                  <div>
-                      <h4 className={`font-bold mb-2 flex items-center gap-2 ${calculations.liquidityGapBefore > 0 ? 'text-rose-700' : 'text-blue-700'}`}>
-                          {calculations.liquidityGapBefore > 0 ? <AlertTriangle size={20}/> : <CheckCircle2 size={20}/>}
-                          流動性風險檢測
-                      </h4>
-                      <p className={`text-sm mb-4 font-medium leading-relaxed ${calculations.liquidityGapBefore > 0 ? 'text-rose-600' : 'text-blue-600'}`}>
-                          {calculations.liquidityGapBefore > 0 
-                            ? "警訊：現金不足以繳納遺產稅！" 
-                            : "安全：預留現金充裕，可順利完稅。"}
-                      </p>
-                      {calculations.liquidityGapBefore > 0 && (
-                          <p className="text-xs text-rose-500 bg-white/50 p-2 rounded border border-rose-100">
-                              目的：不用自己的錢繳稅，用保險理賠金繳。
-                          </p>
-                      )}
-                  </div>
-
-                  <div className="space-y-3">
-                      <div>
-                          <div className="flex justify-between text-xs font-bold mb-1 opacity-70">
-                              <span>應納稅額</span>
-                              <span>手邊現金</span>
-                          </div>
-                          <div className="w-full bg-white/50 rounded-full h-4 overflow-hidden flex">
-                              {/* 稅額條 */}
-                              <div className="h-full bg-slate-400" style={{width: `${Math.min(100, calculations.taxBefore / (Math.max(calculations.taxBefore, cash) || 1) * 100)}%`}}></div>
-                          </div>
-                          <div className="w-full bg-white/50 rounded-full h-4 overflow-hidden flex mt-1">
-                              {/* 現金條 */}
-                              <div className={`h-full ${calculations.liquidityGapBefore > 0 ? 'bg-rose-500' : 'bg-blue-500'}`} style={{width: `${Math.min(100, cash / (Math.max(calculations.taxBefore, cash) || 1) * 100)}%`}}></div>
-                          </div>
-                      </div>
-
-                      {insurancePlan > 0 && (
-                          <div className="pt-2 border-t border-black/5">
-                              <p className="text-xs font-bold mb-1 opacity-80">規劃後：預留稅源 (保險理賠)</p>
-                              <div className="flex items-center gap-2">
-                                  <ShieldCheck size={16} className="text-emerald-600"/>
-                                  <span className="text-lg font-black font-mono text-emerald-700">
-                                      +{formatMoney(insurancePlan)}
-                                  </span>
-                                  <span className="text-xs text-emerald-600">(指定受益人現金)</span>
-                              </div>
-                          </div>
-                      )}
-                  </div>
-              </div>
-          </div>
-
-          {/* 2. 實質課稅風險雷達 (Risk Radar) */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex justify-between items-center mb-6">
-                  <h4 className="font-bold text-slate-700 flex items-center gap-2">
-                      <Siren size={20} className={calculations.riskLevel === 'High' ? 'text-red-500' : calculations.riskLevel === 'Medium' ? 'text-orange-500' : 'text-green-500'}/> 
-                      實質課稅風險雷達
-                  </h4>
-                  <div className="flex gap-2 text-xs">
-                      <button 
-                        onClick={() => setShowRiskDetail(!showRiskDetail)}
-                        className="px-3 py-1 bg-slate-100 rounded hover:bg-slate-200 transition-colors text-slate-600"
-                      >
-                        {showRiskDetail ? '隱藏設定' : '調整風險參數'}
-                      </button>
-                  </div>
-              </div>
-
-              <div className="flex flex-col md:flex-row gap-8 items-center">
-                  {/* Radar Chart */}
-                  <div className="h-[250px] w-[300px] shrink-0">
-                      <ResponsiveContainer width="100%" height="100%">
-                          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={riskData}>
-                              <PolarGrid stroke="#e2e8f0" />
-                              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12, fill: '#64748b' }} />
-                              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false}/>
-                              <Radar
-                                  name="Risk"
-                                  dataKey="A"
-                                  stroke={calculations.riskLevel === 'High' ? '#ef4444' : '#f59e0b'}
-                                  fill={calculations.riskLevel === 'High' ? '#ef4444' : '#f59e0b'}
-                                  fillOpacity={0.4}
-                              />
-                          </RadarChart>
-                      </ResponsiveContainer>
-                  </div>
-
-                  {/* Risk Config / Warning */}
-                  <div className="flex-1 w-full">
-                      {showRiskDetail ? (
-                          <div className="space-y-4 bg-slate-50 p-4 rounded-xl animate-in slide-in-from-right-2">
-                              <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                      <label className="text-xs font-bold text-slate-500 mb-1">投保年齡</label>
-                                      <input 
-                                          type="number" 
-                                          value={tempAge} 
-                                          onChange={(e) => handleNumInput(setTempAge, e.target.value)}
-                                          onBlur={() => commitNumInput('age', tempAge)}
-                                          className="w-full p-2 border rounded text-sm font-bold"
-                                      />
-                                  </div>
-                                  <div>
-                                      <label className="text-xs font-bold text-slate-500 mb-1">健康狀況</label>
-                                      <select value={healthStatus} onChange={(e) => updateField('healthStatus', e.target.value)} className="w-full p-2 border rounded text-sm">
-                                          <option value="normal">健康標準體</option>
-                                          <option value="ill">次標準體(帶病)</option>
-                                          <option value="critical">重病/安寧</option>
-                                      </select>
-                                  </div>
-                                  <div>
-                                      <label className="text-xs font-bold text-slate-500 mb-1">繳費方式</label>
-                                      <select value={paymentType} onChange={(e) => updateField('paymentType', e.target.value)} className="w-full p-2 border rounded text-sm">
-                                          <option value="installment">分期繳納</option>
-                                          <option value="lumpSum">躉繳 (一次清)</option>
-                                      </select>
-                                  </div>
-                              </div>
-                          </div>
-                      ) : (
-                          <div className={`p-4 rounded-xl border-l-4 ${calculations.riskLevel === 'High' ? 'bg-red-50 border-red-500' : calculations.riskLevel === 'Medium' ? 'bg-orange-50 border-orange-500' : 'bg-green-50 border-green-500'}`}>
-                              <h5 className={`font-bold text-lg mb-2 ${calculations.riskLevel === 'High' ? 'text-red-700' : calculations.riskLevel === 'Medium' ? 'text-orange-700' : 'text-green-700'}`}>
-                                  風險評級：{calculations.riskLevel}
-                              </h5>
-                              <p className="text-sm text-slate-600 mb-2">
-                                  {calculations.riskLevel === 'High' 
-                                    ? "警告：極高機率被國稅局依「實質課稅原則」計入遺產課稅！請避免高齡、帶病或躉繳投保。"
-                                    : calculations.riskLevel === 'Medium'
-                                    ? "注意：部分特徵符合八大態樣，建議採分期繳納並提早規劃以降低疑慮。"
-                                    : "安全：規劃符合常規，具有資產傳承與保障之實質意義。"}
-                              </p>
-                              {calculations.isAmtRisk && (
-                                  <div className="mt-3 pt-3 border-t border-black/5 text-xs text-orange-600 font-bold flex items-center gap-1">
-                                      <AlertTriangle size={12}/> 最低稅負制警示：死亡給付超過 3,740 萬，超額部分需計入基本所得額。
-                                  </div>
-                              )}
-                          </div>
-                      )}
-                  </div>
-              </div>
-          </div>
-
-        </div>
-      </div>
-      
-      {/* 底部策略區 */}
-      <div className="grid md:grid-cols-2 gap-8 pt-6 border-t border-slate-200 print-break-inside">
-        
-        {/* 1. 稅務策略三部曲 */}
-        <div className="space-y-4 lg:col-span-1">
-          <div className="flex items-center gap-2 mb-2">
-             <Activity className="text-slate-700" size={24} />
-             <h3 className="text-xl font-bold text-slate-800">稅務傳承三部曲</h3>
-          </div>
+        {/* 稅務試算結果 */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+          <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2 text-sm">
+            <Scale size={16}/> 目前稅務狀況
+          </h4>
           
           <div className="space-y-3">
-             <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-slate-300 transition-colors">
-                <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-slate-100 text-slate-600 flex flex-col items-center justify-center font-bold text-xs">
-                   <span className="text-lg">01</span>
-                   <span>壓縮</span>
-                </div>
-                <div>
-                   <h4 className="font-bold text-slate-800 flex items-center gap-2">資產壓縮 (降稅基)</h4>
-                   <p className="text-sm text-slate-600 mt-1">善用不動產公告現值與市價的落差，以及保險給付不計入遺產總額的特性，合法降低課稅遺產總額。</p>
-                </div>
-             </div>
-
-             <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-blue-200 transition-colors">
-                <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-blue-50 text-blue-600 flex flex-col items-center justify-center font-bold text-xs">
-                   <span className="text-lg">02</span>
-                   <span>預留</span>
-                </div>
-                <div>
-                   <h4 className="font-bold text-slate-800 flex items-center gap-2">預留稅源 (保流動)</h4>
-                   <p className="text-sm text-slate-600 mt-1">透過人壽保險指定受益人，身故理賠金可快速變現，提供家人繳納遺產稅的現金來源，避免變賣祖產。</p>
-                </div>
-             </div>
-
-             <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:border-emerald-200 transition-colors">
-                <div className="mt-1 min-w-[3rem] h-12 rounded-xl bg-emerald-50 text-emerald-600 flex flex-col items-center justify-center font-bold text-xs">
-                   <span className="text-lg">03</span>
-                   <span>分配</span>
-                </div>
-                <div>
-                   <h4 className="font-bold text-slate-800 flex items-center gap-2">指定分配 (避紛爭)</h4>
-                   <p className="text-sm text-slate-600 mt-1">保險金給付不受民法特留分限制（需留意極端案例），可依照您的意願精準分配財富給想照顧的人。</p>
-                </div>
-             </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-slate-500">遺產總額</span>
+              <span className="font-bold">{formatMoney(calculations.totalEstateBefore)}</span>
+            </div>
+            {calculations.spousalRightDeduction > 0 && (
+              <div className="flex justify-between text-xs">
+                <span className="text-purple-500">配偶請求權</span>
+                <span className="font-bold text-purple-600">-{formatMoney(calculations.spousalRightDeduction)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-xs">
+              <span className="text-slate-500">免稅+扣除</span>
+              <span className="font-bold text-green-600">-{formatMoney(calculations.totalDeductions)}</span>
+            </div>
+            <div className="h-px bg-slate-100"></div>
+            <div className="flex justify-between text-xs">
+              <span className="text-slate-500">課稅淨額</span>
+              <div className="flex items-center gap-1">
+                <span className="font-bold">{formatMoney(calculations.netEstateBefore)}</span>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                  calculations.bracketBefore.color === 'red' ? 'bg-red-100 text-red-600' :
+                  calculations.bracketBefore.color === 'orange' ? 'bg-orange-100 text-orange-600' :
+                  calculations.bracketBefore.color === 'yellow' ? 'bg-yellow-100 text-yellow-600' :
+                  'bg-green-100 text-green-600'
+                }`}>
+                  {calculations.bracketBefore.label}
+                </span>
+              </div>
+            </div>
+            
+            {/* 應納稅額 - 大字 */}
+            <div className={`p-4 rounded-xl text-center ${
+              calculations.taxBefore > 0 ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'
+            }`}>
+              <p className="text-xs text-slate-500 mb-1">應納遺產稅</p>
+              <p className={`text-3xl font-black ${calculations.taxBefore > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                {formatMoney(calculations.taxBefore)}
+              </p>
+            </div>
           </div>
-          
-          <div className="mt-6 p-4 bg-slate-800 rounded-xl text-center shadow-lg">
-             <p className="text-slate-300 italic text-sm">
-               「沒有規劃的財富是遺產（稅），有規劃的財富才是傳承（愛）。」
-             </p>
-           </div>
         </div>
 
-        {/* 2. 專案效益 */}
-        <div className="space-y-4 lg:col-span-1">
-           <div className="flex items-center gap-2 mb-2">
-             <ShieldCheck className="text-slate-700" size={24} />
-             <h3 className="text-xl font-bold text-slate-800">專案四大效益</h3>
-           </div>
-           
-           <div className="grid grid-cols-1 gap-3">
-              {[
-                { title: "資產保全", desc: "避免因現金不足繳稅，被迫以低價變賣不動產或股票，導致資產大幅縮水。" },
-                { title: "稅務優化", desc: "將應稅資產（現金/定存）轉為免稅資產（保險），直接降低遺產稅級距與稅額。" },
-                { title: "控制權", desc: "透過要保人與受益人的安排，您可以完全掌控資產的去向，直到最後一刻。" },
-                { title: "隱私保護", desc: "遺產須經全體繼承人協議分割，保險金則直接給付受益人，保有高度隱私與獨立性。" }
-              ].map((item, idx) => (
-                <div key={idx} className="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-200 transition-colors">
-                  <CheckCircle2 className="text-slate-500 shrink-0 mt-0.5" size={20} />
-                  <div>
-                    <h4 className="font-bold text-slate-800">{item.title}</h4>
-                    <p className="text-sm text-slate-600 mt-1 leading-relaxed">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-           </div>
+        {/* 繳稅資金風險 */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+          <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2 text-sm">
+            <AlertTriangle size={16} className="text-amber-500"/> 繳稅資金風險
+          </h4>
+          
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-3 bg-slate-50 rounded-lg text-center">
+                <p className="text-[10px] text-slate-500">應納稅額</p>
+                <p className="text-lg font-bold text-red-600">{formatMoney(calculations.taxBefore)}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg text-center">
+                <p className="text-[10px] text-slate-500">名下現金</p>
+                <p className="text-lg font-bold text-slate-700">{formatMoney(cash)}</p>
+              </div>
+            </div>
+            
+            <div className={`p-3 rounded-lg text-center ${
+              calculations.liquidityGap > 0 ? 'bg-red-50 border border-red-200' : 'bg-amber-50 border border-amber-200'
+            }`}>
+              <p className="text-[10px] text-slate-500">帳面差額</p>
+              <p className={`text-xl font-bold ${calculations.liquidityGap > 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                {calculations.liquidityGap > 0 ? `-${formatMoney(calculations.liquidityGap)}` : `+${formatMoney(Math.abs(calculations.liquidityGap))}`}
+              </p>
+            </div>
+            
+            {/* 隱藏風險提示 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-[10px] text-amber-700 bg-amber-50 p-1.5 rounded">
+                <span>🔒</span> 過世後帳戶立即凍結
+              </div>
+              <div className="flex items-center gap-2 text-[10px] text-amber-700 bg-amber-50 p-1.5 rounded">
+                <span>⏳</span> 核定前 3-6 月無現金可用
+              </div>
+              <div className="flex items-center gap-2 text-[10px] text-amber-700 bg-amber-50 p-1.5 rounded">
+                <span>👥</span> 動用需全體繼承人同意
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* ============================================================ */}
+      {/* 第二區：智能推薦 + 方案選擇 */}
+      {/* ============================================================ */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-200">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Award size={20} className="text-blue-600" />
+              <h4 className="font-bold text-blue-900">智能推薦方案</h4>
+            </div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {calculations.recommendationReasons.map((reason, idx) => (
+                <span key={idx} className="px-2 py-1 bg-white/60 rounded text-xs text-blue-700">
+                  • {reason}
+                </span>
+              ))}
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={() => updateFields({ planMode: 'lumpSum', lumpSumAmount: calculations.optimalLumpSum || 1000 })}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                planMode === 'lumpSum'
+                  ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-300'
+                  : 'bg-white text-blue-600 border border-blue-200 hover:border-blue-400'
+              }`}
+            >
+              <Banknote size={16} className="inline mr-1" />
+              躉繳方案
+              {(calculations.recommendation === 'lumpSum' || calculations.recommendation === 'both') && (
+                <span className="ml-1 px-1.5 py-0.5 bg-amber-400 text-amber-900 rounded text-[10px]">推薦</span>
+              )}
+            </button>
+            <button
+              onClick={() => updateField('planMode', 'installment')}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                planMode === 'installment'
+                  ? 'bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-300'
+                  : 'bg-white text-emerald-600 border border-emerald-200 hover:border-emerald-400'
+              }`}
+            >
+              <Calendar size={16} className="inline mr-1" />
+              分期方案
+              {calculations.recommendation === 'installment' && (
+                <span className="ml-1 px-1.5 py-0.5 bg-amber-400 text-amber-900 rounded text-[10px]">推薦</span>
+              )}
+            </button>
+          </div>
+        </div>
+        
+        {calculations.optimalLumpSum > 0 && (
+          <div className="mt-3 p-3 bg-white/50 rounded-lg">
+            <p className="text-xs text-blue-700">
+              <Sparkles size={12} className="inline mr-1" />
+              <b>最佳躉繳金額：{formatMoney(calculations.optimalLumpSum)}</b>
+              　→ 可將稅率從 {calculations.bracketBefore.label} 降至更低級距
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* ============================================================ */}
+      {/* 第三區：方案詳情（根據選擇顯示）*/}
+      {/* ============================================================ */}
+      {planMode !== 'none' && (
+        <div className="grid lg:grid-cols-2 gap-6">
+          
+          {/* 方案參數設定 */}
+          <div className={`rounded-xl shadow-sm border p-5 ${
+            planMode === 'lumpSum' ? 'bg-blue-50 border-blue-200' : 'bg-emerald-50 border-emerald-200'
+          }`}>
+            <h4 className={`font-bold mb-4 flex items-center gap-2 ${
+              planMode === 'lumpSum' ? 'text-blue-800' : 'text-emerald-800'
+            }`}>
+              {planMode === 'lumpSum' ? (
+                <><Banknote size={18}/> 躉繳方案設定</>
+              ) : (
+                <><Calendar size={18}/> 分期方案設定</>
+              )}
+            </h4>
+            
+            {planMode === 'lumpSum' ? (
+              <div className="space-y-4">
+                {/* 躉繳金額 */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-sm font-bold text-blue-700">躉繳保費</label>
+                    <span className="text-2xl font-black text-blue-700">{formatMoney(lumpSumAmount)}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min={0} 
+                    max={cash} 
+                    step={100} 
+                    value={lumpSumAmount}
+                    onChange={(e) => updateField('lumpSumAmount', Number(e.target.value))}
+                    className="w-full h-3 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                  <div className="flex justify-between text-[10px] text-blue-500 mt-1">
+                    <span>0</span>
+                    <span>最高可用 {formatMoney(cash)}</span>
+                  </div>
+                </div>
+                
+                {/* 槓桿 */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs text-blue-600">保額/保費比</label>
+                    <span className="font-bold text-blue-700">{lumpSumLeverage}x</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min={1} max={1.5} step={0.05}
+                    value={lumpSumLeverage}
+                    onChange={(e) => updateField('lumpSumLeverage', Number(e.target.value))}
+                    className="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  />
+                </div>
+                
+                {/* 結果摘要 */}
+                <div className="grid grid-cols-2 gap-2 pt-3 border-t border-blue-200">
+                  <div className="bg-white/60 p-2 rounded text-center">
+                    <p className="text-[10px] text-blue-500">預估理賠金</p>
+                    <p className="text-lg font-bold text-blue-700">{formatMoney(calculations.lumpSum.benefit)}</p>
+                  </div>
+                  <div className="bg-white/60 p-2 rounded text-center">
+                    <p className="text-[10px] text-blue-500">遺產壓縮</p>
+                    <p className="text-lg font-bold text-blue-700">{formatMoney(lumpSumAmount)}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* 年繳保費 */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-sm font-bold text-emerald-700">年繳保費</label>
+                    <span className="text-2xl font-black text-emerald-700">{formatMoney(annualPremium)}/年</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min={50} 
+                    max={500} 
+                    step={10} 
+                    value={annualPremium}
+                    onChange={(e) => updateField('annualPremium', Number(e.target.value))}
+                    className="w-full h-3 bg-emerald-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                  />
+                </div>
+                
+                {/* 繳費年期 */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs text-emerald-600">繳費年期</label>
+                    <span className="font-bold text-emerald-700">{paymentYears} 年</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min={6} max={20} step={1}
+                    value={paymentYears}
+                    onChange={(e) => updateField('paymentYears', Number(e.target.value))}
+                    className="w-full h-2 bg-emerald-100 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                  />
+                  <div className="flex justify-between text-[10px] text-emerald-500 mt-1">
+                    <span>6年</span>
+                    <span>20年</span>
+                  </div>
+                </div>
+                
+                {/* 槓桿 */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs text-emerald-600">保額/總保費比</label>
+                    <span className="font-bold text-emerald-700">{installmentLeverage}x</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min={1.2} max={3} step={0.1}
+                    value={installmentLeverage}
+                    onChange={(e) => updateField('installmentLeverage', Number(e.target.value))}
+                    className="w-full h-2 bg-emerald-100 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                  />
+                </div>
+                
+                {/* 結果摘要 */}
+                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-emerald-200">
+                  <div className="bg-white/60 p-2 rounded text-center">
+                    <p className="text-[10px] text-emerald-500">總繳保費</p>
+                    <p className="text-sm font-bold text-emerald-700">{formatMoney(calculations.installment.totalPremium)}</p>
+                  </div>
+                  <div className="bg-white/60 p-2 rounded text-center">
+                    <p className="text-[10px] text-emerald-500">預估理賠金</p>
+                    <p className="text-sm font-bold text-emerald-700">{formatMoney(calculations.installment.benefit)}</p>
+                  </div>
+                  <div className="bg-white/60 p-2 rounded text-center">
+                    <p className="text-[10px] text-emerald-500">槓桿倍數</p>
+                    <p className="text-sm font-bold text-emerald-700">{installmentLeverage}x</p>
+                  </div>
+                </div>
+                
+                {/* 【關鍵賣點】第一年即保障 */}
+                <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                  <p className="text-xs font-bold text-amber-800 mb-1">💡 第一年即享完整保障</p>
+                  <p className="text-[10px] text-amber-600">
+                    繳第一年 {formatMoney(annualPremium)}，即享 {formatMoney(calculations.installment.year1Benefit)} 理賠金保障
+                    <br/>
+                    <b>槓桿效果：{calculations.installment.year1ROI.toFixed(0)}% ROI</b>
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 規劃效益比較 */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+            <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
+              <TrendingDown size={18} className="text-emerald-500"/> 規劃效益分析
+            </h4>
+            
+            {(() => {
+              const plan = planMode === 'lumpSum' ? calculations.lumpSum : calculations.installment;
+              const premium = planMode === 'lumpSum' ? lumpSumAmount : calculations.installment.totalPremium;
+              const isBracketDrop = calculations.bracketBefore.rate > plan.bracketAfter.rate;
+              
+              return (
+                <div className="space-y-4">
+                  {/* Before / After 對比 */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-red-50 rounded-lg text-center border border-red-100">
+                      <p className="text-[10px] text-red-500 mb-1">規劃前稅金</p>
+                      <p className="text-xl font-black text-red-600">{formatMoney(calculations.taxBefore)}</p>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                        calculations.bracketBefore.color === 'red' ? 'bg-red-100 text-red-600' :
+                        calculations.bracketBefore.color === 'orange' ? 'bg-orange-100 text-orange-600' :
+                        'bg-yellow-100 text-yellow-600'
+                      }`}>{calculations.bracketBefore.label}</span>
+                    </div>
+                    <div className="p-3 bg-emerald-50 rounded-lg text-center border border-emerald-100">
+                      <p className="text-[10px] text-emerald-500 mb-1">規劃後稅金</p>
+                      <p className="text-xl font-black text-emerald-600">{formatMoney(plan.taxAfter)}</p>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                        plan.bracketAfter.color === 'red' ? 'bg-red-100 text-red-600' :
+                        plan.bracketAfter.color === 'orange' ? 'bg-orange-100 text-orange-600' :
+                        plan.bracketAfter.color === 'yellow' ? 'bg-yellow-100 text-yellow-600' :
+                        'bg-green-100 text-green-600'
+                      }`}>{plan.bracketAfter.label}</span>
+                    </div>
+                  </div>
+                  
+                  {/* 跨級距提示 */}
+                  {isBracketDrop && (
+                    <div className="bg-gradient-to-r from-amber-100 to-yellow-100 p-3 rounded-lg border border-amber-300 text-center">
+                      <Zap size={16} className="inline text-amber-600 mr-1" />
+                      <span className="text-sm font-bold text-amber-700">
+                        🎉 稅率降級！{calculations.bracketBefore.label} → {plan.bracketAfter.label}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* 節稅金額 */}
+                  <div className="bg-emerald-100 p-4 rounded-xl text-center">
+                    <p className="text-xs text-emerald-600 mb-1">節省稅金</p>
+                    <p className="text-3xl font-black text-emerald-700">{formatMoney(plan.taxSaved)}</p>
+                    {premium > 0 && (
+                      <p className="text-xs text-emerald-500 mt-1">
+                        節稅效率 {((plan.taxSaved / premium) * 100).toFixed(1)}%
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* 流動性解決 */}
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <p className="text-xs font-bold text-blue-700 mb-2">💧 流動性保障</p>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-600">保險理賠金</span>
+                      <span className="font-bold text-blue-600">{formatMoney(plan.benefit)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs mt-1">
+                      <span className="text-slate-600">規劃後可用資金</span>
+                      <span className="font-bold text-blue-600">{formatMoney(plan.liquidityAvailable)}</span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      <span className="px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded text-[10px]">✓ 不凍結</span>
+                      <span className="px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded text-[10px]">✓ 3天給付</span>
+                      <span className="px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded text-[10px]">✓ 免協議</span>
+                    </div>
+                  </div>
+                  
+                  {/* 風險提示 */}
+                  <div className={`p-3 rounded-lg border ${
+                    plan.riskLevel === 'High' ? 'bg-red-50 border-red-200' :
+                    plan.riskLevel === 'Medium' ? 'bg-orange-50 border-orange-200' :
+                    'bg-green-50 border-green-200'
+                  }`}>
+                    <p className={`text-xs font-bold ${
+                      plan.riskLevel === 'High' ? 'text-red-700' :
+                      plan.riskLevel === 'Medium' ? 'text-orange-700' :
+                      'text-green-700'
+                    }`}>
+                      實質課稅風險：{plan.riskLevel === 'High' ? '⚠️ 較高' : plan.riskLevel === 'Medium' ? '⚡ 中等' : '✓ 較低'}
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      {planMode === 'lumpSum' 
+                        ? '躉繳屬八大態樣之一，建議搭配分期規劃降低風險'
+                        : '分期繳費風險較低，符合保障本質'}
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* 第四區：雙方案並列比較（當未選擇時顯示）*/}
+      {/* ============================================================ */}
+      {planMode === 'none' && (
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* 躉繳方案卡 */}
+          <div 
+            onClick={() => updateFields({ planMode: 'lumpSum', lumpSumAmount: calculations.optimalLumpSum || 1000 })}
+            className="bg-white rounded-xl shadow-sm border-2 border-blue-200 p-5 cursor-pointer hover:border-blue-400 hover:shadow-lg transition-all group"
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h4 className="font-bold text-blue-800 flex items-center gap-2">
+                  <Banknote size={20}/> 躉繳方案
+                </h4>
+                <p className="text-xs text-blue-500">一次付清・立即見效</p>
+              </div>
+              {(calculations.recommendation === 'lumpSum' || calculations.recommendation === 'both') && (
+                <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs font-bold">推薦</span>
+              )}
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 size={14} className="text-blue-500" />
+                <span>立即壓縮遺產總額</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 size={14} className="text-blue-500" />
+                <span>確定性高，即繳即生效</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <AlertTriangle size={14} className="text-orange-500" />
+                <span className="text-orange-600">實質課稅風險較高</span>
+              </div>
+            </div>
+            
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg text-center group-hover:bg-blue-100 transition-colors">
+              <span className="text-sm font-bold text-blue-600 flex items-center justify-center gap-1">
+                點擊設定方案 <ChevronRight size={16} />
+              </span>
+            </div>
+          </div>
+          
+          {/* 分期方案卡 */}
+          <div 
+            onClick={() => updateField('planMode', 'installment')}
+            className="bg-white rounded-xl shadow-sm border-2 border-emerald-200 p-5 cursor-pointer hover:border-emerald-400 hover:shadow-lg transition-all group"
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h4 className="font-bold text-emerald-800 flex items-center gap-2">
+                  <Calendar size={20}/> 分期方案
+                </h4>
+                <p className="text-xs text-emerald-500">年繳計畫・高槓桿</p>
+              </div>
+              {calculations.recommendation === 'installment' && (
+                <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs font-bold">推薦</span>
+              )}
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 size={14} className="text-emerald-500" />
+                <span>高槓桿，小保費大保障</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 size={14} className="text-emerald-500" />
+                <span>第一年即享完整保障</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 size={14} className="text-emerald-500" />
+                <span>實質課稅風險較低</span>
+              </div>
+            </div>
+            
+            <div className="mt-4 p-3 bg-emerald-50 rounded-lg text-center group-hover:bg-emerald-100 transition-colors">
+              <span className="text-sm font-bold text-emerald-600 flex items-center justify-center gap-1">
+                點擊設定方案 <ChevronRight size={16} />
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* 第五區：底部效益說明 */}
+      {/* ============================================================ */}
+      <div className="grid md:grid-cols-2 gap-6 pt-4 border-t border-slate-200">
+        <div className="space-y-3">
+          <h4 className="font-bold text-slate-800 flex items-center gap-2">
+            <Shield size={18}/> 保險節稅雙效益
+          </h4>
+          <div className="space-y-2">
+            <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 font-bold shrink-0">01</div>
+              <div>
+                <p className="font-bold text-blue-800 text-sm">壓縮遺產</p>
+                <p className="text-xs text-blue-600">保費移出遺產，等效增加免稅額</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 bg-emerald-50 rounded-lg">
+              <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 font-bold shrink-0">02</div>
+              <div>
+                <p className="font-bold text-emerald-800 text-sm">預留稅源</p>
+                <p className="text-xs text-emerald-600">理賠金不凍結，3天給付繳稅</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="space-y-3">
+          <h4 className="font-bold text-slate-800 flex items-center gap-2">
+            <Target size={18}/> 為什麼現在就要規劃
+          </h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2 p-2 bg-slate-50 rounded">
+              <Clock size={14} className="text-slate-500" />
+              <span>年齡越大，保費越高、核保越難</span>
+            </div>
+            <div className="flex items-center gap-2 p-2 bg-slate-50 rounded">
+              <TrendingUp size={14} className="text-slate-500" />
+              <span>資產持續增長，稅負只會更重</span>
+            </div>
+            <div className="flex items-center gap-2 p-2 bg-slate-50 rounded">
+              <Heart size={14} className="text-slate-500" />
+              <span>健康是最大的本錢，趁現在</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ============================================================ */}
+      {/* 隱藏小抄面板 */}
+      {/* ============================================================ */}
+      {showCheatSheet && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div 
+            className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+            onClick={() => setShowCheatSheet(false)}
+          />
+          
+          <div className="relative w-full max-w-md bg-slate-900 text-white shadow-2xl overflow-y-auto animate-in slide-in-from-right duration-300">
+            <div className="sticky top-0 bg-slate-900 border-b border-slate-700 p-4 flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-lg">📋 業務小抄</h3>
+                <p className="text-xs text-slate-400">按 ESC 關閉</p>
+              </div>
+              <button onClick={() => setShowCheatSheet(false)} className="p-2 hover:bg-slate-700 rounded-lg">✕</button>
+            </div>
+            
+            <div className="p-4 space-y-6 text-sm">
+              {/* 當前數據 */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-slate-800 p-2 rounded">
+                  <span className="text-slate-500">遺產總額</span>
+                  <p className="font-bold">{formatMoney(calculations.totalEstateBefore)}</p>
+                </div>
+                <div className="bg-slate-800 p-2 rounded">
+                  <span className="text-slate-500">應納稅額</span>
+                  <p className="font-bold text-red-400">{formatMoney(calculations.taxBefore)}</p>
+                </div>
+                <div className="bg-slate-800 p-2 rounded">
+                  <span className="text-slate-500">建議方案</span>
+                  <p className="font-bold text-amber-400">
+                    {calculations.recommendation === 'lumpSum' ? '躉繳' : calculations.recommendation === 'installment' ? '分期' : '躉繳+分期'}
+                  </p>
+                </div>
+                <div className="bg-slate-800 p-2 rounded">
+                  <span className="text-slate-500">最佳躉繳</span>
+                  <p className="font-bold text-emerald-400">{formatMoney(calculations.optimalLumpSum)}</p>
+                </div>
+              </div>
+
+              {/* 四大施力點 */}
+              <div>
+                <h4 className="font-bold text-amber-400 mb-2">🎯 四大施力點</h4>
+                <div className="space-y-2 text-xs">
+                  <div className="bg-slate-800 p-2 rounded">
+                    <p className="text-amber-300 font-bold">🔒 帳戶凍結</p>
+                    <p className="text-slate-400">「{formatMoney(cash)} 現金，家人一毛領不出」</p>
+                  </div>
+                  <div className="bg-slate-800 p-2 rounded">
+                    <p className="text-orange-300 font-bold">⏳ 空窗期</p>
+                    <p className="text-slate-400">「3-6 個月沒錢可用」</p>
+                  </div>
+                  <div className="bg-slate-800 p-2 rounded">
+                    <p className="text-red-300 font-bold">👥 協議風險</p>
+                    <p className="text-slate-400">「全體繼承人同意才能動」</p>
+                  </div>
+                  <div className="bg-slate-800 p-2 rounded">
+                    <p className="text-blue-300 font-bold">💸 用誰的錢</p>
+                    <p className="text-slate-400">「自己的錢 vs 保險公司的錢」</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 躉繳 vs 分期話術 */}
+              <div>
+                <h4 className="font-bold text-emerald-400 mb-2">💰 躉繳 vs 分期</h4>
+                <div className="space-y-2 text-xs">
+                  <div className="bg-blue-900/50 p-2 rounded border border-blue-700">
+                    <p className="text-blue-300 font-bold">躉繳優勢</p>
+                    <p className="text-slate-400">「立即見效、確定性高、適合高齡急迫」</p>
+                  </div>
+                  <div className="bg-emerald-900/50 p-2 rounded border border-emerald-700">
+                    <p className="text-emerald-300 font-bold">分期優勢</p>
+                    <p className="text-slate-400">「第一年繳 {formatMoney(annualPremium)} 就享 {formatMoney(calculations.installment.year1Benefit)} 保障，槓桿 {installmentLeverage}x」</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 金句 */}
+              <div>
+                <h4 className="font-bold text-purple-400 mb-2">✨ 收尾金句</h4>
+                <div className="space-y-2 text-xs">
+                  <div className="bg-purple-900/30 p-2 rounded border border-purple-700 text-center italic">
+                    「沒有規劃是遺產稅，有規劃才是傳承」
+                  </div>
+                  <div className="bg-purple-900/30 p-2 rounded border border-purple-700 text-center italic">
+                    「留給家人，還是留給國稅局？」
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+export default TaxPlannerTool;
