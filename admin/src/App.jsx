@@ -6,7 +6,6 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
 
 // Pages
-import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
@@ -46,13 +45,20 @@ function App() {
     <ConfigProvider locale={zhTW}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
-          {/* 公開首頁 */}
-          <Route path="/" element={<LandingPage />} />
+          {/* ✅ 首頁：已登入的管理員 → 儀表板；未登入 → 登入頁 */}
+          <Route 
+            path="/" 
+            element={
+              <ProtectedRoute>
+                <Navigate to="/admin/dashboard" replace />
+              </ProtectedRoute>
+            } 
+          />
 
-          {/* 秘密後台登入入口（只有管理員知道）*/}
+          {/* ✅ 秘密後台登入入口（只有管理員知道）*/}
           <Route path="/secret-admin-ultra-2026" element={<Login />} />
 
-          {/* 受保護的後台管理路由 */}
+          {/* ✅ 受保護的後台管理路由 */}
           <Route
             path="/admin"
             element={
@@ -83,13 +89,13 @@ function App() {
             <Route path="settings" element={<div>系統設定（即將推出）</div>} />
           </Route>
 
-          {/* 舊路徑重定向（向後兼容）*/}
+          {/* ✅ 舊路徑重定向（向後兼容）*/}
           <Route path="/dashboard" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="/users" element={<Navigate to="/admin/users" replace />} />
           <Route path="/login" element={<Navigate to="/secret-admin-ultra-2026" replace />} />
 
-          {/* 404 - 重定向到首頁 */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* ✅ 404 - 重定向到登入頁 */}
+          <Route path="*" element={<Navigate to="/secret-admin-ultra-2026" replace />} />
         </Routes>
       </BrowserRouter>
     </ConfigProvider>
