@@ -15,10 +15,8 @@ import { SecretSignupPage } from './components/auth/SecretSignupPage';
 import { LandingPage } from './components/LandingPage'; 
 
 import ReportModal from './components/ReportModal';
+import ClientDashboard from './components/ClientDashboard';
 import SplashScreen from './components/SplashScreen'; 
-
-// ✅ 新版戰情室（整合個人資料、密碼修改、客戶管理）
-import UltraWarRoom from './components/UltraWarRoom';
 
 import { FinancialRealEstateTool } from './components/FinancialRealEstateTool';
 import { StudentLoanTool } from './components/StudentLoanTool';
@@ -32,6 +30,9 @@ import FreeDashboardTool from './components/FreeDashboardTool';
 import MarketDataZone from './components/MarketDataZone'; 
 import GoldenSafeVault from './components/GoldenSafeVault'; 
 import FundTimeMachine from './components/FundTimeMachine'; 
+import AccountSettings from './pages/AccountSettings';
+
+// 在路由配置中加入
 
 const generateSessionId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
 
@@ -85,20 +86,28 @@ export default function App() {
   const [loading, setLoading] = useState(true); 
   const [minSplashTimePassed, setMinSplashTimePassed] = useState(false); 
   
-  // 控制登入頁面顯示邏輯
-  const [needsLoginInteraction, setNeedsLoginInteraction] = useState(() => {
-    if (!user) return true;
-    const isTrialUser = !user.subscriptionStatus || user.subscriptionStatus === 'trial';
-    if (isTrialUser) {
-      return true;
-    } else {
-      const lastShown = sessionStorage.getItem('last_login_page_shown');
-      const now = Date.now();
-      if (!lastShown) return true;
-      const hoursSinceLastShown = (now - parseInt(lastShown)) / (1000 * 60 * 60);
-      return hoursSinceLastShown > 24;
-    }
-  });
+  // 新增：控制登入頁面顯示邏輯
+const [needsLoginInteraction, setNeedsLoginInteraction] = useState(() => {
+  // 混合模式邏輯
+  if (!user) return true; // 未登入一定要顯示登入頁
+  
+  // 判斷是否為試用用戶（這裡需要根據你的實際邏輯調整）
+  // 假設試用用戶沒有 subscriptionStatus 或為 'trial'
+  const isTrialUser = !user.subscriptionStatus || user.subscriptionStatus === 'trial';
+  
+  if (isTrialUser) {
+    // 試用用戶：每次都顯示
+    return true;
+  } else {
+    // 付費用戶：檢查 24 小時內是否已顯示過
+    const lastShown = sessionStorage.getItem('last_login_page_shown');
+    const now = Date.now();
+    if (!lastShown) return true;
+    
+    const hoursSinceLastShown = (now - parseInt(lastShown)) / (1000 * 60 * 60);
+    return hoursSinceLastShown > 24; // 超過 24 小時就顯示
+  }
+});
  
   // 路由與同步狀態
   const [isSecretSignupRoute, setIsSecretSignupRoute] = useState(false); 
@@ -227,6 +236,7 @@ export default function App() {
         }
     };
 
+    // 防抖：1.5 秒內無新變動才寫入
     const handler = setTimeout(saveData, 1500);
     return () => clearTimeout(handler);
   }, [
@@ -339,38 +349,51 @@ export default function App() {
       }} />;
   }
 
-  if (!user || needsLoginInteraction) {
-    if (isLoginRoute || user) {
-      return <LoginPage 
-        user={user}
-        onLoginSuccess={() => {
-          sessionStorage.setItem('last_login_page_shown', Date.now().toString());
-          setNeedsLoginInteraction(false);
-          if (!user && auth.currentUser) {
-            registerDeviceSession(auth.currentUser.uid);
-          }
-          setIsLoginRoute(false);
-          window.history.pushState({}, '', '/');
-        }} 
-      />;
-    }
-    return <LandingPage 
-      onStart={() => navigateTo('/login', () => setIsLoginRoute(true))} 
-      onSignup={() => navigateTo('/signup-secret', () => setIsSecretSignupRoute(true))}
-      onHome={() => navigateTo('/', () => { setIsLoginRoute(false); setIsSecretSignupRoute(false); })}
+ if (!user || needsLoginInteraction) {
+  // 已登入但需要展示歡迎頁 or 未登入需要登入
+  if (isLoginRoute || user) {
+    return <LoginPage 
+      user={user}  // 傳入用戶資訊（已登入時會有值）
+      onLoginSuccess={() => {
+        // 記錄本次顯示時間
+        sessionStorage.setItem('last_login_page_shown', Date.now().toString());
+        
+        // 標記不再需要顯示登入頁
+        setNeedsLoginInteraction(false);
+        
+        // 如果是新登入（之前沒有 user），註冊裝置
+        if (!user && auth.currentUser) {
+          registerDeviceSession(auth.currentUser.uid);
+        }
+        
+        // 清除登入路由狀態
+        setIsLoginRoute(false);
+        window.history.pushState({}, '', '/');
+      }} 
     />;
   }
-
-  // ✅ 使用新版 UltraWarRoom 取代舊的 ClientDashboard
+  // 未登入且不在登入路由 → 顯示 Landing Page
+  return <LandingPage 
+    onStart={() => navigateTo('/login', () => setIsLoginRoute(true))} 
+    onSignup={() => navigateTo('/signup-secret', () => setIsSecretSignupRoute(true))}
+    onHome={() => navigateTo('/', () => { setIsLoginRoute(false); setIsSecretSignupRoute(false); })}
+ />;
+}
   if (!currentClient) {
       return (
           <>
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-            <UltraWarRoom 
-              user={user} 
-              onSelectClient={setCurrentClient} 
-              onLogout={handleLogout}
-            />
+            <div className="flex flex-col h-screen overflow-hidden">
+                <div className="bg-slate-900 text-white p-4 flex justify-between items-center shadow-md shrink-0">
+                    <div className="font-bold flex items-center gap-2 uppercase tracking-tighter"><Coins className="text-yellow-400"/> UltraAdvisor 戰情室</div>
+                    <button onClick={handleLogout} className="text-sm bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                        <LogOut size={16}/> 登出
+                    </button>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                    <ClientDashboard user={user} onSelectClient={setCurrentClient} />
+                </div>
+            </div>
           </>
       );
   }
@@ -409,7 +432,7 @@ export default function App() {
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               <button onClick={() => { setCurrentClient(null); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-3 rounded-lg mb-4 border border-slate-800">
-                <ChevronLeft size={18}/> 返回戰情室
+                <ChevronLeft size={18}/> 返回客戶列表
               </button>
               <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-2">觀念與診斷</div>
               <NavItem icon={LayoutDashboard} label="自由組合戰情室" active={activeTab === 'free_dashboard'} onClick={() => { setActiveTab('free_dashboard'); setIsMobileMenuOpen(false); }} />
@@ -441,7 +464,7 @@ export default function App() {
       <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10 print:hidden">
         <div className="p-4 border-b border-slate-800">
             <button onClick={() => setCurrentClient(null)} className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-lg transition-all mb-4">
-              <ChevronLeft size={18}/> 返回戰情室
+              <ChevronLeft size={18}/> 返回客戶列表
             </button>
             <div className="flex items-center gap-3 px-2">
               <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg text-white shrink-0">

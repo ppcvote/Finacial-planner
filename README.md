@@ -71,3 +71,109 @@ export default defineConfig([
   },
 ])
 ```
+
+```
+financial-planner
+├─ .firebaserc
+├─ admin
+│  ├─ DAY1-GUIDE.md
+│  ├─ index.html
+│  ├─ package-lock.json
+│  ├─ package.json
+│  ├─ postcss.config.js
+│  ├─ src
+│  │  ├─ App.jsx
+│  │  ├─ components
+│  │  │  └─ Layout.jsx
+│  │  ├─ firebase.js
+│  │  ├─ index.css
+│  │  ├─ main.jsx
+│  │  └─ pages
+│  │     ├─ Dashboard.jsx
+│  │     ├─ Login.jsx
+│  │     └─ Users.jsx
+│  ├─ tailwind.config.js
+│  ├─ vercel.json
+│  └─ vite.config.js
+├─ api
+│  └─ market.js
+├─ eslint.config.js
+├─ firebase.json
+├─ firebase.json.backup
+├─ functions
+│  ├─ eslint.config.js
+│  ├─ index.js
+│  ├─ index.js.backup
+│  ├─ lib
+│  │  ├─ index.js
+│  │  └─ index.js.map
+│  ├─ package-lock.json
+│  ├─ package.json
+│  ├─ src
+│  │  └─ index.ts
+│  ├─ tsconfig.dev.json
+│  └─ tsconfig.json
+├─ git-structure.txt
+├─ index.html
+├─ package-lock.json
+├─ package.json
+├─ postcss.config.js
+├─ project-structure.txt
+├─ public
+│  ├─ logo.png
+│  ├─ manifest.json
+│  └─ vite.svg
+├─ README.md
+├─ repomix-output.xml
+├─ src
+│  ├─ App.css
+│  ├─ App.tsx
+│  ├─ assets
+│  │  └─ react.svg
+│  ├─ components
+│  │  ├─ auth
+│  │  │  ├─ LoginPage.tsx
+│  │  │  └─ SecretSignupPage.tsx
+│  │  ├─ BigSmallReservoirTool.tsx
+│  │  ├─ CarReplacementTool.tsx
+│  │  ├─ ClientDashboard.tsx
+│  │  ├─ EstateReport.tsx
+│  │  ├─ FinancialRealEstateTool.tsx
+│  │  ├─ FreeDashboardTool.tsx
+│  │  ├─ FundTimeMachine.tsx
+│  │  ├─ GiftReport.tsx
+│  │  ├─ GoldenSafeVault.tsx
+│  │  ├─ LaborPensionTool.tsx
+│  │  ├─ LandingPage.jsx
+│  │  ├─ MarketDataZone.tsx
+│  │  ├─ MarketWarRoom copy.tsx
+│  │  ├─ MarketWarRoom.tsx
+│  │  ├─ MillionDollarGiftTool.tsx
+│  │  ├─ QuickCalculator.tsx
+│  │  ├─ ReportModal.tsx
+│  │  ├─ SplashScreen.tsx
+│  │  ├─ StudentLoanReport.tsx
+│  │  ├─ StudentLoanTool.tsx
+│  │  ├─ SuperActiveReport.tsx
+│  │  ├─ SuperActiveSavingTool.tsx
+│  │  ├─ TaxPlannerTool.tsx
+│  │  └─ UltraWarRoom.tsx
+│  ├─ data
+│  │  └─ fundData.ts
+│  ├─ firebase.ts
+│  ├─ index.css
+│  ├─ main.tsx
+│  ├─ pages
+│  │  └─ AccountSettings.jsx
+│  ├─ types.d.ts
+│  ├─ utils
+│  └─ utils.ts
+├─ src-structure.txt
+├─ tailwind.config.js
+├─ tsconfig.app.json
+├─ tsconfig.json
+├─ tsconfig.node.json
+├─ vercel.json
+└─ vite.config.ts
+
+```
