@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { auth } from '../firebase';
 import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 
@@ -13,22 +12,10 @@ const Login = () => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      // 1. 登入 Firebase
-      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-      const user = userCredential.user;
-
-      // 2. 檢查是否為管理員
-      const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+      // 登入 Firebase
+      await signInWithEmailAndPassword(auth, values.email, values.password);
       
-      if (!adminDoc.exists()) {
-        // 不是管理員，登出並拒絕
-        await auth.signOut();
-        message.error('此帳號沒有管理員權限');
-        setLoading(false);
-        return;
-      }
-
-      // 3. 是管理員，允許登入
+      // 登入成功
       message.success('登入成功！');
       navigate('/admin/dashboard');
     } catch (error) {

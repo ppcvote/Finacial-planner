@@ -3,34 +3,23 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import zhTW from 'antd/locale/zh_TW';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { auth } from './firebase';
 
 // Pages
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
-import DataMigration from './pages/DataMigration';
 import MainLayout from './components/Layout';
 
-// 受保護的路由（需要管理員權限）
+// 受保護的路由（需要登入）
 const ProtectedRoute = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // 檢查是否為管理員
-        const adminDoc = await getDoc(doc(db, 'admins', user.uid));
-        setIsAdmin(adminDoc.exists());
-        setUser(user);
-      } else {
-        setUser(null);
-        setIsAdmin(false);
-      }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
       setLoading(false);
     });
 
@@ -45,7 +34,7 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  if (!user || !isAdmin) {
+  if (!user) {
     return <Navigate to="/secret-admin-ultra-2026" replace />;
   }
 
@@ -80,9 +69,6 @@ function App() {
 
             {/* 用戶管理 */}
             <Route path="users" element={<Users />} />
-
-            {/* 資料遷移工具 */}
-            <Route path="data-migration" element={<DataMigration />} />
 
             {/* 內容管理 */}
             <Route path="content" element={<div>內容管理（即將推出）</div>} />

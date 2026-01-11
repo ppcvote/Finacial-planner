@@ -11,7 +11,6 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  SyncOutlined,
 } from '@ant-design/icons';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -34,11 +33,6 @@ const MainLayout = () => {
       key: '/admin/users',
       icon: <UserOutlined />,
       label: '用戶管理',
-    },
-    {
-      key: '/admin/data-migration',
-      icon: <SyncOutlined />,
-      label: '資料遷移',
     },
     {
       key: '/admin/content',
