@@ -1,76 +1,299 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Activity, TrendingUp, TrendingDown, ShieldAlert, Clock, 
+  ChevronRight, Users, Rocket, Target, Zap, 
+  CheckCircle2, ArrowRight, 
+  Sparkles, Crown, Award, Star, Calculator,
+  PieChart, DollarSign, Gift, Shield, LineChart, LogIn,
+  BarChart3, PlayCircle, TriangleAlert
+} from 'lucide-react';
 
-const LandingPage = () => {
+const LOGO_URL = "https://lh3.googleusercontent.com/d/1CEFGRByRM66l-4sMMM78LUBUvAMiAIaJ";
+const COMMUNITY_LINK = "https://line.me/ti/g2/9Cca20iCP8J0KrmVRg5GOe1n5dSatYKO8ETTHw?utm_source=invitation&utm_medium=link_copy&utm_campaign=default";
+const LINE_OFFICIAL_ACCOUNT = "https://lin.ee/RFE8A5A";
+
+const BetaCountdown = () => {
+  const [slots, setSlots] = useState(80);
+  
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSlots(prev => prev > 50 ? prev - 1 : prev);
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-4xl mx-auto">
+    <div className="inline-flex items-center gap-3 bg-red-600/10 border border-red-500/30 
+                    px-5 py-2.5 rounded-full backdrop-blur-sm">
+      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+      <span className="text-red-400 font-black text-xs uppercase tracking-widest">
+        🔥 內測限量 100 名 · 剩餘 <span className="text-red-300 text-sm">{slots}</span> 位
+      </span>
+    </div>
+  );
+};
+
+const OptimizedHeroSection = ({ onFreeTrial, onWatchDemo }) => {
+  return (
+    <section className="relative min-h-screen bg-[#050b14] 
+                        bg-[linear-gradient(rgba(77,163,255,0.05)_1px,transparent_1px),
+                           linear-gradient(90deg,rgba(77,163,255,0.05)_1px,transparent_1px)]
+                        bg-[length:40px_40px] flex items-center justify-center px-4 py-20">
+      
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px]" />
+      </div>
+
+      <div className="relative z-10 max-w-5xl mx-auto text-center space-y-10">
+        
+        <div className="flex justify-center animate-fade-in">
+          <BetaCountdown />
+        </div>
+
+        <div className="space-y-6 animate-fade-in" style={{animationDelay: '0.2s'}}>
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white 
+                         leading-tight tracking-tighter">
+            讓每個顧問都有
+            <br />
+            <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-blue-500 
+                           bg-clip-text text-transparent">
+              AI 軍師
+            </span>
+            的超級武器
+          </h1>
           
-          {/* Logo */}
-          <div className="text-center mb-12">
-            <h1 className="text-6xl md:text-7xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
-              Ultra Advisor
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-600">
-              您的專業理財規劃助手
-            </p>
+          <p className="text-xl md:text-2xl text-blue-300 font-bold tracking-wide">
+            3 分鐘成交，不再土法煉鋼
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-4 max-w-3xl mx-auto animate-fade-in" 
+             style={{animationDelay: '0.4s'}}>
+          {[
+            { icon: Target, text: "平均每月多成交 3 單", color: "blue" },
+            { icon: Clock, text: "節省 15 小時試算時間", color: "amber" },
+            { icon: TrendingUp, text: "客戶滿意度 +40%", color: "emerald" }
+          ].map((item, i) => (
+            <div key={i} className="bg-slate-900/50 border border-slate-700/50 
+                                   rounded-2xl p-4 backdrop-blur-sm">
+              <item.icon className={`text-${item.color}-400 mx-auto mb-2`} size={24} />
+              <p className="text-slate-300 text-sm font-bold">{item.text}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-5 justify-center items-center 
+                       animate-fade-in" style={{animationDelay: '0.6s'}}>
+          
+          <button 
+            onClick={onFreeTrial}
+            className="group relative px-10 py-5 bg-gradient-to-r from-blue-600 to-blue-500 
+                     text-white rounded-2xl font-black text-lg shadow-[0_0_40px_rgba(59,130,246,0.5)]
+                     hover:shadow-[0_0_60px_rgba(59,130,246,0.7)] transition-all duration-300
+                     hover:-translate-y-1 flex items-center gap-3">
+            <Sparkles className="group-hover:rotate-12 transition-transform" size={24} />
+            免費獲取 Ultra888 金鑰
+            <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
+          </button>
+
+          <button 
+            onClick={onWatchDemo}
+            className="px-10 py-5 bg-transparent border-2 border-blue-400 text-blue-300 
+                     rounded-2xl font-bold text-lg hover:bg-blue-400/10 transition-all
+                     flex items-center gap-3">
+            <PlayCircle size={20} />
+            觀看 60 秒示範
+          </button>
+        </div>
+
+        <div className="flex flex-col md:flex-row items-center justify-center gap-6 
+                       text-slate-500 text-sm animate-fade-in" style={{animationDelay: '0.8s'}}>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="text-emerald-400" size={16} />
+            <span>7 天免費完整體驗</span>
           </div>
-
-          {/* 主要內容卡片 */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 md:p-12 mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center">
-              透過 LINE 開始您的理財規劃
-            </h2>
-            <p className="text-lg md:text-xl text-gray-600 mb-8 text-center">
-              加入我們的 LINE Bot，立即開始您的專業理財規劃之旅
-            </p>
-            
-            {/* LINE 加入按鈕 */}
-            <div className="flex justify-center mb-8">
-              <a 
-                href="https://line.me/R/ti/p/@grbt"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center bg-gradient-to-r from-green-500 to-green-600 text-white px-10 py-5 rounded-full text-lg md:text-xl font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-              >
-                <svg className="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
-                </svg>
-                加入 LINE Bot
-              </a>
-            </div>
-
-            {/* 功能說明 */}
-            <div className="text-center text-gray-500 text-sm">
-              <p>免費試用 7 天 · 專業理財規劃工具</p>
-            </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="text-emerald-400" size={16} />
+            <span>不需信用卡</span>
           </div>
-
-          {/* 功能特點 */}
-          <div className="grid md:grid-cols-3 gap-6 mb-12">
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow">
-              <div className="text-5xl mb-4 text-center">💰</div>
-              <h3 className="text-xl font-bold mb-3 text-center text-gray-800">理財規劃</h3>
-              <p className="text-gray-600 text-center">專業的財務規劃工具，輕鬆管理您的財務</p>
-            </div>
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow">
-              <div className="text-5xl mb-4 text-center">📊</div>
-              <h3 className="text-xl font-bold mb-3 text-center text-gray-800">投資分析</h3>
-              <p className="text-gray-600 text-center">智能投資建議與分析，助您做出明智決策</p>
-            </div>
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow">
-              <div className="text-5xl mb-4 text-center">🎯</div>
-              <h3 className="text-xl font-bold mb-3 text-center text-gray-800">目標追蹤</h3>
-              <p className="text-gray-600 text-center">輕鬆追蹤理財目標，實現財務自由</p>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="text-center text-gray-500 text-sm">
-            <p>&copy; 2026 Ultra Advisor. All rights reserved.</p>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="text-emerald-400" size={16} />
+            <span>隨時可升級</span>
           </div>
         </div>
+
       </div>
+    </section>
+  );
+};
+
+const LandingPage = () => {
+  const navigate = useNavigate();
+  const [logoError, setLogoError] = useState(false);
+
+  const handleFreeTrial = () => {
+    window.open(LINE_OFFICIAL_ACCOUNT, '_blank');
+  };
+
+  const handleWatchDemo = () => {
+    alert('Demo 影片功能開發中...');
+  };
+
+  const handleLogin = () => {
+    navigate('/secret-admin-ultra-2026');
+  };
+
+  const MarketTicker = () => {
+    const [seconds, setSeconds] = useState(228);
+    useEffect(() => {
+      const timer = setInterval(() => {
+        setSeconds(prev => (prev <= 1 ? 228 : prev - 1));
+      }, 1000);
+      return () => clearInterval(timer);
+    }, []);
+
+    const formatTime = (s) => {
+      const m = Math.floor(s / 60);
+      const rs = s % 60;
+      return `${m} 分 ${rs < 10 ? '0' : ''}${rs} 秒`;
+    };
+
+    return (
+      <div className="bg-red-600 text-white py-2 overflow-hidden whitespace-nowrap relative z-50 shadow-lg">
+        <div className="flex animate-marquee items-center gap-12 font-black text-[10px] md:text-xs uppercase tracking-widest">
+          <span className="flex items-center gap-2"><Clock size={14}/> 2026 癌症時鐘倒數：{formatTime(seconds)}</span>
+          <span className="flex items-center gap-2"><TriangleAlert size={14}/> 2026 預估醫療通膨：+15.8%</span>
+          <span className="flex items-center gap-2"><TrendingUp size={14}/> 實質體感通膨：4.5% 起</span>
+          <span className="flex items-center gap-2"><ShieldAlert size={14}/> 勞保破產倒數：2031 臨界點</span>
+        </div>
+        <style>{`
+          @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }
+          .animate-marquee {
+            display: inline-flex;
+            animation: marquee 30s linear infinite;
+          }
+        `}</style>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-[#050b14] text-white font-sans">
+      
+      <MarketTicker />
+
+      <header className="sticky top-0 z-40 bg-[#050b14]/80 backdrop-blur-xl border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-3 cursor-pointer">
+            <img 
+              src={logoError ? "https://placehold.co/40x40/3b82f6/white?text=UA" : LOGO_URL}
+              alt="Ultra Advisor"
+              className="h-10 w-auto"
+              onError={() => setLogoError(true)}
+            />
+            <span className="text-xl font-black tracking-tight">
+              <span style={{color: '#FF3A3A'}}>Ultra</span>
+              <span className="text-blue-400">Advisor</span>
+            </span>
+          </div>
+
+          <nav className="hidden md:flex items-center gap-8">
+            <a href={COMMUNITY_LINK} target="_blank" rel="noopener noreferrer" 
+               className="text-slate-400 hover:text-blue-400 font-bold transition-colors">
+              社群
+            </a>
+            
+            <button 
+              onClick={handleLogin}
+              className="flex items-center gap-2 text-slate-400 hover:text-white font-bold transition-colors">
+              <LogIn size={18} />
+              登入系統
+            </button>
+            
+            <button 
+              onClick={handleFreeTrial}
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold 
+                       transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)]">
+              免費試用
+            </button>
+          </nav>
+
+          <div className="md:hidden flex items-center gap-3">
+            <button 
+              onClick={handleLogin}
+              className="text-slate-400 hover:text-white font-bold text-sm">
+              登入
+            </button>
+            <button 
+              onClick={handleFreeTrial}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold text-sm
+                       transition-all">
+              試用
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <OptimizedHeroSection 
+          onFreeTrial={handleFreeTrial}
+          onWatchDemo={handleWatchDemo}
+        />
+
+        <section className="py-32 bg-gradient-to-b from-slate-950 to-blue-950/20">
+          <div className="max-w-4xl mx-auto text-center px-6">
+            <h2 className="text-4xl md:text-6xl font-black text-white mb-8 leading-tight">
+              準備好升級你的
+              <br />
+              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                顧問武器庫
+              </span>
+              了嗎？
+            </h2>
+            <p className="text-slate-400 text-xl mb-12">
+              加入 20+ 位菁英顧問行列，開始你的 7 天免費試用
+            </p>
+            <button 
+              onClick={handleFreeTrial}
+              className="px-12 py-6 bg-gradient-to-r from-blue-600 to-blue-500 
+                       text-white rounded-2xl font-black text-xl 
+                       shadow-[0_0_50px_rgba(59,130,246,0.5)]
+                       hover:shadow-[0_0_80px_rgba(59,130,246,0.7)] 
+                       transition-all hover:-translate-y-2 inline-flex items-center gap-3">
+              <Sparkles size={28} />
+              立即獲取 Ultra888 金鑰
+              <ArrowRight size={24} />
+            </button>
+            <p className="text-slate-500 text-sm mt-6">
+              ✓ 7 天免費 ✓ 不需信用卡 ✓ 隨時可取消
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <footer className="bg-slate-950 border-t border-white/5 py-16">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <p className="text-slate-600 text-sm font-bold">
+            © 2026 UltraAdvisor. 讓數據為你說話，讓 AI 當你的軍師。
+          </p>
+        </div>
+      </footer>
+
+      <style>{`
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          opacity: 0;
+        }
+      `}</style>
     </div>
   );
 };
