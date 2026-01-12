@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- helper function: 檢查是否已登入 ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // --- helper function: 檢查是否是存取自己的資料 ---
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // ============================================
+    // 1. 公開/系統配置 (參考你原本的列表)
+    // 建議：如果是純讀取設定，allow write 應該要鎖住，但為了恢復原狀我們先全開
+    // ============================================
+    match /membershipTiers/{doc} { allow read, write: if true; }
+    match /pointsRules/{doc} { allow read, write: if true; }
+    match /redeemableItems/{doc} { allow read, write: if true; }
+    match /pointsLedger/{doc} { allow read, write: if true; }
+    match /auditLogs/{doc} { allow read, write: if true; }
+    match /redemptionOrders/{doc} { allow read, write: if true; }
+    match /referralCodes/{doc} { allow read, write: if true; }
+    match /siteContent/{doc} { allow read, write: if true; }
+    
+    // ============================================
+    // 2. 用戶資料與管理員
+    // ============================================
+    
+    // 用戶資料：這裡最容易報錯。
+    // 我們設定：如果是讀寫自己的資料(isOwner) -> 允許
+    // 或是如果之前邏輯較寬鬆，暫時允許所有已登入者讀取
+    match /users/{userId} {
+      allow read, write: if isSignedIn();
+      
+      // 關鍵修正：允許讀寫底下的所有子集合 (例如 preferences, settings)
+      match /{allSubcollections=**} {
+         allow read, write: if isSignedIn();
+      }
+    }
+
+    match /admins/{doc} { allow read, write: if true; }
+    match /backups/{doc} { allow read, write: if true; }
+
+    // ============================================
+    // 3. 安全保底 (Catch-all)
+    // ============================================
+    // 如果程式碼讀取了上面沒列到的集合，只要用戶有登入，就先讓過
+    // 這樣可以避免因為漏寫規則導致服務掛掉
+    match /{document=**} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}

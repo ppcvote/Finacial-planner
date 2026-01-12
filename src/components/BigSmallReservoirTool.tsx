@@ -331,25 +331,41 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="text-xs text-slate-500">大水庫本金</label>
-                <span className="text-xl font-black text-cyan-600">{formatMoney(initialCapital)}</span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    value={initialCapital}
+                    onChange={(e) => updateField('initialCapital', Number(e.target.value))}
+                    className="w-24 text-xl font-black text-cyan-600 text-right bg-transparent border-b-2 border-transparent hover:border-cyan-300 focus:border-cyan-500 focus:outline-none transition-colors"
+                  />
+                  <span className="text-sm text-slate-400">萬</span>
+                </div>
               </div>
               <input 
                 type="range" 
-                min={100} max={5000} step={100}
+                min={100} max={10000} step={100}
                 value={initialCapital}
                 onChange={(e) => updateField('initialCapital', Number(e.target.value))}
                 className="w-full h-2 bg-cyan-100 rounded-lg appearance-none cursor-pointer accent-cyan-600"
               />
               <div className="flex justify-between text-[10px] text-slate-400 mt-1">
                 <span>100萬</span>
-                <span>5000萬</span>
+                <span>1億</span>
               </div>
             </div>
             
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="text-xs text-slate-500">運作年限</label>
-                <span className="text-xl font-black text-blue-600">{years} 年</span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    value={years}
+                    onChange={(e) => updateField('years', Number(e.target.value))}
+                    className="w-16 text-xl font-black text-blue-600 text-right bg-transparent border-b-2 border-transparent hover:border-blue-300 focus:border-blue-500 focus:outline-none transition-colors"
+                  />
+                  <span className="text-sm text-slate-400">年</span>
+                </div>
               </div>
               <input 
                 type="range" 
@@ -534,12 +550,21 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                     <span className="text-xs font-bold text-cyan-700 flex items-center gap-1">
                       <Database size={12}/> 大水庫配息率
                     </span>
-                    <span className="text-lg font-black text-cyan-600">{calculations.actualDividend}%</span>
+                    <div className="flex items-center gap-0.5">
+                      <input
+                        type="number"
+                        step={0.5}
+                        value={calculations.actualDividend}
+                        onChange={(e) => updateFields({ dividendRate: Number(e.target.value), configMode: 'none' })}
+                        className="w-14 text-lg font-black text-cyan-600 text-right bg-transparent border-b border-transparent hover:border-cyan-300 focus:border-cyan-500 focus:outline-none"
+                      />
+                      <span className="text-cyan-400">%</span>
+                    </div>
                   </div>
                   {showAdvanced && (
                     <input 
                       type="range" 
-                      min={2} max={10} step={0.5}
+                      min={2} max={12} step={0.5}
                       value={dividendRate}
                       onChange={(e) => updateFields({ dividendRate: Number(e.target.value), configMode: 'none' })}
                       className="w-full h-1.5 bg-cyan-200 rounded-lg appearance-none cursor-pointer accent-cyan-600 mt-2"
@@ -555,12 +580,21 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
                     <span className="text-xs font-bold text-amber-700 flex items-center gap-1">
                       <TrendingUp size={12}/> 小水庫成長率
                     </span>
-                    <span className="text-lg font-black text-amber-600">{calculations.actualReinvest}%</span>
+                    <div className="flex items-center gap-0.5">
+                      <input
+                        type="number"
+                        step={0.5}
+                        value={calculations.actualReinvest}
+                        onChange={(e) => updateFields({ reinvestRate: Number(e.target.value), configMode: 'none' })}
+                        className="w-14 text-lg font-black text-amber-600 text-right bg-transparent border-b border-transparent hover:border-amber-300 focus:border-amber-500 focus:outline-none"
+                      />
+                      <span className="text-amber-400">%</span>
+                    </div>
                   </div>
                   {showAdvanced && (
                     <input 
                       type="range" 
-                      min={4} max={15} step={0.5}
+                      min={4} max={20} step={0.5}
                       value={reinvestRate}
                       onChange={(e) => updateFields({ reinvestRate: Number(e.target.value), configMode: 'none' })}
                       className="w-full h-1.5 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600 mt-2"
@@ -613,29 +647,32 @@ export const BigSmallReservoirTool = ({ data, setData }: any) => {
               </div>
             </div>
             
-            {/* 產品建議 */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-              <h4 className="font-bold text-slate-700 mb-3 text-xs flex items-center gap-1">
-                <Landmark size={14}/> 建議標的
+            {/* 進階功能入口 */}
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-sm border border-slate-700 p-4 text-white">
+              <h4 className="font-bold mb-3 text-sm flex items-center gap-1">
+                <Landmark size={14} className="text-amber-400"/> 投資標的研究
               </h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-[10px] text-cyan-600 font-bold mb-1">大水庫（穩健）</p>
-                  <div className="space-y-1">
-                    {calculations.activeConfig.products.big.map((p, i) => (
-                      <span key={i} className="block text-[10px] text-slate-600 bg-cyan-50 px-2 py-0.5 rounded">{p}</span>
-                    ))}
-                  </div>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="bg-slate-800/60 rounded p-2">
+                  <p className="text-[10px] text-cyan-400 font-bold">大水庫</p>
+                  <p className="text-[10px] text-slate-400">穩健配息型標的</p>
                 </div>
-                <div>
-                  <p className="text-[10px] text-amber-600 font-bold mb-1">小水庫（成長）</p>
-                  <div className="space-y-1">
-                    {calculations.activeConfig.products.small.map((p, i) => (
-                      <span key={i} className="block text-[10px] text-slate-600 bg-amber-50 px-2 py-0.5 rounded">{p}</span>
-                    ))}
-                  </div>
+                <div className="bg-slate-800/60 rounded p-2">
+                  <p className="text-[10px] text-amber-400 font-bold">小水庫</p>
+                  <p className="text-[10px] text-slate-400">積極成長型標的</p>
                 </div>
               </div>
+              <button 
+                className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg"
+                onClick={() => alert('此功能僅限付費會員使用，敬請期待！')}
+              >
+                <Sparkles size={16} />
+                進入基金戰情室
+                <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded text-[10px]">PRO</span>
+              </button>
+              <p className="text-[10px] text-slate-500 mt-2 text-center">
+                付費會員專屬功能
+              </p>
             </div>
           </div>
 

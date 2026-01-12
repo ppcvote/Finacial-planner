@@ -321,7 +321,7 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
       recommendationReasons.push('年齡較高，建議把握時間立即規劃');
     } else if (age <= 55) {
       recommendation = 'installment';
-      recommendationReasons.push('年齡優勢，分期繳可獲得更高槓桿');
+      recommendationReasons.push('年齡優勢，分期繳可獲得更高保障效益');
     }
     
     if (healthStatus === 'critical' || healthStatus === 'ill') {
@@ -719,7 +719,15 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <label className="text-sm font-bold text-blue-700">躉繳保費</label>
-                    <span className="text-2xl font-black text-blue-700">{formatMoney(lumpSumAmount)}</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        value={lumpSumAmount}
+                        onChange={(e) => updateField('lumpSumAmount', Number(e.target.value))}
+                        className="w-24 text-2xl font-black text-blue-700 text-right bg-transparent border-b-2 border-transparent hover:border-blue-300 focus:border-blue-500 focus:outline-none transition-colors"
+                      />
+                      <span className="text-sm text-slate-400">萬</span>
+                    </div>
                   </div>
                   <input 
                     type="range" 
@@ -736,11 +744,20 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                   </div>
                 </div>
                 
-                {/* 槓桿 */}
+                {/* 保障倍數 */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <label className="text-xs text-blue-600">保額/保費比</label>
-                    <span className="font-bold text-blue-700">{lumpSumLeverage}x</span>
+                    <label className="text-xs text-blue-600">保障倍數（保額/保費）</label>
+                    <div className="flex items-center gap-0.5">
+                      <input
+                        type="number"
+                        step={0.05}
+                        value={lumpSumLeverage}
+                        onChange={(e) => updateField('lumpSumLeverage', Number(e.target.value))}
+                        className="w-14 font-bold text-blue-700 text-right bg-transparent border-b border-transparent hover:border-blue-300 focus:border-blue-500 focus:outline-none"
+                      />
+                      <span className="text-blue-400">x</span>
+                    </div>
                   </div>
                   <input 
                     type="range" 
@@ -769,7 +786,15 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <label className="text-sm font-bold text-emerald-700">年繳保費</label>
-                    <span className="text-2xl font-black text-emerald-700">{formatMoney(annualPremium)}/年</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        value={annualPremium}
+                        onChange={(e) => updateField('annualPremium', Number(e.target.value))}
+                        className="w-20 text-2xl font-black text-emerald-700 text-right bg-transparent border-b-2 border-transparent hover:border-emerald-300 focus:border-emerald-500 focus:outline-none transition-colors"
+                      />
+                      <span className="text-sm text-slate-400">萬/年</span>
+                    </div>
                   </div>
                   <input 
                     type="range" 
@@ -786,7 +811,15 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <label className="text-xs text-emerald-600">繳費年期</label>
-                    <span className="font-bold text-emerald-700">{paymentYears} 年</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        value={paymentYears}
+                        onChange={(e) => updateField('paymentYears', Number(e.target.value))}
+                        className="w-14 font-bold text-emerald-700 text-right bg-transparent border-b border-transparent hover:border-emerald-300 focus:border-emerald-500 focus:outline-none"
+                      />
+                      <span className="text-emerald-400">年</span>
+                    </div>
                   </div>
                   <input 
                     type="range" 
@@ -801,11 +834,20 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                   </div>
                 </div>
                 
-                {/* 槓桿 */}
+                {/* 保障倍數 */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <label className="text-xs text-emerald-600">保額/總保費比</label>
-                    <span className="font-bold text-emerald-700">{installmentLeverage}x</span>
+                    <label className="text-xs text-emerald-600">保障倍數（保額/總保費）</label>
+                    <div className="flex items-center gap-0.5">
+                      <input
+                        type="number"
+                        step={0.1}
+                        value={installmentLeverage}
+                        onChange={(e) => updateField('installmentLeverage', Number(e.target.value))}
+                        className="w-14 font-bold text-emerald-700 text-right bg-transparent border-b border-transparent hover:border-emerald-300 focus:border-emerald-500 focus:outline-none"
+                      />
+                      <span className="text-emerald-400">x</span>
+                    </div>
                   </div>
                   <input 
                     type="range" 
@@ -827,7 +869,7 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                     <p className="text-sm font-bold text-emerald-700">{formatMoney(calculations.installment.benefit)}</p>
                   </div>
                   <div className="bg-white/60 p-2 rounded text-center">
-                    <p className="text-[10px] text-emerald-500">槓桿倍數</p>
+                    <p className="text-[10px] text-emerald-500">保障倍數</p>
                     <p className="text-sm font-bold text-emerald-700">{installmentLeverage}x</p>
                   </div>
                 </div>
@@ -838,7 +880,7 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                   <p className="text-[10px] text-amber-600">
                     繳第一年 {formatMoney(annualPremium)}，即享 {formatMoney(calculations.installment.year1Benefit)} 理賠金保障
                     <br/>
-                    <b>槓桿效果：{calculations.installment.year1ROI.toFixed(0)}% ROI</b>
+                    <b>保障效益：{calculations.installment.year1ROI.toFixed(0)}% ROI</b>
                   </p>
                 </div>
               </div>
@@ -1000,7 +1042,7 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                 <h4 className="font-bold text-emerald-800 flex items-center gap-2">
                   <Calendar size={20}/> 分期方案
                 </h4>
-                <p className="text-xs text-emerald-500">年繳計畫・高槓桿</p>
+                <p className="text-xs text-emerald-500">年繳計畫・高保障效益</p>
               </div>
               {calculations.recommendation === 'installment' && (
                 <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs font-bold">推薦</span>
@@ -1010,7 +1052,7 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm">
                 <CheckCircle2 size={14} className="text-emerald-500" />
-                <span>高槓桿，小保費大保障</span>
+                <span>高效益，小保費大保障</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <CheckCircle2 size={14} className="text-emerald-500" />
@@ -1153,7 +1195,7 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                   </div>
                   <div className="bg-emerald-900/50 p-2 rounded border border-emerald-700">
                     <p className="text-emerald-300 font-bold">分期優勢</p>
-                    <p className="text-slate-400">「第一年繳 {formatMoney(annualPremium)} 就享 {formatMoney(calculations.installment.year1Benefit)} 保障，槓桿 {installmentLeverage}x」</p>
+                    <p className="text-slate-400">「第一年繳 {formatMoney(annualPremium)} 就享 {formatMoney(calculations.installment.year1Benefit)} 保障，保障倍數 {installmentLeverage}x」</p>
                   </div>
                 </div>
               </div>

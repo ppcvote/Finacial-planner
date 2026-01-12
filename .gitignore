@@ -2,3 +2,5 @@
 dist/
 .env
 .DS_Store
+.tmp.driveupload/
+.tmp.drivedownload/

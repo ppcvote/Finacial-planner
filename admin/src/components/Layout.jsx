@@ -1,28 +1,29 @@
-// ==========================================
-// 📁 admin/src/components/Layout.jsx
-// ✅ 已加入「官網內容」選單項目
-// ✅ 路徑修正為 /admin/xxx
-// ==========================================
-
 import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Layout, Menu, Avatar, Dropdown, Button, theme } from 'antd';
+import {
+  DashboardOutlined,
+  UserOutlined,
+  GlobalOutlined,
+  LogoutOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  CrownOutlined,
+  GiftOutlined,
+  HistoryOutlined,
+  FileTextOutlined,
+  StarOutlined,
+} from '@ant-design/icons';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Globe,
-  LogOut, 
-  Menu, 
-  X,
-  ChevronRight,
-  Shield,
-  Zap
-} from 'lucide-react';
 
-export default function Layout({ user }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+const { Header, Sider, Content } = Layout;
+
+const MainLayout = () => {
+  const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { token } = theme.useToken();
 
   const handleLogout = async () => {
     try {
@@ -33,190 +34,253 @@ export default function Layout({ user }) {
     }
   };
 
-  // ✅ 選單項目 - 路徑改為 /admin/xxx
-  const menuItems = [
+  const userMenuItems = [
     {
-      path: '/admin/dashboard',
-      icon: LayoutDashboard,
-      label: '總覽'
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: '登出',
+      onClick: handleLogout,
     },
-    {
-      path: '/admin/users',
-      icon: Users,
-      label: '用戶管理'
-    },
-    {
-      path: '/admin/site-editor',  // ✅ 新增：官網內容
-      icon: Globe,
-      label: '官網內容'
-    }
   ];
 
-  // 選單項目樣式
-  const navLinkClass = ({ isActive }) => `
-    flex items-center gap-3 px-4 py-3 rounded-xl transition-all
-    ${isActive 
-      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25' 
-      : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+  // 選單項目
+  const menuItems = [
+    {
+      key: '/admin/dashboard',
+      icon: <DashboardOutlined />,
+      label: '總覽',
+    },
+    {
+      key: '/admin/users',
+      icon: <UserOutlined />,
+      label: '用戶管理',
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'membership',
+      icon: <CrownOutlined />,
+      label: '會員系統',
+      children: [
+        {
+          key: '/admin/membership/tiers',
+          icon: <StarOutlined />,
+          label: '身分組管理',
+        },
+        {
+          key: '/admin/membership/points-rules',
+          icon: <GiftOutlined />,
+          label: '點數規則',
+        },
+        {
+          key: '/admin/membership/redeemable-items',
+          icon: <GiftOutlined />,
+          label: '兌換商品',
+        },
+        {
+          key: '/admin/membership/points-ledger',
+          icon: <HistoryOutlined />,
+          label: '點數紀錄',
+        },
+        {
+          key: '/admin/membership/audit-logs',
+          icon: <FileTextOutlined />,
+          label: '操作日誌',
+        },
+      ],
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: '/admin/site-editor',
+      icon: <GlobalOutlined />,
+      label: '官網內容',
+    },
+  ];
+
+  // 計算選中的選單項
+  const getSelectedKeys = () => {
+    const path = location.pathname;
+    return [path];
+  };
+
+  // 計算展開的子選單
+  const getOpenKeys = () => {
+    const path = location.pathname;
+    if (path.includes('/membership/')) {
+      return ['membership'];
     }
-  `;
+    return [];
+  };
+
+  const handleMenuClick = ({ key }) => {
+    if (key && key.startsWith('/')) {
+      navigate(key);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      
-      {/* ==================== 側邊欄（桌面版）==================== */}
-      <aside className="hidden md:flex w-64 bg-slate-900 text-white flex-col fixed h-screen">
+    <Layout style={{ minHeight: '100vh' }}>
+      {/* 側邊欄 */}
+      <Sider
+        trigger={null}
+        collapsible
+        collapsed={collapsed}
+        theme="dark"
+        style={{
+          overflow: 'auto',
+          height: '100vh',
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          zIndex: 100,
+        }}
+      >
         {/* Logo */}
-        <div className="p-6 border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 
-                           rounded-xl flex items-center justify-center">
-              <Zap className="text-white" size={20} />
+        <div
+          style={{
+            height: 64,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderBottom: '1px solid rgba(255,255,255,0.1)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <span style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>⚡</span>
             </div>
-            <div>
-              <h1 className="font-bold text-lg">Ultra Admin</h1>
-              <p className="text-xs text-slate-500">管理後台</p>
-            </div>
+            {!collapsed && (
+              <div>
+                <div style={{ color: '#fff', fontWeight: 'bold', fontSize: 14, lineHeight: 1.2 }}>
+                  Ultra Admin
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>
+                  管理後台
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* 選單 */}
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={navLinkClass}
-            >
-              <item.icon size={20} />
-              <span className="font-medium">{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={getSelectedKeys()}
+          defaultOpenKeys={getOpenKeys()}
+          items={menuItems}
+          onClick={handleMenuClick}
+          style={{ borderRight: 0, marginTop: 8 }}
+        />
 
-        {/* 用戶資訊 & 登出 */}
-        <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center 
-                           justify-center font-bold text-sm">
-              {user?.email?.charAt(0).toUpperCase() || 'A'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
-                {user?.email || 'Admin'}
-              </p>
-              <p className="text-xs text-slate-500 flex items-center gap-1">
-                <Shield size={10} /> 管理員
-              </p>
-            </div>
-          </div>
-          
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 
-                     bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-400 
-                     hover:text-white transition-all font-medium"
-          >
-            <LogOut size={18} />
-            登出
-          </button>
-        </div>
-      </aside>
-
-      {/* ==================== 手機版側邊欄 ==================== */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          {/* 背景遮罩 */}
-          <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setSidebarOpen(false)}
-          />
-          
-          {/* 側邊欄 */}
-          <aside className="absolute left-0 top-0 h-full w-72 bg-slate-900 text-white 
-                           flex flex-col shadow-2xl animate-slide-in">
-            {/* 關閉按鈕 */}
-            <div className="p-4 flex justify-between items-center border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <Zap className="text-blue-400" size={24} />
-                <span className="font-bold">Ultra Admin</span>
+        {/* 底部管理員資訊 */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: collapsed ? '12px 8px' : '12px 16px',
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            background: 'rgba(0,0,0,0.2)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Avatar size={collapsed ? 24 : 32} icon={<UserOutlined />} style={{ backgroundColor: '#3b82f6' }} />
+            {!collapsed && (
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: '#fff', fontSize: 12, fontWeight: 500 }}>Admin</div>
+                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>○ 管理員</div>
               </div>
-              <button 
-                onClick={() => setSidebarOpen(false)}
-                className="p-2 hover:bg-slate-800 rounded-lg"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            {/* 選單 */}
-            <nav className="flex-1 p-4 space-y-2">
-              {menuItems.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setSidebarOpen(false)}
-                  className={navLinkClass}
-                >
-                  <item.icon size={20} />
-                  <span className="font-medium">{item.label}</span>
-                  <ChevronRight size={16} className="ml-auto opacity-50" />
-                </NavLink>
-              ))}
-            </nav>
-
-            {/* 登出 */}
-            <div className="p-4 border-t border-slate-800">
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 
-                         bg-red-600/10 hover:bg-red-600/20 border border-red-500/30
-                         rounded-xl text-red-400 font-medium transition-all"
-              >
-                <LogOut size={18} />
-                登出
-              </button>
-            </div>
-          </aside>
-        </div>
-      )}
-
-      {/* ==================== 主內容區 ==================== */}
-      <main className="flex-1 md:ml-64">
-        {/* 手機版 Header */}
-        <header className="md:hidden bg-white border-b border-gray-200 px-4 py-3 
-                          flex items-center justify-between sticky top-0 z-40">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 hover:bg-gray-100 rounded-lg"
-          >
-            <Menu size={24} />
-          </button>
-          
-          <div className="flex items-center gap-2">
-            <Zap className="text-blue-600" size={20} />
-            <span className="font-bold text-gray-800">Ultra Admin</span>
+            )}
           </div>
-          
-          <div className="w-10" /> {/* 佔位 */}
-        </header>
-
-        {/* 頁面內容 */}
-        <div className="p-4 md:p-8">
-          <Outlet />
+          {!collapsed && (
+            <Button
+              type="text"
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+              style={{
+                width: '100%',
+                marginTop: 8,
+                color: 'rgba(255,255,255,0.65)',
+                textAlign: 'left',
+                padding: '4px 8px',
+              }}
+            >
+              登出
+            </Button>
+          )}
         </div>
-      </main>
+      </Sider>
 
-      {/* 動畫樣式 */}
-      <style>{`
-        @keyframes slide-in {
-          from { transform: translateX(-100%); }
-          to { transform: translateX(0); }
-        }
-        .animate-slide-in {
-          animation: slide-in 0.3s ease-out forwards;
-        }
-      `}</style>
-    </div>
+      {/* 主內容區 */}
+      <Layout style={{ marginLeft: collapsed ? 80 : 200, transition: 'margin-left 0.2s' }}>
+        {/* 頂部欄 */}
+        <Header
+          style={{
+            padding: '0 24px',
+            background: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+            position: 'sticky',
+            top: 0,
+            zIndex: 99,
+          }}
+        >
+          <Button
+            type="text"
+            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            onClick={() => setCollapsed(!collapsed)}
+            style={{ fontSize: 16, width: 48, height: 48 }}
+          />
+
+          <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                cursor: 'pointer',
+                padding: '4px 8px',
+                borderRadius: 8,
+              }}
+            >
+              <span style={{ color: token.colorTextSecondary }}>
+                {auth.currentUser?.email || 'admin@ultraadvisor.com'}
+              </span>
+              <Avatar size={32} icon={<UserOutlined />} />
+            </div>
+          </Dropdown>
+        </Header>
+
+        {/* 內容區 */}
+        <Content
+          style={{
+            margin: 24,
+            minHeight: 'calc(100vh - 64px - 48px)',
+          }}
+        >
+          <Outlet />
+        </Content>
+      </Layout>
+    </Layout>
   );
-}
+};
+
+export default MainLayout;
