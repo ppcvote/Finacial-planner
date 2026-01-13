@@ -244,7 +244,7 @@ async function awardPoints(userId, actionId, reason, referenceId = null) {
     const basePoints = rule.basePoints;
     const finalPoints = Math.floor(basePoints * multiplier);
     
-    const currentPoints = userData.points || 0;
+    const currentPoints = typeof userData.points === 'object' ? (userData.points?.current || 0) : (userData.points || 0);
     const newBalance = currentPoints + finalPoints;
     
     // 12 個月後過期
@@ -273,7 +273,7 @@ async function awardPoints(userId, actionId, reason, referenceId = null) {
       });
       
       transaction.update(userRef, {
-        points: newBalance,
+        'points.current': newBalance,
         totalPointsEarned: admin.firestore.FieldValue.increment(finalPoints),
         lastPointsEarnedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
@@ -332,7 +332,7 @@ async function createTrialAccount(email, lineUserId) {
       membershipTierIds: ['trial'],
       primaryTierId: 'trial',
       // 🆕 UA 點數
-      points: 0,
+      points: { current: 0 },
       totalPointsEarned: 0,
       totalPointsSpent: 0,
       totalPointsExpired: 0,
@@ -721,7 +721,7 @@ exports.getUserPointsSummary = functions.https.onCall(async (data, context) => {
   expiringSnapshot.docs.forEach((doc) => { expiringPoints += doc.data().amount; });
   
   return {
-    currentPoints: userData.points || 0,
+    currentPoints: typeof userData.points === 'object' ? (userData.points?.current || 0) : (userData.points || 0),
     totalEarned: userData.totalPointsEarned || 0,
     totalSpent: userData.totalPointsSpent || 0,
     totalExpired: userData.totalPointsExpired || 0,
@@ -922,11 +922,11 @@ exports.expirePoints = functions.pubsub
           if (!userDoc.exists) return;
           
           const userData = userDoc.data();
-          const currentPoints = userData.points || 0;
+          const currentPoints = typeof userData.points === 'object' ? (userData.points?.current || 0) : (userData.points || 0);
           const pointsToExpire = Math.min(expiredData.totalExpired, currentPoints);
-          
+
           transaction.update(userRef, {
-            points: currentPoints - pointsToExpire,
+            'points.current': currentPoints - pointsToExpire,
             totalPointsExpired: admin.firestore.FieldValue.increment(pointsToExpire),
           });
           
