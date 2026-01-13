@@ -12,6 +12,7 @@ import {
   HistoryOutlined,
   FileTextOutlined,
   StarOutlined,
+  DollarOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
@@ -87,6 +88,11 @@ const MainLayout = () => {
           key: '/admin/membership/audit-logs',
           icon: <FileTextOutlined />,
           label: '操作日誌',
+        },
+        {
+          key: '/admin/membership/payment-history',
+          icon: <DollarOutlined />,
+          label: '付款歷史',
         },
       ],
     },

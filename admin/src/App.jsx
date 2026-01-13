@@ -18,6 +18,7 @@ import PointsRules from './pages/membership/PointsRules.jsx';
 import RedeemableItems from './pages/membership/RedeemableItems.jsx';
 import PointsLedger from './pages/membership/PointsLedger.jsx';
 import AuditLogs from './pages/membership/AuditLogs.jsx';
+import PaymentHistory from './pages/membership/PaymentHistory.jsx';
 
 // ✅ Debug 組件：顯示當前路由
 const DebugRoute = () => {
@@ -107,6 +108,7 @@ function App() {
             <Route path="membership/redeemable-items" element={<RedeemableItems />} />
             <Route path="membership/points-ledger" element={<PointsLedger />} />
             <Route path="membership/audit-logs" element={<AuditLogs />} />
+            <Route path="membership/payment-history" element={<PaymentHistory />} />
           </Route>
 
           {/* 舊路徑重定向 */}

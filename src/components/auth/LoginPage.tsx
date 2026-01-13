@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  LogIn, Loader2, Eye, EyeOff, AlertCircle, CheckCircle2, 
-  TrendingUp, Sparkles, Zap, Bell, BookOpen, Award, X
+import {
+  LogIn, Loader2, Eye, EyeOff, AlertCircle, CheckCircle2,
+  TrendingUp, Sparkles, Zap, Bell, BookOpen, Award, X,
+  Gift, Activity, Megaphone
 } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../../firebase';
 
 // ==========================================
 // 🎯 設計原則：
@@ -24,59 +26,50 @@ interface Announcement {
   type: 'update' | 'event' | 'tip' | 'case' | 'notice';
   title: string;
   content: string;
-  icon: typeof Sparkles;
+  icon: string;
   priority: number;
   targetUsers?: 'trial' | 'paid' | 'all';
   link?: string;
-  isUrgent?: boolean; // 重大公告標記
+  isUrgent?: boolean;
+  enabled?: boolean;
 }
 
-const announcements: Announcement[] = [
+// 圖示對照表
+const iconMap: Record<string, React.ComponentType<any>> = {
+  Sparkles, Zap, Bell, Gift, Activity, Megaphone, TrendingUp, Award
+};
+
+// 預設公告（當 Firestore 無資料時使用）
+const defaultAnnouncements: Announcement[] = [
   {
     id: '1',
     type: 'update',
     title: '新工具上線',
     content: '保險缺口分析工具正式推出，3 分鐘評估客戶需求',
-    icon: Sparkles,
+    icon: 'Sparkles',
     priority: 100,
-    targetUsers: 'all'
+    targetUsers: 'all',
+    enabled: true
   },
   {
     id: '2',
     type: 'tip',
     title: '快捷鍵小技巧',
     content: '按 Cmd/Ctrl + K 快速切換工具，Cmd/Ctrl + S 快速儲存',
-    icon: Zap,
+    icon: 'Zap',
     priority: 80,
-    targetUsers: 'all'
+    targetUsers: 'all',
+    enabled: true
   },
   {
     id: '3',
     type: 'event',
     title: '創始會員倒數',
     content: '剩餘 72 個終身優惠名額，鎖定永久早鳥價',
-    icon: Award,
+    icon: 'Award',
     priority: 90,
-    targetUsers: 'trial'
-  },
-  {
-    id: '4',
-    type: 'case',
-    title: '本週成功案例',
-    content: '陳顧問使用大小水庫工具成功幫 3 位客戶規劃退休金',
-    icon: TrendingUp,
-    priority: 70,
-    targetUsers: 'all'
-  },
-  {
-    id: '5',
-    type: 'notice',
-    title: '系統維護通知',
-    content: '系統將於 1/15 凌晨 2:00-4:00 進行升級，請提前儲存',
-    icon: Bell,
-    priority: 95,
-    targetUsers: 'all',
-    isUrgent: true
+    targetUsers: 'trial',
+    enabled: true
   }
 ];
 
@@ -84,15 +77,15 @@ const announcements: Announcement[] = [
 // 🎨 公告卡片組件
 // ==========================================
 const AnnouncementCard = ({ announcement }: { announcement: Announcement }) => {
-  const Icon = announcement.icon;
-  const colorMap = {
+  const Icon = iconMap[announcement.icon] || Sparkles;
+  const colorMap: Record<string, string> = {
     update: 'blue',
     event: 'amber',
     tip: 'emerald',
     case: 'purple',
     notice: 'red'
   };
-  const color = colorMap[announcement.type];
+  const color = colorMap[announcement.type] || 'blue';
 
   return (
     <div className={`bg-slate-900/30 border border-slate-800 rounded-2xl p-4 
@@ -335,25 +328,46 @@ export function LoginPage({ user, onLoginSuccess }: LoginPageProps) {
   const [logoError, setLogoError] = useState(false);
   const [urgentNotice, setUrgentNotice] = useState<Announcement | null>(null);
   const [dismissedNotices, setDismissedNotices] = useState<string[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>(defaultAnnouncements);
+
+  // 🆕 從 Firestore 載入公告
+  useEffect(() => {
+    const loadAnnouncements = async () => {
+      try {
+        const docRef = doc(db, 'siteContent', 'loginAnnouncements');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const items = (data.items || []).filter((a: Announcement) => a.enabled !== false);
+          if (items.length > 0) {
+            setAnnouncements(items);
+          }
+        }
+      } catch (error) {
+        console.log('載入公告失敗，使用預設公告:', error);
+      }
+    };
+    loadAnnouncements();
+  }, []);
 
   // 檢查是否有重大公告需要顯示
   useEffect(() => {
-    const urgent = announcements.find(a => 
+    const urgent = announcements.find(a =>
       a.isUrgent && !dismissedNotices.includes(a.id)
     );
     if (urgent) {
       setUrgentNotice(urgent);
     }
-  }, [dismissedNotices]);
+  }, [dismissedNotices, announcements]);
 
   // 篩選適合顯示的公告（根據用戶類型）
   const getDisplayAnnouncements = () => {
-    const userType = user ? 'paid' : 'trial'; // 簡化判斷，可以後續優化
+    const userType = user ? 'paid' : 'trial';
     return announcements
-      .filter(a => !a.isUrgent) // 重大公告單獨處理
+      .filter(a => !a.isUrgent)
       .filter(a => !a.targetUsers || a.targetUsers === 'all' || a.targetUsers === userType)
       .sort((a, b) => b.priority - a.priority)
-      .slice(0, 3); // 最多顯示 3 則
+      .slice(0, 3);
   };
 
   const displayAnnouncements = getDisplayAnnouncements();
