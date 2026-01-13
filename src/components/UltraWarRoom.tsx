@@ -32,6 +32,10 @@ import {
 } from 'firebase/storage';
 import { db, storage } from '../firebase';
 
+// 🆕 會員系統與推薦引擎
+import { useMembership } from '../hooks/useMembership';
+import ReferralEngineModal from './ReferralEngineModal';
+
 // ==========================================
 // 🎨 市場快訊跑馬燈
 // ==========================================
@@ -110,13 +114,17 @@ interface ProfileData {
 const ProfileCard = ({ 
   user, 
   profileData, 
+  membership,
   onEditProfile,
-  onChangePassword 
+  onChangePassword,
+  onOpenReferral
 }: { 
   user: any;
   profileData: ProfileData;
+  membership: any;
   onEditProfile: () => void;
   onChangePassword: () => void;
+  onOpenReferral: () => void;
 }) => {
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 
@@ -150,12 +158,32 @@ const ProfileCard = ({
           <h3 className="text-xl font-black text-white truncate">
             {profileData.displayName || '專業財務顧問'}
           </h3>
-          <p className="text-slate-400 text-sm truncate mb-3">
+          <p className="text-slate-400 text-sm truncate">
             {user?.email || 'email@example.com'}
           </p>
           
+          {/* 🆕 會員身分 */}
+          {membership && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+                membership.tier === 'founder' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                membership.tier === 'paid' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                membership.tier === 'trial' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                'bg-slate-500/20 text-slate-400 border border-slate-500/30'
+              }`}>
+                {membership.tier === 'founder' && <Crown size={12} />}
+                {membership.tierName}
+              </span>
+              {membership.expiresAt && (
+                <span className="text-[10px] text-slate-500">
+                  到期：{membership.expiresAt.toLocaleDateString('zh-TW')}
+                </span>
+              )}
+            </div>
+          )}
+          
           {/* 社群連結 */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mt-2">
             {profileData.phone && (
               <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-800 
                              rounded-lg text-xs text-slate-400">
@@ -197,6 +225,21 @@ const ProfileCard = ({
           <Lock size={14} /> 修改密碼
         </button>
       </div>
+
+      {/* 🆕 UA 推薦引擎按鈕 */}
+      <button
+        onClick={onOpenReferral}
+        className="w-full mt-3 flex items-center justify-center gap-2 py-2.5 
+                 bg-purple-600/10 border border-purple-500/30 rounded-xl 
+                 text-purple-400 text-sm font-bold hover:bg-purple-600/20 transition-all"
+      >
+        <Users size={14} /> UA 推薦引擎
+        {membership?.points > 0 && (
+          <span className="bg-purple-500/30 text-purple-300 text-xs px-2 py-0.5 rounded-full">
+            {membership.points} UA
+          </span>
+        )}
+      </button>
     </div>
   );
 };
@@ -1260,6 +1303,10 @@ interface UltraWarRoomProps {
 }
 
 const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLogout }) => {
+  // 🆕 會員系統
+  const { membership } = useMembership(user?.uid || null);
+  const [showReferralEngine, setShowReferralEngine] = useState(false);
+
   // 客戶列表狀態
   const [clients, setClients] = useState<any[]>([]);
   const [clientsLoading, setClientsLoading] = useState(true);
@@ -1372,13 +1419,17 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
       <header className="sticky top-0 z-40 bg-[#050b14]/90 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl 
-                           flex items-center justify-center">
-              <Zap className="text-white" size={20} />
-            </div>
+            <img
+              src="https://lh3.googleusercontent.com/d/1CEFGRByRM66l-4sMMM78LUBUvAMiAIaJ"
+              alt="Ultra Advisor"
+              className="h-10 w-10 rounded-xl object-cover"
+              onError={(e: any) => {
+                e.currentTarget.src = 'https://placehold.co/40x40/3b82f6/white?text=UA';
+              }}
+            />
             <div>
               <h1 className="text-lg md:text-xl font-black text-white tracking-tight">
-                Ultra <span className="text-blue-400">戰情室</span>
+                <span style={{color: '#FF3A3A'}}>Ultra</span> <span className="text-blue-400">戰情室</span>
               </h1>
               <p className="text-[10px] text-slate-500 hidden md:block">
                 專業財務顧問的作戰指揮中心
@@ -1414,8 +1465,10 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
           <ProfileCard
             user={user}
             profileData={profileData}
+            membership={membership}
             onEditProfile={() => setShowEditProfile(true)}
             onChangePassword={() => setShowChangePassword(true)}
+            onOpenReferral={() => setShowReferralEngine(true)}
           />
 
           {/* Market Data */}
@@ -1434,6 +1487,30 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
           onAddClient={() => setShowAddClient(true)}
           onDeleteClient={handleDeleteClient}
         />
+
+        {/* 🆕 傲創計算機入口 */}
+        <div className="mt-6 bg-slate-900/50 border border-slate-800 rounded-2xl p-4
+                       flex items-center justify-between hover:border-emerald-500/30 transition-all">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-emerald-600/20 rounded-xl flex items-center justify-center">
+              <Calculator className="text-emerald-400" size={20} />
+            </div>
+            <div>
+              <h4 className="text-white font-bold">傲創計算機</h4>
+              <p className="text-xs text-slate-500">免費公開的房貸試算工具</p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              window.history.pushState({}, '', '/calculator');
+              window.location.reload();
+            }}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold
+                     rounded-xl transition-all flex items-center gap-2"
+          >
+            前往使用 <ChevronRight size={16} />
+          </button>
+        </div>
 
         {/* CTA Banner */}
         <div className="mt-6 bg-gradient-to-r from-blue-900/30 to-purple-900/30 
@@ -1467,6 +1544,13 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
         isOpen={showAddClient}
         onClose={() => setShowAddClient(false)}
         onAdd={handleAddClient}
+      />
+
+      {/* 🆕 UA 推薦引擎 Modal */}
+      <ReferralEngineModal
+        isOpen={showReferralEngine}
+        onClose={() => setShowReferralEngine(false)}
+        userId={user?.uid || ''}
       />
 
       {/* Global Styles */}

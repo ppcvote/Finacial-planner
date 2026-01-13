@@ -190,7 +190,7 @@ const OptimizedHeroSection = ({ onFreeTrial, onWatchDemo, hasVideo }) => {
                      hover:shadow-[0_0_60px_rgba(59,130,246,0.7)] transition-all duration-300
                      hover:-translate-y-1 flex items-center gap-3">
             <Sparkles className="group-hover:rotate-12 transition-transform" size={24} />
-            免費獲取 Ultra888 金鑰
+            免費獲取 試用會員 金鑰
             <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
           </button>
 
@@ -204,6 +204,23 @@ const OptimizedHeroSection = ({ onFreeTrial, onWatchDemo, hasVideo }) => {
             觀看 60 秒示範
           </button>
         </div>
+
+        {/* 🆕 傲創計算機 - 免費公開工具 */}
+<div className="animate-fade-in" style={{animationDelay: '0.7s'}}>
+  <button 
+    onClick={() => {
+      window.history.pushState({}, '', '/calculator');
+      window.location.reload();
+    }}
+    className="px-8 py-3 bg-emerald-600/20 border border-emerald-500/50 text-emerald-300 
+             rounded-xl font-bold hover:bg-emerald-600/30 transition-all
+             flex items-center gap-2 mx-auto">
+    <Calculator size={18} />
+    🧮 免費試用傲創計算機（不需登入）
+  </button>
+</div>
+
+        
 
         <div className="flex flex-col md:flex-row items-center justify-center gap-6 
                        text-slate-500 text-sm animate-fade-in" style={{animationDelay: '0.8s'}}>
@@ -1022,12 +1039,20 @@ export function LandingPage({ onStart, onSignup, onHome }) {
             )}
           </div>
           
-          <nav className="hidden md:flex items-center gap-8">
-            <button 
-              onClick={() => {
-                document.getElementById('products')?.scrollIntoView({behavior: 'smooth'});
-              }}
-              className="text-slate-400 hover:text-blue-400 font-bold transition-colors">
+<nav className="hidden md:flex items-center gap-8">
+  <button 
+    onClick={() => {
+      window.history.pushState({}, '', '/calculator');
+      window.location.reload();
+    }}
+    className="text-emerald-400 hover:text-emerald-300 font-bold transition-colors flex items-center gap-1">
+    <Calculator size={16} />
+    傲創計算機
+  </button>
+  <button 
+    onClick={() => {
+      document.getElementById('products')?.scrollIntoView({behavior: 'smooth'});
+    }}              className="text-slate-400 hover:text-blue-400 font-bold transition-colors">
               產品展示
             </button>
             <button 
