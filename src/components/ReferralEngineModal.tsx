@@ -23,8 +23,12 @@ import {
   Edit3,
   Save,
   Loader2,
+  Lock,
+  Ticket,
 } from 'lucide-react';
 import { pointsApi } from '../hooks/usePoints';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 interface ReferralEngineModalProps {
   isOpen: boolean;
@@ -32,10 +36,10 @@ interface ReferralEngineModalProps {
   userId: string;
 }
 
-const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({ 
-  isOpen, 
+const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({
+  isOpen,
   onClose,
-  userId 
+  userId
 }) => {
   const [summary, setSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -45,9 +49,21 @@ const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({
   const [savingCode, setSavingCode] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
 
+  // 🆕 新增：用戶會員資訊
+  const [userTier, setUserTier] = useState<string>('trial');
+  const [referredBy, setReferredBy] = useState<string | null>(null);
+
+  // 🆕 新增：輸入推薦碼相關
+  const [enteringReferralCode, setEnteringReferralCode] = useState(false);
+  const [inputReferralCode, setInputReferralCode] = useState('');
+  const [submittingReferral, setSubmittingReferral] = useState(false);
+  const [referralError, setReferralError] = useState<string | null>(null);
+  const [referralSuccess, setReferralSuccess] = useState(false);
+
   useEffect(() => {
     if (isOpen && userId) {
       loadSummary();
+      loadUserInfo();
     }
   }, [isOpen, userId]);
 
@@ -61,6 +77,48 @@ const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({
       console.error('Load summary failed:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 🆕 載入用戶資訊
+  const loadUserInfo = async () => {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        setUserTier(data.primaryTierId || 'trial');
+        setReferredBy(data.referredBy || null);
+      }
+    } catch (err) {
+      console.error('Load user info failed:', err);
+    }
+  };
+
+  // 🆕 判斷是否為付費會員
+  const isPaidMember = ['founder', 'paid'].includes(userTier);
+
+  // 🆕 判斷是否可以輸入推薦碼（試用會員且尚未被推薦）
+  const canEnterReferralCode = !isPaidMember && !referredBy;
+
+  // 🆕 提交推薦碼
+  const handleSubmitReferralCode = async () => {
+    if (!inputReferralCode.trim()) return;
+
+    setSubmittingReferral(true);
+    setReferralError(null);
+    setReferralSuccess(false);
+
+    try {
+      await pointsApi.useReferral(inputReferralCode.toUpperCase());
+      setReferralSuccess(true);
+      setEnteringReferralCode(false);
+      setInputReferralCode('');
+      setReferredBy(inputReferralCode.toUpperCase()); // 更新狀態
+      await loadSummary(); // 重新載入以顯示新點數
+    } catch (err: any) {
+      setReferralError(err.message || '推薦碼無效或已使用過');
+    } finally {
+      setSubmittingReferral(false);
     }
   };
 
@@ -164,8 +222,8 @@ const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({
                       value={newCode}
                       onChange={e => setNewCode(e.target.value.toUpperCase())}
                       maxLength={12}
-                      className="flex-1 bg-slate-900/50 rounded-lg px-4 py-3 font-mono font-bold 
-                               text-lg text-white tracking-wider border border-purple-500/50 
+                      className="flex-1 bg-slate-900/50 rounded-lg px-4 py-3 font-mono font-bold
+                               text-lg text-white tracking-wider border border-purple-500/50
                                focus:border-purple-400 outline-none uppercase"
                       placeholder="輸入新推薦碼"
                     />
@@ -185,27 +243,43 @@ const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-slate-900/50 rounded-lg px-4 py-3 font-mono font-bold 
+                    <div className="flex-1 bg-slate-900/50 rounded-lg px-4 py-3 font-mono font-bold
                                   text-xl text-white tracking-wider border border-slate-700">
                       {summary.referralCode || '載入中...'}
                     </div>
                     <button
                       onClick={copyReferralCode}
                       className={`p-3 rounded-lg transition-all ${
-                        copied 
-                          ? 'bg-green-500 text-white' 
+                        copied
+                          ? 'bg-green-500 text-white'
                           : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
                       }`}
                     >
                       {copied ? <Check size={20} /> : <Copy size={20} />}
                     </button>
-                    <button
-                      onClick={() => setEditingCode(true)}
-                      className="p-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-300 transition-all"
-                      title="自訂推薦碼"
-                    >
-                      <Edit3 size={20} />
-                    </button>
+                    {/* 🆕 只有付費會員才能修改推薦碼 */}
+                    {isPaidMember ? (
+                      <button
+                        onClick={() => setEditingCode(true)}
+                        className="p-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-300 transition-all"
+                        title="自訂推薦碼"
+                      >
+                        <Edit3 size={20} />
+                      </button>
+                    ) : (
+                      <button
+                        className="p-3 bg-slate-800 rounded-lg text-slate-500 cursor-not-allowed relative group"
+                        title="付費會員才能自訂推薦碼"
+                        disabled
+                      >
+                        <Lock size={20} />
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5
+                                      bg-slate-700 text-slate-300 text-xs rounded-lg whitespace-nowrap
+                                      opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                          付費會員才能自訂
+                        </div>
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -216,7 +290,7 @@ const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({
                 {/* 分享按鈕 */}
                 <button
                   onClick={copyShareLink}
-                  className="w-full mt-3 py-2 bg-purple-600/20 hover:bg-purple-600/30 
+                  className="w-full mt-3 py-2 bg-purple-600/20 hover:bg-purple-600/30
                            border border-purple-500/30 rounded-xl text-purple-300 text-sm font-bold
                            flex items-center justify-center gap-2 transition-all"
                 >
@@ -224,6 +298,93 @@ const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({
                   複製分享連結
                 </button>
               </div>
+
+              {/* 🆕 試用會員輸入推薦碼區塊 */}
+              {canEnterReferralCode && (
+                <div className="bg-gradient-to-br from-emerald-900/30 to-teal-900/30
+                               border border-emerald-500/30 rounded-2xl p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm text-slate-300 flex items-center gap-2">
+                      <Ticket size={16} className="text-emerald-400" />
+                      輸入推薦碼
+                    </span>
+                    <span className="text-xs text-emerald-300 bg-emerald-500/20 px-2 py-1 rounded">
+                      獲得 +500 UA
+                    </span>
+                  </div>
+
+                  {referralSuccess ? (
+                    <div className="flex items-center gap-3 p-4 bg-emerald-500/20 border border-emerald-500/30 rounded-xl">
+                      <Check className="text-emerald-400" size={24} />
+                      <div>
+                        <p className="text-emerald-300 font-bold">推薦碼驗證成功！</p>
+                        <p className="text-emerald-400/70 text-xs">已獲得 500 UA 點數獎勵</p>
+                      </div>
+                    </div>
+                  ) : enteringReferralCode ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={inputReferralCode}
+                          onChange={e => setInputReferralCode(e.target.value.toUpperCase())}
+                          maxLength={12}
+                          className="flex-1 bg-slate-900/50 rounded-lg px-4 py-3 font-mono font-bold
+                                   text-lg text-white tracking-wider border border-emerald-500/50
+                                   focus:border-emerald-400 outline-none uppercase"
+                          placeholder="輸入朋友的推薦碼"
+                          disabled={submittingReferral}
+                        />
+                        <button
+                          onClick={handleSubmitReferralCode}
+                          disabled={submittingReferral || !inputReferralCode.trim()}
+                          className="p-3 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white
+                                   transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {submittingReferral ? <Loader2 size={20} className="animate-spin" /> : <Check size={20} />}
+                        </button>
+                        <button
+                          onClick={() => { setEnteringReferralCode(false); setInputReferralCode(''); setReferralError(null); }}
+                          className="p-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-300 transition-all"
+                          disabled={submittingReferral}
+                        >
+                          <X size={20} />
+                        </button>
+                      </div>
+                      {referralError && (
+                        <div className="flex items-center gap-2 text-red-400 text-sm">
+                          <AlertTriangle size={14} />
+                          {referralError}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setEnteringReferralCode(true)}
+                      className="w-full py-3 bg-emerald-600/20 hover:bg-emerald-600/30
+                               border border-emerald-500/30 rounded-xl text-emerald-300 text-sm font-bold
+                               flex items-center justify-center gap-2 transition-all"
+                    >
+                      <Gift size={16} />
+                      我有推薦碼
+                    </button>
+                  )}
+
+                  <p className="text-xs text-slate-500 mt-3">
+                    有朋友推薦你來嗎？輸入他的推薦碼，雙方各得 500 UA！
+                  </p>
+                </div>
+              )}
+
+              {/* 🆕 已被推薦顯示 */}
+              {referredBy && (
+                <div className="flex items-center gap-3 p-3 bg-emerald-900/20 border border-emerald-500/30 rounded-xl">
+                  <Check size={18} className="text-emerald-400 shrink-0" />
+                  <p className="text-xs text-emerald-300">
+                    你是由 <span className="font-bold font-mono">{referredBy}</span> 推薦加入的
+                  </p>
+                </div>
+              )}
 
               {/* 數據統計 */}
               <div className="grid grid-cols-3 gap-3">

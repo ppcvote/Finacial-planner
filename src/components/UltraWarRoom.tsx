@@ -963,12 +963,18 @@ const EditProfileModal = ({
 // ==========================================
 // 🔐 修改密碼 Modal（已修復）
 // ==========================================
-const ChangePasswordModal = ({ 
-  isOpen, 
-  onClose 
+const ChangePasswordModal = ({
+  isOpen,
+  onClose,
+  isFirstLogin = false,
+  userId,
+  onPasswordChanged
 }: {
   isOpen: boolean;
   onClose: () => void;
+  isFirstLogin?: boolean;  // 🆕 首次登入模式（不可關閉）
+  userId?: string;         // 🆕 用於更新 needsPasswordChange 標記
+  onPasswordChanged?: () => void;  // 🆕 密碼修改成功後的回調
 }) => {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -1053,7 +1059,24 @@ const ChangePasswordModal = ({
       // Step 2: 更新密碼
       await updatePassword(currentUser, newPassword);
 
+      // 🆕 如果是首次登入，清除 needsPasswordChange 標記
+      if (isFirstLogin && userId) {
+        try {
+          await setDoc(doc(db, 'users', userId), {
+            needsPasswordChange: false,
+            passwordChangedAt: Timestamp.now()
+          }, { merge: true });
+        } catch (e) {
+          console.error('Failed to update needsPasswordChange flag:', e);
+        }
+      }
+
       setMessage({ type: 'success', text: '✅ 密碼修改成功！3 秒後將重新登入...' });
+
+      // 🆕 觸發回調
+      if (onPasswordChanged) {
+        onPasswordChanged();
+      }
 
       // 3 秒後登出並跳轉
       setTimeout(async () => {
@@ -1100,16 +1123,31 @@ const ChangePasswordModal = ({
         <div className="flex items-center justify-between p-6 border-b border-slate-800">
           <h3 className="text-xl font-black text-white flex items-center gap-2">
             <Lock className="text-amber-400" size={24} />
-            修改密碼
+            {isFirstLogin ? '首次登入 - 請修改密碼' : '修改密碼'}
           </h3>
-          <button 
-            type="button"
-            onClick={onClose} 
-            className="p-2 text-slate-400 hover:text-white transition-colors"
-          >
-            <X size={24} />
-          </button>
+          {!isFirstLogin && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-white transition-colors"
+            >
+              <X size={24} />
+            </button>
+          )}
         </div>
+
+        {/* 🆕 首次登入提示 */}
+        {isFirstLogin && (
+          <div className="mx-6 mt-4 p-4 bg-amber-900/20 border border-amber-500/30 rounded-xl">
+            <p className="text-amber-300 text-sm font-bold flex items-center gap-2">
+              <AlertCircle size={16} />
+              為了帳號安全，首次登入需修改密碼
+            </p>
+            <p className="text-amber-400/70 text-xs mt-1">
+              請設定一個您自己的密碼，修改後需重新登入
+            </p>
+          </div>
+        )}
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
@@ -1390,16 +1428,31 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showAddClient, setShowAddClient] = useState(false);
 
+  // 🆕 首次登入強制改密碼
+  const [needsPasswordChange, setNeedsPasswordChange] = useState(false);
+
   // 載入用戶資料
   useEffect(() => {
     if (!user) return;
 
     const loadProfile = async () => {
       try {
-        const docRef = doc(db, 'users', user.uid, 'profile', 'data');
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setProfileData(prev => ({ ...prev, ...docSnap.data() as ProfileData }));
+        // 載入個人資料
+        const profileRef = doc(db, 'users', user.uid, 'profile', 'data');
+        const profileSnap = await getDoc(profileRef);
+        if (profileSnap.exists()) {
+          setProfileData(prev => ({ ...prev, ...profileSnap.data() as ProfileData }));
+        }
+
+        // 🆕 檢查是否需要首次修改密碼
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          if (userData.needsPasswordChange === true) {
+            setNeedsPasswordChange(true);
+            setShowChangePassword(true); // 自動打開修改密碼 Modal
+          }
         }
       } catch (error) {
         console.error('Load profile failed:', error);
@@ -1598,7 +1651,17 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
 
       <ChangePasswordModal
         isOpen={showChangePassword}
-        onClose={() => setShowChangePassword(false)}
+        onClose={() => {
+          // 🆕 首次登入模式不可關閉
+          if (!needsPasswordChange) {
+            setShowChangePassword(false);
+          }
+        }}
+        isFirstLogin={needsPasswordChange}
+        userId={user?.uid}
+        onPasswordChanged={() => {
+          setNeedsPasswordChange(false);
+        }}
       />
 
       <AddClientModal

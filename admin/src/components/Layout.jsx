@@ -13,6 +13,7 @@ import {
   FileTextOutlined,
   StarOutlined,
   DollarOutlined,
+  MessageOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
@@ -103,6 +104,11 @@ const MainLayout = () => {
       key: '/admin/site-editor',
       icon: <GlobalOutlined />,
       label: '官網內容',
+    },
+    {
+      key: '/admin/line-bot',
+      icon: <MessageOutlined />,
+      label: 'LINE Bot',
     },
   ];
 
