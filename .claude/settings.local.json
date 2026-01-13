@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(firebase deploy:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: 新增會員系統與 Admin 用戶管理功能\n\n- UltraWarRoom: 新增會員身分顯示、UA推薦引擎、傲創計算機入口\n- useMembership: 修復 points 物件讀取問題\n- LoginPage: 新增更詳細的登入錯誤訊息\n- Admin Users: 新增身分組編輯、到期日設定、點數調整、管理員備註\n- functions: 修復 points.current 讀取/寫入邏輯\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(node -e:*)",
+      "Bash(node initPointsRules.js:*)",
+      "Read(//c/Users/User/**)",
+      "Read(//c/Users/User/Downloads/**)",
+      "Bash(GOOGLE_APPLICATION_CREDENTIALS=\"/c/Users/User/financial-planner/admin/src/scripts/serviceAccountKey.json\" node:*)",
+      "Bash(firebase functions:log:*)",
+      "Bash(npm run dev:*)"
+    ]
+  }
+}

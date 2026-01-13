@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultra Advisor - 官方形象影片 60秒 v2</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --slate-950: #0f172a;
+            --slate-900: #1e293b;
+            --slate-800: #334155;
+            --slate-600: #475569;
+            --slate-400: #94a3b8;
+            --blue-600: #2563eb;
+            --blue-500: #3b82f6;
+            --blue-400: #60a5fa;
+            --amber-500: #f59e0b;
+            --amber-400: #fbbf24;
+            --green-500: #10b981;
+            --red-500: #ef4444;
+            --red-400: #FF6A6A;
+            --purple-500: #8b5cf6;
+            --cyan-500: #06b6d4;
+            --strategy-blue: #4DA3FF;
+            --signal-red: #FF6A6A;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--slate-950);
+            color: #fff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* 動態背景 */
+        .bg-container {
+            position: fixed;
+            inset: 0;
+            background: 
+                radial-gradient(ellipse 80% 50% at 20% 40%, rgba(77,163,255,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 80% 60%, rgba(255,106,106,0.05) 0%, transparent 50%),
+                linear-gradient(180deg, #050b14 0%, #0f172a 100%);
+        }
+
+        .grid-overlay {
+            position: fixed;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(77,163,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(77,163,255,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        /* 全螢幕 Logo 浮水印 */
+        .logo-watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 10rem;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.025;
+        }
+        .logo-watermark .ultra { color: var(--signal-red); }
+        .logo-watermark .advisor { color: var(--strategy-blue); }
+
+        /* 主舞台 */
+        .stage {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .scene {
+            position: absolute;
+            width: 100%;
+            max-width: 1200px;
+            padding: 30px;
+            opacity: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ============================================
+           S1: HOOK 數據 (0-2s) 3.3%
+           ============================================ */
+        .s1 { animation: s1 60s linear infinite; }
+        @keyframes s1 {
+            0% { opacity: 0; }
+            0.5% { opacity: 1; }
+            3% { opacity: 1; }
+            3.5% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        .hook-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12rem;
+            font-weight: 800;
+            color: var(--amber-400);
+            text-shadow: 0 0 80px rgba(251,191,36,0.5);
+            animation: numberPop 60s ease-out infinite;
+        }
+        @keyframes numberPop {
+            0% { transform: scale(0.5); opacity: 0; }
+            1% { transform: scale(1.05); opacity: 1; }
+            2% { transform: scale(1); }
+            3% { transform: scale(1); opacity: 1; }
+            3.5% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        .hook-number::after {
+            content: '%';
+            font-size: 6rem;
+            margin-left: 5px;
+            opacity: 0.8;
+        }
+
+        .hook-sub {
+            font-size: 1.8rem;
+            color: var(--slate-400);
+            margin-top: 10px;
+        }
+
+        /* ============================================
+           S2: HOOK 懸念 (2-5s) 5%
+           ============================================ */
+        .s2 { animation: s2 60s linear infinite; }
+        @keyframes s2 {
+            0%, 3.3% { opacity: 0; }
+            4% { opacity: 1; }
+            8% { opacity: 1; }
+            8.5% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        .hook-text {
+            text-align: center;
+        }
+
+        .hook-text .line1 {
+            font-size: 2rem;
+            color: var(--slate-400);
+            margin-bottom: 10px;
+        }
+
+        .hook-text .line2 {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: #fff;
+        }
+
+        .hook-text .hl {
+            color: var(--amber-500);
+            position: relative;
+        }
+
+        /* ============================================
+           S3: 快速痛點連擊 (5-10s) 8.3%
+           每個痛點 1 秒，共 5 個
+           ============================================ */
+        .s3 { animation: s3 60s linear infinite; }
+        @keyframes s3 {
+            0%, 8.3% { opacity: 0; }
+            9% { opacity: 1; }
+            16.5% { opacity: 1; }
+            17% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        .pain-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .pain-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 18px 25px;
+            background: rgba(239,68,68,0.05);
+            border: 1px solid rgba(239,68,68,0.2);
+            border-radius: 16px;
+            opacity: 0;
+            transform: translateX(-30px);
+        }
+
+        .pain-item:nth-child(1) { animation: painIn 60s ease-out infinite; animation-delay: 0s; }
+        .pain-item:nth-child(2) { animation: painIn 60s ease-out infinite; animation-delay: 0.3s; }
+        .pain-item:nth-child(3) { animation: painIn 60s ease-out infinite; animation-delay: 0.6s; }
+        .pain-item:nth-child(4) { animation: painIn 60s ease-out infinite; animation-delay: 0.9s; }
+        .pain-item:nth-child(5) { animation: painIn 60s ease-out infinite; animation-delay: 1.2s; }
+
+        @keyframes painIn {
+            0%, 9% { opacity: 0; transform: translateX(-30px); }
+            11% { opacity: 1; transform: translateX(0); }
+            16.5% { opacity: 1; }
+            17% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        .pain-item .icon {
+            font-size: 1.8rem;
+            width: 50px;
+            text-align: center;
+        }
+
+        .pain-item .text {
+            flex: 1;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .pain-item .text .gray { color: var(--slate-400); }
+        .pain-item .text .red { color: var(--red-500); }
+
+        /* ============================================
+           S4: 轉折 (10-12s) 3.3%
+           ============================================ */
+        .s4 { animation: s4 60s linear infinite; }
+        @keyframes s4 {
+            0%, 16.5% { opacity: 0; }
+            17.5% { opacity: 1; }
+            20% { opacity: 1; }
+            20.5% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        .transition-text {
+            text-align: center;
+        }
+
+        .transition-text .small {
+            font-size: 1.5rem;
+            color: var(--slate-400);
+            margin-bottom: 15px;
+        }
+
+        .transition-text .big {
+            font-size: 5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--strategy-blue), var(--amber-400));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ============================================
+           S5: 品牌亮相 (12-14s) 3.3%
+           ============================================ */
+        .s5 { animation: s5 60s linear infinite; }
+        @keyframes s5 {
+            0%, 20% { opacity: 0; }
+            21% { opacity: 1; }
+            23.3% { opacity: 1; }
+            24% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        .brand-reveal {
+            text-align: center;
+        }
+
+        .brand-logo {
+            font-size: 4rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            margin-bottom: 15px;
+        }
+
+        .brand-logo .ultra { color: var(--signal-red); }
+        .brand-logo .advisor { color: var(--strategy-blue); }
+
+        .brand-tagline {
+            font-size: 1.5rem;
+            color: var(--amber-500);
+            font-weight: 700;
+        }
+
+        /* ============================================
+           工具展示共用樣式
+           ============================================ */
+        .tool-demo {
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        .tool-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .tool-icon {
+            width: 55px;
+            height: 55px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+        }
+
+        .tool-icon.purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        .tool-icon.cyan { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+        .tool-icon.green { background: linear-gradient(135deg, #10b981, #059669); }
+        .tool-icon.blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+
+        .tool-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+        }
+
+        .tool-title .sub {
+            font-size: 0.9rem;
+            color: var(--slate-400);
+            font-weight: 500;
+        }
+
+        .tool-ui {
+            background: var(--slate-900);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .tool-ui-header {
+            padding: 12px 20px;
+            background: rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tool-ui-header .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .tool-ui-header .dot.red { background: #ef4444; }
+        .tool-ui-header .dot.yellow { background: #f59e0b; }
+        .tool-ui-header .dot.green { background: #10b981; }
+
+        .tool-ui-body {
+            padding: 25px;
+            display: grid;
+            grid-template-columns: 1fr 1.8fr;
+            gap: 25px;
+        }
+
+        .input-section h4 {
+            font-size: 0.8rem;
+            color: var(--slate-400);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .input-group {
+            margin-bottom: 18px;
+        }
+
+        .input-group .label {
+            font-size: 0.75rem;
+            color: var(--slate-400);
+            margin-bottom: 6px;
+        }
+
+        .input-group .slider-track {
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .input-group .slider-fill {
+            height: 100%;
+            border-radius: 4px;
+            width: 0;
+        }
+
+        .input-group .value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-top: 5px;
+        }
+
+        /* 滑桿動態調整動畫 */
+        .input-group .slider-thumb {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        .input-group .slider-track {
+            position: relative;
+        }
+
+        /* 數值跳動動畫 */
+        .value-animate {
+            display: inline-block;
+        }
+        
+        /* 調整指示器 */
+        .adjusting-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--amber-500);
+            border-radius: 50%;
+            margin-left: 8px;
+            animation: adjustBlink 0.5s ease-in-out infinite;
+        }
+        @keyframes adjustBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .output-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .chart-area {
+            flex: 1;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-area h4 {
+            font-size: 0.75rem;
+            color: var(--slate-400);
+            margin-bottom: 12px;
+        }
+
+        .result-box {
+            background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.1));
+            border: 1px solid rgba(16,185,129,0.3);
+            border-radius: 12px;
+            padding: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .result-box .label {
+            font-size: 0.9rem;
+            color: var(--slate-400);
+        }
+
+        .result-box .value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .result-box .value.green { color: var(--green-500); }
+        .result-box .value.amber { color: var(--amber-500); }
+        .result-box .value.cyan { color: var(--cyan-500); }
+        .result-box .value.red { color: var(--red-500); }
+
+        /* 長條圖 */
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            height: 120px;
+            flex: 1;
+        }
+
+        .bar {
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px 6px 0 0;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .bar .fill {
+            border-radius: 6px 6px 0 0;
+            width: 100%;
+        }
+
+        .bar .bar-label {
+            position: absolute;
+            bottom: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.65rem;
+            color: var(--slate-400);
+            white-space: nowrap;
+        }
+
+        /* ============================================
+           S6: 工具1 - 稅務傳承 (14-24s) 16.7%
+           ============================================ */
+        .s6 { animation: s6 60s linear infinite; }
+        @keyframes s6 {
+            0%, 23.3% { opacity: 0; }
+            24.5% { opacity: 1; }
+            40% { opacity: 1; }
+            40.5% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        /* 稅務傳承 - 滑桿動畫（模擬調整） */
+        /* h4 是 nth-child(1)，所以 input-group 從 nth-child(2) 開始 */
+        .s6 .input-group:nth-child(2) .slider-fill {
+            background: linear-gradient(90deg, #8b5cf6, #a855f7);
+            animation: taxSlide1 60s ease-in-out infinite;
+        }
+        @keyframes taxSlide1 {
+            0%, 24% { width: 0; }
+            26% { width: 30%; }
+            28% { width: 45%; }
+            30% { width: 55%; }
+            32% { width: 65%; }
+            40% { width: 65%; }
+            100% { width: 65%; }
+        }
+        
+        .s6 .input-group:nth-child(3) .slider-fill {
+            background: linear-gradient(90deg, #8b5cf6, #a855f7);
+            animation: taxSlide2 60s ease-in-out infinite;
+        }
+        @keyframes taxSlide2 {
+            0%, 25% { width: 0; }
+            27% { width: 25%; }
+            29% { width: 50%; }
+            31% { width: 70%; }
+            33% { width: 78%; }
+            40% { width: 78%; }
+            100% { width: 78%; }
+        }
+        
+        .s6 .input-group:nth-child(4) .slider-fill {
+            background: linear-gradient(90deg, #8b5cf6, #a855f7);
+            animation: taxSlide3 60s ease-in-out infinite;
+        }
+        @keyframes taxSlide3 {
+            0%, 26% { width: 0; }
+            28% { width: 15%; }
+            30% { width: 30%; }
+            32% { width: 40%; }
+            34% { width: 26%; }
+            40% { width: 26%; }
+            100% { width: 26%; }
+        }
+
+        .s6 .bar .fill {
+            animation: bar1Grow 60s ease-out infinite;
+        }
+        .s6 .bar:nth-child(1) .fill { background: #22c55e; }
+        .s6 .bar:nth-child(2) .fill { background: #3b82f6; }
+        .s6 .bar:nth-child(3) .fill { background: #f59e0b; }
+        .s6 .bar:nth-child(4) .fill { background: #ef4444; }
+
+        @keyframes bar1Grow {
+            0%, 32% { height: 0; }
+            38% { height: var(--h); }
+            40% { height: var(--h); }
+            100% { height: var(--h); }
+        }
+
+        .s6 .result-box {
+            opacity: 0;
+            animation: result1In 60s ease-out infinite;
+        }
+        @keyframes result1In {
+            0%, 36% { opacity: 0; transform: translateY(10px); }
+            39% { opacity: 1; transform: translateY(0); }
+            40% { opacity: 1; }
+            40.5% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+        
+        .s6 .results-grid {
+            opacity: 0;
+            animation: taxResultsIn 60s ease-out infinite;
+        }
+        @keyframes taxResultsIn {
+            0%, 30% { opacity: 0; }
+            34% { opacity: 1; }
+            40% { opacity: 1; }
+            40.5% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        /* ============================================
+           S7: 工具2 - 大小水庫 (24-34s) 16.7%
+           ============================================ */
+        .s7 { animation: s7 60s linear infinite; }
+        @keyframes s7 {
+            0%, 40% { opacity: 0; }
+            41.5% { opacity: 1; }
+            56.7% { opacity: 1; }
+            57.2% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        /* 大小水庫 - 滑桿動畫（模擬調整） */
+        /* h4 是 nth-child(1)，所以 input-group 從 nth-child(2) 開始 */
+        .s7 .input-group:nth-child(2) .slider-fill {
+            background: linear-gradient(90deg, #06b6d4, #22d3ee);
+            animation: resSlide1 60s ease-in-out infinite;
+        }
+        @keyframes resSlide1 {
+            0%, 41% { width: 0; }
+            43% { width: 30%; }
+            45% { width: 60%; }
+            47% { width: 50%; }
+            57% { width: 50%; }
+            100% { width: 50%; }
+        }
+        
+        .s7 .input-group:nth-child(3) .slider-fill {
+            background: linear-gradient(90deg, #06b6d4, #22d3ee);
+            animation: resSlide2 60s ease-in-out infinite;
+        }
+        @keyframes resSlide2 {
+            0%, 42% { width: 0; }
+            44% { width: 20%; }
+            46% { width: 35%; }
+            48% { width: 50%; }
+            57% { width: 50%; }
+            100% { width: 50%; }
+        }
+        
+        .s7 .input-group:nth-child(4) .slider-fill {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+            animation: resSlide3 60s ease-in-out infinite;
+        }
+        @keyframes resSlide3 {
+            0%, 43% { width: 0; }
+            45% { width: 40%; }
+            47% { width: 70%; }
+            49% { width: 80%; }
+            57% { width: 80%; }
+            100% { width: 80%; }
+        }
+
+        .s7 .bar .fill {
+            animation: bar2Grow 60s ease-out infinite;
+        }
+        .s7 .bar:nth-child(1) .fill { background: #06b6d4; }
+        .s7 .bar:nth-child(2) .fill { background: #f59e0b; }
+        .s7 .bar:nth-child(1) .fill.small { background: #22d3ee; }
+        .s7 .bar:nth-child(2) .fill.small { background: #fbbf24; }
+
+        @keyframes bar2Grow {
+            0%, 48% { height: 0; }
+            54% { height: var(--h); }
+            57% { height: var(--h); }
+            100% { height: var(--h); }
+        }
+
+        .s7 .result-box {
+            opacity: 0;
+            animation: result2In 60s ease-out infinite;
+        }
+        @keyframes result2In {
+            0%, 53% { opacity: 0; transform: translateY(10px); }
+            56% { opacity: 1; transform: translateY(0); }
+            57% { opacity: 1; }
+            57.2% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+        
+        .s7 .results-grid {
+            opacity: 0;
+            animation: resResultsIn 60s ease-out infinite;
+        }
+        @keyframes resResultsIn {
+            0%, 47% { opacity: 0; }
+            51% { opacity: 1; }
+            57% { opacity: 1; }
+            57.2% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        /* 堆疊長條 */
+        .stacked-bar {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        /* ============================================
+           S8: 工具3 - 金融房產 (34-44s) 16.7%
+           ============================================ */
+        .s8 { animation: s8 60s linear infinite; }
+        @keyframes s8 {
+            0%, 56.7% { opacity: 0; }
+            58% { opacity: 1; }
+            73.3% { opacity: 1; }
+            73.8% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        /* 金融房產 - 滑桿動畫（模擬調整） */
+        /* h4 是 nth-child(1)，所以 input-group 從 nth-child(2) 開始 */
+        .s8 .input-group:nth-child(2) .slider-fill {
+            background: linear-gradient(90deg, #10b981, #34d399);
+            animation: realSlide1 60s ease-in-out infinite;
+        }
+        @keyframes realSlide1 {
+            0%, 57% { width: 0; }
+            59% { width: 40%; }
+            61% { width: 70%; }
+            63% { width: 60%; }
+            73% { width: 60%; }
+            100% { width: 60%; }
+        }
+        
+        .s8 .input-group:nth-child(3) .slider-fill {
+            background: linear-gradient(90deg, #ef4444, #f87171);
+            animation: realSlide2 60s ease-in-out infinite;
+        }
+        @keyframes realSlide2 {
+            0%, 58% { width: 0; }
+            60% { width: 15%; }
+            62% { width: 25%; }
+            64% { width: 22%; }
+            73% { width: 22%; }
+            100% { width: 22%; }
+        }
+        
+        .s8 .input-group:nth-child(4) .slider-fill {
+            background: linear-gradient(90deg, #10b981, #34d399);
+            animation: realSlide3 60s ease-in-out infinite;
+        }
+        @keyframes realSlide3 {
+            0%, 59% { width: 0; }
+            61% { width: 40%; }
+            63% { width: 55%; }
+            65% { width: 60%; }
+            73% { width: 60%; }
+            100% { width: 60%; }
+        }
+
+        .calc-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            padding: 20px;
+            flex: 1;
+        }
+
+        .calc-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 800;
+        }
+
+        .calc-num.green { color: var(--green-500); }
+        .calc-num.red { color: var(--red-500); }
+        .calc-num.amber { color: var(--amber-500); }
+
+        .calc-op {
+            font-size: 2rem;
+            color: var(--slate-400);
+        }
+
+        .s8 .calc-num, .s8 .calc-op {
+            opacity: 0;
+            animation: calcIn 60s ease-out infinite;
+        }
+        .s8 .calc-num:nth-child(1) { animation-delay: 0s; }
+        .s8 .calc-op:nth-child(2) { animation-delay: 0.2s; }
+        .s8 .calc-num:nth-child(3) { animation-delay: 0.4s; }
+        .s8 .calc-op:nth-child(4) { animation-delay: 0.6s; }
+        .s8 .calc-num:nth-child(5) { animation-delay: 0.8s; }
+
+        @keyframes calcIn {
+            0%, 63% { opacity: 0; transform: scale(0.5); }
+            67% { opacity: 1; transform: scale(1.1); }
+            69% { transform: scale(1); }
+            73% { opacity: 1; }
+            73.8% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        .s8 .result-box {
+            opacity: 0;
+            animation: result3In 60s ease-out infinite;
+        }
+        @keyframes result3In {
+            0%, 69% { opacity: 0; transform: translateY(10px); }
+            72% { opacity: 1; transform: translateY(0); }
+            73% { opacity: 1; }
+            73.8% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+        
+        .s8 .results-grid {
+            opacity: 0;
+            animation: realResultsIn 60s ease-out infinite;
+        }
+        @keyframes realResultsIn {
+            0%, 63% { opacity: 0; }
+            67% { opacity: 1; }
+            73% { opacity: 1; }
+            73.8% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        /* ============================================
+           S9: 工具4 - 市場數據戰情室 (44-54s) 16.7%
+           ============================================ */
+        .s9 { animation: s9 60s linear infinite; }
+        @keyframes s9 {
+            0%, 73.3% { opacity: 0; }
+            74.5% { opacity: 1; }
+            90% { opacity: 1; }
+            90.5% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        .risk-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .risk-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            opacity: 0;
+        }
+
+        .risk-card:nth-child(1) { animation: riskIn 60s ease-out infinite; animation-delay: 0s; }
+        .risk-card:nth-child(2) { animation: riskIn 60s ease-out infinite; animation-delay: 0.15s; }
+        .risk-card:nth-child(3) { animation: riskIn 60s ease-out infinite; animation-delay: 0.3s; }
+        .risk-card:nth-child(4) { animation: riskIn 60s ease-out infinite; animation-delay: 0.45s; }
+        .risk-card:nth-child(5) { animation: riskIn 60s ease-out infinite; animation-delay: 0.6s; }
+
+        @keyframes riskIn {
+            0%, 75% { opacity: 0; transform: translateY(15px); }
+            80% { opacity: 1; transform: translateY(0); }
+            90% { opacity: 1; }
+            90.5% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        .risk-card .icon { font-size: 1.5rem; margin-bottom: 6px; }
+        .risk-card .name { font-size: 0.7rem; color: var(--slate-400); margin-bottom: 4px; }
+        .risk-card .gap {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .risk-card:nth-child(1) .gap { color: #ef4444; }
+        .risk-card:nth-child(2) .gap { color: #f59e0b; }
+        .risk-card:nth-child(3) .gap { color: #8b5cf6; }
+        .risk-card:nth-child(4) .gap { color: #3b82f6; }
+        .risk-card:nth-child(5) .gap { color: #06b6d4; }
+
+        .radar-section {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .radar-visual {
+            width: 150px;
+            height: 150px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .radar-visual::before {
+            content: '';
+            position: absolute;
+            inset: 25%;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 50%;
+        }
+
+        .radar-fill {
+            position: absolute;
+            inset: 15%;
+            background: rgba(239,68,68,0.2);
+            border: 2px solid #ef4444;
+            border-radius: 50%;
+            animation: radarPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes radarPulse {
+            0%, 100% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1); opacity: 1; }
+        }
+
+        .s9 .result-box {
+            flex: 1;
+            opacity: 0;
+            animation: result4In 60s ease-out infinite;
+        }
+        @keyframes result4In {
+            0%, 82% { opacity: 0; transform: translateY(10px); }
+            85% { opacity: 1; transform: translateY(0); }
+            90% { opacity: 1; }
+            90.5% { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        /* ============================================
+           S10: CTA (54-60s) 10%
+           ============================================ */
+        .s10 { animation: s10 60s linear infinite; }
+        @keyframes s10 {
+            0%, 90% { opacity: 0; }
+            91.5% { opacity: 1; }
+            99.5% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        .cta-section {
+            text-align: center;
+        }
+
+        .cta-logo {
+            font-size: 3.5rem;
+            font-weight: 900;
+            margin-bottom: 15px;
+        }
+
+        .cta-logo .ultra { color: var(--signal-red); }
+        .cta-logo .advisor { color: var(--strategy-blue); }
+
+        .cta-tagline {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+        }
+
+        .cta-tagline .hl {
+            color: var(--amber-500);
+        }
+
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 20px 50px;
+            background: linear-gradient(135deg, var(--strategy-blue), #2E6BFF);
+            border: none;
+            border-radius: 50px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+            cursor: pointer;
+            animation: ctaPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes ctaPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(77,163,255,0.5); }
+            50% { box-shadow: 0 0 0 15px rgba(77,163,255,0); }
+        }
+
+        .cta-features {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 25px;
+            font-size: 0.95rem;
+            color: var(--slate-400);
+        }
+
+        .cta-features .check {
+            color: var(--green-500);
+            margin-right: 5px;
+        }
+
+        /* 控制列 */
+        .controls {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            padding: 8px 20px;
+            border-radius: 40px;
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 100;
+        }
+
+        .ctrl-btn {
+            width: 32px;
+            height: 32px;
+            background: transparent;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+        .ctrl-btn:hover { background: rgba(255,255,255,0.1); }
+        .ctrl-btn svg { width: 12px; height: 12px; }
+
+        .progress-bar {
+            width: 120px;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--strategy-blue), var(--amber-500));
+            animation: progress 60s linear infinite;
+        }
+
+        @keyframes progress {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        .time-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--slate-400);
+            min-width: 40px;
+        }
+
+        .watermark {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            font-size: 0.65rem;
+            color: rgba(255,255,255,0.15);
+        }
+
+        .paused, .paused * { animation-play-state: paused !important; }
+
+        /* 教戰守則按鈕 */
+        .tips-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(245,158,11,0.2);
+            border: 2px solid rgba(245,158,11,0.5);
+            border-radius: 25px;
+            padding: 8px 16px 8px 12px;
+            color: var(--amber-500);
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            z-index: 50;
+            animation: tipsPulse 2s ease-in-out infinite, tipsGlow 1.5s ease-in-out infinite alternate;
+            transition: all 0.2s;
+        }
+        .tips-btn .icon {
+            font-size: 1.2rem;
+            animation: iconBounce 1s ease-in-out infinite;
+        }
+        @keyframes iconBounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        @keyframes tipsPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        @keyframes tipsGlow {
+            0% { box-shadow: 0 0 5px rgba(245,158,11,0.3), 0 0 10px rgba(245,158,11,0.2); }
+            100% { box-shadow: 0 0 15px rgba(245,158,11,0.6), 0 0 30px rgba(245,158,11,0.4); }
+        }
+        .tips-btn:hover {
+            transform: scale(1.08) !important;
+            background: rgba(245,158,11,0.4);
+        }
+
+        /* 教戰守則彈窗 */
+        .tips-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 20px;
+        }
+        .tips-modal.active {
+            display: flex;
+        }
+        .tips-content {
+            background: var(--slate-900);
+            border: 1px solid rgba(245,158,11,0.3);
+            border-radius: 20px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .tips-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .tips-header h3 {
+            font-size: 1.3rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .tips-header h3 .icon { color: var(--amber-500); }
+        .tips-close {
+            width: 32px;
+            height: 32px;
+            background: rgba(255,255,255,0.05);
+            border: none;
+            border-radius: 50%;
+            color: var(--slate-400);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        .tips-close:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .tips-body {
+            padding: 25px;
+        }
+        .tip-item {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .tip-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .tip-num {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, var(--amber-500), var(--amber-400));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #000;
+            flex-shrink: 0;
+        }
+        .tip-text h4 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+        .tip-text p {
+            font-size: 0.85rem;
+            color: var(--slate-400);
+            line-height: 1.6;
+        }
+        .tip-text .highlight {
+            color: var(--amber-500);
+            font-weight: 600;
+        }
+
+        /* 更多結果數據樣式 */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .result-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+        }
+        .result-card .label {
+            font-size: 0.7rem;
+            color: var(--slate-400);
+            margin-bottom: 5px;
+        }
+        .result-card .value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .result-card .value.purple { color: #a855f7; }
+        .result-card .value.cyan { color: #06b6d4; }
+        .result-card .value.green { color: #10b981; }
+        .result-card .value.amber { color: #f59e0b; }
+        .result-card .value.red { color: #ef4444; }
+        .result-card .value.blue { color: #3b82f6; }
+
+        /* 響應式 */
+        @media (max-width: 1024px) {
+            .tool-ui-body { grid-template-columns: 1fr; }
+            .risk-grid { grid-template-columns: repeat(3, 1fr); }
+            .radar-section { flex-direction: column; }
+        }
+
+        @media (max-width: 768px) {
+            .scene { padding: 15px; }
+            .hook-number { font-size: 7rem; }
+            .hook-text .line2 { font-size: 2rem; }
+            .pain-item { padding: 12px 15px; }
+            .pain-item .text { font-size: 1rem; }
+            .brand-logo { font-size: 2.5rem; }
+            .tool-title { font-size: 1.2rem; }
+            .calc-num { font-size: 1.8rem; }
+            .risk-grid { grid-template-columns: repeat(2, 1fr); }
+            .cta-logo { font-size: 2.5rem; }
+            .cta-tagline { font-size: 1.3rem; }
+            .cta-button { padding: 15px 35px; font-size: 1.1rem; }
+            .logo-watermark { font-size: 4rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-container"></div>
+    <div class="grid-overlay"></div>
+    
+    <div class="logo-watermark">
+        <span class="ultra">Ultra</span><span class="advisor">Advisor</span>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- S1: Hook 數據 (0-2s) -->
+        <div class="scene s1">
+            <div class="hook-number">92</div>
+            <div class="hook-sub">的客戶其實已經心動</div>
+        </div>
+
+        <!-- S2: Hook 懸念 (2-5s) -->
+        <div class="scene s2">
+            <div class="hook-text">
+                <div class="line1">他們只差</div>
+                <div class="line2">一個<span class="hl">「看得懂」</span>的理由</div>
+            </div>
+        </div>
+
+        <!-- S3: 快速痛點連擊 (5-10s) -->
+        <div class="scene s3">
+            <div class="pain-container">
+                <div class="pain-item">
+                    <div class="icon">😰</div>
+                    <div class="text"><span class="gray">口才再好，</span><span class="red">客戶聽不懂</span></div>
+                </div>
+                <div class="pain-item">
+                    <div class="icon">📊</div>
+                    <div class="text"><span class="gray">數據再多，</span><span class="red">整理到天亮</span></div>
+                </div>
+                <div class="pain-item">
+                    <div class="icon">⏰</div>
+                    <div class="text"><span class="gray">建立信任，</span><span class="red">要花好幾個月</span></div>
+                </div>
+                <div class="pain-item">
+                    <div class="icon">📑</div>
+                    <div class="text"><span class="gray">Excel 提案，</span><span class="red">客戶直接跳過</span></div>
+                </div>
+                <div class="pain-item">
+                    <div class="icon">🤔</div>
+                    <div class="text"><span class="gray">講完方案，</span><span class="red">客戶說再想想</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- S4: 轉折 (10-12s) -->
+        <div class="scene s4">
+            <div class="transition-text">
+                <div class="small">現在</div>
+                <div class="big">3 分鐘就夠</div>
+            </div>
+        </div>
+
+        <!-- S5: 品牌亮相 (12-14s) -->
+        <div class="scene s5">
+            <div class="brand-reveal">
+                <div class="brand-logo">
+                    <span class="ultra">Ultra</span><span class="advisor">Advisor</span>
+                </div>
+                <div class="brand-tagline">台灣最強財務顧問數據武器庫</div>
+            </div>
+        </div>
+
+        <!-- S6: 工具1 - 稅務傳承 (14-24s) -->
+        <div class="scene s6">
+            <button class="tips-btn" onclick="showTips('tax')"><span class="icon">💡</span>教戰守則</button>
+            <div class="tool-demo">
+                <div class="tool-header">
+                    <div class="tool-icon purple">⚖️</div>
+                    <div class="tool-title">稅務傳承專案<div class="sub">壓縮遺產 + 預留稅源</div></div>
+                </div>
+                <div class="tool-ui">
+                    <div class="tool-ui-header">
+                        <div class="dot red"></div>
+                        <div class="dot yellow"></div>
+                        <div class="dot green"></div>
+                    </div>
+                    <div class="tool-ui-body">
+                        <div class="input-section">
+                            <h4>📝 輸入參數</h4>
+                            <div class="input-group">
+                                <div class="label">現金資產</div>
+                                <div class="slider-track"><div class="slider-fill"></div></div>
+                                <div class="value" style="color: #a855f7;">0</div>
+                            </div>
+                            <div class="input-group">
+                                <div class="label">不動產</div>
+                                <div class="slider-track"><div class="slider-fill"></div></div>
+                                <div class="value" style="color: #a855f7;">0</div>
+                            </div>
+                            <div class="input-group">
+                                <div class="label">股票投資</div>
+                                <div class="slider-track"><div class="slider-fill"></div></div>
+                                <div class="value" style="color: #a855f7;">0</div>
+                            </div>
+                        </div>
+                        <div class="output-section">
+                            <div class="results-grid">
+                                <div class="result-card">
+                                    <div class="label">遺產總額</div>
+                                    <div class="value purple">130,000,000</div>
+                                </div>
+                                <div class="result-card">
+                                    <div class="label">免稅額+扣除額</div>
+                                    <div class="value green">27,800,000</div>
+                                </div>
+                                <div class="result-card">
+                                    <div class="label">課稅淨額</div>
+                                    <div class="value amber">102,200,000</div>
+                                </div>
+                            </div>
+                            <div class="chart-area" style="flex: 0;">
+                                <h4>📊 稅率級距分析</h4>
+                                <div class="bar-chart" style="height: 80px;">
+                                    <div class="bar"><div class="fill" style="--h: 30%;"></div><div class="bar-label">免稅</div></div>
+                                    <div class="bar"><div class="fill" style="--h: 50%;"></div><div class="bar-label">10%</div></div>
+                                    <div class="bar"><div class="fill" style="--h: 75%;"></div><div class="bar-label">15%</div></div>
+                                    <div class="bar"><div class="fill" style="--h: 95%;"></div><div class="bar-label">20%</div></div>
+                                </div>
+                            </div>
+                            <div class="results-grid" style="grid-template-columns: 1fr 1fr; margin-top: 15px;">
+                                <div class="result-card">
+                                    <div class="label">原始應納稅額</div>
+                                    <div class="value red">8,430,000</div>
+                                </div>
+                                <div class="result-card">
+                                    <div class="label">規劃後稅額</div>
+                                    <div class="value green">3,877,800</div>
+                                </div>
+                            </div>
+                            <div class="result-box">
+                                <div class="label">💰 透過保險規劃可節省</div>
+                                <div class="value green">-4,552,200 (-54%)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- S7: 工具2 - 大小水庫 (24-34s) -->
+        <div class="scene s7">
+            <button class="tips-btn" onclick="showTips('reservoir')"><span class="icon">💡</span>教戰守則</button>
+            <div class="tool-demo">
+                <div class="tool-header">
+                    <div class="tool-icon cyan">🌊</div>
+                    <div class="tool-title">大小水庫專案<div class="sub">讓配息去生小孩</div></div>
+                </div>
+                <div class="tool-ui">
+                    <div class="tool-ui-header">
+                        <div class="dot red"></div>
+                        <div class="dot yellow"></div>
+                        <div class="dot green"></div>
+                    </div>
+                    <div class="tool-ui-body">
+                        <div class="input-section">
+                            <h4>📝 輸入參數</h4>
+                            <div class="input-group">
+                                <div class="label">大水庫本金</div>
+                                <div class="slider-track"><div class="slider-fill"></div></div>
+                                <div class="value" style="color: #06b6d4;">0</div>
+                            </div>
+                            <div class="input-group">
+                                <div class="label">配息率</div>
+                                <div class="slider-track"><div class="slider-fill"></div></div>
+                                <div class="value" style="color: #06b6d4;">0.0%</div>
+                            </div>
+                            <div class="input-group">
+                                <div class="label">再投資報酬率</div>
+                                <div class="slider-track"><div class="slider-fill"></div></div>
+                                <div class="value" style="color: #f59e0b;">0.0%</div>
+                            </div>
+                        </div>
+                        <div class="output-section">
+                            <div class="results-grid">
+                                <div class="result-card">
+                                    <div class="label">大水庫（本金）</div>
+                                    <div class="value cyan">10,000,000</div>
+                                </div>
+                                <div class="result-card">
+                                    <div class="label">小水庫（複利）</div>
+                                    <div class="value amber">24,070,000</div>
+                                </div>
+                                <div class="result-card">
+                                    <div class="label">20年總配息</div>
+                                    <div class="value green">10,000,000</div>
+                                </div>
+                            </div>
+                            <div class="chart-area" style="flex: 0;">
+                                <h4>📈 20年資產成長</h4>
+                                <div class="bar-chart" style="height: 80px;">
+                                    <div class="bar stacked-bar">
+                                        <div class="fill small" style="--h: 15%; background: #fbbf24;"></div>
+                                        <div class="fill" style="--h: 35%; background: #06b6d4;"></div>
+                                        <div class="bar-label">第5年</div>
+                                    </div>
+                                    <div class="bar stacked-bar">
+                                        <div class="fill small" style="--h: 30%; background: #fbbf24;"></div>
+                                        <div class="fill" style="--h: 35%; background: #06b6d4;"></div>
+                                        <div class="bar-label">第10年</div>
+                                    </div>
+                                    <div class="bar stacked-bar">
+                                        <div class="fill small" style="--h: 50%; background: #fbbf24;"></div>
+                                        <div class="fill" style="--h: 35%; background: #06b6d4;"></div>
+                                        <div class="bar-label">第15年</div>
+                                    </div>
+                                    <div class="bar stacked-bar">
+                                        <div class="fill small" style="--h: 65%; background: #fbbf24;"></div>
+                                        <div class="fill" style="--h: 35%; background: #06b6d4;"></div>
+                                        <div class="bar-label">第20年</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="results-grid" style="grid-template-columns: 1fr 1fr; margin-top: 15px;">
+                                <div class="result-card">
+                                    <div class="label">⚠️ 若配息花掉</div>
+                                    <div class="value red">僅剩 10,000,000</div>
+                                </div>
+                                <div class="result-card">
+                                    <div class="label">✅ 機會成本損失</div>
+                                    <div class="value red">-24,070,000</div>
+                                </div>
+                            </div>
+                            <div class="result-box">
+                                <div class="label">🚀 20年後總資產</div>
+                                <div class="value amber">34,070,000 (+240%)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- S8: 工具3 - 金融房產 (34-44s) -->
+        <div class="scene s8">
+            <button class="tips-btn" onclick="showTips('realestate')"><span class="icon">💡</span>教戰守則</button>
+            <div class="tool-demo">
+                <div class="tool-header">
+                    <div class="tool-icon green">🏠</div>
+                    <div class="tool-title">金融房產專案<div class="sub">以息養貸，負債變資產</div></div>
+                </div>
+                <div class="tool-ui">
+                    <div class="tool-ui-header">
+                        <div class="dot red"></div>
+                        <div class="dot yellow"></div>
+                        <div class="dot green"></div>
+                    </div>
+                    <div class="tool-ui-body">
+                        <div class="input-section">
+                            <h4>📝 輸入參數</h4>
+                            <div class="input-group">
+                                <div class="label">貸款總額</div>
+                                <div class="slider-track"><div class="slider-fill"></div></div>
+                                <div class="value" style="color: #10b981;">0</div>
+                            </div>
+                            <div class="input-group">
+                                <div class="label">房貸利率</div>
+                                <div class="slider-track"><div class="slider-fill"></div></div>
+                                <div class="value" style="color: #ef4444;">0.0%</div>
+                            </div>
+                            <div class="input-group">
+                                <div class="label">配息利率</div>
+                                <div class="slider-track"><div class="slider-fill"></div></div>
+                                <div class="value" style="color: #10b981;">0.0%</div>
+                            </div>
+                        </div>
+                        <div class="output-section">
+                            <div class="results-grid">
+                                <div class="result-card">
+                                    <div class="label">每月配息收入</div>
+                                    <div class="value green">+50,000</div>
+                                </div>
+                                <div class="result-card">
+                                    <div class="label">每月房貸支出</div>
+                                    <div class="value red">-38,000</div>
+                                </div>
+                                <div class="result-card">
+                                    <div class="label">收益差額</div>
+                                    <div class="value amber">+3.8%</div>
+                                </div>
+                            </div>
+                            <div class="chart-area" style="flex: 0;">
+                                <h4>🧮 收益差額計算</h4>
+                                <div class="calc-display">
+                                    <div class="calc-num green">6.0%</div>
+                                    <div class="calc-op">−</div>
+                                    <div class="calc-num red">2.2%</div>
+                                    <div class="calc-op">=</div>
+                                    <div class="calc-num amber">+3.8%</div>
+                                </div>
+                            </div>
+                            <div class="results-grid" style="grid-template-columns: 1fr 1fr; margin-top: 15px;">
+                                <div class="result-card">
+                                    <div class="label">每月正現金流</div>
+                                    <div class="value green">+12,000</div>
+                                </div>
+                                <div class="result-card">
+                                    <div class="label">每年正現金流</div>
+                                    <div class="value green">+144,000</div>
+                                </div>
+                            </div>
+                            <div class="result-box">
+                                <div class="label">💵 30年累積收益</div>
+                                <div class="value cyan">+4,320,000</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- S9: 工具4 - 市場數據戰情室 (44-54s) -->
+        <div class="scene s9">
+            <button class="tips-btn" onclick="showTips('market')"><span class="icon">💡</span>教戰守則</button>
+            <div class="tool-demo">
+                <div class="tool-header">
+                    <div class="tool-icon blue">📊</div>
+                    <div class="tool-title">市場數據戰情室<div class="sub">五大風險，一次掌握</div></div>
+                </div>
+                <div class="tool-ui">
+                    <div class="tool-ui-header">
+                        <div class="dot red"></div>
+                        <div class="dot yellow"></div>
+                        <div class="dot green"></div>
+                    </div>
+                    <div class="tool-ui-body" style="grid-template-columns: 1fr;">
+                        <div class="risk-grid">
+                            <div class="risk-card">
+                                <div class="icon">📉</div>
+                                <div class="name">通膨侵蝕</div>
+                                <div class="gap">-49%</div>
+                            </div>
+                            <div class="risk-card">
+                                <div class="icon">🧓</div>
+                                <div class="name">退休缺口</div>
+                                <div class="gap">8,320,000</div>
+                            </div>
+                            <div class="risk-card">
+                                <div class="icon">🛏️</div>
+                                <div class="name">長照缺口</div>
+                                <div class="gap">6,050,000</div>
+                            </div>
+                            <div class="risk-card">
+                                <div class="icon">🏥</div>
+                                <div class="name">醫療缺口</div>
+                                <div class="gap">1,800,000</div>
+                            </div>
+                            <div class="risk-card">
+                                <div class="icon">🎗️</div>
+                                <div class="name">癌症風險</div>
+                                <div class="gap">1,530,000</div>
+                            </div>
+                        </div>
+                        <div class="results-grid" style="grid-template-columns: repeat(4, 1fr); margin: 15px 0;">
+                            <div class="result-card">
+                                <div class="label">客戶年齡</div>
+                                <div class="value blue">45 歲</div>
+                            </div>
+                            <div class="result-card">
+                                <div class="label">月收入</div>
+                                <div class="value green">80,000</div>
+                            </div>
+                            <div class="result-card">
+                                <div class="label">退休目標</div>
+                                <div class="value amber">60 歲</div>
+                            </div>
+                            <div class="result-card">
+                                <div class="label">家庭成員</div>
+                                <div class="value cyan">4 人</div>
+                            </div>
+                        </div>
+                        <div class="radar-section">
+                            <div class="radar-visual">
+                                <div class="radar-fill"></div>
+                            </div>
+                            <div class="result-box" style="flex: 1;">
+                                <div>
+                                    <div class="label">⚠️ 總保障缺口</div>
+                                    <div class="value red">17,700,000</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div class="label">建議每月投入</div>
+                                    <div class="value green" style="font-size: 1.5rem;">25,000</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- S10: CTA (54-60s) -->
+        <div class="scene s10">
+            <div class="cta-section">
+                <div class="cta-logo">
+                    <span class="ultra">Ultra</span><span class="advisor">Advisor</span>
+                </div>
+                <div class="cta-tagline">讓數據替你<span class="hl">開口說話</span></div>
+                <button class="cta-button">免費試用 7 天 →</button>
+                <div class="cta-features">
+                    <span><span class="check">✓</span> 免信用卡</span>
+                    <span><span class="check">✓</span> 完整功能</span>
+                    <span><span class="check">✓</span> 隨時取消</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="controls">
+        <button class="ctrl-btn" onclick="location.reload()" title="重新播放">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 4v6h6M23 20v-6h-6"/>
+                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+            </svg>
+        </button>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+        <button class="ctrl-btn" id="playPauseBtn" title="播放/暫停">
+            <svg id="pauseIcon" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="4" width="4" height="16"/>
+                <rect x="14" y="4" width="4" height="16"/>
+            </svg>
+            <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+                <polygon points="5 3 19 12 5 21"/>
+            </svg>
+        </button>
+        <div class="time-display" id="timeDisplay">0:00</div>
+    </div>
+
+    <div class="watermark">ULTRA ADVISOR © 2026</div>
+
+    <!-- 教戰守則彈窗 -->
+    <div class="tips-modal" id="tipsModal">
+        <div class="tips-content">
+            <div class="tips-header">
+                <h3><span class="icon">💡</span> <span id="tipsTitle">教戰守則</span></h3>
+                <button class="tips-close" onclick="closeTips()">✕</button>
+            </div>
+            <div class="tips-body" id="tipsBody">
+                <!-- 動態內容 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 教戰守則內容
+        const tipsData = {
+            tax: {
+                title: '稅務傳承專案 · 教戰守則',
+                tips: [
+                    { title: '開場破冰', text: '「您知道遺產稅最高可以到 <span class="highlight">20%</span> 嗎？很多人辛苦一輩子，最後 <span class="highlight">1/5 都留給國稅局</span>。」' },
+                    { title: '數據說話', text: '用工具展示 <span class="highlight">1.3 億資產</span> 的稅負試算，讓數字自己說話，比口頭說服更有力。' },
+                    { title: '方案對比', text: '永遠給客戶 <span class="highlight">兩個選擇</span>（躉繳 vs 分期），讓客戶感覺是自己做決定。' },
+                    { title: '關鍵金句', text: '「錢要留給家人，不是留給國稅局。<span class="highlight">提早規劃</span>，才能掌握主動權。」' }
+                ]
+            },
+            reservoir: {
+                title: '大小水庫專案 · 教戰守則',
+                tips: [
+                    { title: '比喻開場', text: '「配息就像水龍頭流出來的水，您是讓它 <span class="highlight">流進小水庫存起來</span>，還是直接流掉？」' },
+                    { title: '機會成本', text: '重點展示 <span class="highlight">-24,070,000 的機會成本</span>，讓客戶感受「不行動的代價」。' },
+                    { title: '時間複利', text: '強調 <span class="highlight">20 年 +240%</span> 的威力，「時間是最好的朋友，但要趁早開始。」' },
+                    { title: '關鍵金句', text: '「讓配息去生小孩，<span class="highlight">錢滾錢</span>，才是聰明的理財方式。」' }
+                ]
+            },
+            realestate: {
+                title: '金融房產專案 · 教戰守則',
+                tips: [
+                    { title: '觀念翻轉', text: '「房貸是資產還是負債？<span class="highlight">看你怎麼用</span>。用對方法，負債也能變現金流機器。」' },
+                    { title: '簡單算術', text: '用工具展示 <span class="highlight">6% - 2.2% = 3.8%</span>，讓客戶親眼看到收益差額怎麼計算。' },
+                    { title: '具體數字', text: '「每個月多 <span class="highlight">12,000 元</span>，一年就是 14 萬，30 年累積超過 <span class="highlight">430 萬</span>。」' },
+                    { title: '關鍵金句', text: '「以息養貸，讓銀行的錢幫你賺錢。<span class="highlight">這就是富人的思維。</span>」' }
+                ]
+            },
+            market: {
+                title: '市場數據戰情室 · 教戰守則',
+                tips: [
+                    { title: '數據開場', text: '「根據 <span class="highlight">2026 年政府統計</span>，台灣人平均有 1,770 萬的保障缺口，這不是我說的，是官方數據。」' },
+                    { title: '五大風險', text: '逐一點擊展示 <span class="highlight">通膨、退休、長照、醫療、癌症</span>，讓客戶自己發現問題有多嚴重。' },
+                    { title: '優先排序', text: '幫客戶排出優先順序：「<span class="highlight">退休準備</span>最急迫，因為距離退休只剩 15 年。」' },
+                    { title: '關鍵金句', text: '「用政府數據說話，<span class="highlight">3 分鐘建立信任</span>。客戶自己會問：那我該怎麼辦？」' }
+                ]
+            }
+        };
+
+        function showTips(type) {
+            const modal = document.getElementById('tipsModal');
+            const title = document.getElementById('tipsTitle');
+            const body = document.getElementById('tipsBody');
+            
+            const data = tipsData[type];
+            title.textContent = data.title;
+            
+            body.innerHTML = data.tips.map((tip, i) => `
+                <div class="tip-item">
+                    <div class="tip-num">${i + 1}</div>
+                    <div class="tip-text">
+                        <h4>${tip.title}</h4>
+                        <p>${tip.text}</p>
+                    </div>
+                </div>
+            `).join('');
+            
+            modal.classList.add('active');
+            document.body.classList.add('paused');
+        }
+
+        function closeTips() {
+            document.getElementById('tipsModal').classList.remove('active');
+            document.body.classList.remove('paused');
+        }
+
+        // 點擊背景關閉
+        document.getElementById('tipsModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeTips();
+        });
+
+        // ESC 關閉
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeTips();
+        });
+
+        const stage = document.getElementById('stage');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const playIcon = document.getElementById('playIcon');
+        const pauseIcon = document.getElementById('pauseIcon');
+        const timeDisplay = document.getElementById('timeDisplay');
+        
+        let isPlaying = true;
+        let startTime = Date.now();
+
+        function updateTime() {
+            if (!isPlaying) return;
+            const elapsed = (Date.now() - startTime) % 60000;
+            const seconds = Math.floor(elapsed / 1000);
+            timeDisplay.textContent = `0:${seconds.toString().padStart(2, '0')}`;
+            requestAnimationFrame(updateTime);
+        }
+
+        function togglePlayPause() {
+            isPlaying = !isPlaying;
+            document.body.classList.toggle('paused', !isPlaying);
+            playIcon.style.display = isPlaying ? 'none' : 'block';
+            pauseIcon.style.display = isPlaying ? 'block' : 'none';
+            
+            if (isPlaying) {
+                const currentSeconds = parseInt(timeDisplay.textContent.split(':')[1]);
+                startTime = Date.now() - (currentSeconds * 1000);
+                updateTime();
+            }
+        }
+
+        playPauseBtn.addEventListener('click', togglePlayPause);
+        stage.addEventListener('click', (e) => {
+            if (!e.target.closest('.controls')) togglePlayPause();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') { e.preventDefault(); togglePlayPause(); }
+        });
+
+        updateTime();
+
+        // 數字跳動動畫
+        function animateNumber(element, start, end, duration) {
+            const startTime = performance.now();
+            const diff = end - start;
+            
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const current = Math.floor(start + diff * eased);
+                element.textContent = current.toLocaleString();
+                
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        }
+
+        // 追蹤當前場景並觸發數字動畫
+        let lastScene = 0;
+        function checkScene() {
+            if (!isPlaying) {
+                requestAnimationFrame(checkScene);
+                return;
+            }
+            
+            const elapsed = (Date.now() - startTime) % 60000;
+            const percent = elapsed / 600;
+            let currentScene = 0;
+            
+            if (percent >= 24 && percent < 40) currentScene = 6;
+            else if (percent >= 41 && percent < 57) currentScene = 7;
+            else if (percent >= 58 && percent < 73) currentScene = 8;
+            else if (percent >= 74 && percent < 90) currentScene = 9;
+            
+            if (currentScene !== lastScene && currentScene > 0) {
+                triggerNumberAnimations(currentScene);
+                lastScene = currentScene;
+            }
+            
+            if (percent < 5) lastScene = 0;
+            requestAnimationFrame(checkScene);
+        }
+        
+        function triggerNumberAnimations(scene) {
+            const sceneEl = document.querySelector('.s' + scene);
+            if (!sceneEl) return;
+            
+            const values = sceneEl.querySelectorAll('.input-group .value');
+            
+            if (scene === 6) {
+                setTimeout(() => { if (values[0]) animateNumber(values[0], 0, 50000000, 1800); }, 100);
+                setTimeout(() => { if (values[1]) animateNumber(values[1], 0, 60000000, 1800); }, 400);
+                setTimeout(() => { if (values[2]) animateNumber(values[2], 0, 20000000, 1800); }, 700);
+            } else if (scene === 7) {
+                setTimeout(() => { if (values[0]) animateNumber(values[0], 0, 10000000, 1500); }, 100);
+                setTimeout(() => { if (values[1]) { values[1].textContent = '0.0%'; animatePercent(values[1], 0, 5, 1200); } }, 400);
+                setTimeout(() => { if (values[2]) { values[2].textContent = '0.0%'; animatePercent(values[2], 0, 8, 1200); } }, 700);
+            } else if (scene === 8) {
+                setTimeout(() => { if (values[0]) animateNumber(values[0], 0, 10000000, 1500); }, 100);
+                setTimeout(() => { if (values[1]) { values[1].textContent = '0.0%'; animatePercent(values[1], 0, 2.2, 1000); } }, 400);
+                setTimeout(() => { if (values[2]) { values[2].textContent = '0.0%'; animatePercent(values[2], 0, 6, 1000); } }, 600);
+            }
+        }
+        
+        function animatePercent(element, start, end, duration) {
+            const startTime = performance.now();
+            const diff = end - start;
+            
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const current = start + diff * eased;
+                element.textContent = current.toFixed(1) + '%';
+                
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        }
+        
+        checkScene();
+    </script>
+</body>
+</html>

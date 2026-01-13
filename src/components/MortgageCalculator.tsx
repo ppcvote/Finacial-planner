@@ -588,7 +588,7 @@ export default function MortgageCalculator() {
                       </span>
                       <span className="flex items-center gap-1.5">
                         <span className="w-3 h-3 rounded" style={{ backgroundColor: '#10b981' }}></span>
-                        余額
+                        餘貸款額
                       </span>
                     </div>
                     
@@ -752,7 +752,7 @@ export default function MortgageCalculator() {
                           <th className="text-center py-2 px-2 font-medium">年</th>
                           <th className="text-right py-2 px-3 font-medium">付款總計</th>
                           <th className="text-right py-2 px-3 font-medium">總利率</th>
-                          <th className="text-right py-2 px-3 font-medium">余額</th>
+                          <th className="text-right py-2 px-3 font-medium">餘貸款額</th>
                           <th className="text-right py-2 px-3 font-medium">
                             <span className="text-purple-400">支付</span>
                             <br/>
@@ -890,9 +890,14 @@ export default function MortgageCalculator() {
                 <p className="text-blue-100 text-sm">想找到最適合的房貸方案？</p>
                 <p className="text-white font-bold">讓專業顧問為您量身規劃</p>
               </div>
-              <button className="w-full md:w-auto px-6 py-2.5 bg-white text-blue-600 rounded-lg font-bold hover:bg-blue-50 transition-all text-sm">
+              <a
+                href="https://line.me/R/ti/p/@568iajac"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full md:w-auto px-6 py-2.5 bg-white text-blue-600 rounded-lg font-bold hover:bg-blue-50 transition-all text-sm text-center inline-block"
+              >
                 預約免費諮詢
-              </button>
+              </a>
             </div>
           </div>
         </div>

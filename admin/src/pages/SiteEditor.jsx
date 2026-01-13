@@ -11,7 +11,7 @@ import {
   Zap, FileText, Cloud, Target, LayoutDashboard, ShieldCheck,
   Activity, History, Gift, Building, GraduationCap, Rocket,
   Waves, Car, Umbrella, Landmark, Play, ExternalLink, Bell,
-  Home, LogIn, Monitor, Smartphone, Info
+  Home, LogIn, Monitor, Smartphone
 } from 'lucide-react';
 
 // 圖示對應表
@@ -129,44 +129,60 @@ const Card = ({ title, icon: Icon, children, color = 'blue' }) => (
 // 影片位置預覽組件
 // ==========================================
 const VideoLocationPreview = ({ location, videoType, videoUrl }) => {
-  const locations = {
-    hero: {
-      title: '官網首頁 Hero 區',
-      desc: '官網最上方，主標題下方的影片區域',
-      preview: '/assets/hero-preview.png'
-    },
-    demo: {
-      title: '產品展示彈窗',
-      desc: '點擊「觀看 60 秒示範」按鈕後彈出的影片',
-      preview: '/assets/demo-preview.png'
-    }
-  };
-
-  const loc = locations[location] || locations.hero;
-
   return (
     <div className="bg-gray-50 rounded-xl p-4 border-2 border-dashed border-gray-300">
       <div className="flex items-center gap-2 mb-2">
         <Monitor className="text-blue-500" size={18} />
-        <span className="font-bold text-gray-700">{loc.title}</span>
+        <span className="font-bold text-gray-700">顯示位置預覽</span>
       </div>
-      <p className="text-xs text-gray-500 mb-3">{loc.desc}</p>
 
-      {videoType !== 'none' && videoUrl ? (
-        <div className="aspect-video bg-slate-900 rounded-lg overflow-hidden relative">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <Play className="text-white/50 mx-auto mb-2" size={40} />
-              <p className="text-white/50 text-xs">已設定影片</p>
-              <p className="text-white/30 text-[10px] mt-1 max-w-[200px] truncate">{videoUrl}</p>
+      {/* 模擬官網畫面 */}
+      <div className="bg-slate-900 rounded-lg overflow-hidden p-4">
+        {/* 模擬 Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-blue-500 rounded"></div>
+            <span className="text-white text-xs font-bold">UltraAdvisor</span>
+          </div>
+          <div className="flex gap-2">
+            <div className="w-12 h-2 bg-slate-700 rounded"></div>
+            <div className="w-12 h-2 bg-slate-700 rounded"></div>
+          </div>
+        </div>
+
+        {/* 模擬 Hero 區 */}
+        <div className="text-center py-4">
+          <div className="w-32 h-2 bg-slate-600 rounded mx-auto mb-2"></div>
+          <div className="w-48 h-3 bg-slate-500 rounded mx-auto mb-4"></div>
+
+          {/* 這是按鈕位置 */}
+          <div className="flex justify-center gap-2 mb-3">
+            <div className="px-3 py-1.5 bg-blue-600 rounded text-[8px] text-white">免費試用</div>
+            <div className="px-3 py-1.5 border border-blue-400 rounded text-[8px] text-blue-300 flex items-center gap-1">
+              <Play size={8} />
+              觀看示範 ← 點這裡會播放影片
             </div>
           </div>
         </div>
-      ) : (
-        <div className="aspect-video bg-gray-200 rounded-lg flex items-center justify-center">
-          <p className="text-gray-400 text-sm">尚未設定影片</p>
-        </div>
-      )}
+      </div>
+
+      {/* 狀態顯示 */}
+      <div className="mt-3 p-3 rounded-lg bg-white border">
+        {videoType !== 'none' && videoUrl ? (
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+            <span className="text-emerald-700 text-sm font-bold">已設定影片</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+            <span className="text-gray-500 text-sm">尚未設定（按鈕會顯示為半透明）</span>
+          </div>
+        )}
+        {videoUrl && (
+          <p className="text-gray-400 text-[10px] mt-1 truncate">{videoUrl}</p>
+        )}
+      </div>
     </div>
   );
 };
@@ -523,16 +539,115 @@ export default function SiteEditor() {
         {/* ==================== 影片管理分頁 ==================== */}
         {activeTab === 'videos' && (
           <div className="space-y-6">
-            {/* 說明卡片 */}
-            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+            {/* 整體架構說明 */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
               <div className="flex items-start gap-3">
-                <Info className="text-blue-500 flex-shrink-0 mt-1" size={20} />
-                <div>
-                  <h4 className="font-bold text-blue-800 mb-1">影片位置說明</h4>
+                <Monitor className="text-blue-600 flex-shrink-0 mt-1" size={24} />
+                <div className="flex-1">
+                  <h4 className="font-bold text-blue-800 text-lg mb-3">官網影片架構圖</h4>
+
+                  {/* 視覺化網站結構 */}
+                  <div className="bg-white rounded-xl p-4 border border-blue-100 mb-4">
+                    <div className="text-center mb-3">
+                      <span className="text-xs text-gray-500">訪客開啟官網時看到的畫面</span>
+                    </div>
+
+                    {/* 模擬完整網頁 */}
+                    <div className="bg-slate-900 rounded-lg overflow-hidden text-white">
+                      {/* 公告橫幅 */}
+                      <div className="bg-gradient-to-r from-purple-600 to-pink-500 text-center py-1 text-[9px]">
+                        🎉 公告橫幅（在「公告管理」分頁設定）
+                      </div>
+
+                      {/* Header */}
+                      <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700">
+                        <div className="flex items-center gap-1">
+                          <div className="w-5 h-5 bg-blue-500 rounded"></div>
+                          <span className="text-[10px] font-bold">UltraAdvisor</span>
+                        </div>
+                        <div className="flex gap-3 text-[8px] text-slate-400">
+                          <span>功能</span>
+                          <span>定價</span>
+                          <span>登入</span>
+                        </div>
+                      </div>
+
+                      {/* Hero 區 */}
+                      <div className="text-center py-6 px-4">
+                        <div className="text-[10px] text-slate-400 mb-1">專業財務顧問的</div>
+                        <div className="text-sm font-bold mb-3">數位武器庫</div>
+
+                        {/* 這是重點！按鈕區域 */}
+                        <div className="flex justify-center gap-2">
+                          <div className="px-3 py-1.5 bg-blue-600 rounded text-[9px]">免費試用</div>
+                          <div className="px-3 py-1.5 border-2 border-amber-400 bg-amber-400/20 rounded text-[9px] text-amber-300 flex items-center gap-1">
+                            <Play size={10} />
+                            觀看 60 秒示範
+                          </div>
+                        </div>
+                        <div className="mt-2 animate-pulse">
+                          <span className="text-amber-400 text-[10px]">↑ 點這個按鈕會彈出影片 ↑</span>
+                        </div>
+                      </div>
+
+                      {/* 其他區塊 */}
+                      <div className="bg-slate-800 px-4 py-3 text-center text-[8px] text-slate-500">
+                        ↓ 下方還有功能介紹、定價、FAQ 等區塊...
+                      </div>
+                    </div>
+                  </div>
+
                   <p className="text-blue-700 text-sm">
-                    目前官網有 1 個影片位置：<strong>Hero 區影片</strong>（點擊「觀看 60 秒示範」按鈕後播放）。
-                    支援 YouTube 嵌入或自製 HTML 動畫。
+                    <strong>總結：</strong>官網目前只有一處使用影片，就是首頁的「觀看 60 秒示範」按鈕。
                   </p>
+                </div>
+              </div>
+            </div>
+
+            {/* HTML 動畫上傳教學 */}
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
+              <div className="flex items-start gap-3">
+                <HelpCircle className="text-amber-600 flex-shrink-0 mt-1" size={24} />
+                <div className="flex-1">
+                  <h4 className="font-bold text-amber-800 text-lg mb-3">如何上傳 HTML 動畫？</h4>
+
+                  <div className="space-y-4">
+                    {/* 方法一 */}
+                    <div className="bg-white rounded-xl p-4 border border-amber-100">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                        <span className="font-bold text-amber-800">方法一：放進官網專案（推薦）</span>
+                      </div>
+                      <ol className="text-amber-700 text-sm space-y-1 ml-8 list-decimal">
+                        <li>將你的 <code className="bg-amber-100 px-1 rounded">animation.html</code> 放到 <code className="bg-amber-100 px-1 rounded">public/</code> 資料夾</li>
+                        <li>執行 <code className="bg-amber-100 px-1 rounded">firebase deploy</code> 部署</li>
+                        <li>填入網址：<code className="bg-amber-100 px-1 rounded">https://ultra-advisor.tw/animation.html</code></li>
+                      </ol>
+                    </div>
+
+                    {/* 方法二 */}
+                    <div className="bg-white rounded-xl p-4 border border-amber-100">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                        <span className="font-bold text-amber-800">方法二：上傳到 Firebase Storage</span>
+                      </div>
+                      <ol className="text-amber-700 text-sm space-y-1 ml-8 list-decimal">
+                        <li>到 Firebase Console → Storage</li>
+                        <li>建立資料夾 <code className="bg-amber-100 px-1 rounded">public-assets/</code></li>
+                        <li>上傳 HTML 檔案並設定公開存取</li>
+                        <li>複製下載網址貼到這裡</li>
+                      </ol>
+                    </div>
+
+                    {/* 注意事項 */}
+                    <div className="bg-red-50 rounded-xl p-4 border border-red-100">
+                      <p className="text-red-700 text-sm font-bold mb-1">⚠️ 注意：HTML 動畫必須是單一檔案</p>
+                      <p className="text-red-600 text-xs">
+                        如果你的動畫有引用其他 CSS/JS 檔案，需要把它們都內嵌到同一個 HTML 檔案中，
+                        或確保所有資源都能透過完整網址存取。
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
