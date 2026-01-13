@@ -547,18 +547,6 @@ export default function App() {
               <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => { setActiveTab('tax'); setIsMobileMenuOpen(false); }} />
             </div>
             <div className="p-4 border-t border-slate-800 space-y-2">
-              {/* 🆕 我的 UA 點數按鈕 */}
-              <button 
-                onClick={() => { setIsPointsDashboardOpen(true); setIsMobileMenuOpen(false); }}
-                className="flex items-center justify-center gap-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 font-bold px-4 py-3 rounded-xl w-full transition-all"
-              >
-                <Coins size={18} /> 我的 UA 點數
-                {membership && (
-                  <span className="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
-                    {membership.points}
-                  </span>
-                )}
-              </button>
               <button onClick={() => { setIsReportOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-3 rounded-xl w-full">
                 <FileBarChart size={18} /> 生成策略報表
               </button>
@@ -616,18 +604,6 @@ export default function App() {
           <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => setActiveTab('tax')} />
         </nav>
         <div className="p-4 border-t border-slate-800 space-y-2">
-           {/* 🆕 我的 UA 點數按鈕 */}
-           <button 
-             onClick={() => setIsPointsDashboardOpen(true)}
-             className="flex items-center justify-center gap-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 font-bold px-4 py-3 rounded-xl w-full transition-all"
-           >
-             <Coins size={18} /> 我的 UA 點數
-             {membership && (
-               <span className="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
-                 {membership.points}
-               </span>
-             )}
-           </button>
            <button onClick={() => setIsReportOpen(true)} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-3 rounded-xl w-full transition-all shadow-lg shadow-blue-900/50">
              <FileBarChart size={18} /> 生成策略報表
            </button>

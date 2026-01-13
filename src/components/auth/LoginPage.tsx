@@ -374,10 +374,13 @@ export function LoginPage({ user, onLoginSuccess }: LoginPageProps) {
       {/* 主容器 */}
       <div className="relative z-10 w-full max-w-7xl mx-auto">
         
-        {/* Logo 居中 */}
+        {/* Logo 居中 - 點擊返回官網 */}
         <div className="flex justify-center mb-12 animate-fade-in">
-          <div className="flex items-center gap-3 group cursor-pointer">
-            <img 
+          <a
+            href="/"
+            className="flex items-center gap-3 group cursor-pointer"
+          >
+            <img
               src={logoError ? "https://placehold.co/40x40/3b82f6/white?text=UA" : LOGO_URL}
               alt="Ultra Advisor"
               className="h-12 w-auto group-hover:scale-105 transition-transform"
@@ -387,7 +390,7 @@ export function LoginPage({ user, onLoginSuccess }: LoginPageProps) {
               <span style={{color: '#FF3A3A'}}>Ultra</span>
               <span className="text-blue-400">Advisor</span>
             </span>
-          </div>
+          </a>
         </div>
 
         {/* 主內容區：桌面版左右分欄，手機版堆疊 */}
