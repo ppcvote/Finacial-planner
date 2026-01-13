@@ -178,14 +178,17 @@ const LoginForm = ({ onSuccess }: { onSuccess: () => void }) => {
       await signInWithEmailAndPassword(auth, email, password);
       onSuccess();
     } catch (err: any) {
+      console.error('Login error:', err.code, err.message);
       const errorMessages: Record<string, string> = {
         'auth/invalid-email': '無效的 Email 格式',
         'auth/user-not-found': '帳號不存在',
         'auth/wrong-password': '密碼錯誤',
         'auth/invalid-credential': 'Email 或密碼錯誤',
-        'auth/too-many-requests': '登入嘗試次數過多，請稍後再試'
+        'auth/too-many-requests': '登入嘗試次數過多，請稍後再試',
+        'auth/network-request-failed': '網路連線失敗，請檢查網路',
+        'auth/internal-error': '伺服器錯誤，請稍後再試',
       };
-      setError(errorMessages[err.code] || '登入失敗，請稍後再試');
+      setError(errorMessages[err.code] || `登入失敗：${err.code || err.message || '未知錯誤'}`);
     } finally {
       setLoading(false);
     }

@@ -1500,16 +1500,13 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
               <p className="text-xs text-slate-500">免費公開的房貸試算工具</p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              window.history.pushState({}, '', '/calculator');
-              window.location.reload();
-            }}
+          <a
+            href="/calculator"
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold
                      rounded-xl transition-all flex items-center gap-2"
           >
             前往使用 <ChevronRight size={16} />
-          </button>
+          </a>
         </div>
 
         {/* CTA Banner */}

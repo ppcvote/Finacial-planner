@@ -100,7 +100,7 @@ export const useMembership = (userId: string | null) => {
           setMembership({
             tier,
             tierName: tierNames[tier] || '試用會員',
-            points: data.points || 0,
+            points: typeof data.points === 'object' ? (data.points?.current || 0) : (data.points || 0),
             referralCode: data.referralCode || '',
             referralCount: data.referralCount || 0,
             loginStreak: data.loginStreak || 0,
