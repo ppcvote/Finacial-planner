@@ -57,6 +57,128 @@ function isValidEmail(email) {
   return emailRegex.test(email);
 }
 
+// ==========================================
+// 🆕 防刷機制 - 速率限制
+// ==========================================
+
+// 記憶體快取（用於快速檢查，重啟後會清除，但 Firestore 有持久記錄）
+const rateLimitCache = new Map();
+
+// 清理過期的快取記錄（每 10 分鐘）
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, data] of rateLimitCache.entries()) {
+    if (now - data.lastAttempt > 3600000) { // 1 小時後清除
+      rateLimitCache.delete(key);
+    }
+  }
+}, 600000);
+
+/**
+ * 🆕 檢查並記錄速率限制（防止同一 LINE 用戶頻繁註冊）
+ * @param {string} lineUserId - LINE 用戶 ID
+ * @returns {Promise<{allowed: boolean, message: string, waitMinutes: number}>}
+ */
+async function checkRateLimit(lineUserId) {
+  const now = Date.now();
+  const COOLDOWN_MINUTES = 30;  // 註冊冷卻時間（分鐘）
+  const MAX_ATTEMPTS_PER_DAY = 3;  // 每天最多嘗試次數
+
+  // 先檢查記憶體快取（快速擋掉重複請求）
+  const cached = rateLimitCache.get(lineUserId);
+  if (cached) {
+    const timeSinceLast = now - cached.lastAttempt;
+    if (timeSinceLast < COOLDOWN_MINUTES * 60 * 1000) {
+      const waitMinutes = Math.ceil((COOLDOWN_MINUTES * 60 * 1000 - timeSinceLast) / 60000);
+      return {
+        allowed: false,
+        message: `⏳ 請等待 ${waitMinutes} 分鐘後再嘗試註冊`,
+        waitMinutes
+      };
+    }
+  }
+
+  // 從 Firestore 讀取該用戶的註冊嘗試記錄
+  const rateLimitRef = db.collection('rateLimits').doc(lineUserId);
+  const rateLimitDoc = await rateLimitRef.get();
+
+  if (rateLimitDoc.exists) {
+    const data = rateLimitDoc.data();
+    const lastAttempt = data.lastAttempt?.toMillis() || 0;
+    const attemptsToday = data.attemptsToday || 0;
+    const lastResetDate = data.lastResetDate || '';
+
+    // 檢查是否需要重置每日計數
+    const today = new Date().toISOString().slice(0, 10);
+    const shouldResetDaily = lastResetDate !== today;
+
+    // 檢查冷卻時間
+    const timeSinceLast = now - lastAttempt;
+    if (timeSinceLast < COOLDOWN_MINUTES * 60 * 1000) {
+      const waitMinutes = Math.ceil((COOLDOWN_MINUTES * 60 * 1000 - timeSinceLast) / 60000);
+
+      // 更新快取
+      rateLimitCache.set(lineUserId, { lastAttempt, attemptsToday });
+
+      return {
+        allowed: false,
+        message: `⏳ 系統冷卻中，請等待 ${waitMinutes} 分鐘後再嘗試`,
+        waitMinutes
+      };
+    }
+
+    // 檢查每日嘗試次數
+    const currentAttempts = shouldResetDaily ? 0 : attemptsToday;
+    if (currentAttempts >= MAX_ATTEMPTS_PER_DAY) {
+      return {
+        allowed: false,
+        message: `🚫 今日註冊嘗試次數已達上限（${MAX_ATTEMPTS_PER_DAY}次），請明天再試`,
+        waitMinutes: -1  // 表示需要等到明天
+      };
+    }
+  }
+
+  return { allowed: true, message: '', waitMinutes: 0 };
+}
+
+/**
+ * 🆕 記錄註冊嘗試（不管成功失敗都要記錄）
+ */
+async function recordRegistrationAttempt(lineUserId, success = false, email = null) {
+  const now = admin.firestore.Timestamp.now();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const rateLimitRef = db.collection('rateLimits').doc(lineUserId);
+  const rateLimitDoc = await rateLimitRef.get();
+
+  let attemptsToday = 1;
+  let totalAttempts = 1;
+
+  if (rateLimitDoc.exists) {
+    const data = rateLimitDoc.data();
+    const lastResetDate = data.lastResetDate || '';
+    attemptsToday = lastResetDate === today ? (data.attemptsToday || 0) + 1 : 1;
+    totalAttempts = (data.totalAttempts || 0) + 1;
+  }
+
+  await rateLimitRef.set({
+    lineUserId,
+    lastAttempt: now,
+    lastResetDate: today,
+    attemptsToday,
+    totalAttempts,
+    lastEmail: email,
+    lastSuccess: success,
+    updatedAt: now
+  }, { merge: true });
+
+  // 更新快取
+  rateLimitCache.set(lineUserId, {
+    lastAttempt: now.toMillis(),
+    attemptsToday
+  });
+}
+
 /**
  * 驗證 LINE Webhook 簽章
  */
@@ -92,6 +214,133 @@ async function sendLineMessage(userId, messages) {
     console.error('LINE message send error:', error.response?.data || error.message);
     throw error;
   }
+}
+
+// ==========================================
+// 🆕 LINE Bot 內容載入（從 Firestore）
+// ==========================================
+
+// 快取 LINE Bot 內容（避免每次都讀 Firestore）
+let lineBotContentCache = {
+  welcome: null,
+  keywords: null,
+  notifications: null,
+  lastFetch: 0
+};
+const CACHE_TTL = 5 * 60 * 1000; // 5 分鐘快取
+
+/**
+ * 載入 LINE Bot 歡迎訊息設定
+ */
+async function getWelcomeMessages() {
+  const now = Date.now();
+  if (lineBotContentCache.welcome && (now - lineBotContentCache.lastFetch) < CACHE_TTL) {
+    return lineBotContentCache.welcome;
+  }
+
+  try {
+    const doc = await db.collection('lineBotContent').doc('welcome').get();
+    if (doc.exists) {
+      lineBotContentCache.welcome = doc.data();
+      lineBotContentCache.lastFetch = now;
+      return lineBotContentCache.welcome;
+    }
+  } catch (err) {
+    console.error('Failed to load welcome messages:', err);
+  }
+
+  // 預設值
+  return {
+    newFollower: '🎉 歡迎加入 Ultra Advisor！\n\n我是你的專屬 AI 財務軍師\n━━━━━━━━━━━━━━\n\n💎 立即獲得 7 天免費試用\n✓ 18 種專業理財工具\n✓ 無限客戶檔案\n✓ AI 智能建議\n\n🎁 推薦好友付費後雙方各得 500 UA 點！\n\n━━━━━━━━━━━━━━\n\n📧 請直接傳送你的 Email 開始試用！',
+    newFollowerEnabled: true,
+    memberLinked: '🎉 綁定成功！\n\n{{name}} 您好，您的帳號已成功綁定。\n\n現在您可以透過 LINE 接收：\n✅ 會員到期提醒\n✅ 最新功能通知\n✅ 專屬優惠資訊',
+    memberLinkedEnabled: true
+  };
+}
+
+/**
+ * 載入關鍵字回覆設定
+ */
+async function getKeywordReplies() {
+  const now = Date.now();
+  if (lineBotContentCache.keywords && (now - lineBotContentCache.lastFetch) < CACHE_TTL) {
+    return lineBotContentCache.keywords;
+  }
+
+  try {
+    const doc = await db.collection('lineBotContent').doc('keywords').get();
+    if (doc.exists) {
+      lineBotContentCache.keywords = doc.data().items || [];
+      lineBotContentCache.lastFetch = now;
+      return lineBotContentCache.keywords;
+    }
+  } catch (err) {
+    console.error('Failed to load keyword replies:', err);
+  }
+
+  return [];
+}
+
+/**
+ * 載入系統通知設定
+ */
+async function getNotificationSettings() {
+  const now = Date.now();
+  if (lineBotContentCache.notifications && (now - lineBotContentCache.lastFetch) < CACHE_TTL) {
+    return lineBotContentCache.notifications;
+  }
+
+  try {
+    const doc = await db.collection('lineBotContent').doc('notifications').get();
+    if (doc.exists) {
+      lineBotContentCache.notifications = doc.data();
+      lineBotContentCache.lastFetch = now;
+      return lineBotContentCache.notifications;
+    }
+  } catch (err) {
+    console.error('Failed to load notification settings:', err);
+  }
+
+  // 預設值
+  return {
+    expiryReminder7Days: '⏰ 會員即將到期提醒\n\n{{name}} 您好，\n您的會員資格將在 7 天後到期。\n\n立即續費可享優惠價格！\n👉 https://ultra-advisor.tw/pricing',
+    expiryReminder7DaysEnabled: true,
+    expiryReminder1Day: '🚨 會員明天到期！\n\n{{name}} 您好，\n您的會員資格將在明天到期。\n\n到期後將無法使用進階工具，請盡快續費！\n👉 https://ultra-advisor.tw/pricing',
+    expiryReminder1DayEnabled: true,
+    paymentSuccess: '🎉 付款成功！\n\n{{name}} 您好，\n感謝您的支持！您的會員資格已延長。\n\n新到期日：{{expiryDate}}\n\n祝您使用愉快！',
+    paymentSuccessEnabled: true
+  };
+}
+
+/**
+ * 替換訊息變數
+ */
+function replaceMessageVariables(message, variables = {}) {
+  if (!message) return '';
+  let result = message;
+  for (const [key, value] of Object.entries(variables)) {
+    result = result.replace(new RegExp(`{{${key}}}`, 'g'), value || '');
+  }
+  return result;
+}
+
+/**
+ * 檢查關鍵字是否匹配
+ */
+function matchKeyword(userMessage, keywords, matchType) {
+  const msg = userMessage.toLowerCase();
+  return keywords.some(keyword => {
+    const kw = keyword.toLowerCase();
+    switch (matchType) {
+      case 'exact':
+        return msg === kw;
+      case 'startsWith':
+        return msg.startsWith(kw);
+      case 'contains':
+      default:
+        return msg.includes(kw);
+    }
+  });
 }
 
 // ==========================================
@@ -301,6 +550,9 @@ async function awardPoints(userId, actionId, reason, referenceId = null) {
  */
 async function createTrialAccount(email, lineUserId, inputReferralCode = null) {
   try {
+    // 🆕 載入動態訊息設定
+    const welcomeMessages = await getWelcomeMessages();
+
     const existingUsers = await auth.getUserByEmail(email).catch(() => null);
     if (existingUsers) {
       throw new Error('此 Email 已經註冊');
@@ -402,16 +654,36 @@ async function createTrialAccount(email, lineUserId, inputReferralCode = null) {
       ? `\n👥 推薦人：${referrerName}`
       : '';
 
+    // 🆕 使用後台設定的標題
+    const accountCreatedTitle = welcomeMessages.accountCreatedTitle || '🎉 帳號開通成功';
+
+    // 🆕 使用後台設定的密碼訊息
+    let passwordMessageText = welcomeMessages.passwordMessageEnabled && welcomeMessages.passwordMessage
+      ? replaceMessageVariables(welcomeMessages.passwordMessage, {
+          password: password,
+          referralCode: newReferralCode,
+          referrerName: referrerName || '',
+        })
+      : `🔐 你的登入密碼（請妥善保管）：\n\n${password}\n\n⚠️ 請立即登入並修改密碼以確保安全\n\n📢 分享你的推薦碼「${newReferralCode}」給朋友，付費後雙方都能獲得 500 UA 點！`;
+
+    // 加上推薦人和折扣資訊（如果後台訊息沒有包含的話）
+    if (!passwordMessageText.includes(referrerNote) && referrerNote) {
+      passwordMessageText += referrerNote;
+    }
+    if (!passwordMessageText.includes('折扣碼') && discountNote) {
+      passwordMessageText += discountNote;
+    }
+
     await sendLineMessage(lineUserId, [
       {
         type: 'flex',
-        altText: '🎉 你的試用帳號已開通！',
+        altText: accountCreatedTitle,
         contents: {
           type: 'bubble',
           hero: {
             type: 'box',
             layout: 'vertical',
-            contents: [{ type: 'text', text: '🎉 帳號開通成功', size: 'xl', weight: 'bold', color: '#ffffff' }],
+            contents: [{ type: 'text', text: accountCreatedTitle, size: 'xl', weight: 'bold', color: '#ffffff' }],
             backgroundColor: tierId === 'referral_trial' ? '#8b5cf6' : '#3b82f6',
             paddingAll: '20px'
           },
@@ -461,7 +733,7 @@ async function createTrialAccount(email, lineUserId, inputReferralCode = null) {
       },
       {
         type: 'text',
-        text: `🔐 你的登入密碼（請妥善保管）：\n\n${password}\n\n⚠️ 請立即登入並修改密碼以確保安全${referrerNote}${discountNote}\n\n📢 分享你的推薦碼「${newReferralCode}」給朋友，付費後雙方都能獲得 500 UA 點！`
+        text: passwordMessageText
       }
     ]);
 
@@ -508,16 +780,20 @@ const userStates = new Map();
 async function handleEvent(event) {
   const lineUserId = event.source.userId;
 
+  // 🆕 載入動態內容
+  const welcomeMessages = await getWelcomeMessages();
+  const keywordReplies = await getKeywordReplies();
+
   if (event.type === 'follow') {
     // 清除舊狀態
     userStates.delete(lineUserId);
 
-    await sendLineMessage(lineUserId, [
-      {
-        type: 'text',
-        text: '🎉 歡迎加入 Ultra Advisor！\n\n我是你的專屬 AI 財務軍師\n━━━━━━━━━━━━━━\n\n💎 立即獲得 7 天免費試用\n✓ 18 種專業理財工具\n✓ 無限客戶檔案\n✓ AI 智能建議\n\n🎁 推薦好友付費後雙方各得 500 UA 點！\n\n━━━━━━━━━━━━━━\n\n📧 請直接傳送你的 Email 開始試用！'
-      }
-    ]);
+    // 🆕 使用後台設定的歡迎訊息
+    if (welcomeMessages.newFollowerEnabled && welcomeMessages.newFollower) {
+      await sendLineMessage(lineUserId, [
+        { type: 'text', text: welcomeMessages.newFollower }
+      ]);
+    }
     return;
   }
 
@@ -533,16 +809,30 @@ async function handleEvent(event) {
         break;
 
       default:
+        // 🆕 先檢查關鍵字回覆
+        const matchedKeyword = keywordReplies.find(kw =>
+          kw.enabled && kw.keywords?.length && matchKeyword(userMessage, kw.keywords, kw.matchType)
+        );
+
+        if (matchedKeyword) {
+          await sendLineMessage(lineUserId, [
+            { type: 'text', text: matchedKeyword.reply }
+          ]);
+          return;
+        }
+
         // IDLE 狀態：等待 Email
         if (isValidEmail(userMessage)) {
           // 儲存 Email，詢問推薦碼
           userStates.set(lineUserId, { step: 'WAIT_REFERRAL', email: userMessage });
 
+          // 🆕 使用後台設定的「收到 Email」訊息
+          const emailReceivedMsg = welcomeMessages.emailReceivedEnabled && welcomeMessages.emailReceived
+            ? welcomeMessages.emailReceived.replace('{{email}}', userMessage)
+            : `✅ Email 確認：${userMessage}\n\n請問有朋友的推薦碼嗎？\n\n有的話請輸入推薦碼，沒有請輸入「無」`;
+
           await sendLineMessage(lineUserId, [
-            {
-              type: 'text',
-              text: `✅ Email 確認：${userMessage}\n\n請問有朋友的推薦碼嗎？\n\n有的話請輸入推薦碼，沒有請輸入「無」`
-            }
+            { type: 'text', text: emailReceivedMsg + `\n\n📧 Email: ${userMessage}\n\n🎟️ 請問有朋友的推薦碼嗎？\n有的話請輸入，沒有請輸入「無」` }
           ]);
         } else {
           await sendLineMessage(lineUserId, [
@@ -560,6 +850,16 @@ async function handleEvent(event) {
 async function handleReferralInput(lineUserId, userMessage, state) {
   const email = state.email;
   let referralCode = null;
+
+  // 🆕 防刷機制：檢查速率限制
+  const rateCheck = await checkRateLimit(lineUserId);
+  if (!rateCheck.allowed) {
+    userStates.delete(lineUserId);
+    await sendLineMessage(lineUserId, [
+      { type: 'text', text: rateCheck.message }
+    ]);
+    return;
+  }
 
   if (userMessage.toLowerCase() !== '無' && userMessage.toLowerCase() !== 'no' && userMessage.toLowerCase() !== 'none') {
     // 驗證推薦碼
@@ -587,11 +887,15 @@ async function handleReferralInput(lineUserId, userMessage, state) {
   // 創建帳號
   try {
     await createTrialAccount(email, lineUserId, referralCode);
+    // 🆕 只有成功註冊才計入冷卻時間（防止同一人用不同 Email 大量刷帳號）
+    await recordRegistrationAttempt(lineUserId, true, email);
   } catch (error) {
     console.error('Account creation error:', error);
+
+    // 🆕 失敗不計入冷卻（不管是 Email 重複還是系統錯誤，都不應懲罰用戶）
     let errorMessage = '❌ 帳號開通失敗，請稍後再試';
     if (error.message.includes('已經註冊')) {
-      errorMessage = '⚠️ 此 Email 已經註冊過試用帳號！\n\n如需協助請聯繫客服';
+      errorMessage = '⚠️ 此 Email 已經註冊過囉！\n\n👉 請直接用這個 Email 登入系統\n👉 或使用其他 Email 重新註冊\n\n如需協助請聯繫客服';
     }
     await sendLineMessage(lineUserId, [{ type: 'text', text: errorMessage }]);
   }
@@ -1013,13 +1317,22 @@ exports.processPayment = functions.https.onCall(async (data, context) => {
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  // 6. 發送 LINE 通知
+  // 6. 發送 LINE 通知（使用後台設定的訊息）
   if (userData.lineUserId) {
     try {
-      await sendLineMessage(userData.lineUserId, [{
-        type: 'text',
-        text: `🎉 付款成功！\n\n已為您加值 ${days} 天\n目前剩餘天數：${newDaysRemaining} 天\n\n感謝您的支持！`
-      }]);
+      const notificationSettings = await getNotificationSettings();
+      if (notificationSettings.paymentSuccessEnabled) {
+        const message = replaceMessageVariables(
+          notificationSettings.paymentSuccess || `🎉 付款成功！\n\n已為您加值 ${days} 天\n目前剩餘天數：${newDaysRemaining} 天\n\n感謝您的支持！`,
+          {
+            name: userData.displayName || userData.email?.split('@')[0] || '用戶',
+            days: days.toString(),
+            daysRemaining: newDaysRemaining.toString(),
+            expiryDate: new Date(Date.now() + newDaysRemaining * 24 * 60 * 60 * 1000).toLocaleDateString('zh-TW')
+          }
+        );
+        await sendLineMessage(userData.lineUserId, [{ type: 'text', text: message }]);
+      }
     } catch (err) {
       console.error('LINE notification error:', err);
     }
@@ -1084,6 +1397,9 @@ exports.deductDailyDays = functions.pubsub
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     const notifications = [];
 
+    // 🆕 載入後台通知設定
+    const notificationSettings = await getNotificationSettings();
+
     // 1. 處理付費用戶（排除 founder）
     const paidUsers = await db.collection('users')
       .where('primaryTierId', '==', 'paid')
@@ -1099,6 +1415,7 @@ exports.deductDailyDays = functions.pubsub
 
       const currentDays = data.daysRemaining || 0;
       const newDays = Math.max(0, currentDays - 1);
+      const userName = data.displayName || data.email?.split('@')[0] || '用戶';
 
       const updateData = {
         daysRemaining: newDays,
@@ -1106,8 +1423,25 @@ exports.deductDailyDays = functions.pubsub
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       };
 
-      // 檢查是否需要通知或降級
-      if (newDays === 30 || newDays === 7 || newDays === 3) {
+      // 🆕 使用後台設定的到期提醒訊息
+      if (newDays === 7 && notificationSettings.expiryReminder7DaysEnabled) {
+        notifications.push({
+          lineUserId: data.lineUserId,
+          message: replaceMessageVariables(notificationSettings.expiryReminder7Days, {
+            name: userName,
+            daysRemaining: '7'
+          }),
+        });
+      } else if (newDays === 1 && notificationSettings.expiryReminder1DayEnabled) {
+        notifications.push({
+          lineUserId: data.lineUserId,
+          message: replaceMessageVariables(notificationSettings.expiryReminder1Day, {
+            name: userName,
+            daysRemaining: '1'
+          }),
+        });
+      } else if (newDays === 30 || newDays === 3) {
+        // 30天和3天仍使用原本的訊息
         notifications.push({
           lineUserId: data.lineUserId,
           message: `⏰ 您的 Ultra Advisor 剩餘 ${newDays} 天，記得續訂喔！\n\n續訂連結：https://portaly.cc/GinRollBT`,

@@ -37,9 +37,11 @@ import {
 import {
   collection,
   getDocs,
+  getDoc,
   doc,
   updateDoc,
   deleteDoc,
+  setDoc,
   Timestamp,
 } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -137,15 +139,34 @@ const Users = () => {
 
       console.log('查詢到的文檔數:', snapshot.size);
 
-      const usersList = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        usersList.push({
-          key: doc.id,
-          id: doc.id,
-          ...data,
-        });
-      });
+      // 🆕 載入每個用戶的 profile 子集合
+      const usersList = await Promise.all(
+        snapshot.docs.map(async (userDoc) => {
+          const data = userDoc.data();
+
+          // 嘗試載入 profile 子集合
+          let profileData = {};
+          try {
+            const profileDoc = await getDoc(doc(db, 'users', userDoc.id, 'profile', 'data'));
+            if (profileDoc.exists()) {
+              profileData = profileDoc.data();
+            }
+          } catch (err) {
+            // 忽略錯誤，可能沒有 profile
+          }
+
+          return {
+            key: userDoc.id,
+            id: userDoc.id,
+            ...data,
+            // 🆕 合併 profile 資料（優先使用 profile 的值）
+            displayName: profileData.displayName || data.displayName || '',
+            photoURL: profileData.photoURL || data.photoURL || '',
+            phone: profileData.phone || data.phone || '',
+            lineId: profileData.lineId || data.lineId || '',
+          };
+        })
+      );
 
       setUsers(usersList);
       setFilteredUsers(usersList);
@@ -169,21 +190,23 @@ const Users = () => {
     }
   };
 
-  // 延長會員（快速按鈕）
+  // 延長會員（快速按鈕）- 使用天數制
   const handleQuickExtend = async (userId, days) => {
     try {
       const userRef = doc(db, 'users', userId);
       const user = users.find(u => u.id === userId);
-      const currentExpiry = user?.membershipExpiresAt || user?.trialExpiresAt || Timestamp.now();
-      const baseTime = currentExpiry.toMillis() > Date.now() ? currentExpiry.toMillis() : Date.now();
-      const newExpiry = Timestamp.fromMillis(baseTime + days * 24 * 60 * 60 * 1000);
+
+      // 🆕 天數制：直接增加 daysRemaining
+      const currentDays = user?.daysRemaining || 0;
+      const newDays = Math.max(0, currentDays) + days;
 
       await updateDoc(userRef, {
-        membershipExpiresAt: newExpiry,
-        trialExpiresAt: newExpiry, // 同步更新舊欄位
+        daysRemaining: newDays,
+        updatedAt: Timestamp.now(),
+        updatedBy: auth.currentUser?.email || 'admin',
       });
 
-      message.success(`已延長 ${days} 天`);
+      message.success(`已延長 ${days} 天（現有 ${newDays} 天）`);
       fetchUsers();
     } catch (error) {
       console.error('Error extending membership:', error);
@@ -195,7 +218,14 @@ const Users = () => {
   const openEditModal = (user) => {
     setSelectedUser(user);
     editForm.setFieldsValue({
+      // 🆕 基本資料
+      displayName: user.displayName || '',
+      photoURL: user.photoURL || '',
+      // 身分組
       primaryTierId: user.primaryTierId || 'trial',
+      // 🆕 天數制
+      daysRemaining: user.daysRemaining ?? 0,
+      // 舊版到期日（備用）
       membershipExpiresAt: user.membershipExpiresAt
         ? dayjs(user.membershipExpiresAt.toDate())
         : user.trialExpiresAt
@@ -215,13 +245,20 @@ const Users = () => {
     try {
       const userRef = doc(db, 'users', selectedUser.id);
       const updateData = {
+        // 🆕 基本資料
+        displayName: values.displayName || '',
+        photoURL: values.photoURL || '',
+        // 身分組
         primaryTierId: values.primaryTierId,
+        // 🆕 天數制
+        daysRemaining: values.daysRemaining ?? 0,
+        // 備註
         adminNote: values.adminNote || '',
         updatedAt: Timestamp.now(),
         updatedBy: auth.currentUser?.email || 'admin',
       };
 
-      // 更新到期日
+      // 更新到期日（舊版備用）
       if (values.membershipExpiresAt) {
         const expiryTimestamp = Timestamp.fromDate(values.membershipExpiresAt.toDate());
         updateData.membershipExpiresAt = expiryTimestamp;
@@ -237,7 +274,7 @@ const Users = () => {
       if (values.primaryTierId === 'paid' || values.primaryTierId === 'founder') {
         updateData.subscriptionStatus = 'paid';
         updateData.isActive = true;
-      } else if (values.primaryTierId === 'trial') {
+      } else if (values.primaryTierId === 'trial' || values.primaryTierId === 'referral_trial') {
         updateData.subscriptionStatus = 'trial';
         updateData.isActive = true;
       } else if (values.primaryTierId === 'grace') {
@@ -248,7 +285,20 @@ const Users = () => {
         updateData.isActive = false;
       }
 
-      await updateDoc(userRef, updateData);
+      // 🆕 將 displayName 和 photoURL 從 updateData 移除（因為要存到 profile 子集合）
+      const { displayName, photoURL, ...rootUpdateData } = updateData;
+
+      await updateDoc(userRef, rootUpdateData);
+
+      // 🆕 更新 profile 子集合（與登入頁面資料結構一致）
+      if (values.displayName !== undefined || values.photoURL !== undefined) {
+        const profileRef = doc(db, 'users', selectedUser.id, 'profile', 'data');
+        await setDoc(profileRef, {
+          displayName: values.displayName || '',
+          photoURL: values.photoURL || '',
+          updatedAt: Timestamp.now(),
+        }, { merge: true });
+      }
 
       message.success('用戶資料已更新');
       setEditModalVisible(false);
@@ -265,6 +315,12 @@ const Users = () => {
   const adjustPoints = (amount) => {
     const current = editForm.getFieldValue('pointsCurrent') || 0;
     editForm.setFieldValue('pointsCurrent', Math.max(0, current + amount));
+  };
+
+  // 🆕 調整天數
+  const adjustDays = (amount) => {
+    const current = editForm.getFieldValue('daysRemaining') || 0;
+    editForm.setFieldValue('daysRemaining', Math.max(0, current + amount));
   };
 
   // 延長試用（舊功能保留）
@@ -378,11 +434,58 @@ const Users = () => {
   // 表格欄位
   const columns = [
     {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
-      width: 220,
-      ellipsis: true,
+      title: '用戶',
+      key: 'user',
+      width: 280,
+      render: (_, record) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* 頭像 */}
+          {record.photoURL ? (
+            <img
+              src={record.photoURL}
+              alt=""
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                objectFit: 'cover',
+                border: '1px solid #e5e7eb'
+              }}
+            />
+          ) : (
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: 8,
+              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff',
+              fontWeight: 'bold',
+              fontSize: 14
+            }}>
+              {record.displayName?.charAt(0) || record.email?.charAt(0)?.toUpperCase() || '?'}
+            </div>
+          )}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            {record.displayName && (
+              <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 13, marginBottom: 2 }}>
+                {record.displayName}
+              </div>
+            )}
+            <div style={{
+              color: record.displayName ? '#64748b' : '#1e293b',
+              fontSize: record.displayName ? 12 : 13,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
+              {record.email}
+            </div>
+          </div>
+        </div>
+      ),
     },
     {
       title: '身分組',
@@ -399,6 +502,37 @@ const Users = () => {
       },
     },
     {
+      title: '剩餘天數',
+      key: 'daysRemaining',
+      width: 100,
+      render: (_, record) => {
+        // 優先顯示 daysRemaining（天數制）
+        const days = record.daysRemaining;
+        if (days !== undefined && days !== null) {
+          const color = days <= 0 ? 'red' : days <= 3 ? 'orange' : days <= 7 ? '#faad14' : 'green';
+          return (
+            <Tooltip title={`剩餘 ${days} 天會員權限`}>
+              <span style={{ color, fontWeight: 600 }}>
+                {days > 0 ? `${days} 天` : `已過期`}
+              </span>
+            </Tooltip>
+          );
+        }
+        // 舊版：用 timestamp 計算
+        const timestamp = record.membershipExpiresAt || record.trialExpiresAt;
+        if (!timestamp) return <span style={{ color: '#9ca3af' }}>-</span>;
+        const daysLeft = Math.ceil((timestamp.toMillis() - Date.now()) / (1000 * 60 * 60 * 24));
+        const color = daysLeft <= 0 ? 'red' : daysLeft <= 3 ? 'orange' : daysLeft <= 7 ? '#faad14' : 'green';
+        return (
+          <Tooltip title={dayjs(timestamp.toDate()).format('YYYY-MM-DD HH:mm')}>
+            <span style={{ color }}>
+              {daysLeft > 0 ? `${daysLeft} 天` : `已過期`}
+            </span>
+          </Tooltip>
+        );
+      },
+    },
+    {
       title: '點數',
       dataIndex: ['points', 'current'],
       key: 'points',
@@ -408,24 +542,6 @@ const Users = () => {
           {points || 0} UA
         </Text>
       ),
-    },
-    {
-      title: '到期時間',
-      key: 'expiresAt',
-      width: 130,
-      render: (_, record) => {
-        const timestamp = record.membershipExpiresAt || record.trialExpiresAt;
-        if (!timestamp) return '-';
-        const daysLeft = Math.ceil((timestamp.toMillis() - Date.now()) / (1000 * 60 * 60 * 24));
-        const color = daysLeft <= 0 ? 'red' : daysLeft <= 3 ? 'orange' : daysLeft <= 7 ? '#faad14' : 'green';
-        return (
-          <Tooltip title={dayjs(timestamp.toDate()).format('YYYY-MM-DD HH:mm')}>
-            <span style={{ color }}>
-              {daysLeft > 0 ? `${daysLeft} 天後` : `已過期 ${Math.abs(daysLeft)} 天`}
-            </span>
-          </Tooltip>
-        );
-      },
     },
     {
       title: '快速延長',
@@ -643,6 +759,43 @@ const Users = () => {
           onFinish={handleSaveEdit}
           className="mt-4"
         >
+          {/* 🆕 基本資料區塊 */}
+          <div style={{
+            background: '#f8fafc',
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 16,
+            border: '1px solid #e2e8f0'
+          }}>
+            <Text strong style={{ display: 'block', marginBottom: 12, color: '#334155' }}>
+              👤 基本資料
+            </Text>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="displayName"
+                  label="姓名 / 暱稱"
+                >
+                  <Input
+                    placeholder="用於辨識會員"
+                    size="large"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="photoURL"
+                  label="頭像網址"
+                >
+                  <Input
+                    placeholder="https://..."
+                    size="large"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </div>
+
           {/* 身分組選擇 */}
           <Form.Item
             name="primaryTierId"
@@ -662,57 +815,98 @@ const Users = () => {
             </Select>
           </Form.Item>
 
-          {/* 到期日期 */}
-          <Form.Item
-            name="membershipExpiresAt"
-            label="會員到期日"
-          >
-            <DatePicker
-              showTime
-              format="YYYY-MM-DD HH:mm"
-              style={{ width: '100%' }}
-              size="large"
-              placeholder="選擇到期日期"
-            />
-          </Form.Item>
+          {/* 🆕 天數制會員 */}
+          <div style={{
+            background: '#f0fdf4',
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 16,
+            border: '1px solid #bbf7d0'
+          }}>
+            <Text strong style={{ display: 'block', marginBottom: 12, color: '#166534' }}>
+              ⏰ 會員天數（天數制）
+            </Text>
+            <Form.Item label="剩餘天數" style={{ marginBottom: 8 }}>
+              <Space wrap>
+                <Button
+                  icon={<MinusOutlined />}
+                  onClick={() => adjustDays(-7)}
+                  danger
+                  size="small"
+                >
+                  -7
+                </Button>
+                <Button
+                  icon={<MinusOutlined />}
+                  onClick={() => adjustDays(-1)}
+                  size="small"
+                >
+                  -1
+                </Button>
+                <Form.Item name="daysRemaining" noStyle>
+                  <InputNumber
+                    min={0}
+                    max={9999}
+                    style={{ width: 100, textAlign: 'center' }}
+                    size="large"
+                    addonAfter="天"
+                  />
+                </Form.Item>
+                <Button
+                  icon={<PlusOutlined />}
+                  onClick={() => adjustDays(1)}
+                  size="small"
+                >
+                  +1
+                </Button>
+                <Button
+                  icon={<PlusOutlined />}
+                  onClick={() => adjustDays(7)}
+                  type="primary"
+                  size="small"
+                >
+                  +7
+                </Button>
+                <Button
+                  icon={<PlusOutlined />}
+                  onClick={() => adjustDays(30)}
+                  type="primary"
+                  size="small"
+                >
+                  +30
+                </Button>
+                <Button
+                  icon={<PlusOutlined />}
+                  onClick={() => adjustDays(365)}
+                  type="primary"
+                  size="small"
+                >
+                  +365
+                </Button>
+              </Space>
+            </Form.Item>
+          </div>
 
-          {/* 快速延長按鈕 */}
-          <Form.Item label="快速延長">
-            <Space wrap>
-              <Button
-                onClick={() => {
-                  const current = editForm.getFieldValue('membershipExpiresAt') || dayjs();
-                  editForm.setFieldValue('membershipExpiresAt', current.add(7, 'day'));
-                }}
+          {/* 舊版到期日期（折疊顯示） */}
+          <details style={{ marginBottom: 16 }}>
+            <summary style={{ cursor: 'pointer', color: '#64748b', fontSize: 13 }}>
+              📅 舊版到期日（點擊展開）
+            </summary>
+            <div style={{ paddingTop: 12 }}>
+              <Form.Item
+                name="membershipExpiresAt"
+                label="會員到期日（舊版）"
               >
-                +7 天
-              </Button>
-              <Button
-                onClick={() => {
-                  const current = editForm.getFieldValue('membershipExpiresAt') || dayjs();
-                  editForm.setFieldValue('membershipExpiresAt', current.add(30, 'day'));
-                }}
-              >
-                +30 天
-              </Button>
-              <Button
-                onClick={() => {
-                  const current = editForm.getFieldValue('membershipExpiresAt') || dayjs();
-                  editForm.setFieldValue('membershipExpiresAt', current.add(90, 'day'));
-                }}
-              >
-                +90 天
-              </Button>
-              <Button
-                onClick={() => {
-                  const current = editForm.getFieldValue('membershipExpiresAt') || dayjs();
-                  editForm.setFieldValue('membershipExpiresAt', current.add(365, 'day'));
-                }}
-              >
-                +365 天
-              </Button>
-            </Space>
-          </Form.Item>
+                <DatePicker
+                  showTime
+                  format="YYYY-MM-DD HH:mm"
+                  style={{ width: '100%' }}
+                  size="large"
+                  placeholder="選擇到期日期"
+                />
+              </Form.Item>
+            </div>
+          </details>
 
           <Divider />
 

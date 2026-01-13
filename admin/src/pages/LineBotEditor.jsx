@@ -137,13 +137,36 @@ export default function LineBotEditor() {
   const [saveMessage, setSaveMessage] = useState(null);
   const [activeTab, setActiveTab] = useState('welcome'); // welcome, keywords, broadcast, settings
 
-  // 歡迎訊息
-  const [welcomeMessages, setWelcomeMessages] = useState({
-    newFollower: '',
+  // 🆕 預設值（與 Cloud Functions 一致）
+  const DEFAULT_WELCOME = {
+    newFollower: '🎉 歡迎加入 Ultra Advisor！\n\n我是你的專屬 AI 財務軍師\n━━━━━━━━━━━━━━\n\n💎 立即獲得 7 天免費試用\n✓ 18 種專業理財工具\n✓ 無限客戶檔案\n✓ AI 智能建議\n\n🎁 推薦好友付費後雙方各得 500 UA 點！\n\n━━━━━━━━━━━━━━\n\n📧 請直接傳送你的 Email 開始試用！',
     newFollowerEnabled: true,
-    memberLinked: '',
+    memberLinked: '🎉 綁定成功！\n\n{{name}} 您好，您的帳號已成功綁定。\n\n現在您可以透過 LINE 接收：\n✅ 會員到期提醒\n✅ 最新功能通知\n✅ 專屬優惠資訊',
     memberLinkedEnabled: true,
-  });
+    // 🆕 Email 收到訊息
+    emailReceived: '📧 收到您的 Email！\n\n正在為您建立試用帳號...\n請稍候約 10 秒 ⏳',
+    emailReceivedEnabled: true,
+    // 🆕 開通成功訊息（Flex Message 的各部分）
+    accountCreatedTitle: '🎉 帳號開通成功',
+    accountCreatedEnabled: true,
+    // 🆕 密碼訊息
+    passwordMessage: '🔐 你的登入密碼（請妥善保管）：\n\n{{password}}\n\n⚠️ 請立即登入並修改密碼以確保安全\n\n📢 分享你的推薦碼「{{referralCode}}」給朋友，付費後雙方都能獲得 500 UA 點！',
+    passwordMessageEnabled: true,
+  };
+
+  const DEFAULT_NOTIFICATIONS = {
+    expiryReminder7Days: '⏰ 會員即將到期提醒\n\n{{name}} 您好，\n您的會員資格將在 7 天後到期。\n\n立即續費可享優惠價格！\n👉 https://ultra-advisor.tw/pricing',
+    expiryReminder7DaysEnabled: true,
+    expiryReminder1Day: '🚨 會員明天到期！\n\n{{name}} 您好，\n您的會員資格將在明天到期。\n\n到期後將無法使用進階工具，請盡快續費！\n👉 https://ultra-advisor.tw/pricing',
+    expiryReminder1DayEnabled: true,
+    paymentSuccess: '🎉 付款成功！\n\n{{name}} 您好，\n感謝您的支持！您的會員資格已延長。\n\n新到期日：{{expiryDate}}\n\n祝您使用愉快！',
+    paymentSuccessEnabled: true,
+    dailyTip: '',
+    dailyTipEnabled: false,
+  };
+
+  // 歡迎訊息
+  const [welcomeMessages, setWelcomeMessages] = useState(DEFAULT_WELCOME);
 
   // 關鍵字回覆
   const [keywordReplies, setKeywordReplies] = useState([]);
@@ -152,16 +175,7 @@ export default function LineBotEditor() {
   const [broadcastTemplates, setBroadcastTemplates] = useState([]);
 
   // 通知設定
-  const [notificationSettings, setNotificationSettings] = useState({
-    expiryReminder7Days: '',
-    expiryReminder7DaysEnabled: true,
-    expiryReminder1Day: '',
-    expiryReminder1DayEnabled: true,
-    paymentSuccess: '',
-    paymentSuccessEnabled: true,
-    dailyTip: '',
-    dailyTipEnabled: false,
-  });
+  const [notificationSettings, setNotificationSettings] = useState(DEFAULT_NOTIFICATIONS);
 
   // 載入資料
   useEffect(() => {
@@ -447,6 +461,71 @@ export default function LineBotEditor() {
                     <div>
                       <p className="text-sm font-medium text-gray-700 mb-2">預覽效果</p>
                       <MessagePreview message={welcomeMessages.memberLinked || `🎉 綁定成功！\n\n用戶 您好，您的帳號已成功綁定。`} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* 🆕 收到 Email 訊息 */}
+            <Card title="收到 Email 回覆" icon={Clock} color="amber">
+              <div className="space-y-4">
+                <Toggle
+                  enabled={welcomeMessages.emailReceivedEnabled}
+                  onChange={(v) => setWelcomeMessages(prev => ({ ...prev, emailReceivedEnabled: v }))}
+                  label="啟用收到 Email 回覆"
+                />
+
+                {welcomeMessages.emailReceivedEnabled && (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <InputField
+                      label="訊息內容"
+                      value={welcomeMessages.emailReceived}
+                      onChange={(v) => setWelcomeMessages(prev => ({ ...prev, emailReceived: v }))}
+                      placeholder="📧 收到您的 Email！\n\n正在為您建立試用帳號...\n請稍候約 10 秒 ⏳"
+                      rows={4}
+                      hint="當用戶傳送 Email 後立即回覆的訊息"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-2">預覽效果</p>
+                      <MessagePreview message={welcomeMessages.emailReceived || '📧 收到您的 Email！'} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* 🆕 帳號開通成功訊息 */}
+            <Card title="帳號開通成功（密碼訊息）" icon={Zap} color="purple">
+              <div className="space-y-4">
+                <Toggle
+                  enabled={welcomeMessages.passwordMessageEnabled}
+                  onChange={(v) => setWelcomeMessages(prev => ({ ...prev, passwordMessageEnabled: v }))}
+                  label="啟用密碼訊息"
+                />
+
+                {welcomeMessages.passwordMessageEnabled && (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                      <InputField
+                        label="密碼訊息內容"
+                        value={welcomeMessages.passwordMessage}
+                        onChange={(v) => setWelcomeMessages(prev => ({ ...prev, passwordMessage: v }))}
+                        placeholder="🔐 你的登入密碼：\n\n{{password}}\n\n⚠️ 請立即登入並修改密碼"
+                        rows={6}
+                        hint="可用變數：{{password}} 密碼、{{referralCode}} 推薦碼、{{referrerName}} 推薦人"
+                      />
+                      <InputField
+                        label="開通成功標題"
+                        value={welcomeMessages.accountCreatedTitle}
+                        onChange={(v) => setWelcomeMessages(prev => ({ ...prev, accountCreatedTitle: v }))}
+                        placeholder="🎉 帳號開通成功"
+                        hint="Flex Message 卡片的標題"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 mb-2">預覽效果</p>
+                      <MessagePreview message={welcomeMessages.passwordMessage?.replace('{{password}}', 'Ab1234xyz').replace('{{referralCode}}', 'USER-ABC1') || '🔐 你的登入密碼...'} />
                     </div>
                   </div>
                 )}
