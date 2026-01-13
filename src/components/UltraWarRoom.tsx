@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Calculator, Lock, User, Camera, Mail, Phone, MessageCircle, Instagram,
   Home, TrendingUp, Coins, Check, AlertCircle, Eye, EyeOff, Info, Zap,
-  Users, Search, Plus, Trash2, ChevronRight, LogOut, Settings, X,
+  Users, Search, Plus, Trash2, LogOut, Settings, X,
   Clock, TriangleAlert, ShieldAlert, Activity, Edit3, Save, Loader2,
-  Heart, RefreshCw, Download, Sparkles, Crown, BarChart3
+  Heart, RefreshCw, Download, Sparkles, Crown, BarChart3, Bell,
+  MessageSquarePlus, Send, Lightbulb
 } from 'lucide-react';
 import { 
   getAuth, 
@@ -13,17 +14,18 @@ import {
   EmailAuthProvider,
   updateProfile 
 } from 'firebase/auth';
-import { 
-  doc, 
-  setDoc, 
-  getDoc, 
-  collection, 
-  addDoc, 
-  deleteDoc, 
-  onSnapshot, 
-  query, 
-  orderBy, 
-  Timestamp 
+import {
+  doc,
+  setDoc,
+  getDoc,
+  collection,
+  addDoc,
+  deleteDoc,
+  updateDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  Timestamp
 } from 'firebase/firestore';
 import { 
   ref, 
@@ -37,11 +39,11 @@ import { useMembership } from '../hooks/useMembership';
 import ReferralEngineModal from './ReferralEngineModal';
 
 // ==========================================
-// 🎨 市場快訊跑馬燈
+// 🎨 市場快訊跑馬燈（含傲創計算機入口）
 // ==========================================
 const MarketTicker = () => {
   const [cancerSeconds, setCancerSeconds] = useState(228);
-  
+
   useEffect(() => {
     const timer = setInterval(() => {
       setCancerSeconds(prev => (prev <= 1 ? 228 : prev - 1));
@@ -56,34 +58,48 @@ const MarketTicker = () => {
   };
 
   return (
-    <div className="bg-gradient-to-r from-red-900/80 to-red-800/80 text-white py-2 px-4 
-                    overflow-hidden whitespace-nowrap border-b border-red-500/20">
-      <div className="flex animate-marquee items-center gap-12 font-black text-[10px] uppercase tracking-widest">
-        <span className="flex items-center gap-2">
-          <Heart size={12} className="text-red-400 animate-pulse" />
-          癌症時鐘：{formatTime(cancerSeconds)}
-        </span>
-        <span className="flex items-center gap-2">
-          <TriangleAlert size={12} className="text-amber-400" />
-          醫療通膨：+15.8%
-        </span>
-        <span className="flex items-center gap-2">
-          <TrendingUp size={12} className="text-emerald-400" />
-          實質通膨：4.5%
-        </span>
-        <span className="flex items-center gap-2">
-          <ShieldAlert size={12} className="text-orange-400" />
-          勞保倒數：2031
-        </span>
-        <span className="flex items-center gap-2">
-          <Heart size={12} className="text-red-400 animate-pulse" />
-          癌症時鐘：{formatTime(cancerSeconds)}
-        </span>
-        <span className="flex items-center gap-2">
-          <TriangleAlert size={12} className="text-amber-400" />
-          醫療通膨：+15.8%
-        </span>
+    <div className="bg-gradient-to-r from-red-900/80 to-red-800/80 text-white py-2 px-4
+                    border-b border-red-500/20 flex items-center">
+      {/* 跑馬燈區域 */}
+      <div className="flex-1 overflow-hidden whitespace-nowrap">
+        <div className="flex animate-marquee items-center gap-12 font-black text-[10px] uppercase tracking-widest">
+          <span className="flex items-center gap-2">
+            <Heart size={12} className="text-red-400 animate-pulse" />
+            癌症時鐘：{formatTime(cancerSeconds)}
+          </span>
+          <span className="flex items-center gap-2">
+            <TriangleAlert size={12} className="text-amber-400" />
+            醫療通膨：+15.8%
+          </span>
+          <span className="flex items-center gap-2">
+            <TrendingUp size={12} className="text-emerald-400" />
+            實質通膨：4.5%
+          </span>
+          <span className="flex items-center gap-2">
+            <ShieldAlert size={12} className="text-orange-400" />
+            勞保倒數：2031
+          </span>
+          <span className="flex items-center gap-2">
+            <Heart size={12} className="text-red-400 animate-pulse" />
+            癌症時鐘：{formatTime(cancerSeconds)}
+          </span>
+          <span className="flex items-center gap-2">
+            <TriangleAlert size={12} className="text-amber-400" />
+            醫療通膨：+15.8%
+          </span>
+        </div>
       </div>
+
+      {/* 傲創計算機按鈕 */}
+      <a
+        href="/calculator"
+        className="ml-4 flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500
+                 text-white text-xs font-bold rounded-lg transition-all shrink-0"
+      >
+        <Calculator size={14} />
+        <span className="hidden sm:inline">傲創計算機</span>
+      </a>
+
       <style>{`
         @keyframes marquee {
           0% { transform: translateX(0); }
@@ -111,20 +127,22 @@ interface ProfileData {
 // ==========================================
 // 👤 個人檔案卡片
 // ==========================================
-const ProfileCard = ({ 
-  user, 
-  profileData, 
+const ProfileCard = ({
+  user,
+  profileData,
   membership,
   onEditProfile,
   onChangePassword,
-  onOpenReferral
-}: { 
+  onOpenReferral,
+  onOpenPayment
+}: {
   user: any;
   profileData: ProfileData;
   membership: any;
   onEditProfile: () => void;
   onChangePassword: () => void;
   onOpenReferral: () => void;
+  onOpenPayment: (isReferral: boolean) => void;
 }) => {
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 
@@ -259,31 +277,27 @@ const ProfileCard = ({
                        border border-purple-500/20 rounded-xl">
           {membership.tier === 'referral_trial' ? (
             <>
-              <a
-                href="https://portaly.cc/GinRollBT"
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => onOpenPayment(true)}
                 className="block w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600
                          rounded-xl text-white font-bold text-center text-sm
                          hover:from-purple-500 hover:to-blue-500 transition-all shadow-lg"
               >
                 🎁 升級 365 天 - $8,000（已折 $999）
-              </a>
+              </button>
               <p className="text-[10px] text-purple-300 mt-2 text-center">
-                使用折扣碼「Miiroll7」享轉介紹優惠
+                轉介紹專屬優惠價
               </p>
             </>
           ) : (
-            <a
-              href="https://portaly.cc/GinRollBT"
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => onOpenPayment(false)}
               className="block w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600
                        rounded-xl text-white font-bold text-center text-sm
                        hover:from-blue-500 hover:to-purple-500 transition-all shadow-lg"
             >
               升級 365 天 - $8,999
-            </a>
+            </button>
           )}
 
           {membership.isTrial && membership.daysRemaining > 0 && (
@@ -454,8 +468,8 @@ const QuickCalculator = () => {
                   step="0.1"
                   value={loanRate}
                   onChange={e => setLoanRate(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 
-                           text-sm outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
+                           text-white font-bold text-sm outline-none focus:border-amber-500"
                 />
               </div>
               <div>
@@ -466,8 +480,8 @@ const QuickCalculator = () => {
                   type="number"
                   value={loanYears}
                   onChange={e => setLoanYears(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 
-                           text-sm outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
+                           text-white font-bold text-sm outline-none focus:border-amber-500"
                 />
               </div>
             </div>
@@ -495,8 +509,8 @@ const QuickCalculator = () => {
                   type="number"
                   value={initialCapital}
                   onChange={e => setInitialCapital(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 
-                           text-sm outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
+                           text-white font-bold text-sm outline-none focus:border-amber-500"
                 />
               </div>
               <div>
@@ -507,8 +521,8 @@ const QuickCalculator = () => {
                   type="number"
                   value={monthlyInvest}
                   onChange={e => setMonthlyInvest(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 
-                           text-sm outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
+                           text-white font-bold text-sm outline-none focus:border-amber-500"
                 />
               </div>
             </div>
@@ -522,8 +536,8 @@ const QuickCalculator = () => {
                   step="0.1"
                   value={expectedRate}
                   onChange={e => setExpectedRate(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 
-                           text-sm outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
+                           text-white font-bold text-sm outline-none focus:border-amber-500"
                 />
               </div>
               <div>
@@ -534,8 +548,8 @@ const QuickCalculator = () => {
                   type="number"
                   value={investYears}
                   onChange={e => setInvestYears(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 
-                           text-sm outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
+                           text-white font-bold text-sm outline-none focus:border-amber-500"
                 />
               </div>
             </div>
@@ -562,8 +576,8 @@ const QuickCalculator = () => {
                 type="number"
                 value={totalPremium}
                 onChange={e => setTotalPremium(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 
-                         text-sm outline-none focus:border-amber-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
+                         text-white font-bold text-sm outline-none focus:border-amber-500"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -575,8 +589,8 @@ const QuickCalculator = () => {
                   type="number"
                   value={maturityValue}
                   onChange={e => setMaturityValue(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 
-                           text-amber-400 font-bold text-sm outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
+                           text-white font-bold text-sm outline-none focus:border-amber-500"
                 />
               </div>
               <div>
@@ -587,8 +601,8 @@ const QuickCalculator = () => {
                   type="number"
                   value={irrYears}
                   onChange={e => setIrrYears(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 
-                           text-sm outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
+                           text-white font-bold text-sm outline-none focus:border-amber-500"
                 />
               </div>
             </div>
@@ -611,19 +625,21 @@ const QuickCalculator = () => {
 // ==========================================
 // 👥 客戶列表卡片
 // ==========================================
-const ClientList = ({ 
-  user, 
-  clients, 
-  loading, 
+const ClientList = ({
+  user,
+  clients,
+  loading,
   onSelectClient,
   onAddClient,
-  onDeleteClient 
+  onEditClient,
+  onDeleteClient
 }: {
   user: any;
   clients: any[];
   loading: boolean;
   onSelectClient: (client: any) => void;
   onAddClient: () => void;
+  onEditClient: (client: any) => void;
   onDeleteClient: (clientId: string) => void;
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -693,20 +709,32 @@ const ClientList = ({
                 </div>
               </div>
               <div className="text-xs text-slate-500 truncate">{client.note || '無備註'}</div>
-              
-              {/* Delete button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (window.confirm(`確定要刪除 ${client.name} 的檔案嗎？`)) {
-                    onDeleteClient(client.id);
-                  }
-                }}
-                className="absolute top-2 right-2 p-1 text-slate-600 hover:text-red-400 
-                         opacity-0 group-hover:opacity-100 transition-all"
-              >
-                <Trash2 size={12} />
-              </button>
+
+              {/* Action buttons */}
+              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditClient(client);
+                  }}
+                  className="p-1 text-slate-600 hover:text-blue-400 transition-all"
+                  title="編輯"
+                >
+                  <Edit3 size={12} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm(`確定要刪除 ${client.name} 的檔案嗎？`)) {
+                      onDeleteClient(client.id);
+                    }
+                  }}
+                  className="p-1 text-slate-600 hover:text-red-400 transition-all"
+                  title="刪除"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -722,14 +750,77 @@ const ClientList = ({
 };
 
 // ==========================================
+// 💳 付款 Modal（iframe 嵌入）
+// ==========================================
+const PaymentModal = ({
+  isOpen,
+  onClose,
+  isReferral
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  isReferral: boolean;
+}) => {
+  if (!isOpen) return null;
+
+  // 原價訂閱 vs 好友推薦價
+  const iframeUrl = isReferral
+    ? 'https://portaly.cc/embed/GinRollBT/product/hF1hHcEGbsp5VlbRsKWI'
+    : 'https://portaly.cc/embed/GinRollBT/product/WsaTvEYOA1yqAQYzVZgy';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="relative bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-md overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-slate-700">
+          <div>
+            <h3 className="text-lg font-black text-white">
+              {isReferral ? '🎁 好友推薦價' : '💎 年度訂閱'}
+            </h3>
+            <p className="text-xs text-slate-400">
+              {isReferral ? '365 天 - $8,000（已折 $999）' : '365 天 - $8,999'}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-slate-800 rounded-xl transition-all"
+          >
+            <X size={20} className="text-slate-400" />
+          </button>
+        </div>
+
+        {/* iframe 內容 */}
+        <div className="w-full" style={{ height: '620px' }}>
+          <iframe
+            src={iframeUrl}
+            width="100%"
+            height="100%"
+            style={{ border: 0 }}
+            loading="lazy"
+            title="付款頁面"
+          />
+        </div>
+
+        {/* Footer */}
+        <div className="p-3 border-t border-slate-700 bg-slate-800/50">
+          <p className="text-[10px] text-slate-500 text-center">
+            付款完成後系統將自動開通會員權限
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==========================================
 // ✏️ 編輯個人資料 Modal
 // ==========================================
-const EditProfileModal = ({ 
-  isOpen, 
-  onClose, 
+const EditProfileModal = ({
+  isOpen,
+  onClose,
   user,
   profileData,
-  onSave 
+  onSave
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -1396,6 +1487,110 @@ const AddClientModal = ({
 };
 
 // ==========================================
+// ✏️ 編輯客戶 Modal
+// ==========================================
+const EditClientModal = ({
+  isOpen,
+  onClose,
+  client,
+  onSave
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  client: any;
+  onSave: (clientId: string, name: string, note: string) => Promise<void>;
+}) => {
+  const [name, setName] = useState('');
+  const [note, setNote] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && client) {
+      setName(client.name || '');
+      setNote(client.note || '');
+    }
+  }, [isOpen, client]);
+
+  const handleSubmit = async () => {
+    if (!name.trim() || !client) return;
+    setLoading(true);
+    try {
+      await onSave(client.id, name, note);
+      onClose();
+    } catch (error) {
+      alert('儲存失敗');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen || !client) return null;
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md
+                     shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between p-6 border-b border-slate-800">
+          <h3 className="text-xl font-black text-white flex items-center gap-2">
+            <Edit3 className="text-blue-400" size={24} />
+            編輯客戶
+          </h3>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white">
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="text-sm text-slate-400 font-bold mb-2 block">客戶姓名</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="例如：王小明"
+              autoFocus
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4
+                       text-white focus:border-blue-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-sm text-slate-400 font-bold mb-2 block">備註（選填）</label>
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder="例如：工程師，年收 150 萬..."
+              rows={3}
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4
+                       text-white focus:border-blue-500 outline-none resize-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 p-6 border-t border-slate-800">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 bg-slate-800 text-slate-400 rounded-xl font-bold
+                     hover:bg-slate-700 transition-all"
+          >
+            取消
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!name.trim() || loading}
+            className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold
+                     hover:bg-blue-500 transition-all disabled:opacity-50
+                     flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />}
+            儲存變更
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==========================================
 // 🚀 主組件：Ultra 戰情室
 // ==========================================
 interface UltraWarRoomProps {
@@ -1427,9 +1622,60 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showAddClient, setShowAddClient] = useState(false);
+  const [showEditClient, setShowEditClient] = useState(false);
+  const [editingClient, setEditingClient] = useState<any>(null);
+
+  // 🆕 付款 Modal 狀態
+  const [showPayment, setShowPayment] = useState(false);
+  const [isReferralPayment, setIsReferralPayment] = useState(false);
+
+  const handleOpenPayment = (isReferral: boolean) => {
+    setIsReferralPayment(isReferral);
+    setShowPayment(true);
+  };
 
   // 🆕 首次登入強制改密碼
   const [needsPasswordChange, setNeedsPasswordChange] = useState(false);
+
+  // 🆕 通知系統
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showAllNotifications, setShowAllNotifications] = useState(false);
+  const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
+
+  // 計算未讀通知數（只計算最新 3 則）
+  const displayedNotifications = showAllNotifications ? notifications : notifications.slice(0, 3);
+  const unreadCount = notifications.slice(0, 3).filter(n => !readNotificationIds.includes(n.id)).length;
+
+  // 🆕 功能建議系統
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackContent, setFeedbackContent] = useState('');
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+
+  // 🆕 LOGO 五連點進入後台
+  const [logoClickCount, setLogoClickCount] = useState(0);
+  const logoClickTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const handleLogoClick = () => {
+    setLogoClickCount(prev => {
+      const newCount = prev + 1;
+      if (newCount >= 5) {
+        // 連點 5 次，導航到後台
+        window.open('/secret-admin-ultra-2026', '_blank');
+        return 0;
+      }
+      return newCount;
+    });
+
+    // 重置計時器
+    if (logoClickTimer.current) {
+      clearTimeout(logoClickTimer.current);
+    }
+    logoClickTimer.current = setTimeout(() => {
+      setLogoClickCount(0);
+    }, 2000); // 2 秒內要點完 5 次
+  };
 
   // 載入用戶資料
   useEffect(() => {
@@ -1483,6 +1729,94 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
     return () => unsubscribe();
   }, [user]);
 
+  // 🆕 即時監聽通知
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      doc(db, 'siteContent', 'notifications'),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const items = (data.items || [])
+            .filter((n: any) => n.enabled !== false)
+            .sort((a: any, b: any) => (b.priority || 0) - (a.priority || 0));
+          setNotifications(items);
+        }
+      },
+      (error) => {
+        console.error('Load notifications failed:', error);
+      }
+    );
+
+    // 從 localStorage 讀取已讀通知
+    const readIds = localStorage.getItem('readNotificationIds');
+    if (readIds) {
+      setReadNotificationIds(JSON.parse(readIds));
+    }
+
+    return () => unsubscribe();
+  }, []);
+
+  // 標記通知為已讀
+  const markNotificationRead = (notifId: string) => {
+    const newReadIds = [...readNotificationIds, notifId];
+    setReadNotificationIds(newReadIds);
+    localStorage.setItem('readNotificationIds', JSON.stringify(newReadIds));
+  };
+
+  // 標記全部已讀（只處理顯示的 3 則）
+  const markAllNotificationsRead = () => {
+    const allIds = displayedNotifications.map(n => n.id);
+    const newReadIds = [...new Set([...readNotificationIds, ...allIds])];
+    setReadNotificationIds(newReadIds);
+    localStorage.setItem('readNotificationIds', JSON.stringify(newReadIds));
+  };
+
+  // 🆕 提交功能建議
+  const handleSubmitFeedback = async () => {
+    if (!feedbackContent.trim() || !user) return;
+
+    setFeedbackSubmitting(true);
+    try {
+      // 儲存建議到 Firestore
+      await addDoc(collection(db, 'feedbacks'), {
+        userId: user.uid,
+        userEmail: user.email,
+        userName: profileData.displayName || user.displayName || '匿名用戶',
+        content: feedbackContent.trim(),
+        status: 'pending', // pending, reviewed, implemented, rejected
+        createdAt: Timestamp.now(),
+        pointsAwarded: false,
+      });
+
+      // 發放 10 UA 點獎勵（透過 API）
+      try {
+        const token = await user.getIdToken();
+        await fetch('/api/points/award-feedback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ amount: 10, reason: 'feedback_submit' })
+        });
+      } catch (pointsError) {
+        console.log('Points award skipped:', pointsError);
+      }
+
+      setFeedbackSuccess(true);
+      setFeedbackContent('');
+      setTimeout(() => {
+        setFeedbackSuccess(false);
+        setShowFeedback(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Submit feedback failed:', error);
+      alert('提交失敗，請重試');
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  };
+
   // 儲存個人資料
   const handleSaveProfile = async (data: ProfileData) => {
     if (!user) return;
@@ -1523,19 +1857,42 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
     await deleteDoc(doc(db, 'users', user.uid, 'clients', clientId));
   };
 
+  // 編輯客戶
+  const handleEditClient = async (clientId: string, name: string, note: string) => {
+    if (!user) return;
+    await updateDoc(doc(db, 'users', user.uid, 'clients', clientId), {
+      name,
+      note,
+      updatedAt: Timestamp.now(),
+    });
+  };
+
+  // 開啟編輯客戶 Modal
+  const openEditClient = (client: any) => {
+    setEditingClient(client);
+    setShowEditClient(true);
+  };
+
   return (
-    <div className="min-h-screen bg-[#050b14] 
+    <div
+      className="min-h-screen bg-[#050b14]
                     bg-[linear-gradient(rgba(77,163,255,0.03)_1px,transparent_1px),
                        linear-gradient(90deg,rgba(77,163,255,0.03)_1px,transparent_1px)]
-                    bg-[length:40px_40px]">
-      
+                    bg-[length:40px_40px]"
+      onClick={() => setShowNotifications(false)}
+    >
+
       {/* 市場快訊跑馬燈 */}
       <MarketTicker />
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-[#050b14]/90 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
+          <div
+            className="flex items-center gap-3 cursor-pointer select-none"
+            onClick={handleLogoClick}
+            title="Ultra 戰情室"
+          >
             <img
               src="https://lh3.googleusercontent.com/d/1CEFGRByRM66l-4sMMM78LUBUvAMiAIaJ"
               alt="Ultra Advisor"
@@ -1555,6 +1912,103 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
+            {/* 🆕 通知按鈕 */}
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowNotifications(!showNotifications);
+                }}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all relative"
+                title="通知"
+              >
+                <Bell size={20} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold
+                                 rounded-full flex items-center justify-center animate-pulse">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* 通知面板 */}
+              {showNotifications && (
+                <div
+                  className="absolute right-0 top-full mt-2 w-80 bg-slate-900 border border-slate-700
+                               rounded-2xl shadow-2xl z-50 overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between p-4 border-b border-slate-700">
+                    <h4 className="font-bold text-white flex items-center gap-2">
+                      <Bell size={16} className="text-amber-400" />
+                      通知中心
+                    </h4>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllNotificationsRead}
+                        className="text-xs text-blue-400 hover:text-blue-300"
+                      >
+                        全部已讀
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto">
+                    {displayedNotifications.length > 0 ? (
+                      displayedNotifications.map(notif => (
+                        <div
+                          key={notif.id}
+                          onClick={() => markNotificationRead(notif.id)}
+                          className={`p-4 border-b border-slate-800 hover:bg-slate-800/50 cursor-pointer transition-all
+                                    ${!readNotificationIds.includes(notif.id) ? 'bg-blue-900/20' : ''}`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`w-2 h-2 rounded-full mt-2 shrink-0
+                                          ${!readNotificationIds.includes(notif.id) ? 'bg-blue-400' : 'bg-slate-600'}`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-white text-sm">{notif.title}</p>
+                              <p className="text-slate-400 text-xs mt-1 line-clamp-2">{notif.content}</p>
+                              {notif.createdAt && (
+                                <p className="text-slate-500 text-[10px] mt-2">
+                                  {new Date(notif.createdAt).toLocaleDateString('zh-TW')}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-slate-500">
+                        <Bell size={32} className="mx-auto mb-2 opacity-30" />
+                        <p className="text-sm">目前沒有通知</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 查看全部/收起按鈕 */}
+                  {notifications.length > 3 && (
+                    <div className="p-3 border-t border-slate-700">
+                      <button
+                        onClick={() => setShowAllNotifications(!showAllNotifications)}
+                        className="w-full text-center text-xs text-blue-400 hover:text-blue-300 py-1"
+                      >
+                        {showAllNotifications ? `收起 ▲` : `查看全部 (${notifications.length} 則) ▼`}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 🆕 功能建議按鈕 */}
+            <button
+              onClick={() => setShowFeedback(true)}
+              className="p-2 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg transition-all"
+              title="功能建議"
+            >
+              <Lightbulb size={20} />
+            </button>
+
             <button
               onClick={() => setShowEditProfile(true)}
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
@@ -1564,7 +2018,7 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
             </button>
             <button
               onClick={onLogout}
-              className="flex items-center gap-2 px-3 md:px-4 py-2 bg-slate-800 hover:bg-slate-700 
+              className="flex items-center gap-2 px-3 md:px-4 py-2 bg-slate-800 hover:bg-slate-700
                        text-slate-300 rounded-xl text-sm font-bold transition-all"
             >
               <LogOut size={16} />
@@ -1586,6 +2040,7 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
             onEditProfile={() => setShowEditProfile(true)}
             onChangePassword={() => setShowChangePassword(true)}
             onOpenReferral={() => setShowReferralEngine(true)}
+            onOpenPayment={handleOpenPayment}
           />
 
           {/* Market Data */}
@@ -1602,29 +2057,9 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
           loading={clientsLoading}
           onSelectClient={onSelectClient}
           onAddClient={() => setShowAddClient(true)}
+          onEditClient={openEditClient}
           onDeleteClient={handleDeleteClient}
         />
-
-        {/* 🆕 傲創計算機入口 */}
-        <div className="mt-6 bg-slate-900/50 border border-slate-800 rounded-2xl p-4
-                       flex items-center justify-between hover:border-emerald-500/30 transition-all">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-600/20 rounded-xl flex items-center justify-center">
-              <Calculator className="text-emerald-400" size={20} />
-            </div>
-            <div>
-              <h4 className="text-white font-bold">傲創計算機</h4>
-              <p className="text-xs text-slate-500">免費公開的房貸試算工具</p>
-            </div>
-          </div>
-          <a
-            href="/calculator"
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold
-                     rounded-xl transition-all flex items-center gap-2"
-          >
-            前往使用 <ChevronRight size={16} />
-          </a>
-        </div>
 
         {/* CTA Banner */}
         <div className="mt-6 bg-gradient-to-r from-blue-900/30 to-purple-900/30 
@@ -1670,12 +2105,121 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
         onAdd={handleAddClient}
       />
 
+      {/* 🆕 編輯客戶 Modal */}
+      <EditClientModal
+        isOpen={showEditClient}
+        onClose={() => {
+          setShowEditClient(false);
+          setEditingClient(null);
+        }}
+        client={editingClient}
+        onSave={handleEditClient}
+      />
+
       {/* 🆕 UA 推薦引擎 Modal */}
       <ReferralEngineModal
         isOpen={showReferralEngine}
         onClose={() => setShowReferralEngine(false)}
         userId={user?.uid || ''}
       />
+
+      {/* 🆕 付款 Modal */}
+      <PaymentModal
+        isOpen={showPayment}
+        onClose={() => setShowPayment(false)}
+        isReferral={isReferralPayment}
+      />
+
+      {/* 🆕 功能建議 Modal */}
+      {showFeedback && (
+        <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md
+                         shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-6 border-b border-slate-800">
+              <h3 className="text-xl font-black text-white flex items-center gap-2">
+                <Lightbulb className="text-emerald-400" size={24} />
+                功能建議
+              </h3>
+              <button
+                onClick={() => {
+                  setShowFeedback(false);
+                  setFeedbackContent('');
+                  setFeedbackSuccess(false);
+                }}
+                className="p-2 text-slate-400 hover:text-white"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {feedbackSuccess ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Check className="text-emerald-400" size={32} />
+                  </div>
+                  <h4 className="text-xl font-bold text-white mb-2">感謝您的建議！</h4>
+                  <p className="text-emerald-400 text-sm">已獲得 +10 UA 點獎勵</p>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-4 mb-4">
+                    <p className="text-emerald-300 text-sm flex items-center gap-2">
+                      <Coins size={16} />
+                      提交建議即可獲得 <span className="font-bold">+10 UA 點</span> 獎勵！
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm text-slate-400 font-bold mb-2 block">
+                        您希望新增什麼功能？
+                      </label>
+                      <textarea
+                        value={feedbackContent}
+                        onChange={e => setFeedbackContent(e.target.value)}
+                        placeholder="請描述您希望新增或改進的功能..."
+                        rows={5}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4
+                                 text-white focus:border-emerald-500 outline-none resize-none"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {!feedbackSuccess && (
+              <div className="flex gap-3 p-6 border-t border-slate-800">
+                <button
+                  onClick={() => {
+                    setShowFeedback(false);
+                    setFeedbackContent('');
+                  }}
+                  className="flex-1 py-3 bg-slate-800 text-slate-400 rounded-xl font-bold
+                           hover:bg-slate-700 transition-all"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleSubmitFeedback}
+                  disabled={!feedbackContent.trim() || feedbackSubmitting}
+                  className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold
+                           hover:bg-emerald-500 transition-all disabled:opacity-50
+                           flex items-center justify-center gap-2"
+                >
+                  {feedbackSubmitting ? (
+                    <Loader2 className="animate-spin" size={18} />
+                  ) : (
+                    <Send size={18} />
+                  )}
+                  提交建議
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Global Styles */}
       <style>{`

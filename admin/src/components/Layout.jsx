@@ -14,6 +14,7 @@ import {
   StarOutlined,
   DollarOutlined,
   MessageOutlined,
+  BellOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
@@ -109,6 +110,16 @@ const MainLayout = () => {
       key: '/admin/line-bot',
       icon: <MessageOutlined />,
       label: 'LINE Bot',
+    },
+    {
+      key: '/admin/notifications',
+      icon: <BellOutlined />,
+      label: '通知管理',
+    },
+    {
+      key: '/admin/feedbacks',
+      icon: <StarOutlined />,
+      label: '建議管理',
     },
   ];
 

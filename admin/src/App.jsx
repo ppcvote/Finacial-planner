@@ -11,6 +11,8 @@ import Dashboard from './pages/Dashboard.jsx';
 import Users from './pages/Users.jsx';
 import SiteEditor from './pages/SiteEditor.jsx';
 import LineBotEditor from './pages/LineBotEditor.jsx';
+import NotificationsEditor from './pages/NotificationsEditor.jsx';
+import FeedbackManager from './pages/FeedbackManager.jsx';
 import MainLayout from './components/Layout';
 
 // 🆕 會員系統頁面
@@ -103,7 +105,9 @@ function App() {
             <Route path="users" element={<Users />} />
             <Route path="site-editor" element={<SiteEditor />} />
             <Route path="line-bot" element={<LineBotEditor />} />
-            
+            <Route path="notifications" element={<NotificationsEditor />} />
+            <Route path="feedbacks" element={<FeedbackManager />} />
+
             {/* 🆕 會員系統路由 */}
             <Route path="membership/tiers" element={<MembershipTiers />} />
             <Route path="membership/points-rules" element={<PointsRules />} />
