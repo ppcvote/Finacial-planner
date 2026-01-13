@@ -162,21 +162,33 @@ const ProfileCard = ({
             {user?.email || 'email@example.com'}
           </p>
           
-          {/* 🆕 會員身分 */}
+          {/* 🆕 會員身分與天數 */}
           {membership && (
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${
-                membership.tier === 'founder' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-                membership.tier === 'paid' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                membership.tier === 'trial' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                'bg-slate-500/20 text-slate-400 border border-slate-500/30'
-              }`}>
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
+                style={{
+                  backgroundColor: `${membership.tierColor}20`,
+                  color: membership.tierColor,
+                  border: `1px solid ${membership.tierColor}30`
+                }}
+              >
                 {membership.tier === 'founder' && <Crown size={12} />}
                 {membership.tierName}
               </span>
-              {membership.expiresAt && (
-                <span className="text-[10px] text-slate-500">
-                  到期：{membership.expiresAt.toLocaleDateString('zh-TW')}
+              {/* 🆕 顯示剩餘天數 */}
+              {membership.tier !== 'founder' && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                  membership.daysRemaining <= 3 ? 'bg-red-500/20 text-red-400' :
+                  membership.daysRemaining <= 7 ? 'bg-amber-500/20 text-amber-400' :
+                  'bg-slate-700 text-slate-400'
+                }`}>
+                  {membership.tier === 'grace'
+                    ? `寬限期 ${membership.graceDaysRemaining} 天`
+                    : membership.tier === 'expired'
+                    ? '已過期'
+                    : `剩餘 ${membership.daysRemaining} 天`
+                  }
                 </span>
               )}
             </div>
@@ -229,8 +241,8 @@ const ProfileCard = ({
       {/* 🆕 UA 推薦引擎按鈕 */}
       <button
         onClick={onOpenReferral}
-        className="w-full mt-3 flex items-center justify-center gap-2 py-2.5 
-                 bg-purple-600/10 border border-purple-500/30 rounded-xl 
+        className="w-full mt-3 flex items-center justify-center gap-2 py-2.5
+                 bg-purple-600/10 border border-purple-500/30 rounded-xl
                  text-purple-400 text-sm font-bold hover:bg-purple-600/20 transition-all"
       >
         <Users size={14} /> UA 推薦引擎
@@ -240,6 +252,58 @@ const ProfileCard = ({
           </span>
         )}
       </button>
+
+      {/* 🆕 升級按鈕（非 founder/paid 顯示） */}
+      {membership && !membership.isPaid && (
+        <div className="mt-3 p-4 bg-gradient-to-r from-purple-900/30 to-blue-900/30
+                       border border-purple-500/20 rounded-xl">
+          {membership.tier === 'referral_trial' ? (
+            <>
+              <a
+                href="https://portaly.cc/GinRollBT"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600
+                         rounded-xl text-white font-bold text-center text-sm
+                         hover:from-purple-500 hover:to-blue-500 transition-all shadow-lg"
+              >
+                🎁 升級 365 天 - $8,000（已折 $999）
+              </a>
+              <p className="text-[10px] text-purple-300 mt-2 text-center">
+                使用折扣碼「Miiroll7」享轉介紹優惠
+              </p>
+            </>
+          ) : (
+            <a
+              href="https://portaly.cc/GinRollBT"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600
+                       rounded-xl text-white font-bold text-center text-sm
+                       hover:from-blue-500 hover:to-purple-500 transition-all shadow-lg"
+            >
+              升級 365 天 - $8,999
+            </a>
+          )}
+
+          {membership.isTrial && membership.daysRemaining > 0 && (
+            <p className="text-xs text-slate-400 mt-2 text-center">
+              試用剩餘 {membership.daysRemaining} 天
+            </p>
+          )}
+          {membership.tier === 'grace' && (
+            <p className="text-xs text-amber-400 mt-2 text-center flex items-center justify-center gap-1">
+              <TriangleAlert size={12} />
+              寬限期剩餘 {membership.graceDaysRemaining} 天，請盡快續訂
+            </p>
+          )}
+          {membership.tier === 'expired' && (
+            <p className="text-xs text-red-400 mt-2 text-center">
+              已過期，立即升級恢復使用
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 };

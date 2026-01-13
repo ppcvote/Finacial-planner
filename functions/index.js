@@ -294,9 +294,12 @@ async function awardPoints(userId, actionId, reason, referenceId = null) {
 // ==========================================
 
 /**
- * 創建試用帳號
+ * 創建試用帳號（支援推薦碼）
+ * @param {string} email - 用戶 Email
+ * @param {string} lineUserId - LINE 用戶 ID
+ * @param {string|null} inputReferralCode - 輸入的推薦碼（可選）
  */
-async function createTrialAccount(email, lineUserId) {
+async function createTrialAccount(email, lineUserId, inputReferralCode = null) {
   try {
     const existingUsers = await auth.getUserByEmail(email).catch(() => null);
     if (existingUsers) {
@@ -304,7 +307,7 @@ async function createTrialAccount(email, lineUserId) {
     }
 
     const password = generateRandomPassword();
-    const referralCode = generateReferralCode(email);
+    const newReferralCode = generateReferralCode(email);
 
     const userRecord = await auth.createUser({
       email: email,
@@ -314,38 +317,70 @@ async function createTrialAccount(email, lineUserId) {
     });
 
     const now = admin.firestore.Timestamp.now();
-    const expiresAt = admin.firestore.Timestamp.fromMillis(
-      now.toMillis() + 7 * 24 * 60 * 60 * 1000
-    );
 
-    // 🆕 新增身分組和點數欄位
+    // 🆕 決定身分組（根據是否有推薦碼）
+    let tierId = 'trial';
+    let referredByUid = null;
+    let referrerName = null;
+
+    if (inputReferralCode) {
+      const codeDoc = await db.collection('referralCodes').doc(inputReferralCode.toUpperCase()).get();
+      if (codeDoc.exists && codeDoc.data().isActive) {
+        tierId = 'referral_trial';
+        referredByUid = codeDoc.data().ownerId;
+
+        // 取得推薦人名稱
+        const referrerDoc = await db.collection('users').doc(referredByUid).get();
+        if (referrerDoc.exists) {
+          const referrerData = referrerDoc.data();
+          referrerName = referrerData.displayName || referrerData.email?.split('@')[0] || '會員';
+        }
+
+        // 更新推薦碼使用次數
+        await codeDoc.ref.update({
+          usageCount: admin.firestore.FieldValue.increment(1),
+          updatedAt: now,
+        });
+
+        // 更新推薦人的 referralCount
+        await db.collection('users').doc(referredByUid).update({
+          referralCount: admin.firestore.FieldValue.increment(1),
+        });
+      }
+    }
+
+    // 🆕 天數制：新用戶有 7 天試用
     await db.collection('users').doc(userRecord.uid).set({
       email: email,
       createdAt: now,
-      trialExpiresAt: expiresAt,
-      subscriptionStatus: 'trial',
+      updatedAt: now,
       lineUserId: lineUserId,
       isActive: true,
       clients: [],
       stats: { trialsCompleted: 0, hoursSaved: 0 },
-      // 🆕 身分組
-      membershipTierIds: ['trial'],
-      primaryTierId: 'trial',
+      // 🆕 天數制會員系統
+      primaryTierId: tierId,
+      daysRemaining: 7,  // 試用 7 天
+      lastDayDeducted: null,
+      graceDaysRemaining: 0,
       // 🆕 UA 點數
       points: { current: 0 },
       totalPointsEarned: 0,
       totalPointsSpent: 0,
       totalPointsExpired: 0,
       // 🆕 推薦系統
-      referralCode: referralCode,
+      referralCode: newReferralCode,
+      referredBy: referredByUid,  // 誰推薦我的
       referralCount: 0,
+      referralRewardClaimed: false,  // 付款後才發放獎勵
       // 🆕 追蹤
       toolUsageCount: 0,
       loginStreak: 0,
     });
 
     // 🆕 建立推薦碼索引
-    await db.collection('referralCodes').doc(referralCode).set({
+    await db.collection('referralCodes').doc(newReferralCode).set({
+      code: newReferralCode,
       ownerId: userRecord.uid,
       ownerEmail: email,
       usageCount: 0,
@@ -357,6 +392,16 @@ async function createTrialAccount(email, lineUserId) {
     });
 
     const loginUrl = APP_LOGIN_URL;
+
+    // 🆕 根據身分組顯示不同訊息
+    const tierText = tierId === 'referral_trial' ? '轉介紹試用' : '試用會員';
+    const discountNote = tierId === 'referral_trial'
+      ? `\n\n🎁 轉介紹優惠：購買時使用折扣碼「Miiroll7」可折 $999！`
+      : '';
+    const referrerNote = referrerName
+      ? `\n👥 推薦人：${referrerName}`
+      : '';
+
     await sendLineMessage(lineUserId, [
       {
         type: 'flex',
@@ -367,7 +412,7 @@ async function createTrialAccount(email, lineUserId) {
             type: 'box',
             layout: 'vertical',
             contents: [{ type: 'text', text: '🎉 帳號開通成功', size: 'xl', weight: 'bold', color: '#ffffff' }],
-            backgroundColor: '#3b82f6',
+            backgroundColor: tierId === 'referral_trial' ? '#8b5cf6' : '#3b82f6',
             paddingAll: '20px'
           },
           body: {
@@ -386,12 +431,16 @@ async function createTrialAccount(email, lineUserId) {
                     { type: 'text', text: email, wrap: true, color: '#1e293b', size: 'sm', flex: 5 }
                   ]},
                   { type: 'box', layout: 'baseline', spacing: 'sm', contents: [
+                    { type: 'text', text: '身分', color: '#64748b', size: 'sm', flex: 2 },
+                    { type: 'text', text: tierText, wrap: true, color: tierId === 'referral_trial' ? '#8b5cf6' : '#3b82f6', size: 'sm', flex: 5, weight: 'bold' }
+                  ]},
+                  { type: 'box', layout: 'baseline', spacing: 'sm', contents: [
                     { type: 'text', text: '試用期', color: '#64748b', size: 'sm', flex: 2 },
                     { type: 'text', text: '7 天', wrap: true, color: '#1e293b', size: 'sm', flex: 5 }
                   ]},
                   { type: 'box', layout: 'baseline', spacing: 'sm', contents: [
                     { type: 'text', text: '推薦碼', color: '#64748b', size: 'sm', flex: 2 },
-                    { type: 'text', text: referralCode, wrap: true, color: '#f59e0b', size: 'sm', flex: 5, weight: 'bold' }
+                    { type: 'text', text: newReferralCode, wrap: true, color: '#f59e0b', size: 'sm', flex: 5, weight: 'bold' }
                   ]}
                 ]
               }
@@ -402,7 +451,7 @@ async function createTrialAccount(email, lineUserId) {
             layout: 'vertical',
             spacing: 'sm',
             contents: [
-              { type: 'button', style: 'primary', height: 'sm', action: { type: 'uri', label: '立即登入', uri: loginUrl }},
+              { type: 'button', style: 'primary', height: 'sm', action: { type: 'uri', label: '立即登入', uri: loginUrl }, color: tierId === 'referral_trial' ? '#8b5cf6' : '#3b82f6' },
               { type: 'box', layout: 'baseline', contents: [
                 { type: 'text', text: '⚠️ 密碼將在下一則訊息單獨傳送', color: '#64748b', size: 'xs', wrap: true }
               ], margin: 'md' }
@@ -412,12 +461,12 @@ async function createTrialAccount(email, lineUserId) {
       },
       {
         type: 'text',
-        text: `🔐 你的登入密碼（請妥善保管）：\n\n${password}\n\n⚠️ 請立即登入並修改密碼以確保安全\n\n📢 分享你的推薦碼「${referralCode}」給朋友，雙方都能獲得 500 UA 點！`
+        text: `🔐 你的登入密碼（請妥善保管）：\n\n${password}\n\n⚠️ 請立即登入並修改密碼以確保安全${referrerNote}${discountNote}\n\n📢 分享你的推薦碼「${newReferralCode}」給朋友，付費後雙方都能獲得 500 UA 點！`
       }
     ]);
 
-    console.log(`Trial account created: ${email}`);
-    return { success: true, uid: userRecord.uid, email: email, expiresAt: expiresAt.toMillis() };
+    console.log(`Trial account created: ${email}, tier: ${tierId}, referredBy: ${referredByUid || 'none'}`);
+    return { success: true, uid: userRecord.uid, email: email, tierId };
 
   } catch (error) {
     console.error('Create trial account error:', error);
@@ -453,14 +502,20 @@ exports.lineWebhook = functions.https.onRequest(async (req, res) => {
   }
 });
 
+// 🆕 用戶狀態暫存（簡易實作，生產環境建議用 Firestore）
+const userStates = new Map();
+
 async function handleEvent(event) {
-  const userId = event.source.userId;
+  const lineUserId = event.source.userId;
 
   if (event.type === 'follow') {
-    await sendLineMessage(userId, [
+    // 清除舊狀態
+    userStates.delete(lineUserId);
+
+    await sendLineMessage(lineUserId, [
       {
         type: 'text',
-        text: '🎉 歡迎加入 Ultra Advisor！\n\n我是你的專屬 AI 財務軍師\n━━━━━━━━━━━━━━\n\n💎 立即獲得 7 天免費試用\n✓ 18 種專業理財工具\n✓ 無限客戶檔案\n✓ AI 智能建議\n\n🎁 推薦好友雙方各得 500 UA 點！\n\n━━━━━━━━━━━━━━\n\n📧 請直接傳送你的 Email 開始試用！'
+        text: '🎉 歡迎加入 Ultra Advisor！\n\n我是你的專屬 AI 財務軍師\n━━━━━━━━━━━━━━\n\n💎 立即獲得 7 天免費試用\n✓ 18 種專業理財工具\n✓ 無限客戶檔案\n✓ AI 智能建議\n\n🎁 推薦好友付費後雙方各得 500 UA 點！\n\n━━━━━━━━━━━━━━\n\n📧 請直接傳送你的 Email 開始試用！'
       }
     ]);
     return;
@@ -468,24 +523,77 @@ async function handleEvent(event) {
 
   if (event.type === 'message' && event.message.type === 'text') {
     const userMessage = event.message.text.trim();
+    const state = userStates.get(lineUserId) || { step: 'IDLE' };
 
-    if (isValidEmail(userMessage)) {
-      try {
-        await sendLineMessage(userId, [{ type: 'text', text: '⏳ 正在為你開通帳號，請稍候...' }]);
-        await createTrialAccount(userMessage, userId);
-      } catch (error) {
-        console.error('Account creation error:', error);
-        let errorMessage = '❌ 帳號開通失敗，請稍後再試';
-        if (error.message.includes('已經註冊')) {
-          errorMessage = '⚠️ 此 Email 已經註冊過試用帳號！\n\n如需協助請聯繫客服';
+    // 🆕 狀態機處理
+    switch (state.step) {
+      case 'WAIT_REFERRAL':
+        // 用戶回覆推薦碼或「無」
+        await handleReferralInput(lineUserId, userMessage, state);
+        break;
+
+      default:
+        // IDLE 狀態：等待 Email
+        if (isValidEmail(userMessage)) {
+          // 儲存 Email，詢問推薦碼
+          userStates.set(lineUserId, { step: 'WAIT_REFERRAL', email: userMessage });
+
+          await sendLineMessage(lineUserId, [
+            {
+              type: 'text',
+              text: `✅ Email 確認：${userMessage}\n\n請問有朋友的推薦碼嗎？\n\n有的話請輸入推薦碼，沒有請輸入「無」`
+            }
+          ]);
+        } else {
+          await sendLineMessage(lineUserId, [
+            { type: 'text', text: '📧 請傳送你的 Email 來開始試用！\n\n範例：your@email.com' }
+          ]);
         }
-        await sendLineMessage(userId, [{ type: 'text', text: errorMessage }]);
-      }
+        break;
+    }
+  }
+}
+
+/**
+ * 處理推薦碼輸入
+ */
+async function handleReferralInput(lineUserId, userMessage, state) {
+  const email = state.email;
+  let referralCode = null;
+
+  if (userMessage.toLowerCase() !== '無' && userMessage.toLowerCase() !== 'no' && userMessage.toLowerCase() !== 'none') {
+    // 驗證推薦碼
+    const codeDoc = await db.collection('referralCodes').doc(userMessage.toUpperCase()).get();
+
+    if (codeDoc.exists && codeDoc.data().isActive) {
+      referralCode = userMessage.toUpperCase();
+      await sendLineMessage(lineUserId, [
+        { type: 'text', text: `✅ 推薦碼有效！正在為你開通帳號...\n\n🎁 恭喜獲得轉介紹優惠：購買時可折 $999！` }
+      ]);
     } else {
-      await sendLineMessage(userId, [
-        { type: 'text', text: '⚠️ Email 格式不正確！請重新傳送正確的 Email\n\n範例：your@email.com' }
+      await sendLineMessage(lineUserId, [
+        { type: 'text', text: '❌ 推薦碼無效，將以一般試用身分註冊...' }
       ]);
     }
+  } else {
+    await sendLineMessage(lineUserId, [
+      { type: 'text', text: '⏳ 正在為你開通帳號，請稍候...' }
+    ]);
+  }
+
+  // 清除狀態
+  userStates.delete(lineUserId);
+
+  // 創建帳號
+  try {
+    await createTrialAccount(email, lineUserId, referralCode);
+  } catch (error) {
+    console.error('Account creation error:', error);
+    let errorMessage = '❌ 帳號開通失敗，請稍後再試';
+    if (error.message.includes('已經註冊')) {
+      errorMessage = '⚠️ 此 Email 已經註冊過試用帳號！\n\n如需協助請聯繫客服';
+    }
+    await sendLineMessage(lineUserId, [{ type: 'text', text: errorMessage }]);
   }
 }
 
@@ -769,6 +877,440 @@ exports.awardActivityPoints = functions.https.onCall(async (data, context) => {
   });
   
   return result;
+});
+
+// ==========================================
+// 🆕 Phase 1：天數制會員系統
+// ==========================================
+
+/**
+ * 驗證推薦碼
+ * 輸入：{ code: "WANG123" }
+ * 輸出：{ valid: true, ownerName: "王小明" } 或 { valid: false }
+ */
+exports.validateReferralCode = functions.https.onCall(async (data, context) => {
+  const { code } = data;
+
+  if (!code) {
+    return { valid: false, message: '請提供推薦碼' };
+  }
+
+  try {
+    const codeDoc = await db.collection('referralCodes').doc(code.toUpperCase()).get();
+
+    if (!codeDoc.exists || !codeDoc.data().isActive) {
+      return { valid: false, message: '推薦碼無效或已停用' };
+    }
+
+    // 取得推薦人名稱
+    const ownerDoc = await db.collection('users').doc(codeDoc.data().ownerId).get();
+    const ownerData = ownerDoc.data();
+
+    return {
+      valid: true,
+      ownerId: codeDoc.data().ownerId,
+      ownerName: ownerData?.displayName || ownerData?.email?.split('@')[0] || '會員',
+    };
+  } catch (error) {
+    console.error('validateReferralCode error:', error);
+    return { valid: false, message: '驗證失敗' };
+  }
+});
+
+/**
+ * 處理付款（Admin 用）
+ * 輸入：{ userEmail, days: 365, amount: 8999, notes?: "備註" }
+ * 輸出：{ success: true, newDaysRemaining: 372 }
+ */
+exports.processPayment = functions.https.onCall(async (data, context) => {
+  // 驗證是否為 Admin
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', '請先登入');
+  }
+
+  const adminDoc = await db.collection('admins').doc(context.auth.uid).get();
+  if (!adminDoc.exists) {
+    throw new functions.https.HttpsError('permission-denied', '需要管理員權限');
+  }
+
+  const { userEmail, days, amount, notes } = data;
+
+  if (!userEmail || !days) {
+    throw new functions.https.HttpsError('invalid-argument', '請提供用戶 Email 和天數');
+  }
+
+  // 1. 找到用戶
+  const usersSnapshot = await db.collection('users')
+    .where('email', '==', userEmail)
+    .limit(1)
+    .get();
+
+  if (usersSnapshot.empty) {
+    throw new functions.https.HttpsError('not-found', '找不到此用戶');
+  }
+
+  const userDoc = usersSnapshot.docs[0];
+  const userData = userDoc.data();
+  const userId = userDoc.id;
+
+  // 2. 計算新天數
+  const currentDays = userData.daysRemaining || 0;
+  const newDaysRemaining = currentDays + days;
+
+  // 3. 更新用戶資料
+  const updateData = {
+    primaryTierId: 'paid',
+    daysRemaining: newDaysRemaining,
+    graceDaysRemaining: 0,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  await userDoc.ref.update(updateData);
+
+  // 4. 發放推薦獎勵（如果有推薦人且尚未領取）
+  let referralRewardGiven = false;
+  if (userData.referredBy && !userData.referralRewardClaimed) {
+    try {
+      // 推薦人 +500
+      await awardPointsSimple(userData.referredBy, 500, '推薦好友成功付費');
+      // 被推薦人 +500
+      await awardPointsSimple(userId, 500, '使用推薦碼註冊並付費獎勵');
+      // 標記已領取
+      await userDoc.ref.update({ referralRewardClaimed: true });
+
+      // 更新推薦碼統計
+      if (userData.referralCode) {
+        const referrerDoc = await db.collection('users').doc(userData.referredBy).get();
+        if (referrerDoc.exists) {
+          const referrerCode = referrerDoc.data().referralCode;
+          if (referrerCode) {
+            await db.collection('referralCodes').doc(referrerCode).update({
+              successCount: admin.firestore.FieldValue.increment(1),
+              totalPointsGenerated: admin.firestore.FieldValue.increment(1000),
+            });
+          }
+        }
+      }
+
+      referralRewardGiven = true;
+    } catch (err) {
+      console.error('Referral reward error:', err);
+    }
+  }
+
+  // 5. 記錄付款歷史
+  await db.collection('paymentHistory').add({
+    userId,
+    userEmail,
+    days,
+    amount: amount || 0,
+    notes: notes || '',
+    previousDays: currentDays,
+    newDaysRemaining,
+    referralRewardGiven,
+    processedBy: context.auth.uid,
+    processedByEmail: context.auth.token.email,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  // 6. 發送 LINE 通知
+  if (userData.lineUserId) {
+    try {
+      await sendLineMessage(userData.lineUserId, [{
+        type: 'text',
+        text: `🎉 付款成功！\n\n已為您加值 ${days} 天\n目前剩餘天數：${newDaysRemaining} 天\n\n感謝您的支持！`
+      }]);
+    } catch (err) {
+      console.error('LINE notification error:', err);
+    }
+  }
+
+  console.log(`Payment processed: ${userEmail} +${days} days, total: ${newDaysRemaining}`);
+
+  return {
+    success: true,
+    newDaysRemaining,
+    referralRewardGiven,
+    userId,
+  };
+});
+
+/**
+ * 簡易發放點數（不經過規則檢查）
+ */
+async function awardPointsSimple(userId, amount, reason) {
+  const userRef = db.collection('users').doc(userId);
+  const userDoc = await userRef.get();
+
+  if (!userDoc.exists) return;
+
+  const userData = userDoc.data();
+  const currentPoints = typeof userData.points === 'object'
+    ? (userData.points?.current || 0)
+    : (userData.points || 0);
+  const newBalance = currentPoints + amount;
+
+  await db.runTransaction(async (transaction) => {
+    transaction.update(userRef, {
+      'points.current': newBalance,
+      totalPointsEarned: admin.firestore.FieldValue.increment(amount),
+    });
+
+    transaction.set(db.collection('pointsLedger').doc(), {
+      userId,
+      userEmail: userData.email,
+      type: 'earn',
+      amount,
+      balanceBefore: currentPoints,
+      balanceAfter: newBalance,
+      reason,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdBy: 'system',
+    });
+  });
+
+  console.log(`Awarded ${amount} points to ${userId}: ${reason}`);
+}
+
+/**
+ * 每日扣除天數（台灣時間 00:05）
+ */
+exports.deductDailyDays = functions.pubsub
+  .schedule('5 0 * * *')
+  .timeZone('Asia/Taipei')
+  .onRun(async (context) => {
+    console.log('Starting daily days deduction...');
+
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const notifications = [];
+
+    // 1. 處理付費用戶（排除 founder）
+    const paidUsers = await db.collection('users')
+      .where('primaryTierId', '==', 'paid')
+      .get();
+
+    console.log(`Found ${paidUsers.size} paid users`);
+
+    for (const doc of paidUsers.docs) {
+      const data = doc.data();
+
+      // 跳過今天已扣過的
+      if (data.lastDayDeducted === today) continue;
+
+      const currentDays = data.daysRemaining || 0;
+      const newDays = Math.max(0, currentDays - 1);
+
+      const updateData = {
+        daysRemaining: newDays,
+        lastDayDeducted: today,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+      // 檢查是否需要通知或降級
+      if (newDays === 30 || newDays === 7 || newDays === 3) {
+        notifications.push({
+          lineUserId: data.lineUserId,
+          message: `⏰ 您的 Ultra Advisor 剩餘 ${newDays} 天，記得續訂喔！\n\n續訂連結：https://portaly.cc/GinRollBT`,
+        });
+      } else if (newDays <= 0) {
+        // 進入寬限期
+        updateData.primaryTierId = 'grace';
+        updateData.daysRemaining = 0;
+        updateData.graceDaysRemaining = 3;
+
+        notifications.push({
+          lineUserId: data.lineUserId,
+          message: '⚠️ 您的 Ultra Advisor 天數已用完！\n\n已進入 3 天寬限期，部分功能將受限。\n\n立即續訂：https://portaly.cc/GinRollBT',
+        });
+      }
+
+      await doc.ref.update(updateData);
+    }
+
+    // 2. 處理寬限期用戶
+    const graceUsers = await db.collection('users')
+      .where('primaryTierId', '==', 'grace')
+      .get();
+
+    console.log(`Found ${graceUsers.size} grace users`);
+
+    for (const doc of graceUsers.docs) {
+      const data = doc.data();
+      const currentGraceDays = data.graceDaysRemaining || 0;
+      const newGraceDays = Math.max(0, currentGraceDays - 1);
+
+      if (newGraceDays <= 0) {
+        // 寬限期結束，變為過期
+        await doc.ref.update({
+          primaryTierId: 'expired',
+          graceDaysRemaining: 0,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        notifications.push({
+          lineUserId: data.lineUserId,
+          message: '❌ 您的 Ultra Advisor 已過期！\n\n所有進階功能已停用。\n\n立即續訂恢復使用：https://portaly.cc/GinRollBT',
+        });
+      } else {
+        await doc.ref.update({
+          graceDaysRemaining: newGraceDays,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+    }
+
+    // 3. 處理試用用戶天數
+    const trialUsers = await db.collection('users')
+      .where('primaryTierId', 'in', ['trial', 'referral_trial'])
+      .get();
+
+    console.log(`Found ${trialUsers.size} trial users`);
+
+    for (const doc of trialUsers.docs) {
+      const data = doc.data();
+
+      if (data.lastDayDeducted === today) continue;
+
+      const currentDays = data.daysRemaining || 0;
+      const newDays = Math.max(0, currentDays - 1);
+
+      const updateData = {
+        daysRemaining: newDays,
+        lastDayDeducted: today,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+      if (newDays === 3 || newDays === 1) {
+        const upgradeLink = data.primaryTierId === 'referral_trial'
+          ? 'https://portaly.cc/GinRollBT（使用折扣碼 Miiroll7 可折 $999）'
+          : 'https://portaly.cc/GinRollBT';
+
+        notifications.push({
+          lineUserId: data.lineUserId,
+          message: `⏰ 試用期剩餘 ${newDays} 天！\n\n升級享受完整功能：${upgradeLink}`,
+        });
+      } else if (newDays <= 0) {
+        updateData.primaryTierId = 'expired';
+
+        notifications.push({
+          lineUserId: data.lineUserId,
+          message: '❌ 試用期已結束！\n\n立即升級繼續使用：https://portaly.cc/GinRollBT',
+        });
+      }
+
+      await doc.ref.update(updateData);
+    }
+
+    // 4. 發送 LINE 通知
+    for (const n of notifications) {
+      if (n.lineUserId) {
+        try {
+          await sendLineMessage(n.lineUserId, [{ type: 'text', text: n.message }]);
+        } catch (err) {
+          console.error('LINE notification error:', err);
+        }
+      }
+    }
+
+    console.log(`Daily deduction completed. Sent ${notifications.length} notifications.`);
+    return null;
+  });
+
+/**
+ * 點數兌換天數
+ * 輸入：{ itemId: "7days" }
+ * 輸出：{ success: true, newPoints: 1000, newDays: 372 }
+ */
+exports.redeemPoints = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', '請先登入');
+  }
+
+  const userId = context.auth.uid;
+  const { itemId } = data;
+
+  // 兌換項目定義
+  const redeemItems = {
+    '7days': { points: 500, days: 7, name: '延長 7 天' },
+    '30days': { points: 1800, days: 30, name: '延長 30 天' },
+  };
+
+  const item = redeemItems[itemId];
+  if (!item) {
+    throw new functions.https.HttpsError('invalid-argument', '無效的兌換項目');
+  }
+
+  const userDoc = await db.collection('users').doc(userId).get();
+  if (!userDoc.exists) {
+    throw new functions.https.HttpsError('not-found', '用戶不存在');
+  }
+
+  const userData = userDoc.data();
+  const currentPoints = typeof userData.points === 'object'
+    ? (userData.points?.current || 0)
+    : (userData.points || 0);
+
+  // 檢查點數
+  if (currentPoints < item.points) {
+    throw new functions.https.HttpsError('failed-precondition', `點數不足，需要 ${item.points} UA，目前僅有 ${currentPoints} UA`);
+  }
+
+  // 執行兌換
+  const newPoints = currentPoints - item.points;
+  const currentDays = userData.daysRemaining || 0;
+  const newDays = currentDays + item.days;
+
+  // 如果是 expired/grace/trial，升級為 paid
+  let newTierId = userData.primaryTierId;
+  if (['expired', 'grace', 'trial', 'referral_trial'].includes(newTierId)) {
+    newTierId = 'paid';
+  }
+
+  await db.runTransaction(async (transaction) => {
+    transaction.update(userDoc.ref, {
+      'points.current': newPoints,
+      daysRemaining: newDays,
+      primaryTierId: newTierId,
+      graceDaysRemaining: 0,
+      totalPointsSpent: admin.firestore.FieldValue.increment(item.points),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // 記錄點數消費
+    transaction.set(db.collection('pointsLedger').doc(), {
+      userId,
+      userEmail: userData.email,
+      type: 'spend',
+      amount: -item.points,
+      balanceBefore: currentPoints,
+      balanceAfter: newPoints,
+      reason: `兌換：${item.name}`,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // 記錄兌換訂單
+    transaction.set(db.collection('redemptionOrders').doc(), {
+      userId,
+      userEmail: userData.email,
+      itemId,
+      itemName: item.name,
+      pointsCost: item.points,
+      daysAdded: item.days,
+      previousDays: currentDays,
+      newDaysRemaining: newDays,
+      status: 'completed',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  console.log(`Points redeemed: ${userId} spent ${item.points} for ${item.name}`);
+
+  return {
+    success: true,
+    newPoints,
+    newDays,
+    itemName: item.name,
+  };
 });
 
 // ==========================================

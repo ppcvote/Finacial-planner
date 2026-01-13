@@ -42,7 +42,11 @@ import {
   deleteDoc,
   Timestamp,
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db, auth } from '../firebase';
+
+// 初始化 Firebase Functions
+const functions = getFunctions(undefined, 'us-central1');
 import dayjs from 'dayjs';
 
 const { Search } = Input;
@@ -50,13 +54,22 @@ const { Option } = Select;
 const { TextArea } = Input;
 const { Text } = Typography;
 
-// 身分組設定
+// 身分組設定（新增 referral_trial）
 const MEMBERSHIP_TIERS = [
   { id: 'founder', name: '創始會員', color: 'gold', icon: '👑' },
   { id: 'paid', name: '付費會員', color: 'blue', icon: '💎' },
+  { id: 'referral_trial', name: '轉介紹試用', color: 'purple', icon: '🎁' },
   { id: 'trial', name: '試用會員', color: 'green', icon: '🎁' },
   { id: 'grace', name: '寬限期', color: 'orange', icon: '⏳' },
   { id: 'expired', name: '已過期', color: 'default', icon: '❌' },
+];
+
+// 天數方案
+const DAYS_OPTIONS = [
+  { value: 365, label: '365 天（年訂閱）- $8,999', amount: 8999 },
+  { value: 180, label: '180 天（半年）- $4,999', amount: 4999 },
+  { value: 30, label: '30 天（月訂閱）- $999', amount: 999 },
+  { value: 7, label: '7 天（週訂閱）- $299', amount: 299 },
 ];
 
 const Users = () => {
@@ -70,7 +83,10 @@ const Users = () => {
   const [extendModalVisible, setExtendModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editForm] = Form.useForm();
+  const [processPaymentForm] = Form.useForm();
   const [saving, setSaving] = useState(false);
+  const [processPaymentModalVisible, setProcessPaymentModalVisible] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     trial: 0,
@@ -282,6 +298,37 @@ const Users = () => {
     } catch (error) {
       console.error('Error deleting user:', error);
       message.error('刪除用戶失敗');
+    }
+  };
+
+  // 🆕 處理付款訂單（呼叫 Cloud Function）
+  const handleProcessPayment = async (values) => {
+    setProcessingPayment(true);
+    try {
+      const processPayment = httpsCallable(functions, 'processPayment');
+      const selectedOption = DAYS_OPTIONS.find(opt => opt.value === values.days);
+
+      const result = await processPayment({
+        userEmail: values.email,
+        days: values.days,
+        amount: selectedOption?.amount || 0,
+        notes: values.notes || '',
+      });
+
+      if (result.data.success) {
+        message.success(
+          `處理成功！用戶現有 ${result.data.newDaysRemaining} 天` +
+          (result.data.referralRewardGiven ? '（已發放推薦獎勵 +500 UA）' : '')
+        );
+        setProcessPaymentModalVisible(false);
+        processPaymentForm.resetFields();
+        fetchUsers();
+      }
+    } catch (error) {
+      console.error('Process payment error:', error);
+      message.error(error.message || '處理失敗');
+    } finally {
+      setProcessingPayment(false);
     }
   };
 
@@ -544,6 +591,15 @@ const Users = () => {
                   size="large"
                 >
                   導出 CSV
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => setProcessPaymentModalVisible(true)}
+                  size="large"
+                  style={{ backgroundColor: '#722ed1' }}
+                >
+                  處理訂單
                 </Button>
               </Space>
             </Col>
@@ -905,6 +961,117 @@ const Users = () => {
                 確定延長
               </Button>
               <Button onClick={() => setExtendModalVisible(false)}>取消</Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 🆕 處理訂單 Modal */}
+      <Modal
+        title={
+          <Space>
+            <CrownOutlined style={{ color: '#722ed1' }} />
+            <span>處理付款訂單</span>
+          </Space>
+        }
+        open={processPaymentModalVisible}
+        onCancel={() => {
+          setProcessPaymentModalVisible(false);
+          processPaymentForm.resetFields();
+        }}
+        footer={null}
+        width={500}
+        destroyOnClose
+      >
+        <Form
+          form={processPaymentForm}
+          layout="vertical"
+          onFinish={handleProcessPayment}
+          className="mt-4"
+        >
+          {/* 用戶 Email */}
+          <Form.Item
+            name="email"
+            label="用戶 Email"
+            rules={[
+              { required: true, message: '請輸入用戶 Email' },
+              { type: 'email', message: '請輸入有效的 Email' },
+            ]}
+          >
+            <Input
+              placeholder="輸入已付款用戶的 Email"
+              size="large"
+              prefix={<UserOutlined />}
+            />
+          </Form.Item>
+
+          {/* 天數方案 */}
+          <Form.Item
+            name="days"
+            label="購買方案"
+            rules={[{ required: true, message: '請選擇方案' }]}
+            initialValue={365}
+          >
+            <Select size="large" placeholder="選擇天數方案">
+              {DAYS_OPTIONS.map(opt => (
+                <Option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          {/* 備註 */}
+          <Form.Item
+            name="notes"
+            label="訂單備註（選填）"
+          >
+            <TextArea
+              rows={2}
+              placeholder="例如：LINE Pay 訂單編號、銀行轉帳後五碼等"
+              maxLength={200}
+            />
+          </Form.Item>
+
+          {/* 提示訊息 */}
+          <div style={{
+            background: '#f6ffed',
+            border: '1px solid #b7eb8f',
+            borderRadius: 6,
+            padding: '12px 16px',
+            marginBottom: 16,
+          }}>
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              💡 處理後系統將自動：
+              <ul style={{ margin: '8px 0 0 0', paddingLeft: 20 }}>
+                <li>為用戶增加購買天數</li>
+                <li>更新用戶身分為「付費會員」</li>
+                <li>若有推薦人，自動發放 +500 UA 獎勵</li>
+                <li>記錄付款歷史</li>
+              </ul>
+            </Text>
+          </div>
+
+          {/* 操作按鈕 */}
+          <Form.Item className="mb-0">
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+              <Button
+                onClick={() => {
+                  setProcessPaymentModalVisible(false);
+                  processPaymentForm.resetFields();
+                }}
+              >
+                取消
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={processingPayment}
+                icon={<SaveOutlined />}
+                style={{ backgroundColor: '#722ed1' }}
+              >
+                確認處理
+              </Button>
             </Space>
           </Form.Item>
         </Form>

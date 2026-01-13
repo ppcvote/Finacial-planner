@@ -1,0 +1,786 @@
+# Ultra Advisor 會員系統規格書 v2.0
+
+## 📋 系統概述
+
+採用「購買天數制」，用戶付款購買使用天數，簡單直覺。
+
+---
+
+## 🔢 基本設定
+
+| 項目 | 設定值 |
+|------|--------|
+| 試用天數 | 7 天 |
+| 寬限天數 | 3 天 |
+| 標準方案 | 365 天 / $8,999 |
+| 轉介紹價 | 365 天 / $8,000（折 $999） |
+| 推薦獎勵 | 雙方各 500 UA |
+
+---
+
+## 👥 會員身分組
+
+| ID | 名稱 | 工具權限 | 說明 |
+|---|---|---|---|
+| `trial` | 試用會員 | 3 免費工具 | 一般註冊，7天試用 |
+| `referral_trial` | 轉介紹試用 | 3 免費工具 | 有推薦碼註冊，7天試用 |
+| `paid` | 付費會員 | 全部 18 工具 | 有剩餘天數 |
+| `founder` | 創始會員 | 全部 18 工具 | 永久權限，不扣天數 |
+| `grace` | 寬限期 | 3 免費工具 | 天數歸零後 3 天緩衝 |
+| `expired` | 已過期 | 3 免費工具 | 需購買天數 |
+
+### 免費工具（所有身分都可用）
+- `estate` - 金融房產專案
+- `reservoir` - 大小水庫專案
+- `tax` - 稅務傳承專案
+
+---
+
+## 🎯 點數兌換項目
+
+| 項目 | 所需點數 | 說明 |
+|------|---------|------|
+| 延長 7 天 | 500 UA | daysRemaining +7 |
+| 延長 30 天 | 1,800 UA | daysRemaining +30 |
+| 續訂折抵 $500 | 2,500 UA | 產生折扣碼 |
+| 續訂折抵 $1,000 | 4,500 UA | 產生折扣碼 |
+| 實體禮品 | 依商品 | 待定義 |
+
+### 點數獲取方式
+| 動作 | 點數 |
+|------|------|
+| 每日登入 | +5 UA |
+| 使用工具（每日上限10次） | +10 UA |
+| 連續登入 7 天 | +50 UA |
+| 連續登入 30 天 | +200 UA |
+| 推薦好友成功 | +500 UA（雙方各得） |
+
+---
+
+## 🗄️ Firestore 資料結構
+
+### users/{uid}
+```javascript
+{
+  // 基本資料
+  email: "user@example.com",
+  displayName: "王小明",
+  photoURL: "https://...",
+  
+  // 會員系統（天數制）
+  primaryTierId: "paid",           // 身分組
+  daysRemaining: 365,              // 剩餘天數
+  lastDayDeducted: "2025-01-13",   // 上次扣天數日期（YYYY-MM-DD）
+  graceDaysRemaining: 0,           // 寬限期剩餘天數
+  
+  // 點數系統
+  points: {
+    current: 1500,                 // 當前點數
+  },
+  totalPointsEarned: 2000,
+  totalPointsSpent: 500,
+  totalPointsExpired: 0,
+  
+  // 推薦系統
+  referralCode: "WANG123",         // 我的推薦碼
+  referredBy: "推薦人UID",          // 誰推薦我的
+  referralCount: 3,                // 我推薦了幾人
+  referralRewardClaimed: false,    // 推薦獎勵是否已領（付款後才發）
+  
+  // 登入追蹤
+  loginStreak: 7,
+  lastLoginDate: "2025-01-13",
+  
+  // 時間戳
+  createdAt: Timestamp,
+  updatedAt: Timestamp,
+}
+```
+
+### referralCodes/{code}
+```javascript
+{
+  code: "WANG123",
+  ownerId: "用戶UID",
+  isActive: true,
+  usedCount: 3,
+  createdAt: Timestamp,
+}
+```
+
+### pointsLedger/{docId}
+```javascript
+{
+  userId: "用戶UID",
+  type: "earn" | "spend" | "expire" | "admin",
+  amount: 500,
+  reason: "推薦好友成功",
+  createdAt: Timestamp,
+}
+```
+
+### redemptionOrders/{docId}
+```javascript
+{
+  userId: "用戶UID",
+  itemId: "7days",
+  itemName: "延長 7 天",
+  pointsCost: 500,
+  status: "completed" | "pending" | "shipped",
+  createdAt: Timestamp,
+}
+```
+
+---
+
+## 🔄 完整流程
+
+### 流程 1：新用戶註冊（LINE 機器人）
+
+```
+用戶加入 LINE 官方帳號
+        ↓
+機器人：「歡迎！請輸入您的 Email」
+        ↓
+用戶：「test@gmail.com」
+        ↓
+機器人：「請問有朋友的推薦碼嗎？有請輸入，沒有請輸入『無』」
+        ↓
+    ┌───┴───┐
+    有      無
+    ↓       ↓
+驗證推薦碼  
+    ↓       
+  有效？     
+  ↙   ↘    ↓
+ 是    否   
+ ↓     ↓    ↓
+referral  trial  trial
+_trial
+        ↓
+機器人建立帳號：
+- 產生隨機密碼
+- daysRemaining = 7（試用）
+- 寄送登入資訊
+        ↓
+機器人：「帳號建立成功！您有 7 天免費試用期」
+```
+
+### 流程 2：試用轉付費
+
+```
+用戶登入戰情室
+        ↓
+顯示剩餘天數：「試用剩餘 5 天」
+        ↓
+顯示升級按鈕（根據身分組）：
+├─ trial → 「購買 365 天 $8,999」→ 原價連結
+└─ referral_trial → 「購買 365 天 $8,000」→ 折扣連結
+        ↓
+用戶點擊 → 導向 Portaly 付款
+        ↓
+付款成功 → 你收到 Email
+        ↓
+Admin 後台「處理訂單」：
+├─ 輸入用戶 Email
+├─ 點擊「確認付款」
+└─ 系統自動：
+   ├─ primaryTierId → "paid"
+   ├─ daysRemaining + 365
+   └─ 如有推薦人 → 雙方各 +500 UA
+```
+
+### 流程 3：每日天數扣除（Cloud Function）
+
+```
+每日凌晨 00:05 執行
+        ↓
+查詢所有 paid 用戶（founder 除外）
+        ↓
+檢查 lastDayDeducted !== 今天
+        ↓
+    daysRemaining - 1
+    lastDayDeducted = 今天
+        ↓
+檢查剩餘天數：
+├─ 剩 30 天 → 發 LINE 通知「天數剩 30 天」
+├─ 剩 7 天 → 發 LINE 通知「天數剩 7 天，快續訂！」
+├─ 剩 0 天 → primaryTierId → "grace", graceDaysRemaining = 3
+└─ grace 且 graceDaysRemaining = 0 → primaryTierId → "expired"
+```
+
+### 流程 4：點數兌換天數
+
+```
+用戶在戰情室點「點數商城」
+        ↓
+選擇「延長 7 天」（500 UA）
+        ↓
+確認兌換
+        ↓
+Cloud Function：
+├─ 檢查點數足夠
+├─ points.current - 500
+├─ daysRemaining + 7
+├─ 如果是 expired/grace → primaryTierId → "paid"
+└─ 記錄到 pointsLedger + redemptionOrders
+        ↓
+顯示「兌換成功！天數 +7」
+```
+
+---
+
+## ☁️ Cloud Functions 規格
+
+### 1. validateReferralCode（驗證推薦碼）
+
+```javascript
+// 觸發：callable
+// 輸入：{ code: "WANG123" }
+// 輸出：{ valid: true, ownerName: "王小明" } 或 { valid: false }
+
+exports.validateReferralCode = functions.https.onCall(async (data, context) => {
+  const { code } = data;
+  
+  // 查詢 referralCodes collection
+  const codeDoc = await db.collection('referralCodes').doc(code.toUpperCase()).get();
+  
+  if (!codeDoc.exists || !codeDoc.data().isActive) {
+    return { valid: false };
+  }
+  
+  // 取得推薦人名稱
+  const ownerDoc = await db.collection('users').doc(codeDoc.data().ownerId).get();
+  
+  return { 
+    valid: true, 
+    ownerId: codeDoc.data().ownerId,
+    ownerName: ownerDoc.data()?.displayName || '會員'
+  };
+});
+```
+
+### 2. createUserFromLine（LINE 註冊建立用戶）
+
+```javascript
+// 觸發：callable（從 LINE Bot 呼叫）
+// 輸入：{ email, referralCode?, lineUserId }
+// 輸出：{ success: true, password: "隨機密碼", tierId: "trial" }
+
+exports.createUserFromLine = functions.https.onCall(async (data, context) => {
+  const { email, referralCode, lineUserId } = data;
+  
+  // 1. 產生隨機密碼
+  const password = generateRandomPassword();
+  
+  // 2. 建立 Firebase Auth 用戶
+  const userRecord = await admin.auth().createUser({
+    email,
+    password,
+  });
+  
+  // 3. 決定身分組
+  let tierId = 'trial';
+  let referredByUid = null;
+  
+  if (referralCode) {
+    const codeDoc = await db.collection('referralCodes').doc(referralCode.toUpperCase()).get();
+    if (codeDoc.exists && codeDoc.data().isActive) {
+      tierId = 'referral_trial';
+      referredByUid = codeDoc.data().ownerId;
+    }
+  }
+  
+  // 4. 建立用戶文件
+  await db.collection('users').doc(userRecord.uid).set({
+    email,
+    primaryTierId: tierId,
+    daysRemaining: 7,  // 試用 7 天
+    lastDayDeducted: null,
+    graceDaysRemaining: 0,
+    points: { current: 0 },
+    totalPointsEarned: 0,
+    totalPointsSpent: 0,
+    referralCode: generateReferralCode(),  // 產生該用戶的推薦碼
+    referredBy: referredByUid,
+    referralRewardClaimed: false,
+    lineUserId,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  
+  // 5. 如果有推薦碼，更新推薦人的 referralCount
+  if (referredByUid) {
+    await db.collection('users').doc(referredByUid).update({
+      referralCount: admin.firestore.FieldValue.increment(1),
+    });
+  }
+  
+  return { success: true, password, tierId };
+});
+```
+
+### 3. processPayment（處理付款 - Admin 用）
+
+```javascript
+// 觸發：callable（從 Admin 後台呼叫）
+// 輸入：{ userEmail, days: 365, amount: 8999 }
+// 輸出：{ success: true, newDaysRemaining: 372 }
+
+exports.processPayment = functions.https.onCall(async (data, context) => {
+  // 驗證是否為 Admin
+  // ...
+  
+  const { userEmail, days, amount } = data;
+  
+  // 1. 找到用戶
+  const usersSnapshot = await db.collection('users')
+    .where('email', '==', userEmail)
+    .limit(1)
+    .get();
+  
+  if (usersSnapshot.empty) {
+    throw new functions.https.HttpsError('not-found', '找不到此用戶');
+  }
+  
+  const userDoc = usersSnapshot.docs[0];
+  const userData = userDoc.data();
+  
+  // 2. 更新天數和身分組
+  const newDaysRemaining = (userData.daysRemaining || 0) + days;
+  
+  await userDoc.ref.update({
+    primaryTierId: 'paid',
+    daysRemaining: newDaysRemaining,
+    graceDaysRemaining: 0,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  
+  // 3. 發放推薦獎勵（如果有推薦人且尚未領取）
+  if (userData.referredBy && !userData.referralRewardClaimed) {
+    // 推薦人 +500
+    await awardPoints(userData.referredBy, 500, '推薦好友成功');
+    // 被推薦人 +500
+    await awardPoints(userDoc.id, 500, '使用推薦碼註冊獎勵');
+    // 標記已領取
+    await userDoc.ref.update({ referralRewardClaimed: true });
+  }
+  
+  return { success: true, newDaysRemaining };
+});
+```
+
+### 4. deductDailyDays（每日扣天數）
+
+```javascript
+// 觸發：scheduled（每日 00:05）
+// 台灣時間 = UTC+8，所以 cron 要設 16:05 UTC
+
+exports.deductDailyDays = functions.pubsub
+  .schedule('5 16 * * *')  // UTC 16:05 = 台灣 00:05
+  .timeZone('UTC')
+  .onRun(async (context) => {
+    const today = new Date().toISOString().split('T')[0];  // YYYY-MM-DD
+    
+    // 查詢所有 paid 用戶（排除 founder）
+    const paidUsers = await db.collection('users')
+      .where('primaryTierId', '==', 'paid')
+      .get();
+    
+    const batch = db.batch();
+    const notifications = [];
+    
+    for (const doc of paidUsers.docs) {
+      const data = doc.data();
+      
+      // 跳過今天已扣過的
+      if (data.lastDayDeducted === today) continue;
+      
+      const newDays = (data.daysRemaining || 0) - 1;
+      
+      // 更新天數
+      batch.update(doc.ref, {
+        daysRemaining: newDays,
+        lastDayDeducted: today,
+      });
+      
+      // 檢查是否需要通知或降級
+      if (newDays === 30 || newDays === 7) {
+        notifications.push({
+          userId: doc.id,
+          lineUserId: data.lineUserId,
+          message: `您的 Ultra Advisor 剩餘 ${newDays} 天，記得續訂喔！`,
+        });
+      } else if (newDays <= 0) {
+        batch.update(doc.ref, {
+          primaryTierId: 'grace',
+          daysRemaining: 0,
+          graceDaysRemaining: 3,
+        });
+        notifications.push({
+          userId: doc.id,
+          lineUserId: data.lineUserId,
+          message: '您的 Ultra Advisor 天數已用完，進入 3 天寬限期。',
+        });
+      }
+    }
+    
+    // 處理寬限期用戶
+    const graceUsers = await db.collection('users')
+      .where('primaryTierId', '==', 'grace')
+      .get();
+    
+    for (const doc of graceUsers.docs) {
+      const data = doc.data();
+      const newGraceDays = (data.graceDaysRemaining || 0) - 1;
+      
+      if (newGraceDays <= 0) {
+        batch.update(doc.ref, {
+          primaryTierId: 'expired',
+          graceDaysRemaining: 0,
+        });
+      } else {
+        batch.update(doc.ref, {
+          graceDaysRemaining: newGraceDays,
+        });
+      }
+    }
+    
+    await batch.commit();
+    
+    // 發送 LINE 通知（需要實作 sendLineNotification）
+    for (const n of notifications) {
+      await sendLineNotification(n.lineUserId, n.message);
+    }
+    
+    console.log(`Daily deduction completed. Processed ${paidUsers.size} paid users.`);
+    return null;
+  });
+```
+
+### 5. redeemPoints（點數兌換）
+
+```javascript
+// 觸發：callable
+// 輸入：{ itemId: "7days" }
+// 輸出：{ success: true, newPoints: 1000, newDays: 372 }
+
+exports.redeemPoints = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', '請先登入');
+  }
+  
+  const userId = context.auth.uid;
+  const { itemId } = data;
+  
+  // 兌換項目定義
+  const redeemItems = {
+    '7days': { points: 500, days: 7, name: '延長 7 天' },
+    '30days': { points: 1800, days: 30, name: '延長 30 天' },
+  };
+  
+  const item = redeemItems[itemId];
+  if (!item) {
+    throw new functions.https.HttpsError('invalid-argument', '無效的兌換項目');
+  }
+  
+  const userDoc = await db.collection('users').doc(userId).get();
+  const userData = userDoc.data();
+  
+  // 檢查點數
+  if ((userData.points?.current || 0) < item.points) {
+    throw new functions.https.HttpsError('failed-precondition', '點數不足');
+  }
+  
+  // 執行兌換
+  const newPoints = userData.points.current - item.points;
+  const newDays = (userData.daysRemaining || 0) + item.days;
+  
+  // 如果是 expired/grace，升級為 paid
+  let newTierId = userData.primaryTierId;
+  if (['expired', 'grace', 'trial', 'referral_trial'].includes(newTierId)) {
+    newTierId = 'paid';
+  }
+  
+  await userDoc.ref.update({
+    'points.current': newPoints,
+    daysRemaining: newDays,
+    primaryTierId: newTierId,
+    graceDaysRemaining: 0,
+    totalPointsSpent: admin.firestore.FieldValue.increment(item.points),
+  });
+  
+  // 記錄
+  await db.collection('pointsLedger').add({
+    userId,
+    type: 'spend',
+    amount: -item.points,
+    reason: `兌換：${item.name}`,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  
+  await db.collection('redemptionOrders').add({
+    userId,
+    itemId,
+    itemName: item.name,
+    pointsCost: item.points,
+    daysAdded: item.days,
+    status: 'completed',
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  
+  return { success: true, newPoints, newDays };
+});
+```
+
+---
+
+## 🖥️ 前端修改規格
+
+### 1. UltraWarRoom.tsx - 顯示天數和升級按鈕
+
+```tsx
+// 在 ProfileCard 區塊加入
+
+// 顯示剩餘天數
+{membership.tier === 'paid' && (
+  <div className="text-center p-3 bg-green-900/30 rounded-xl">
+    <p className="text-2xl font-black text-green-400">{user.daysRemaining}</p>
+    <p className="text-xs text-slate-400">剩餘天數</p>
+  </div>
+)}
+
+// 顯示升級按鈕（試用/過期用戶）
+{['trial', 'referral_trial', 'grace', 'expired'].includes(membership.tier) && (
+  <div className="mt-4">
+    {membership.tier === 'referral_trial' ? (
+      <a 
+        href="https://portaly.cc/你的折扣連結" 
+        target="_blank"
+        className="block w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 
+                   rounded-xl text-white font-bold text-center"
+      >
+        升級 365 天 - $8,000（已折 $999）
+      </a>
+    ) : (
+      <a 
+        href="https://portaly.cc/你的原價連結" 
+        target="_blank"
+        className="block w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 
+                   rounded-xl text-white font-bold text-center"
+      >
+        升級 365 天 - $8,999
+      </a>
+    )}
+    
+    {membership.tier === 'trial' && (
+      <p className="text-xs text-slate-500 mt-2 text-center">
+        試用剩餘 {user.daysRemaining} 天
+      </p>
+    )}
+    {membership.tier === 'grace' && (
+      <p className="text-xs text-amber-400 mt-2 text-center">
+        ⚠️ 寬限期剩餘 {user.graceDaysRemaining} 天
+      </p>
+    )}
+  </div>
+)}
+```
+
+### 2. Admin 後台 - 處理訂單按鈕
+
+在 Users.jsx 加入「處理訂單」功能：
+
+```jsx
+// 新增 Modal：處理付款訂單
+const ProcessPaymentModal = ({ visible, onClose, onSuccess }) => {
+  const [email, setEmail] = useState('');
+  const [days, setDays] = useState(365);
+  const [loading, setLoading] = useState(false);
+  
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      const processPayment = httpsCallable(functions, 'processPayment');
+      const result = await processPayment({ userEmail: email, days });
+      message.success(`處理成功！用戶現有 ${result.data.newDaysRemaining} 天`);
+      onSuccess();
+      onClose();
+    } catch (err) {
+      message.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <Modal title="處理付款訂單" open={visible} onCancel={onClose} onOk={handleSubmit}>
+      <Input 
+        placeholder="用戶 Email" 
+        value={email} 
+        onChange={e => setEmail(e.target.value)} 
+      />
+      <Select value={days} onChange={setDays} className="w-full mt-4">
+        <Option value={365}>365 天（年訂閱）</Option>
+        <Option value={30}>30 天（月訂閱）</Option>
+        <Option value={7}>7 天（週訂閱）</Option>
+      </Select>
+      <p className="text-gray-500 mt-2">
+        系統將自動：升級為 paid + 加天數 + 發放推薦獎勵（如有）
+      </p>
+    </Modal>
+  );
+};
+```
+
+---
+
+## 📱 LINE 機器人修改規格
+
+### 註冊流程對話
+
+```
+狀態機：
+IDLE → WAIT_EMAIL → WAIT_REFERRAL → CREATING
+
+---
+
+[用戶加入/傳送任意訊息]
+機器人：
+「👋 歡迎來到 Ultra Advisor！
+
+我是小幫手，幫您快速建立帳號。
+請輸入您的 Email：」
+
+狀態 → WAIT_EMAIL
+
+---
+
+[用戶輸入 Email]
+驗證 Email 格式
+├─ 無效 → 「Email 格式不正確，請重新輸入」
+└─ 有效 → 
+
+機器人：
+「✅ Email 確認：test@gmail.com
+
+請問有朋友的推薦碼嗎？
+有的話請輸入推薦碼，沒有請輸入『無』」
+
+狀態 → WAIT_REFERRAL
+
+---
+
+[用戶輸入推薦碼或「無」]
+├─ 輸入「無」→ tierId = trial
+└─ 輸入推薦碼 → 呼叫 validateReferralCode
+   ├─ 有效 → tierId = referral_trial
+   └─ 無效 → 
+
+機器人：「❌ 推薦碼無效，將以一般試用身分註冊」
+tierId = trial
+
+---
+
+[建立帳號]
+呼叫 createUserFromLine({ email, referralCode, lineUserId })
+
+機器人：
+「🎉 帳號建立成功！
+
+📧 Email：test@gmail.com
+🔑 密碼：Ab3kX9mN（請登入後修改）
+⭐ 身分：試用會員（7天免費體驗）
+${tierId === 'referral_trial' ? '🎁 轉介紹優惠：購買時可享折扣 $999！' : ''}
+
+👉 立即登入：https://ultra-advisor.tw
+
+有問題隨時問我！」
+
+狀態 → IDLE
+```
+
+---
+
+## 📋 開發任務檢查清單
+
+### Phase 1：核心功能 🔴
+
+- [ ] **1-1** Cloud Function: `validateReferralCode`
+- [ ] **1-2** Cloud Function: `createUserFromLine`
+- [ ] **1-3** Cloud Function: `processPayment`
+- [ ] **1-4** LINE 機器人：加入推薦碼註冊流程
+- [ ] **1-5** Firestore：新增 `referral_trial` 到 membershipTiers
+- [ ] **1-6** 前端 UltraWarRoom：顯示剩餘天數
+- [ ] **1-7** 前端 UltraWarRoom：根據身分組顯示不同付款連結
+- [ ] **1-8** Admin 後台：新增「處理訂單」按鈕/Modal
+
+### Phase 2：自動化 🟡
+
+- [ ] **2-1** Cloud Function: `deductDailyDays`（每日扣天數）
+- [ ] **2-2** Cloud Function: `sendLineNotification`（LINE 推播）
+- [ ] **2-3** 到期提醒：30天、7天、0天通知
+
+### Phase 3：點數商城 🟢
+
+- [ ] **3-1** Cloud Function: `redeemPoints`
+- [ ] **3-2** 前端：點數兌換頁面/Modal
+- [ ] **3-3** Admin：兌換商品管理
+- [ ] **3-4** Admin：兌換訂單列表
+
+---
+
+## 🔗 Portaly 連結設定
+
+| 用途 | 價格 | 連結 |
+|------|------|------|
+| 原價購買 | $8,999 | `https://portaly.cc/你的原價連結` |
+| 折扣購買 | $8,000 | `https://portaly.cc/你的折扣連結`（使用折扣碼） |
+
+**折扣碼**：Miiroll7（折 $999）
+
+---
+
+## 📝 給 VS Code Claude 的開發指令
+
+複製以下內容給 Claude Code：
+
+```
+請先讀取 CLAUDE.md 了解專案背景。
+
+我要開發「天數制會員系統」，規格如下：
+
+【資料結構變更】
+users/{uid} 新增欄位：
+- daysRemaining: number（剩餘天數）
+- lastDayDeducted: string（上次扣天數日期，YYYY-MM-DD）
+- graceDaysRemaining: number（寬限期剩餘天數）
+- referralRewardClaimed: boolean（推薦獎勵是否已領）
+
+【新增身分組】
+在 membershipTiers 新增：
+- referral_trial：轉介紹試用會員
+
+【Cloud Functions 開發】
+請在 functions/index.js 新增：
+
+1. validateReferralCode - 驗證推薦碼
+2. processPayment - 處理付款（Admin 用）
+3. deductDailyDays - 每日扣天數（scheduled）
+4. redeemPoints - 點數兌換天數
+
+【前端修改】
+UltraWarRoom.tsx：
+1. 顯示剩餘天數（paid 用戶）
+2. 顯示升級按鈕（trial/referral_trial/grace/expired）
+3. referral_trial 顯示折扣價 $8,000
+4. 其他顯示原價 $8,999
+
+【Admin 修改】
+Users.jsx 新增「處理訂單」功能：
+- 輸入用戶 Email
+- 選擇天數（365/30/7）
+- 一鍵完成：升級 paid + 加天數 + 發推薦獎勵
+
+請開始開發，先從 Cloud Functions 開始。
+```

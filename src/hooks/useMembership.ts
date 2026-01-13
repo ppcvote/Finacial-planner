@@ -48,20 +48,27 @@ export const TOOL_NAMES: Record<string, string> = {
   free_dashboard: '自由組合戰情室',
 };
 
-// 會員等級類型
-type MembershipTier = 'founder' | 'paid' | 'trial' | 'grace' | 'expired';
+// 會員等級類型（新增 referral_trial）
+type MembershipTier = 'founder' | 'paid' | 'referral_trial' | 'trial' | 'grace' | 'expired';
 
 interface MembershipData {
   tier: MembershipTier;
   tierName: string;
+  tierColor: string;
   points: number;
   referralCode: string;
   referralCount: number;
   loginStreak: number;
+  // 🆕 天數制欄位
+  daysRemaining: number;
+  graceDaysRemaining: number;
+  referredBy: string | null;
+  hasDiscountEligibility: boolean;  // referral_trial 可享折扣
   expiresAt?: Date;
   canAccessTool: (toolId: string) => boolean;
   isPaid: boolean;
   isExpired: boolean;
+  isTrial: boolean;
 }
 
 /**
@@ -83,30 +90,41 @@ export const useMembership = (userId: string | null) => {
         if (doc.exists()) {
           const data = doc.data();
           const tier = (data.primaryTierId || 'trial') as MembershipTier;
-          
+
           // 判斷是否為付費會員
           const isPaid = ['founder', 'paid'].includes(tier);
           const isExpired = ['grace', 'expired'].includes(tier);
-          
-          // 會員等級名稱
-          const tierNames: Record<MembershipTier, string> = {
-            founder: '創始會員',
-            paid: '付費會員',
-            trial: '試用會員',
-            grace: '寬限期',
-            expired: '已過期',
+          const isTrial = ['trial', 'referral_trial'].includes(tier);
+
+          // 會員等級名稱和顏色
+          const tierConfig: Record<MembershipTier, { name: string; color: string }> = {
+            founder: { name: '創始會員', color: '#f59e0b' },
+            paid: { name: '付費會員', color: '#3b82f6' },
+            referral_trial: { name: '轉介紹試用', color: '#8b5cf6' },
+            trial: { name: '試用會員', color: '#10b981' },
+            grace: { name: '寬限期', color: '#f97316' },
+            expired: { name: '已過期', color: '#ef4444' },
           };
+
+          const config = tierConfig[tier] || { name: '試用會員', color: '#10b981' };
 
           setMembership({
             tier,
-            tierName: tierNames[tier] || '試用會員',
+            tierName: config.name,
+            tierColor: config.color,
             points: typeof data.points === 'object' ? (data.points?.current || 0) : (data.points || 0),
             referralCode: data.referralCode || '',
             referralCount: data.referralCount || 0,
             loginStreak: data.loginStreak || 0,
+            // 🆕 天數制欄位
+            daysRemaining: data.daysRemaining || 0,
+            graceDaysRemaining: data.graceDaysRemaining || 0,
+            referredBy: data.referredBy || null,
+            hasDiscountEligibility: tier === 'referral_trial',
             expiresAt: data.membershipExpiresAt?.toDate(),
             isPaid,
             isExpired,
+            isTrial,
             canAccessTool: (toolId: string) => {
               // 創始/付費會員可用全部工具
               if (isPaid) return true;
