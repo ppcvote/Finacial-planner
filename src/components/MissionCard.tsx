@@ -62,9 +62,6 @@ const MissionCard: React.FC<MissionCardProps> = ({
 
   // 處理任務點擊
   const handleMissionClick = async (mission: Mission) => {
-    // 最早的 debug
-    window.alert(`點擊任務: ${mission.title}, verificationType: ${mission.verificationType}`);
-
     if (completing) return;
 
     setErrorMsg(null);
@@ -81,15 +78,13 @@ const MissionCard: React.FC<MissionCardProps> = ({
           setCompleting(false);
           return; // 任務完成，不需要開啟 Modal
         } else {
-          // 用 alert 顯示失敗原因
-          window.alert(`任務驗證失敗: ${result?.message || '未知錯誤'}`);
+          // 顯示失敗原因
           setErrorMsg(result?.message || '驗證失敗');
-          setTimeout(() => setErrorMsg(null), 2000);
+          setTimeout(() => setErrorMsg(null), 3000);
         }
       } catch (error: any) {
-        window.alert(`任務執行錯誤: ${error?.message || '未知錯誤'}`);
         setErrorMsg(error?.message || '發生錯誤');
-        setTimeout(() => setErrorMsg(null), 2000);
+        setTimeout(() => setErrorMsg(null), 3000);
       }
       setCompleting(false);
     }
@@ -110,11 +105,17 @@ const MissionCard: React.FC<MissionCardProps> = ({
 
       case 'external':
         if (mission.linkTarget) {
-          window.open(mission.linkTarget, '_blank');
+          // 使用 <a> 標籤方式開啟，避免被 popup blocker 擋住
+          const link = document.createElement('a');
+          link.href = mission.linkTarget;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
         }
-        // 對於手動驗證的外部連結，顯示確認完成按鈕
+        // 對於手動驗證的外部連結，延遲後自動嘗試完成任務
         if (mission.verificationType === 'manual') {
-          // 延遲後自動嘗試完成任務
           setTimeout(() => handleManualComplete(mission), 2000);
         }
         break;

@@ -25,7 +25,7 @@ const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
   const [activeTab, setActiveTab] = useState<DeviceType>('ios');
   const [completing, setCompleting] = useState(false);
 
-  // 自動偵測裝置類型 + 鎖定背景滾動
+  // 自動偵測裝置類型
   useEffect(() => {
     if (isOpen) {
       const userAgent = navigator.userAgent.toLowerCase();
@@ -36,22 +36,14 @@ const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
       } else {
         setActiveTab('desktop');
       }
-      // 鎖定背景滾動
-      document.body.style.overflow = 'hidden';
-    } else {
-      // 恢復背景滾動
-      document.body.style.overflow = 'unset';
     }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
   }, [isOpen]);
 
   // 處理完成按鈕
   const handleComplete = async () => {
     setCompleting(true);
     try {
-      const result = await missionsApi.completeMission('pwa_install');
+      const result = await missionsApi.completeMission('install_pwa');
       if (result.success && onComplete) {
         onComplete(result.pointsAwarded || 0);
       }
