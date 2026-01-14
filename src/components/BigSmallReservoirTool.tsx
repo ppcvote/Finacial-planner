@@ -243,6 +243,12 @@ export const BigSmallReservoirTool = ({ data, setData, userId }: any) => {
     }
   };
 
+  // 處理輸入值，移除前導零（手機版相容）
+  const sanitizeInput = (val: string): string => {
+    if (val === '') return '';
+    return val.replace(/^0+(?=\d)/, '');
+  };
+
   // --- 計算引擎 ---
   const calculations = useMemo(() => {
     // 根據配置模式決定實際利率
@@ -446,7 +452,7 @@ export const BigSmallReservoirTool = ({ data, setData, userId }: any) => {
                     type="number"
                     inputMode="decimal"
                     value={tempInitialCapital}
-                    onChange={(e) => setTempInitialCapital(e.target.value === '' ? '' : e.target.value)}
+                    onChange={(e) => setTempInitialCapital(sanitizeInput(e.target.value))}
                     onBlur={finalizeInitialCapital}
                     onKeyDown={handleKeyDown(finalizeInitialCapital)}
                     className="w-24 text-xl font-black text-cyan-600 text-right bg-transparent border-b-2 border-transparent hover:border-cyan-300 focus:border-cyan-500 focus:outline-none transition-colors"
@@ -475,7 +481,7 @@ export const BigSmallReservoirTool = ({ data, setData, userId }: any) => {
                     type="number"
                     inputMode="numeric"
                     value={tempYears}
-                    onChange={(e) => setTempYears(e.target.value === '' ? '' : e.target.value)}
+                    onChange={(e) => setTempYears(sanitizeInput(e.target.value))}
                     onBlur={finalizeYears}
                     onKeyDown={handleKeyDown(finalizeYears)}
                     className="w-16 text-xl font-black text-blue-600 text-right bg-transparent border-b-2 border-transparent hover:border-blue-300 focus:border-blue-500 focus:outline-none transition-colors"
@@ -500,7 +506,7 @@ export const BigSmallReservoirTool = ({ data, setData, userId }: any) => {
                     type="number"
                     inputMode="numeric"
                     value={tempClientAge}
-                    onChange={(e) => setTempClientAge(e.target.value === '' ? '' : e.target.value)}
+                    onChange={(e) => setTempClientAge(sanitizeInput(e.target.value))}
                     onBlur={finalizeClientAge}
                     onKeyDown={handleKeyDown(finalizeClientAge)}
                     className="w-14 p-1 border rounded text-sm font-bold text-center"
@@ -675,7 +681,7 @@ export const BigSmallReservoirTool = ({ data, setData, userId }: any) => {
                         inputMode="decimal"
                         step={0.5}
                         value={tempDividendRate}
-                        onChange={(e) => setTempDividendRate(e.target.value === '' ? '' : e.target.value)}
+                        onChange={(e) => setTempDividendRate(sanitizeInput(e.target.value))}
                         onBlur={finalizeDividendRate}
                         onKeyDown={handleKeyDown(finalizeDividendRate)}
                         className="w-14 text-lg font-black text-cyan-600 text-right bg-transparent border-b border-transparent hover:border-cyan-300 focus:border-cyan-500 focus:outline-none"
@@ -708,7 +714,7 @@ export const BigSmallReservoirTool = ({ data, setData, userId }: any) => {
                         inputMode="decimal"
                         step={0.5}
                         value={tempReinvestRate}
-                        onChange={(e) => setTempReinvestRate(e.target.value === '' ? '' : e.target.value)}
+                        onChange={(e) => setTempReinvestRate(sanitizeInput(e.target.value))}
                         onBlur={finalizeReinvestRate}
                         onKeyDown={handleKeyDown(finalizeReinvestRate)}
                         className="w-14 text-lg font-black text-amber-600 text-right bg-transparent border-b border-transparent hover:border-amber-300 focus:border-amber-500 focus:outline-none"

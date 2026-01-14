@@ -274,6 +274,13 @@ export const FinancialRealEstateTool = ({ data, setData, userId }: any) => {
     }
   };
 
+  // 處理輸入值，移除前導零（手機版相容）
+  const sanitizeInput = (val: string): string => {
+    if (val === '') return '';
+    // 移除前導零，但保留 "0"、"0." 等情況
+    return val.replace(/^0+(?=\d)/, '');
+  };
+
   // --- 計算引擎 ---
   const calculations = useMemo(() => {
     // 每月貸款支出
@@ -512,7 +519,7 @@ export const FinancialRealEstateTool = ({ data, setData, userId }: any) => {
                     type="number"
                     inputMode="decimal"
                     value={tempLoanAmount}
-                    onChange={(e) => setTempLoanAmount(e.target.value === '' ? '' : e.target.value)}
+                    onChange={(e) => setTempLoanAmount(sanitizeInput(e.target.value))}
                     onBlur={finalizeLoanAmount}
                     onKeyDown={handleKeyDown(finalizeLoanAmount)}
                     className="w-24 text-xl font-black text-emerald-600 text-right bg-transparent border-b-2 border-transparent hover:border-emerald-300 focus:border-emerald-500 focus:outline-none transition-colors"
@@ -541,7 +548,7 @@ export const FinancialRealEstateTool = ({ data, setData, userId }: any) => {
                     type="number"
                     inputMode="numeric"
                     value={tempLoanTerm}
-                    onChange={(e) => setTempLoanTerm(e.target.value === '' ? '' : e.target.value)}
+                    onChange={(e) => setTempLoanTerm(sanitizeInput(e.target.value))}
                     onBlur={finalizeLoanTerm}
                     onKeyDown={handleKeyDown(finalizeLoanTerm)}
                     className="w-16 text-xl font-black text-teal-600 text-right bg-transparent border-b-2 border-transparent hover:border-teal-300 focus:border-teal-500 focus:outline-none transition-colors"
@@ -579,7 +586,7 @@ export const FinancialRealEstateTool = ({ data, setData, userId }: any) => {
                         inputMode="decimal"
                         step={0.1}
                         value={tempLoanRate}
-                        onChange={(e) => setTempLoanRate(e.target.value === '' ? '' : e.target.value)}
+                        onChange={(e) => setTempLoanRate(sanitizeInput(e.target.value))}
                         onBlur={finalizeLoanRate}
                         onKeyDown={handleKeyDown(finalizeLoanRate)}
                         className="w-14 font-bold text-slate-700 text-right bg-transparent border-b border-transparent hover:border-slate-300 focus:border-slate-500 focus:outline-none"
@@ -603,7 +610,7 @@ export const FinancialRealEstateTool = ({ data, setData, userId }: any) => {
                         inputMode="decimal"
                         step={0.1}
                         value={tempInvestReturnRate}
-                        onChange={(e) => setTempInvestReturnRate(e.target.value === '' ? '' : e.target.value)}
+                        onChange={(e) => setTempInvestReturnRate(sanitizeInput(e.target.value))}
                         onBlur={finalizeInvestReturnRate}
                         onKeyDown={handleKeyDown(finalizeInvestReturnRate)}
                         className="w-14 font-bold text-blue-600 text-right bg-transparent border-b border-transparent hover:border-blue-300 focus:border-blue-500 focus:outline-none"
@@ -798,7 +805,7 @@ export const FinancialRealEstateTool = ({ data, setData, userId }: any) => {
                           type="number"
                           inputMode="decimal"
                           value={tempExistingLoanBalance}
-                          onChange={(e) => setTempExistingLoanBalance(e.target.value === '' ? '' : e.target.value)}
+                          onChange={(e) => setTempExistingLoanBalance(sanitizeInput(e.target.value))}
                           onBlur={finalizeExistingLoanBalance}
                           onKeyDown={handleKeyDown(finalizeExistingLoanBalance)}
                           className="w-20 font-bold text-orange-700 text-right bg-transparent border-b border-transparent hover:border-orange-300 focus:border-orange-500 focus:outline-none"
@@ -827,7 +834,7 @@ export const FinancialRealEstateTool = ({ data, setData, userId }: any) => {
                           type="number"
                           inputMode="decimal"
                           value={tempExistingMonthlyPayment}
-                          onChange={(e) => setTempExistingMonthlyPayment(e.target.value === '' ? '' : e.target.value)}
+                          onChange={(e) => setTempExistingMonthlyPayment(sanitizeInput(e.target.value))}
                           onBlur={finalizeExistingMonthlyPayment}
                           onKeyDown={handleKeyDown(finalizeExistingMonthlyPayment)}
                           className="w-24 font-bold text-orange-700 text-right bg-transparent border-b border-transparent hover:border-orange-300 focus:border-orange-500 focus:outline-none"

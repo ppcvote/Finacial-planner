@@ -38,6 +38,10 @@ import { db, storage } from '../firebase';
 import { useMembership } from '../hooks/useMembership';
 import ReferralEngineModal from './ReferralEngineModal';
 
+// 🆕 任務看板
+import MissionCard from './MissionCard';
+import PWAInstallModal from './PWAInstallModal';
+
 // ==========================================
 // 🎨 市場快訊跑馬燈（含傲創計算機入口）
 // ==========================================
@@ -1613,6 +1617,7 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
   // 🆕 會員系統
   const { membership } = useMembership(user?.uid || null);
   const [showReferralEngine, setShowReferralEngine] = useState(false);
+  const [showPWAInstall, setShowPWAInstall] = useState(false);
 
   // 客戶列表狀態
   const [clients, setClients] = useState<any[]>([]);
@@ -2089,16 +2094,32 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
         {/* Top Row: Profile + Market Data + Calculator */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
-          {/* Profile Card */}
-          <ProfileCard
-            user={user}
-            profileData={profileData}
-            membership={membership}
-            onEditProfile={() => setShowEditProfile(true)}
-            onChangePassword={() => setShowChangePassword(true)}
-            onOpenReferral={() => setShowReferralEngine(true)}
-            onOpenPayment={handleOpenPayment}
-          />
+          {/* Profile Card + Mission Card */}
+          <div className="space-y-4">
+            <ProfileCard
+              user={user}
+              profileData={profileData}
+              membership={membership}
+              onEditProfile={() => setShowEditProfile(true)}
+              onChangePassword={() => setShowChangePassword(true)}
+              onOpenReferral={() => setShowReferralEngine(true)}
+              onOpenPayment={handleOpenPayment}
+            />
+            {/* 🆕 任務卡片 */}
+            <MissionCard
+              onOpenModal={(modalName) => {
+                if (modalName === 'editProfile') setShowEditProfile(true);
+              }}
+              onNavigate={(path) => {
+                // 站內跳轉處理
+                if (path === '/clients' || path === 'clients') {
+                  // 滾動到客戶列表
+                  document.getElementById('client-list')?.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              onOpenPWAInstall={() => setShowPWAInstall(true)}
+            />
+          </div>
 
           {/* Market Data */}
           <MarketDataCard />
@@ -2185,6 +2206,12 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
         isOpen={showPayment}
         onClose={() => setShowPayment(false)}
         isReferral={isReferralPayment}
+      />
+
+      {/* 🆕 PWA 安裝教學 Modal */}
+      <PWAInstallModal
+        isOpen={showPWAInstall}
+        onClose={() => setShowPWAInstall(false)}
       />
 
       {/* 🆕 功能建議 Modal */}
