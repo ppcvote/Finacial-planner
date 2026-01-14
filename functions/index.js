@@ -2285,4 +2285,90 @@ exports.liffRegister = functions.https.onRequest(async (req, res) => {
   }
 });
 
+// ==========================================
+// 🆕 更新點數規則（一次性管理員函數）
+// ==========================================
+exports.updatePointsRules = functions.https.onCall(async (_data, context) => {
+  // 驗證管理員權限
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', '請先登入');
+  }
+
+  const adminEmails = ['ppcvote@gmail.com', 'admin@ultra-advisor.tw'];
+  const userEmail = context.auth.token.email;
+
+  if (!adminEmails.includes(userEmail)) {
+    throw new functions.https.HttpsError('permission-denied', '無管理員權限');
+  }
+
+  const now = admin.firestore.Timestamp.now();
+  const batch = db.batch();
+
+  // 更新的規則
+  const rulesToUpdate = [
+    {
+      actionId: 'referral_registration',
+      name: '推薦好友註冊',
+      description: '推薦好友完成註冊，推薦人獲得點數',
+      basePoints: 100,
+      isActive: true,
+      limits: null,
+      category: 'referral',
+      triggerType: 'auto',
+      icon: '🎁',
+      priority: 6,
+    },
+    {
+      actionId: 'referral_success',
+      name: '推薦成功',
+      description: '推薦新用戶並完成付費（推薦人獎勵）',
+      basePoints: 1000,
+      isActive: true,
+      limits: null,
+      category: 'referral',
+      triggerType: 'auto',
+      icon: '🎁',
+      priority: 7,
+    },
+    {
+      actionId: 'referred_bonus',
+      name: '被推薦獎勵',
+      description: '透過推薦碼註冊並付費（被推薦人獎勵）',
+      basePoints: 1000,
+      isActive: true,
+      limits: { totalMax: 1 },
+      category: 'referral',
+      triggerType: 'auto',
+      icon: '🎉',
+      priority: 8,
+    },
+  ];
+
+  // 批次更新/建立規則
+  for (const rule of rulesToUpdate) {
+    const docRef = db.collection('pointsRules').doc(rule.actionId);
+    batch.set(docRef, {
+      ...rule,
+      updatedAt: now,
+    }, { merge: true });
+  }
+
+  await batch.commit();
+
+  // 記錄審計日誌
+  await db.collection('auditLogs').add({
+    adminId: context.auth.uid,
+    adminEmail: userEmail,
+    action: 'points_rules.bulk_update',
+    description: '批次更新推薦獎勵規則：註冊+100, 付費+1000',
+    createdAt: now,
+  });
+
+  return {
+    success: true,
+    message: '點數規則已更新：推薦註冊 +100 UA，推薦付費 +1000 UA（雙方）',
+    updatedRules: rulesToUpdate.map(r => r.actionId),
+  };
+});
+
 console.log('Ultra Advisor Cloud Functions loaded');

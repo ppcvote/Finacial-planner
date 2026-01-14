@@ -37,7 +37,8 @@ import {
   orderBy,
   Timestamp,
 } from 'firebase/firestore';
-import { db, auth } from '../../firebase';
+import { db, auth, functions } from '../../firebase';
+import { httpsCallable } from 'firebase/functions';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -71,6 +72,25 @@ const PointsRules = () => {
     active: 0,
     totalPointsIssued: 0,
   });
+  const [updatingReferral, setUpdatingReferral] = useState(false);
+
+  // 🆕 一鍵更新推薦獎勵規則
+  const handleUpdateReferralRules = async () => {
+    setUpdatingReferral(true);
+    try {
+      const updatePointsRules = httpsCallable(functions, 'updatePointsRules');
+      const result = await updatePointsRules();
+      if (result.data.success) {
+        message.success(result.data.message);
+        fetchRules(); // 重新載入規則
+      }
+    } catch (error) {
+      console.error('Update referral rules error:', error);
+      message.error(error.message || '更新失敗');
+    } finally {
+      setUpdatingReferral(false);
+    }
+  };
 
   // 載入點數規則
   useEffect(() => {
@@ -357,6 +377,14 @@ const PointsRules = () => {
           <p className="text-gray-500 mt-1">管理 UA 點數獲取規則與限制</p>
         </div>
         <Space>
+          <Button
+            icon={<GiftOutlined />}
+            onClick={handleUpdateReferralRules}
+            loading={updatingReferral}
+            style={{ backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }}
+          >
+            更新推薦獎勵
+          </Button>
           <Button icon={<ReloadOutlined />} onClick={fetchRules}>
             重新載入
           </Button>
