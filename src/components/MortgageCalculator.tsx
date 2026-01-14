@@ -369,6 +369,7 @@ export default function MortgageCalculator() {
               </div>
               <input
                 type="number"
+                inputMode="decimal"
                 value={loanAmount}
                 onChange={(e) => setLoanAmount(Number(e.target.value))}
                 className="w-full bg-transparent text-3xl font-black text-white text-right focus:outline-none border-b-2 border-slate-600 focus:border-blue-500 pb-1 mb-2"
@@ -394,6 +395,7 @@ export default function MortgageCalculator() {
               </div>
               <input
                 type="number"
+                inputMode="decimal"
                 step={0.01}
                 value={interestRate}
                 onChange={(e) => setInterestRate(Number(e.target.value))}
@@ -435,6 +437,7 @@ export default function MortgageCalculator() {
               </div>
               <input
                 type="number"
+                inputMode="numeric"
                 value={loanTerm}
                 onChange={(e) => setLoanTerm(Number(e.target.value))}
                 className="w-full bg-transparent text-3xl font-black text-emerald-400 text-right focus:outline-none border-b-2 border-slate-600 focus:border-emerald-500 pb-1 mb-2"
@@ -493,6 +496,7 @@ export default function MortgageCalculator() {
                 </div>
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={extraMonthly}
                   onChange={(e) => setExtraMonthly(Number(e.target.value))}
                   placeholder="0"
@@ -520,6 +524,7 @@ export default function MortgageCalculator() {
               </div>
               <input
                 type="number"
+                inputMode="decimal"
                 step={0.1}
                 value={inflationRate}
                 onChange={(e) => setInflationRate(Number(e.target.value))}
@@ -891,7 +896,7 @@ export default function MortgageCalculator() {
                 <p className="text-white font-bold">讓專業顧問為您量身規劃</p>
               </div>
               <a
-                href="https://line.me/R/ti/p/@568iajac"
+                href="https://line.me/R/ti/p/@ultraadvisor"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full md:w-auto px-6 py-2.5 bg-white text-blue-600 rounded-lg font-bold hover:bg-blue-50 transition-all text-sm text-center inline-block"

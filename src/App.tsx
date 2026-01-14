@@ -652,7 +652,7 @@ export default function App() {
               {activeTab === 'market_data' && renderTool('market_data', <MarketDataZone />, '市場數據戰情室')}
               {activeTab === 'golden_safe' && renderTool('golden_safe', <GoldenSafeVault data={goldenSafeData} setData={setGoldenSafeData} />, '黃金保險箱理論')}
               {activeTab === 'fund_machine' && renderTool('fund_machine', <FundTimeMachine />, '基金時光機')}
-              {activeTab === 'gift' && renderTool('gift', <MillionDollarGiftTool data={giftData} setData={setGiftData} />, '百萬禮物專案')}
+              {activeTab === 'gift' && renderTool('gift', <MillionDollarGiftTool data={giftData} setData={setGiftData} userId={user?.uid} />, '百萬禮物專案')}
               {activeTab === 'estate' && <FinancialRealEstateTool data={estateData} setData={setEstateData} />}
               {activeTab === 'student' && renderTool('student', <StudentLoanTool data={studentData} setData={setStudentData} />, '學貸活化專案')}
               {activeTab === 'super_active' && renderTool('super_active', <SuperActiveSavingTool data={superActiveData} setData={setSuperActiveData} />, '超積極存錢法')}

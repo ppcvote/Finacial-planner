@@ -161,6 +161,22 @@ const LoginForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+
+  // 🆕 讀取記住的帳號密碼
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('ua_saved_email');
+    const savedPassword = localStorage.getItem('ua_saved_password');
+    const savedRemember = localStorage.getItem('ua_remember_me');
+
+    if (savedRemember === 'true' && savedEmail) {
+      setEmail(savedEmail);
+      if (savedPassword) {
+        setPassword(atob(savedPassword)); // 簡單解碼
+      }
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,6 +185,18 @@ const LoginForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
+
+      // 🆕 儲存或清除記住的帳號密碼
+      if (rememberMe) {
+        localStorage.setItem('ua_saved_email', email);
+        localStorage.setItem('ua_saved_password', btoa(password)); // 簡單編碼
+        localStorage.setItem('ua_remember_me', 'true');
+      } else {
+        localStorage.removeItem('ua_saved_email');
+        localStorage.removeItem('ua_saved_password');
+        localStorage.removeItem('ua_remember_me');
+      }
+
       onSuccess();
     } catch (err: any) {
       console.error('Login error:', err.code, err.message);
@@ -221,7 +249,7 @@ const LoginForm = ({ onSuccess }: { onSuccess: () => void }) => {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-slate-800 
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-slate-800
                      rounded-lg transition-colors">
             {showPassword ? (
               <EyeOff size={18} className="text-slate-400" />
@@ -230,6 +258,30 @@ const LoginForm = ({ onSuccess }: { onSuccess: () => void }) => {
             )}
           </button>
         </div>
+      </div>
+
+      {/* 🆕 記住帳號密碼 */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setRememberMe(!rememberMe)}
+          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all
+                    ${rememberMe
+                      ? 'bg-blue-600 border-blue-600'
+                      : 'bg-transparent border-slate-600 hover:border-slate-500'}`}
+        >
+          {rememberMe && (
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+        </button>
+        <span
+          className="text-slate-400 text-sm cursor-pointer select-none"
+          onClick={() => setRememberMe(!rememberMe)}
+        >
+          記住帳號密碼
+        </span>
       </div>
 
       {/* Error Message */}
@@ -391,7 +443,7 @@ export function LoginPage({ user, onLoginSuccess }: LoginPageProps) {
         {/* Logo 居中 - 點擊返回官網 */}
         <div className="flex justify-center mb-12 animate-fade-in">
           <a
-            href="/"
+            href="https://ultra-advisor.tw"
             className="flex items-center gap-3 group cursor-pointer"
           >
             <img

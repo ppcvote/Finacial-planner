@@ -1,0 +1,914 @@
+# Ultra Advisor 工具開發規格書
+
+> 版本：v1.2 | 更新日期：2026-01-14
+適用於：所有 Ultra Advisor 前端工具開發
+> 
+
+---
+
+## 📌 核心原則
+
+1. **專業正向**：使用正向、專業的金融詞語，避免負面行銷詞彙
+2. **客戶友善**：讓客戶看得懂效益與差別，降低心理壓力
+3. **操作便利**：所有可調整參數支援「點擊輸入 + 滑軌」雙模式
+4. **視覺一致**：統一色調規範，正向用綠色系，中性用藍色系
+
+---
+
+## 🚫 禁用詞語對照表
+
+| ❌ 禁用詞語 | ✅ 替代詞語 | 說明 |
+| --- | --- | --- |
+| 利差 | **收益差額** | 描述配息率與貸款利率的差距 |
+| 套利 | **資產累積** | 描述投資策略效益 |
+| 槓桿 | **保障倍數** / **效益倍數** | 保險或投資的倍數效益 |
+| 需自行負擔 | **只需負擔** | 負現金流情境，正向表達 |
+| 月付 | **每月只需** | 負現金流情境，降低壓力感 |
+| 損益平衡 | **達成正現金流所需** | 配息率計算結果說明 |
+| 損益平衡配息率 | **當配息率達 X% 即可實現正現金流** | 完整說明句 |
+
+### 應用範例
+
+```tsx
+// ❌ 錯誤
+<p>利差：配息 6% - 貸款 2.2% = 3.8%</p>
+<p>槓桿置產：以小博大</p>
+<p>每月需自行負擔 $10,920</p>
+<p>損益平衡配息率：6.7%</p>
+
+// ✅ 正確
+<p>收益差額：配息 6% - 貸款 2.2% = 3.8%</p>
+<p>聰明理財：小額累積大資產</p>
+<p>每月只需負擔 $10,920</p>
+<p>當配息率達 6.7% 即可實現正現金流</p>
+
+```
+
+---
+
+## 🎨 色調規範
+
+### 狀態色彩對照
+
+| 狀態 | ❌ 禁用色彩 | ✅ 使用色彩 | Tailwind Class |
+| --- | --- | --- | --- |
+| 負值 / 負現金流 | 紅色、橙色 | **藍色** | `blue-50`, `blue-600` |
+| 收益差額為負 | 紅色 | **灰色** | `slate-400`, `slate-500` |
+| 正向狀態 | - | **綠色** | `emerald-*`, `teal-*` |
+| 中性資訊 | - | **藍色** | `blue-*`, `indigo-*` |
+| 警示（必要時） | - | **琥珀色** | `amber-*`（僅用於提醒，非負面） |
+
+### 色彩應用範例
+
+```tsx
+// ❌ 錯誤：負現金流使用紅色/橙色
+<div className="bg-amber-50 border-amber-200">
+  <p className="text-amber-600">每月需自行負擔</p>
+  <p className="text-3xl text-amber-600">$-10,920</p>
+</div>
+
+// ✅ 正確：負現金流使用藍色（正向表達）
+<div className="bg-blue-50 border-blue-200">
+  <p className="text-slate-600">每月只需負擔</p>
+  <p className="text-3xl text-blue-600">$10,920</p>
+</div>
+
+```
+
+### 情境分析色彩
+
+```tsx
+// 配息情境分析中的數值顯示
+<p className={`text-lg font-black ${
+  value >= 0 ? 'text-emerald-600' : 'text-blue-600'  // ✅ 負值用藍色
+}`}>
+  {value >= 0 ? '+' : ''}{formatMoneyYuan(value)}
+</p>
+
+```
+
+---
+
+## 🎛️ 輸入組件規範
+
+### 核心要求
+
+所有可調整參數必須支援：
+
+1. **點擊數字直接輸入**：精確輸入任意數值
+2. **滑軌拖動調整**：快速調整，以固定步長跳動
+3. **雙向同步**：兩種輸入方式即時同步
+
+### 標準輸入組件模板（推薦：暫存狀態模式）
+
+**重要原則：**
+1. 使用 `temp state` 暫存輸入值，避免輸入時強制顯示預設值
+2. `onChange` 允許空值和任意輸入
+3. `onBlur` 進行驗證、限制範圍、儲存到 data
+4. `inputMode` 支援手機數字鍵盤
+5. `onKeyDown` 支援 Enter 鍵確認
+
+```tsx
+// ===== 1. 定義暫存狀態 =====
+const [tempFieldValue, setTempFieldValue] = useState<string | number>(fieldValue);
+
+// ===== 2. 同步外部資料變化 =====
+useEffect(() => { setTempFieldValue(fieldValue); }, [fieldValue]);
+
+// ===== 3. Finalize 函數（onBlur 時驗證）=====
+const finalizeFieldValue = () => {
+  let val = Number(tempFieldValue) || 1000; // 預設值
+  val = Math.max(100, Math.min(10000, val)); // 限制範圍
+  setTempFieldValue(val);
+  setData({ ...data, fieldName: val });
+};
+
+// ===== 4. KeyDown 處理函數 =====
+const handleKeyDown = (finalizer: () => void) => (e: React.KeyboardEvent<HTMLInputElement>) => {
+  if (e.key === 'Enter') {
+    finalizer();
+    e.currentTarget.blur();
+  }
+};
+
+// ===== 5. JSX 模板 =====
+{/* 可點擊輸入 + 滑軌雙模式 */}
+<div>
+  <div className="flex justify-between items-center mb-2">
+    <label className="text-xs text-slate-500">標籤名稱</label>
+    <div className="flex items-center gap-1">
+      <input
+        type="number"
+        inputMode="decimal"  // 手機顯示數字鍵盤
+        value={tempFieldValue}
+        onChange={(e) => setTempFieldValue(e.target.value === '' ? '' : e.target.value)}
+        onBlur={finalizeFieldValue}
+        onKeyDown={handleKeyDown(finalizeFieldValue)}
+        className="w-24 text-xl font-black text-emerald-600 text-right
+                   bg-transparent border-b-2 border-transparent
+                   hover:border-emerald-300 focus:border-emerald-500
+                   focus:outline-none transition-colors"
+      />
+      <span className="text-sm text-slate-400">萬</span>
+    </div>
+  </div>
+  <input
+    type="range"
+    min={100} max={10000} step={100}
+    value={fieldValue}  // 滑軌使用實際值
+    onChange={(e) => updateField('fieldName', Number(e.target.value))}
+    className="w-full h-2 bg-emerald-100 rounded-lg appearance-none
+               cursor-pointer accent-emerald-600"
+  />
+  <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+    <span>100萬</span>
+    <span>1億</span>
+  </div>
+</div>
+
+```
+
+### inputMode 使用指南
+
+| 輸入類型 | inputMode | 說明 |
+| --- | --- | --- |
+| 金額（萬） | `decimal` | 允許小數點 |
+| 百分比（%） | `decimal` | 允許小數點 |
+| 年期（年） | `numeric` | 純整數 |
+| 年齡（歲） | `numeric` | 純整數 |
+| 月數（月） | `numeric` | 純整數 |
+
+### 百分比輸入模板
+
+```tsx
+{/* 百分比輸入（如利率、配息率） */}
+<div>
+  <div className="flex justify-between items-center mb-2">
+    <label className="text-xs text-slate-500">配息率</label>
+    <div className="flex items-center gap-0.5">
+      <input
+        type="number"
+        step={0.1}
+        value={rateValue}
+        onChange={(e) => updateField('rateField', Number(e.target.value))}
+        className="w-14 text-lg font-black text-blue-600 text-right
+                   bg-transparent border-b border-transparent
+                   hover:border-blue-300 focus:border-blue-500
+                   focus:outline-none"
+      />
+      <span className="text-blue-400">%</span>
+    </div>
+  </div>
+  <input
+    type="range"
+    min={2} max={12} step={0.1}
+    value={rateValue}
+    onChange={(e) => updateField('rateField', Number(e.target.value))}
+    className="w-full h-1.5 bg-blue-200 rounded-lg appearance-none
+               cursor-pointer accent-blue-600"
+  />
+</div>
+
+```
+
+### 倍數輸入模板
+
+```tsx
+{/* 倍數輸入（如保障倍數） */}
+<div>
+  <div className="flex justify-between items-center mb-2">
+    <label className="text-xs text-emerald-600">保障倍數（保額/總保費）</label>
+    <div className="flex items-center gap-0.5">
+      <input
+        type="number"
+        step={0.1}
+        value={leverageValue}
+        onChange={(e) => updateField('leverageField', Number(e.target.value))}
+        className="w-14 font-bold text-emerald-700 text-right
+                   bg-transparent border-b border-transparent
+                   hover:border-emerald-300 focus:border-emerald-500
+                   focus:outline-none"
+      />
+      <span className="text-emerald-400">x</span>
+    </div>
+  </div>
+  <input
+    type="range"
+    min={1.2} max={3} step={0.1}
+    value={leverageValue}
+    onChange={(e) => updateField('leverageField', Number(e.target.value))}
+    className="w-full h-2 bg-emerald-100 rounded-lg appearance-none
+               cursor-pointer accent-emerald-500"
+  />
+</div>
+
+```
+
+### 常用參數上限建議
+
+| 參數類型 | 最小值 | 最大值 | 滑軌步長 | inputMode |
+| --- | --- | --- | --- | --- |
+| 資產/貸款金額 | 100萬 | 1億（10000萬） | 100萬 | `decimal` |
+| 房貸餘額 | 0 | 1億（10000萬） | 100萬 | `decimal` |
+| 月付金 | 1萬 | 30萬 | 1000元 | `decimal` |
+| 年期 | 5年 | 40年 | 1年 | `numeric` |
+| **年齡（投保/客戶）** | 20歲 | **99歲** | 1歲 | `numeric` |
+| 利率 | 1.5% | 5% | 0.1% | `decimal` |
+| 配息率 | 3% | 12% | 0.1% | `decimal` |
+| 成長率 | 4% | 20% | 0.5% | `decimal` |
+| 保障倍數 | 1x | 3x | 0.1x | `decimal` |
+
+---
+
+## 🔘 基金戰情室按鈕規範
+
+### 使用場景
+
+當工具原本有「建議標的」或「建議產品」區塊時，改為「基金戰情室」按鈕，作為付費會員功能預留。
+
+### 標準按鈕模板
+
+```tsx
+{/* 進階功能入口 - 基金戰情室 */}
+<div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl
+               shadow-sm border border-slate-700 p-4 text-white">
+  <h4 className="font-bold mb-3 text-sm flex items-center gap-1">
+    <Landmark size={14} className="text-amber-400"/> 投資標的研究
+  </h4>
+  <p className="text-[11px] text-slate-300 mb-3">
+    深入分析高配息基金、ETF、債券等標的，找出最適合您的投資組合
+  </p>
+  <button
+    className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500
+               hover:from-amber-600 hover:to-orange-600 rounded-lg font-bold
+               text-sm flex items-center justify-center gap-2 transition-all shadow-lg"
+    onClick={() => alert('此功能僅限付費會員使用，敬請期待！')}
+  >
+    <Sparkles size={16} />
+    進入基金戰情室
+    <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded text-[10px]">PRO</span>
+  </button>
+  <p className="text-[10px] text-slate-500 mt-2 text-center">
+    付費會員專屬功能
+  </p>
+</div>
+
+```
+
+### 變體：含分類提示
+
+```tsx
+{/* 基金戰情室 - 含大小水庫分類 */}
+<div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl
+               shadow-sm border border-slate-700 p-4 text-white">
+  <h4 className="font-bold mb-3 text-sm flex items-center gap-1">
+    <Landmark size={14} className="text-amber-400"/> 投資標的研究
+  </h4>
+  <div className="grid grid-cols-2 gap-2 mb-3">
+    <div className="bg-slate-800/60 rounded p-2">
+      <p className="text-[10px] text-cyan-400 font-bold">大水庫</p>
+      <p className="text-[10px] text-slate-400">穩健配息型標的</p>
+    </div>
+    <div className="bg-slate-800/60 rounded p-2">
+      <p className="text-[10px] text-amber-400 font-bold">小水庫</p>
+      <p className="text-[10px] text-slate-400">積極成長型標的</p>
+    </div>
+  </div>
+  <button
+    className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500
+               hover:from-amber-600 hover:to-orange-600 rounded-lg font-bold
+               text-sm flex items-center justify-center gap-2 transition-all shadow-lg"
+    onClick={() => alert('此功能僅限付費會員使用，敬請期待！')}
+  >
+    <Sparkles size={16} />
+    進入基金戰情室
+    <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded text-[10px]">PRO</span>
+  </button>
+  <p className="text-[10px] text-slate-500 mt-2 text-center">
+    付費會員專屬功能
+  </p>
+</div>
+
+```
+
+### 未來會員系統整合（預留）
+
+```tsx
+// 會員身分判斷（未來從用戶資料讀取）
+const isPremiumMember = false; // TODO: 從 context 或 props 取得
+
+// 按鈕點擊邏輯
+const handleFundWarRoomClick = () => {
+  if (isPremiumMember) {
+    // 導向基金戰情室頁面
+    router.push('/fund-war-room');
+  } else {
+    // 顯示升級提示或彈窗
+    alert('此功能僅限付費會員使用，敬請期待！');
+  }
+};
+
+```
+
+---
+
+## 📐 資產累積效益區塊規範
+
+### 正現金流狀態
+
+```tsx
+<div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-center">
+  <p className="text-xs text-emerald-600 mb-1">🎉 配息完全支付房貸，還有盈餘！</p>
+  <p className="text-2xl font-black text-emerald-600">
+    每月多 {formatMoneyYuan(netCashFlow)}
+  </p>
+</div>
+<div className="p-2 bg-emerald-100 rounded-lg text-center">
+  <p className="text-xs font-bold text-emerald-700">
+    {years}年累積現金流：{formatMoney(cumulativeCashFlow)}
+  </p>
+</div>
+<div className="p-2 bg-slate-100 rounded-lg text-center">
+  <p className="text-xs text-slate-700">
+    期滿擁有 <b className="text-emerald-600 text-lg">{formatMoney(loanAmount)}</b> 資產
+  </p>
+</div>
+
+```
+
+### 負現金流狀態（正向表達）
+
+```tsx
+<div className="p-3 bg-blue-50 rounded-xl border border-blue-200 text-center">
+  <p className="text-xs text-blue-600 mb-1">聰明理財：小額累積大資產</p>
+  <p className="text-xl font-black text-blue-600">
+    每月只需 {formatMoneyYuan(monthlyOutOfPocket)}
+  </p>
+</div>
+<div className="p-2 bg-emerald-50 rounded-lg text-center border border-emerald-200">
+  <p className="text-xs text-emerald-700">
+    總投入 <b>{formatMoney(totalOutOfPocket)}</b>
+    <br/>
+    累積 <b className="text-lg text-emerald-600">{formatMoney(loanAmount)}</b> 資產
+  </p>
+</div>
+<div className="p-2 bg-slate-100 rounded-lg text-center">
+  <p className="text-[10px] text-slate-600">
+    當配息率達 <b>{breakEvenRate.toFixed(1)}%</b> 即可達成正現金流
+  </p>
+</div>
+
+```
+
+---
+
+## 📊 配息情境分析區塊規範
+
+### 標準模板
+
+```tsx
+<div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-200">
+  <h4 className="font-bold text-blue-700 mb-4 flex items-center gap-2 text-sm">
+    <Target size={16}/> 配息率情境分析
+  </h4>
+
+  {/* 資產累積提示 - 必須顯示 */}
+  <div className="mb-4 p-3 bg-white rounded-lg border border-blue-100 text-center">
+    <p className="text-xs text-slate-600">
+      {isPositiveCashFlow ? (
+        <>
+          <span className="text-emerald-600">🎉 正現金流模式</span><br/>
+          {years}年累積 <b className="text-emerald-600">{formatMoney(cumulativeCashFlow)}</b> 現金流
+          + <b className="text-emerald-600">{formatMoney(loanAmount)}</b> 資產
+        </>
+      ) : (
+        <>
+          總投入 <b className="text-blue-600">{formatMoney(totalOutOfPocket)}</b>
+          累積 <b className="text-lg text-emerald-600">{formatMoney(loanAmount)}</b> 資產
+        </>
+      )}
+    </p>
+  </div>
+
+  {/* 三種情境 */}
+  <div className="grid grid-cols-3 gap-3">
+    {[
+      { label: '保守 4%', value: scenarios.low },
+      { label: '平衡 6%', value: scenarios.mid },
+      { label: '積極 8%', value: scenarios.high },
+    ].map((scenario, idx) => (
+      <div key={idx} className="bg-white p-3 rounded-lg text-center">
+        <p className="text-[10px] text-slate-500 mb-1">{scenario.label}</p>
+        <p className={`text-lg font-black ${
+          scenario.value >= 0 ? 'text-emerald-600' : 'text-blue-600'
+        }`}>
+          {scenario.value >= 0 ? '+' : ''}{formatMoneyYuan(scenario.value)}
+        </p>
+        <p className="text-[10px] text-slate-400">/月</p>
+      </div>
+    ))}
+  </div>
+
+  {/* 正現金流門檻 */}
+  <div className="mt-3 p-2 bg-white/50 rounded-lg text-center">
+    <p className="text-xs text-blue-700">
+      當配息率達 <b>{breakEvenRate.toFixed(1)}%</b> 即可實現正現金流
+    </p>
+  </div>
+</div>
+
+```
+
+---
+
+## 🎯 業務小抄規範
+
+### 功能說明
+
+業務小抄是一個隱藏面板，提供業務人員在客戶面前快速參考的話術和數據。透過「三連點」秘密觸發，不會被客戶察覺。
+
+### 觸發機制
+
+### 狀態管理
+
+```tsx
+import { useMembership } from '../hooks/useMembership';
+
+// 會員權限判斷
+const { membership } = useMembership(userId || null);
+const isPaidMember = membership?.isPaid || false;
+
+// --- 隱藏小抄狀態 ---
+const [showCheatSheet, setShowCheatSheet] = useState(false);
+const [clickCount, setClickCount] = useState(0);
+const clickTimer = useRef<NodeJS.Timeout | null>(null);
+
+// --- 首次進入提示狀態 ---
+const [showTripleClickHint, setShowTripleClickHint] = useState(false);
+const HINT_STORAGE_KEY = 'ua_[工具名稱]_cheatsheet_hint_seen'; // 每個工具不同 key
+
+// 三連點觸發函式
+const handleSecretClick = () => {
+  setClickCount(prev => prev + 1);
+  if (clickTimer.current) clearTimeout(clickTimer.current);
+  clickTimer.current = setTimeout(() => setClickCount(0), 800); // 800ms 內要完成三連點
+  if (clickCount >= 2) {
+    setShowCheatSheet(true);
+    setClickCount(0);
+  }
+};
+
+// ESC 鍵關閉（同時關閉小抄和首次提示）
+useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setShowCheatSheet(false);
+      setShowTripleClickHint(false);
+    }
+  };
+  window.addEventListener('keydown', handleKeyDown);
+  return () => window.removeEventListener('keydown', handleKeyDown);
+}, []);
+
+// 首次進入頁面顯示提示
+useEffect(() => {
+  const hasSeenHint = localStorage.getItem(HINT_STORAGE_KEY);
+  if (!hasSeenHint) {
+    const timer = setTimeout(() => {
+      setShowTripleClickHint(true);
+    }, 1000); // 延遲 1 秒顯示
+    return () => clearTimeout(timer);
+  }
+}, []);
+
+// 關閉提示並記錄已看過
+const dismissHint = () => {
+  setShowTripleClickHint(false);
+  localStorage.setItem(HINT_STORAGE_KEY, 'true');
+};
+
+```
+
+### localStorage Key 命名規範
+
+每個工具使用不同的 key 追蹤首次提示狀態：
+
+| 工具 | localStorage Key |
+| --- | --- |
+| 百萬禮物 | `ua_gift_cheatsheet_hint_seen` |
+| 大小水庫 | `ua_reservoir_cheatsheet_hint_seen` |
+| 稅務傳承 | `ua_tax_cheatsheet_hint_seen` |
+| 金融房產 | `ua_estate_cheatsheet_hint_seen` |
+
+### 觸發點設置（含首次提示氣泡）
+
+在 Header 區塊中放置一個不起眼的標籤作為觸發點，並包含首次進入提示氣泡：
+
+```tsx
+{/* Header */}
+<div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-6 text-white">
+  <div className="flex flex-wrap items-center gap-2 mb-2">
+    <span className="bg-white/15 px-3 py-1 rounded-full text-xs font-bold">
+      PASSIVE INCOME
+    </span>
+    {/* 🔥 這個標籤是秘密觸發點 + 首次提示 */}
+    <div className="relative">
+      <span
+        onClick={handleSecretClick}
+        className="bg-orange-400/20 text-orange-100 px-3 py-1 rounded-full text-xs
+                   font-bold border border-orange-400/30 cursor-default select-none"
+      >
+        以息養貸・數位包租公
+      </span>
+      {/* 首次進入提示氣泡 - 顯示在右側 */}
+      {showTripleClickHint && (
+        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 animate-pulse">
+          <div className="relative bg-slate-900 text-white px-4 py-2 rounded-lg shadow-xl whitespace-nowrap">
+            {/* 左側箭頭指向觸發標籤 */}
+            <div className="absolute top-1/2 -left-2 -translate-y-1/2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-transparent border-r-slate-900" />
+            <p className="text-sm font-bold flex items-center gap-2">
+              <span className="text-yellow-400">💡</span>
+              點三下可開啟業務小抄
+            </p>
+            <button
+              onClick={dismissHint}
+              className="absolute -top-1 -right-1 w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center text-xs"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+  {/* ... */}
+</div>
+
+```
+
+### 小抄面板結構
+
+業務小抄包含五大區塊：
+
+| 區塊 | 圖標 | 色彩 | 內容 |
+| --- | --- | --- | --- |
+| 當前數據 | - | `slate-800` | 即時計算的關鍵數字 |
+| 開場話術 | 🎬 | `emerald-400` | 破冰開場的話術 |
+| 核心賣點 | 💡 | `amber-400` | 主要銷售論點 |
+| 異議處理 | 🛡️ | `rose-400` | 常見反對意見的回應 |
+| 收尾金句 | ✨ | `purple-400` | 促成成交的金句 |
+
+### 會員權限限制
+
+業務小抄對不同會員等級有不同的呈現方式：
+
+| 會員等級 | 呈現方式 |
+| --- | --- |
+| `founder`, `paid` | 完整顯示小抄內容，標題有皇冠圖示 |
+| `trial`, `referral_trial`, `grace`, `expired` | 內容模糊化 + 「會員專屬功能」遮罩 |
+
+### 完整面板模板（含會員限制）
+
+```tsx
+import { Lock, Crown, X } from 'lucide-react';
+
+{/* ============================================================ */}
+{/* 隱藏小抄面板 */}
+{/* ============================================================ */}
+{showCheatSheet && (
+  <div className="fixed inset-0 z-50 flex justify-end">
+    {/* 背景遮罩 */}
+    <div
+      className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+      onClick={() => setShowCheatSheet(false)}
+    />
+
+    {/* 側邊面板 */}
+    <div className="relative w-full max-w-md bg-slate-900 text-white shadow-2xl overflow-y-auto">
+      {/* 標題列 */}
+      <div className="sticky top-0 bg-slate-900 border-b border-slate-700 p-4 flex justify-between items-center z-10">
+        <div>
+          <h3 className="font-bold text-lg flex items-center gap-2">
+            業務小抄
+            {isPaidMember && <Crown size={16} className="text-amber-400" />}
+          </h3>
+          <p className="text-xs text-slate-400">按 ESC 關閉</p>
+        </div>
+        <button onClick={() => setShowCheatSheet(false)} className="p-2 hover:bg-slate-700 rounded-lg">
+          <X size={20}/>
+        </button>
+      </div>
+
+      {/* 內容區域 - 根據會員等級顯示 */}
+      <div className="relative">
+        {/* 非付費會員：模糊遮罩 */}
+        {!isPaidMember && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-md">
+            <div className="text-center p-8">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                <Lock size={40} className="text-white" />
+              </div>
+              <h4 className="text-xl font-bold text-white mb-2">會員專屬功能</h4>
+              <p className="text-slate-400 text-sm mb-4">
+                業務小抄是付費會員專屬功能<br/>
+                升級後即可解鎖完整話術庫
+              </p>
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg text-white font-bold text-sm">
+                  <Crown size={16} />
+                  升級成為付費會員
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  {membership?.tier === 'referral_trial' ? '轉介紹試用會員可享升級折扣' : '解鎖所有工具與進階功能'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 小抄內容（非付費會員會模糊） */}
+        <div className={`p-4 space-y-6 text-sm ${!isPaidMember ? 'blur-sm pointer-events-none select-none' : ''}`}>
+
+        {/* ========== 1. 當前數據 ========== */}
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="bg-slate-800 p-2 rounded">
+            <span className="text-slate-500">貸款金額</span>
+            <p className="font-bold text-emerald-400">{formatMoney(loanAmount)}</p>
+          </div>
+          <div className="bg-slate-800 p-2 rounded">
+            <span className="text-slate-500">收益差額</span>
+            <p className={`font-bold ${calculations.isPositiveSpread ? 'text-emerald-400' : 'text-slate-400'}`}>
+              {calculations.rateSpread.toFixed(1)}%
+            </p>
+          </div>
+          <div className="bg-slate-800 p-2 rounded">
+            <span className="text-slate-500">月現金流</span>
+            <p className={`font-bold ${calculations.isPositiveCashFlow ? 'text-emerald-400' : 'text-blue-400'}`}>
+              {formatMoneyYuan(calculations.netCashFlow)}
+            </p>
+          </div>
+          <div className="bg-slate-800 p-2 rounded">
+            <span className="text-slate-500">正現金流門檻</span>
+            <p className="font-bold text-blue-400">{calculations.breakEvenRate.toFixed(1)}%</p>
+          </div>
+        </div>
+
+        {/* ========== 2. 開場話術 ========== */}
+        <div>
+          <h4 className="font-bold text-emerald-400 mb-2">🎬 開場</h4>
+          <div className="bg-slate-800 p-3 rounded text-xs space-y-2">
+            <p className="text-slate-300">「王先生，您有聽過<b className="text-white">金融房產</b>嗎？」</p>
+            <p className="text-slate-300">「就是用銀行的錢，買<b className="text-white">會生錢的資產</b>，讓配息自動幫您繳房貸。」</p>
+          </div>
+        </div>
+
+        {/* ========== 3. 核心賣點 ========== */}
+        <div>
+          <h4 className="font-bold text-amber-400 mb-2">💡 核心賣點</h4>
+          <div className="space-y-2 text-xs">
+            <div className="bg-slate-800 p-2 rounded">
+              <p className="text-emerald-300 font-bold">收益差額</p>
+              <p className="text-slate-400">「貸款 {loanRate}%，配息 {investReturnRate}%，中間差 {calculations.rateSpread.toFixed(1)}% 就是您的獲利空間」</p>
+            </div>
+            <div className="bg-slate-800 p-2 rounded">
+              <p className="text-blue-300 font-bold">以息養貸</p>
+              <p className="text-slate-400">「每月配息 {formatMoneyYuan(calculations.monthlyIncome)}，房貸 {formatMoneyYuan(calculations.monthlyPayment)}」</p>
+            </div>
+            <div className="bg-slate-800 p-2 rounded">
+              <p className="text-purple-300 font-bold">免頭期款</p>
+              <p className="text-slate-400">「實體房產要 200-300 萬頭期，金融房產 0 頭期」</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ========== 4. 異議處理 ========== */}
+        <div>
+          <h4 className="font-bold text-rose-400 mb-2">🛡️ 異議處理</h4>
+          <div className="space-y-2 text-xs">
+            <div className="bg-slate-800 p-2 rounded">
+              <p className="text-rose-300 font-bold">「會不會賠錢？」</p>
+              <p className="text-slate-400">→ 「配息只要 {calculations.breakEvenRate.toFixed(1)}% 就打平，我們選 {investReturnRate}% 的標的」</p>
+            </div>
+            <div className="bg-slate-800 p-2 rounded">
+              <p className="text-rose-300 font-bold">「借錢投資很危險」</p>
+              <p className="text-slate-400">→ 「房貸也是借錢，但沒人說買房危險。差別只在買什麼」</p>
+            </div>
+            <div className="bg-slate-800 p-2 rounded">
+              <p className="text-rose-300 font-bold">「配息會被砍」</p>
+              <p className="text-slate-400">→ 「我們選穩健標的，即使降息 1-2%，還是正現金流」</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ========== 5. 收尾金句 ========== */}
+        <div>
+          <h4 className="font-bold text-purple-400 mb-2">✨ 收尾金句</h4>
+          <div className="space-y-2 text-xs">
+            <div className="bg-purple-900/30 p-2 rounded border border-purple-700 text-center italic">
+              「富人買資產，窮人買負債」
+            </div>
+            <div className="bg-purple-900/30 p-2 rounded border border-purple-700 text-center italic">
+              「不是買房子出租，是買現金流」
+            </div>
+            <div className="bg-purple-900/30 p-2 rounded border border-purple-700 text-center italic">
+              「讓銀行的錢幫您賺錢」
+            </div>
+          </div>
+        </div>
+        </div>  {/* 關閉小抄內容 div */}
+      </div>  {/* 關閉內容區域 div */}
+    </div>  {/* 關閉側邊面板 div */}
+  </div>  {/* 關閉 fixed 容器 div */}
+)}
+
+```
+
+### 各工具小抄內容規劃
+
+| 工具 | 開場話術 | 核心賣點 | 異議處理 |
+| --- | --- | --- | --- |
+| **金融房產** | 金融房產概念介紹 | 收益差額、以息養貸、免頭期 | 賠錢、借錢危險、配息被砍 |
+| **大小水庫** | 雙引擎理財介紹 | 穩定現金流、複利成長、攻守兼備 | 報酬率不穩、配息會降、太複雜 |
+| **稅務傳承** | 遺產稅問題引入 | 壓縮遺產、預留稅源、即時保障 | 很健康不急、保費太貴、不信任保險 |
+
+### 小抄詞語注意事項
+
+小抄中的話術也要遵循詞語規範：
+
+```tsx
+// ❌ 錯誤（小抄中也不能用禁用詞語）
+<p className="text-emerald-300 font-bold">利差套利</p>
+<p className="text-slate-400">「利差 3.8% 就是您的利潤」</p>
+
+// ✅ 正確
+<p className="text-emerald-300 font-bold">收益差額</p>
+<p className="text-slate-400">「中間差 3.8% 就是您的獲利空間」</p>
+
+```
+
+### 動態數據綁定
+
+小抄中的數據必須與工具計算結果即時同步：
+
+```tsx
+// 當前數據區塊 - 必須使用 calculations 中的即時數據
+<div className="bg-slate-800 p-2 rounded">
+  <span className="text-slate-500">月現金流</span>
+  <p className={`font-bold ${calculations.isPositiveCashFlow ? 'text-emerald-400' : 'text-blue-400'}`}>
+    {formatMoneyYuan(calculations.netCashFlow)}  {/* ✅ 即時計算值 */}
+  </p>
+</div>
+
+// 話術區塊 - 帶入當前參數值
+<p className="text-slate-400">
+  「貸款 {loanRate}%，配息 {investReturnRate}%，中間差 {calculations.rateSpread.toFixed(1)}% 就是您的獲利空間」
+</p>
+
+```
+
+---
+
+## ✅ 開發檢查清單
+
+### 詞語檢查
+
+- [ ]  搜尋 `利差` → 替換為 `收益差額`
+- [ ]  搜尋 `套利` → 替換為 `資產累積`
+- [ ]  搜尋 `槓桿` → 替換為 `保障倍數` 或 `效益倍數`
+- [ ]  搜尋 `需自行負擔` → 替換為 `只需負擔`
+- [ ]  搜尋 `月付` → 替換為 `每月只需`
+- [ ]  搜尋 `損益平衡` → 替換為正向說法
+
+### 色調檢查
+
+- [ ]  負現金流區塊不使用 `red-*` 或 `orange-*`
+- [ ]  負值顯示使用 `blue-*` 而非 `red-*`
+- [ ]  收益差額為負時使用 `slate-*`
+
+### 輸入組件檢查
+
+- [ ]  所有金額參數支援點擊輸入
+- [ ]  所有金額參數支援滑軌調整
+- [ ]  金額上限至少 1 億（10000萬）
+- [ ]  利率/配息率上限合理（建議 12%）
+- [ ]  滑軌步長設定合理
+- [ ]  **使用暫存狀態模式（temp state + onBlur）**
+- [ ]  **所有數字輸入添加 `inputMode` 屬性**
+- [ ]  **所有年齡欄位上限設為 99**
+- [ ]  **支援 Enter 鍵確認輸入**
+
+### 功能檢查
+
+- [ ]  「建議標的」區塊改為「基金戰情室」按鈕
+- [ ]  基金戰情室按鈕標示 PRO 標籤
+- [ ]  按鈕點擊顯示「付費會員功能」提示
+
+### 業務小抄檢查
+
+- [ ]  實作三連點觸發機制（800ms 內完成）
+- [ ]  觸發點設置在 Header 的不起眼標籤上
+- [ ]  ESC 鍵可關閉小抄面板
+- [ ]  小抄包含五大區塊（當前數據、開場、核心賣點、異議處理、收尾金句）
+- [ ]  當前數據區塊綁定即時計算值
+- [ ]  話術區塊帶入當前參數值
+- [ ]  小抄中的話術也遵循詞語規範（無禁用詞語）
+
+---
+
+## 📁 已完成工具清單
+
+| 工具名稱 | 檔案名稱 | 版本 | 狀態 |
+| --- | --- | --- | --- |
+| 金融房產專案 | FinancialRealEstateTool_v2.tsx | v2.1 | ✅ 已優化 |
+| 大小水庫專案 | BigSmallReservoirTool_v2.tsx | v2.1 | ✅ 已優化 |
+| 稅務傳承專案 | TaxPlannerTool_v3.1.tsx | v3.2 | ✅ 已優化 |
+
+---
+
+## 🔧 常用 Import
+
+```tsx
+import {
+  // 常用圖標
+  Calculator,
+  TrendingUp,
+  Target,
+  Shield,
+  Landmark,
+  Sparkles,
+  ChevronRight,
+  CheckCircle2,
+  AlertTriangle,
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  // ... 其他需要的圖標
+} from 'lucide-react';
+
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  Area,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  // ... 其他圖表組件
+} from 'recharts';
+
+```
+
+---
+
+## 📝 備註
+
+1. 本規格書適用於所有 Ultra Advisor 前端工具
+2. 新開發工具必須遵循本規格
+3. 既有工具更新時需依本規格進行對照檢查
+4. 如有規格更新需求，請先討論後統一修訂本文件
+
+---
+
+*Ultra Advisor - 打造台灣最強財務顧問提案解決方案*

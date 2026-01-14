@@ -1,0 +1,130 @@
+# Ultra Advisor 更新日誌
+
+---
+
+## 2026-01-15
+
+### 任務看板系統（全新功能）
+
+#### Cloud Functions
+- `completeMission` - 完成任務並原子性發放點數
+- `getMissions` - 取得任務列表（含用戶完成狀態）
+- `initMissions` - 初始化 8 個預設任務（管理員專用）
+
+#### 前台元件
+- `src/hooks/useMissions.ts` - 任務系統 Hook
+- `src/components/MissionCard.tsx` - 任務卡片元件（顯示當前任務）
+- `src/components/PWAInstallModal.tsx` - PWA 安裝教學 Modal
+
+#### 後台頁面
+- `admin/src/pages/membership/Missions.jsx` - 任務管理頁面
+- `admin/src/pages/membership/Referrals.jsx` - 推薦紀錄頁面
+- 側邊欄新增「任務管理」和「推薦紀錄」選單項目
+
+#### PWA 設定
+- `public/manifest.json` - PWA manifest 完整設定
+- `index.html` - 加入 manifest 連結
+
+#### 預設任務（8 個）
+| 任務 | 點數 | 分類 | 驗證方式 |
+|------|------|------|----------|
+| 設定個人頭像 | +20 | 新手 | 自動 (photoURL) |
+| 設定顯示名稱 | +15 | 新手 | 自動 (displayName) |
+| 建立第一位客戶 | +20 | 新手 | 自動 (clients) |
+| 加入 LINE 官方帳號 | +20 | 社交 | 自動 (lineUserId) |
+| 加入 LINE 戰友社群 | +25 | 社交 | 手動確認 |
+| 將 Ultra 加入主畫面 | +30 | 習慣 | 手動確認 |
+| 使用 3 次業務小抄 | +15 | 習慣 | 自動 (cheatSheetUsageCount) |
+| 每日登入 | +5 | 每日 | 自動 (lastLoginDate) |
+
+#### 使用方式
+1. 後台 → 會員系統 → 任務管理 → 點擊「初始化預設任務」
+2. 前台在適當位置引入 `<MissionCard />` 元件
+
+### 推薦獎勵調整
+- 推薦好友註冊：+100 UA（原 +500）
+- 推薦好友付費：+1000 UA（原 +500）
+- 被推薦人付費：+1000 UA（原 +500）
+- 新增 `updatePointsRules` Cloud Function（後台一鍵更新）
+- 後台點數規則頁面新增「更新推薦獎勵」按鈕
+
+### LINE 官方帳號更換
+- 更換為新購買的專屬帳號 `@ultraadvisor`
+- 新連結：`https://line.me/R/ti/p/@ultraadvisor`
+- 已更新位置：
+  - 官網 Landing Page
+  - 傲創計算機（MortgageCalculator）
+  - CLAUDE.md 文檔
+
+### 百萬禮物專案修復
+- **循環同步功能**：第二、三階段預設同步第一階段，手動調整後才取消同步
+- **業務小抄權限修復**：修正付費會員無法查看業務小抄的問題
+  - 根本原因：App.tsx 未傳遞 `userId` prop
+  - 解決方案：新增 `userId={user?.uid}` 傳遞給 MillionDollarGiftTool
+
+### 檔案變更
+- `src/components/LandingPage.jsx` - LINE 連結更新
+- `src/components/MortgageCalculator.tsx` - LINE 連結更新
+- `src/components/MillionDollarGiftTool.tsx` - 循環同步邏輯優化
+- `src/App.tsx` - 傳遞 userId 給百萬禮物元件
+- `CLAUDE.md` - LINE 連結更新
+
+---
+
+## 2026-01-14
+
+### LINE Bot 後台功能增強
+
+#### 新增訊息設定
+- **收到 Email 回覆**：用戶傳送 Email 後的即時回覆訊息
+- **帳號開通成功訊息**：包含密碼訊息和 Flex Message 標題
+- 支援動態變數：`{{password}}`、`{{referralCode}}`、`{{referrerName}}`
+
+#### LINE Bot 防刷機制
+- 新增速率限制功能，防止同一 LINE 帳號大量註冊
+- **冷卻時間**：成功註冊後需等待 30 分鐘
+- **每日上限**：同一 LINE 帳號每天最多嘗試 3 次
+- **智慧判斷**：
+  - 成功註冊 → 計入冷卻
+  - Email 已註冊 → 不計入冷卻
+  - 系統錯誤 → 不計入冷卻
+- 資料存入 Firestore `rateLimits` 集合
+
+### 管理後台用戶管理改進
+
+#### 用戶列表優化
+- 新增「用戶」欄位：顯示頭像 + 姓名 + Email
+- 「到期時間」改為「剩餘天數」(daysRemaining)
+
+#### 編輯 Modal 強化
+- 新增 `displayName` 和 `photoURL` 欄位
+- 新增「剩餘天數」調整功能（+1, +7, +30, +365 天按鈕）
+- **Profile 子集合同步**：displayName/photoURL 存入 `users/{uid}/profile/data`
+
+### 檔案變更
+- `functions/index.js` - 防刷機制、動態訊息
+- `admin/src/pages/LineBotEditor.jsx` - 新訊息設定卡片
+- `admin/src/pages/Users.jsx` - 用戶管理改進
+
+---
+
+## 部署指令
+
+```bash
+# 部署 Cloud Functions
+cd functions && firebase deploy --only functions
+
+# 部署管理後台
+cd admin && npm run build && firebase deploy --only hosting:admin
+
+# 部署主應用
+npm run build && firebase deploy --only hosting
+```
+
+---
+
+## 注意事項
+
+1. **Firestore 新集合**：`rateLimits` - LINE 用戶註冊嘗試記錄
+2. **Profile 子集合**：用戶資料統一存在 `users/{uid}/profile/data`
+3. **LINE Bot 訊息**：需在後台 LINE Bot 頁面儲存才會生效

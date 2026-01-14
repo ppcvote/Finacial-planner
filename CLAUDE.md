@@ -32,7 +32,7 @@ C:\Users\User\ultra-admin\           # Admin 後台（如獨立）
 ## 🌐 網址
 - 前端：https://ultra-advisor.tw
 - 後台：https://admin.ultra-advisor.tw/secret-admin-ultra-2026
-- LINE 官方帳號：https://lin.ee/RFE8A5A
+- LINE 官方帳號：https://line.me/R/ti/p/@ultraadvisor
 
 ## 🔥 Firebase 設定
 ```javascript

@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { 
-  Landmark, 
-  Calculator, 
-  Scale, 
-  AlertTriangle, 
-  Siren, 
-  CheckCircle2, 
+import {
+  Landmark,
+  Calculator,
+  Scale,
+  AlertTriangle,
+  Siren,
+  CheckCircle2,
   ShieldCheck,
   Activity,
   Heart,
@@ -21,8 +21,12 @@ import {
   ChevronRight,
   Calendar,
   PiggyBank,
-  Shield
+  Shield,
+  X,
+  Lock,
+  Crown
 } from 'lucide-react';
+import { useMembership } from '../hooks/useMembership';
 import { 
   ResponsiveContainer, 
   RadarChart, 
@@ -76,11 +80,19 @@ const TAX_CONSTANTS = {
 // ============================================================
 // 主元件
 // ============================================================
-export const TaxPlannerTool = ({ data, setData }: any) => {
+export const TaxPlannerTool = ({ data, setData, userId }: any) => {
+  // 會員權限判斷
+  const { membership } = useMembership(userId || null);
+  const isPaidMember = membership?.isPaid || false;
+
   // --- 隱藏小抄狀態 ---
   const [showCheatSheet, setShowCheatSheet] = useState(false);
   const [clickCount, setClickCount] = useState(0);
   const clickTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // --- 首次進入提示狀態 ---
+  const [showTripleClickHint, setShowTripleClickHint] = useState(false);
+  const HINT_STORAGE_KEY = 'ua_tax_cheatsheet_hint_seen';
 
   const handleSecretClick = () => {
     setClickCount(prev => prev + 1);
@@ -94,11 +106,31 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowCheatSheet(false);
+      if (e.key === 'Escape') {
+        setShowCheatSheet(false);
+        setShowTripleClickHint(false);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // 首次進入頁面顯示提示
+  useEffect(() => {
+    const hasSeenHint = localStorage.getItem(HINT_STORAGE_KEY);
+    if (!hasSeenHint) {
+      const timer = setTimeout(() => {
+        setShowTripleClickHint(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // 關閉提示並記錄已看過
+  const dismissHint = () => {
+    setShowTripleClickHint(false);
+    localStorage.setItem(HINT_STORAGE_KEY, 'true');
+  };
 
   // --- 資料初始化 ---
   const safeData = {
@@ -153,6 +185,9 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
   const [tempAge, setTempAge] = useState(age);
   const [tempLumpSum, setTempLumpSum] = useState(lumpSumAmount);
   const [tempAnnualPremium, setTempAnnualPremium] = useState(annualPremium);
+  const [tempLumpSumLeverage, setTempLumpSumLeverage] = useState(lumpSumLeverage);
+  const [tempPaymentYears, setTempPaymentYears] = useState(paymentYears);
+  const [tempInstallmentLeverage, setTempInstallmentLeverage] = useState(installmentLeverage);
 
   useEffect(() => { setTempCash(cash); }, [cash]);
   useEffect(() => { setTempRealEstate(realEstateMarket); }, [realEstateMarket]);
@@ -161,6 +196,9 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
   useEffect(() => { setTempAge(age); }, [age]);
   useEffect(() => { setTempLumpSum(lumpSumAmount); }, [lumpSumAmount]);
   useEffect(() => { setTempAnnualPremium(annualPremium); }, [annualPremium]);
+  useEffect(() => { setTempLumpSumLeverage(lumpSumLeverage); }, [lumpSumLeverage]);
+  useEffect(() => { setTempPaymentYears(paymentYears); }, [paymentYears]);
+  useEffect(() => { setTempInstallmentLeverage(installmentLeverage); }, [installmentLeverage]);
 
   // ============================================================
   // 核心計算引擎
@@ -407,9 +445,18 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
   const handleNumInput = (setter: React.Dispatch<React.SetStateAction<number>>, val: string) => {
     setter(val === '' ? 0 : Number(val));
   };
-  
-  const commitNumInput = (field: string, val: number) => {
-    updateField(field, Number(val));
+
+  const commitNumInput = (field: string, val: number, min: number = 0, max: number = 99999) => {
+    let finalVal = Number(val) || 0;
+    finalVal = Math.max(min, Math.min(max, finalVal));
+    updateField(field, finalVal);
+  };
+
+  const handleKeyDown = (commitFn: () => void) => (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      commitFn();
+      e.currentTarget.blur();
+    }
   };
 
   // 快速設定最佳方案
@@ -437,13 +484,33 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
             <span className="bg-white/15 px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase">
               Estate Tax Planning
             </span>
-            <span 
-              onClick={handleSecretClick}
-              className="bg-emerald-500/25 text-emerald-200 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 cursor-default select-none"
-            >
-              <CheckCircle2 size={12} />
-              {TAX_CONSTANTS.APPLICABLE_YEARS}年適用
-            </span>
+            <div className="relative">
+              <span
+                onClick={handleSecretClick}
+                className="bg-emerald-500/25 text-emerald-200 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 cursor-default select-none"
+              >
+                <CheckCircle2 size={12} />
+                {TAX_CONSTANTS.APPLICABLE_YEARS}年適用
+              </span>
+              {/* 首次進入提示氣泡 - 顯示在右側 */}
+              {showTripleClickHint && (
+                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 animate-pulse">
+                  <div className="relative bg-slate-900 text-white px-4 py-2 rounded-lg shadow-xl whitespace-nowrap">
+                    <div className="absolute top-1/2 -left-2 -translate-y-1/2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-transparent border-r-slate-900" />
+                    <p className="text-sm font-bold flex items-center gap-2">
+                      <span className="text-yellow-400">💡</span>
+                      點三下可開啟業務小抄
+                    </p>
+                    <button
+                      onClick={dismissHint}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center text-xs"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight">
             稅務傳承專案
@@ -480,11 +547,13 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
             {spouse && (
               <div className="p-2 bg-purple-50 rounded-lg">
                 <label className="text-[10px] text-purple-600 block mb-1">配偶資產 (萬)</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
+                  inputMode="decimal"
                   value={tempSpouseAssets}
                   onChange={(e) => handleNumInput(setTempSpouseAssets, e.target.value)}
-                  onBlur={() => commitNumInput('spouseAssets', tempSpouseAssets)}
+                  onBlur={() => commitNumInput('spouseAssets', tempSpouseAssets, 0, 100000)}
+                  onKeyDown={handleKeyDown(() => commitNumInput('spouseAssets', tempSpouseAssets, 0, 100000))}
                   className="w-full p-1.5 border border-purple-200 rounded text-sm font-bold text-purple-700"
                 />
               </div>
@@ -509,11 +578,13 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                 <div key={idx} className="flex items-center justify-between">
                   <label className="text-xs text-slate-500">{item.label}</label>
                   <div className="flex items-center gap-1">
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
+                      inputMode="decimal"
                       value={item.val}
                       onChange={(e) => handleNumInput(item.set, e.target.value)}
-                      onBlur={() => commitNumInput(item.field, item.val)}
+                      onBlur={() => commitNumInput(item.field, item.val, 0, 100000)}
+                      onKeyDown={handleKeyDown(() => commitNumInput(item.field, item.val, 0, 100000))}
                       className="w-20 p-1.5 border rounded text-sm font-bold text-right"
                     />
                     <span className="text-xs text-slate-400">萬</span>
@@ -521,16 +592,18 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                 </div>
               ))}
             </div>
-            
+
             {/* 年齡 */}
             <div className="flex items-center justify-between pt-2 border-t border-slate-100">
               <label className="text-xs text-slate-500">投保年齡</label>
               <div className="flex items-center gap-1">
-                <input 
-                  type="number" 
+                <input
+                  type="number"
+                  inputMode="numeric"
                   value={tempAge}
                   onChange={(e) => handleNumInput(setTempAge, e.target.value)}
-                  onBlur={() => commitNumInput('age', tempAge)}
+                  onBlur={() => commitNumInput('age', tempAge, 20, 99)}
+                  onKeyDown={handleKeyDown(() => commitNumInput('age', tempAge, 20, 99))}
                   className="w-16 p-1.5 border rounded text-sm font-bold text-center"
                 />
                 <span className="text-xs text-slate-400">歲</span>
@@ -722,18 +795,21 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                     <div className="flex items-center gap-1">
                       <input
                         type="number"
-                        value={lumpSumAmount}
-                        onChange={(e) => updateField('lumpSumAmount', Number(e.target.value))}
+                        inputMode="decimal"
+                        value={tempLumpSum}
+                        onChange={(e) => handleNumInput(setTempLumpSum, e.target.value)}
+                        onBlur={() => commitNumInput('lumpSumAmount', tempLumpSum, 0, cash)}
+                        onKeyDown={handleKeyDown(() => commitNumInput('lumpSumAmount', tempLumpSum, 0, cash))}
                         className="w-24 text-2xl font-black text-blue-700 text-right bg-transparent border-b-2 border-transparent hover:border-blue-300 focus:border-blue-500 focus:outline-none transition-colors"
                       />
                       <span className="text-sm text-slate-400">萬</span>
                     </div>
                   </div>
-                  <input 
-                    type="range" 
-                    min={0} 
-                    max={cash} 
-                    step={100} 
+                  <input
+                    type="range"
+                    min={0}
+                    max={cash}
+                    step={100}
                     value={lumpSumAmount}
                     onChange={(e) => updateField('lumpSumAmount', Number(e.target.value))}
                     className="w-full h-3 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
@@ -743,7 +819,7 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                     <span>最高可用 {formatMoney(cash)}</span>
                   </div>
                 </div>
-                
+
                 {/* 保障倍數 */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
@@ -751,16 +827,19 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                     <div className="flex items-center gap-0.5">
                       <input
                         type="number"
+                        inputMode="decimal"
                         step={0.05}
-                        value={lumpSumLeverage}
-                        onChange={(e) => updateField('lumpSumLeverage', Number(e.target.value))}
+                        value={tempLumpSumLeverage}
+                        onChange={(e) => setTempLumpSumLeverage(e.target.value === '' ? 1 : Number(e.target.value))}
+                        onBlur={() => commitNumInput('lumpSumLeverage', tempLumpSumLeverage, 1, 1.5)}
+                        onKeyDown={handleKeyDown(() => commitNumInput('lumpSumLeverage', tempLumpSumLeverage, 1, 1.5))}
                         className="w-14 font-bold text-blue-700 text-right bg-transparent border-b border-transparent hover:border-blue-300 focus:border-blue-500 focus:outline-none"
                       />
                       <span className="text-blue-400">x</span>
                     </div>
                   </div>
-                  <input 
-                    type="range" 
+                  <input
+                    type="range"
                     min={1} max={1.5} step={0.05}
                     value={lumpSumLeverage}
                     onChange={(e) => updateField('lumpSumLeverage', Number(e.target.value))}
@@ -789,24 +868,27 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                     <div className="flex items-center gap-1">
                       <input
                         type="number"
-                        value={annualPremium}
-                        onChange={(e) => updateField('annualPremium', Number(e.target.value))}
+                        inputMode="decimal"
+                        value={tempAnnualPremium}
+                        onChange={(e) => handleNumInput(setTempAnnualPremium, e.target.value)}
+                        onBlur={() => commitNumInput('annualPremium', tempAnnualPremium, 50, 500)}
+                        onKeyDown={handleKeyDown(() => commitNumInput('annualPremium', tempAnnualPremium, 50, 500))}
                         className="w-20 text-2xl font-black text-emerald-700 text-right bg-transparent border-b-2 border-transparent hover:border-emerald-300 focus:border-emerald-500 focus:outline-none transition-colors"
                       />
                       <span className="text-sm text-slate-400">萬/年</span>
                     </div>
                   </div>
-                  <input 
-                    type="range" 
-                    min={50} 
-                    max={500} 
-                    step={10} 
+                  <input
+                    type="range"
+                    min={50}
+                    max={500}
+                    step={10}
                     value={annualPremium}
                     onChange={(e) => updateField('annualPremium', Number(e.target.value))}
                     className="w-full h-3 bg-emerald-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                   />
                 </div>
-                
+
                 {/* 繳費年期 */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
@@ -814,15 +896,18 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                     <div className="flex items-center gap-1">
                       <input
                         type="number"
-                        value={paymentYears}
-                        onChange={(e) => updateField('paymentYears', Number(e.target.value))}
+                        inputMode="numeric"
+                        value={tempPaymentYears}
+                        onChange={(e) => setTempPaymentYears(e.target.value === '' ? 6 : Number(e.target.value))}
+                        onBlur={() => commitNumInput('paymentYears', tempPaymentYears, 6, 20)}
+                        onKeyDown={handleKeyDown(() => commitNumInput('paymentYears', tempPaymentYears, 6, 20))}
                         className="w-14 font-bold text-emerald-700 text-right bg-transparent border-b border-transparent hover:border-emerald-300 focus:border-emerald-500 focus:outline-none"
                       />
                       <span className="text-emerald-400">年</span>
                     </div>
                   </div>
-                  <input 
-                    type="range" 
+                  <input
+                    type="range"
                     min={6} max={20} step={1}
                     value={paymentYears}
                     onChange={(e) => updateField('paymentYears', Number(e.target.value))}
@@ -833,7 +918,7 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                     <span>20年</span>
                   </div>
                 </div>
-                
+
                 {/* 保障倍數 */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
@@ -841,16 +926,19 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                     <div className="flex items-center gap-0.5">
                       <input
                         type="number"
+                        inputMode="decimal"
                         step={0.1}
-                        value={installmentLeverage}
-                        onChange={(e) => updateField('installmentLeverage', Number(e.target.value))}
+                        value={tempInstallmentLeverage}
+                        onChange={(e) => setTempInstallmentLeverage(e.target.value === '' ? 1.2 : Number(e.target.value))}
+                        onBlur={() => commitNumInput('installmentLeverage', tempInstallmentLeverage, 1.2, 3)}
+                        onKeyDown={handleKeyDown(() => commitNumInput('installmentLeverage', tempInstallmentLeverage, 1.2, 3))}
                         className="w-14 font-bold text-emerald-700 text-right bg-transparent border-b border-transparent hover:border-emerald-300 focus:border-emerald-500 focus:outline-none"
                       />
                       <span className="text-emerald-400">x</span>
                     </div>
                   </div>
-                  <input 
-                    type="range" 
+                  <input
+                    type="range"
                     min={1.2} max={3} step={0.1}
                     value={installmentLeverage}
                     onChange={(e) => updateField('installmentLeverage', Number(e.target.value))}
@@ -1125,21 +1213,53 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
       {/* ============================================================ */}
       {showCheatSheet && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div 
+          <div
             className="absolute inset-0 bg-black/20 backdrop-blur-sm"
             onClick={() => setShowCheatSheet(false)}
           />
-          
+
           <div className="relative w-full max-w-md bg-slate-900 text-white shadow-2xl overflow-y-auto animate-in slide-in-from-right duration-300">
-            <div className="sticky top-0 bg-slate-900 border-b border-slate-700 p-4 flex justify-between items-center">
+            <div className="sticky top-0 bg-slate-900 border-b border-slate-700 p-4 flex justify-between items-center z-10">
               <div>
-                <h3 className="font-bold text-lg">📋 業務小抄</h3>
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  業務小抄
+                  {isPaidMember && <Crown size={16} className="text-amber-400" />}
+                </h3>
                 <p className="text-xs text-slate-400">按 ESC 關閉</p>
               </div>
-              <button onClick={() => setShowCheatSheet(false)} className="p-2 hover:bg-slate-700 rounded-lg">✕</button>
+              <button onClick={() => setShowCheatSheet(false)} className="p-2 hover:bg-slate-700 rounded-lg">
+                <X size={20}/>
+              </button>
             </div>
-            
-            <div className="p-4 space-y-6 text-sm">
+
+            {/* 內容區域 - 根據會員等級顯示 */}
+            <div className="relative">
+              {/* 非付費會員：模糊遮罩 */}
+              {!isPaidMember && (
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-md">
+                  <div className="text-center p-8">
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                      <Lock size={40} className="text-white" />
+                    </div>
+                    <h4 className="text-xl font-bold text-white mb-2">會員專屬功能</h4>
+                    <p className="text-slate-400 text-sm mb-4">
+                      業務小抄是付費會員專屬功能<br/>
+                      升級後即可解鎖完整話術庫
+                    </p>
+                    <div className="space-y-2">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg text-white font-bold text-sm">
+                        <Crown size={16} />
+                        升級成為付費會員
+                      </div>
+                      <p className="text-[10px] text-slate-500">
+                        {membership?.tier === 'referral_trial' ? '轉介紹試用會員可享升級折扣' : '解鎖所有工具與進階功能'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className={`p-4 space-y-6 text-sm ${!isPaidMember ? 'blur-sm pointer-events-none select-none' : ''}`}>
               {/* 當前數據 */}
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="bg-slate-800 p-2 rounded">
@@ -1211,6 +1331,7 @@ export const TaxPlannerTool = ({ data, setData }: any) => {
                     「留給家人，還是留給國稅局？」
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           </div>

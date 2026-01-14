@@ -15,6 +15,8 @@ import {
   DollarOutlined,
   MessageOutlined,
   BellOutlined,
+  TrophyOutlined,
+  UsergroupAddOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
@@ -95,6 +97,16 @@ const MainLayout = () => {
           key: '/admin/membership/payment-history',
           icon: <DollarOutlined />,
           label: '付款歷史',
+        },
+        {
+          key: '/admin/membership/missions',
+          icon: <TrophyOutlined />,
+          label: '任務管理',
+        },
+        {
+          key: '/admin/membership/referrals',
+          icon: <UsergroupAddOutlined />,
+          label: '推薦紀錄',
         },
       ],
     },

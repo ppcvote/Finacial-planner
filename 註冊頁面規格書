@@ -1,0 +1,898 @@
+# 📱 Ultra Advisor LIFF 註冊頁面規格書
+
+> 版本：v1.0
+> 
+> 
+> **日期**：2026-01-14
+> 
+> **目標**：用戶從 LINE 加好友到取得帳號，20 秒內完成
+> 
+
+---
+
+## 📋 執行摘要
+
+| 項目 | 現狀 | 目標 |
+| --- | --- | --- |
+| 註冊時間 | ~60 秒（LINE 對話式） | **20 秒以內** |
+| 用戶體驗 | 文字來回、密碼單獨發送 | 一頁式表單、即時回饋 |
+| 技術架構 | LINE Bot Webhook | **LIFF 頁面 + Cloud Function** |
+
+---
+
+## 一、用戶流程設計
+
+### 1.1 新流程（LIFF 版本）
+
+```
+用戶加入 LINE OA
+       │
+       ▼
+┌──────────────────┐
+│  自動推送歡迎訊息  │
+│  + 「立即開通」按鈕 │
+└────────┬─────────┘
+         │ 點擊按鈕
+         ▼
+┌──────────────────┐
+│   LIFF 註冊頁面   │  ← 在 LINE 內開啟（Full Screen）
+│                  │
+│  ┌────────────┐  │
+│  │ 姓名輸入    │  │
+│  └────────────┘  │
+│  ┌────────────┐  │
+│  │ Email 輸入  │  │
+│  └────────────┘  │
+│  ┌────────────┐  │
+│  │ 密碼設定    │  │
+│  └────────────┘  │
+│  ┌────────────┐  │
+│  │ 推薦碼(選填) │  │
+│  └────────────┘  │
+│                  │
+│  [ 🚀 開始試用 ] │
+└────────┬─────────┘
+         │ 提交
+         ▼
+┌──────────────────┐
+│ Cloud Function   │
+│ - 創建 Auth 帳號  │
+│ - 寫入 Firestore │
+│ - 關聯 LINE UID  │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│   成功頁面       │
+│  「帳號已開通！」 │
+│                  │
+│ [ 立即前往系統 ] │
+└──────────────────┘
+
+```
+
+### 1.2 時間分析
+
+| 步驟 | 舊流程 | 新流程 |
+| --- | --- | --- |
+| 開啟頁面 | - | 2 秒 |
+| 輸入姓名 | - | 3 秒 |
+| 輸入 Email | 10 秒（打字+發送） | 5 秒 |
+| 設定密碼 | - | 5 秒 |
+| 等待處理 | 5 秒 | 3 秒 |
+| 閱讀密碼 | 10 秒 | - |
+| **總計** | **~60 秒** | **~18 秒** |
+
+---
+
+## 二、LIFF 頁面設計
+
+### 2.1 視覺設計（符合品牌指南）
+
+```
+┌─────────────────────────────────────┐
+│  ████  戰情黑背景 #050b14  ████     │
+│                                     │
+│         ╱╲                          │
+│        ╱  ╲   UA 三線 Logo          │
+│       ╱────╲  (動畫：藍→紅→紫)       │
+│                                     │
+│      Ultra Advisor                  │
+│      財務顧問的秘密武器               │
+│                                     │
+│  ┌─────────────────────────────┐   │
+│  │  👤  你的稱呼                │   │
+│  │  ┌─────────────────────┐   │   │
+│  │  │ 例：王大明            │   │   │
+│  │  └─────────────────────┘   │   │
+│  └─────────────────────────────┘   │
+│                                     │
+│  ┌─────────────────────────────┐   │
+│  │  ✉️  Email（登入帳號）       │   │
+│  │  ┌─────────────────────┐   │   │
+│  │  │ example@gmail.com   │   │   │
+│  │  └─────────────────────┘   │   │
+│  └─────────────────────────────┘   │
+│                                     │
+│  ┌─────────────────────────────┐   │
+│  │  🔐  設定密碼（至少 6 碼）   │   │
+│  │  ┌─────────────────────┐   │   │
+│  │  │ ••••••••            │   │   │
+│  │  └─────────────────────┘   │   │
+│  └─────────────────────────────┘   │
+│                                     │
+│  ┌─────────────────────────────┐   │
+│  │  🎁  推薦碼（選填）          │   │
+│  │  ┌─────────────────────┐   │   │
+│  │  │ 有推薦碼可享優惠      │   │   │
+│  │  └─────────────────────┘   │   │
+│  └─────────────────────────────┘   │
+│                                     │
+│  ┌─────────────────────────────┐   │
+│  │                             │   │
+│  │     🚀 開始 7 天免費試用     │   │
+│  │                             │   │
+│  └─────────────────────────────┘   │
+│           Strategy Blue 按鈕        │
+│           發光效果 + 懸停放大        │
+│                                     │
+│  ─────────────────────────────────  │
+│                                     │
+│  📋 試用期間享有完整功能：           │
+│     ✓ 18 種專業理財工具             │
+│     ✓ 無限客戶檔案                  │
+│     ✓ 報表匯出功能                  │
+│                                     │
+│  ─────────────────────────────────  │
+│  已有帳號？ [直接登入]              │
+│                                     │
+└─────────────────────────────────────┘
+
+```
+
+### 2.2 設計規範
+
+**色彩系統**：
+
+```css
+:root {
+  --bg-primary: #050b14;          /* 戰情黑 */
+  --bg-card: rgba(15, 23, 42, 0.8); /* 卡片背景 */
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --accent-blue: #4DA3FF;
+  --accent-blue-dark: #2E6BFF;
+  --accent-amber: #F59E0B;
+  --border-color: rgba(77, 163, 255, 0.2);
+  --glow-blue: 0 0 20px rgba(77, 163, 255, 0.4);
+}
+
+```
+
+**輸入框樣式**：
+
+```css
+.input-field {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  color: white;
+  font-size: 16px; /* 防止 iOS 縮放 */
+  transition: all 0.3s;
+}
+
+.input-field:focus {
+  border-color: var(--accent-blue);
+  box-shadow: var(--glow-blue);
+  outline: none;
+}
+
+```
+
+**CTA 按鈕**：
+
+```css
+.btn-primary {
+  background: linear-gradient(135deg, #4DA3FF, #2E6BFF);
+  color: white;
+  padding: 18px 32px;
+  border-radius: 14px;
+  font-size: 18px;
+  font-weight: 700;
+  box-shadow: var(--glow-blue);
+  transition: all 0.3s;
+  width: 100%;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(77, 163, 255, 0.6);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+```
+
+### 2.3 動畫效果
+
+**Logo 進場動畫**（與品牌指南一致）：
+
+```css
+/* 三線依序繪製 */
+.logo-line-blue { animation: drawLine 0.6s ease-out 0.2s forwards; }
+.logo-line-red  { animation: drawLine 0.6s ease-out 0.8s forwards; }
+.logo-line-purple { animation: drawLine 0.6s ease-out 1.4s forwards; }
+
+@keyframes drawLine {
+  from { stroke-dashoffset: 100; opacity: 0; }
+  to { stroke-dashoffset: 0; opacity: 1; }
+}
+
+```
+
+**表單元素進場**：
+
+```css
+.form-group {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.form-group:nth-child(1) { animation-delay: 0.3s; }
+.form-group:nth-child(2) { animation-delay: 0.4s; }
+.form-group:nth-child(3) { animation-delay: 0.5s; }
+.form-group:nth-child(4) { animation-delay: 0.6s; }
+
+@keyframes fadeInUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+```
+
+---
+
+## 三、技術實作
+
+### 3.1 LIFF 設定
+
+**LINE Developers Console**：
+
+1. 建立 LIFF App
+2. Endpoint URL: `https://ultra-advisor.tw/liff/register`
+3. Scope: `profile`, `openid`
+4. 尺寸: `Full`（全螢幕）
+
+**LIFF ID**：`1234567890-abcdefgh`（需替換實際值）
+
+### 3.2 前端程式碼結構
+
+```
+/liff
+├── /register
+│   ├── index.html
+│   ├── styles.css
+│   └── app.js
+├── /profile
+│   └── ...
+└── /points
+    └── ...
+
+```
+
+### 3.3 核心程式碼
+
+**index.html**：
+
+```html
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>開通 Ultra Advisor 試用</title>
+  <link rel="stylesheet" href="styles.css">
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Loading State -->
+    <div id="loading" class="loading-screen">
+      <div class="logo-animation">
+        <svg><!-- UA Logo SVG --></svg>
+      </div>
+      <p>載入中...</p>
+    </div>
+
+    <!-- Register Form -->
+    <div id="register-form" class="hidden">
+      <!-- 表單內容 -->
+    </div>
+
+    <!-- Success State -->
+    <div id="success" class="hidden">
+      <!-- 成功畫面 -->
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
+```
+
+**app.js**：
+
+```jsx
+// ==========================================
+// Ultra Advisor LIFF 註冊頁面
+// ==========================================
+
+const LIFF_ID = 'YOUR_LIFF_ID';
+const API_ENDPOINT = 'https://us-central1-grbt-f87fa.cloudfunctions.net/liffRegister';
+
+// 狀態管理
+let lineProfile = null;
+let isSubmitting = false;
+
+// ==========================================
+// LIFF 初始化
+// ==========================================
+async function initializeLiff() {
+  try {
+    await liff.init({ liffId: LIFF_ID });
+
+    // 檢查是否在 LINE 內開啟
+    if (!liff.isInClient()) {
+      showError('請從 LINE 應用程式開啟此頁面');
+      return;
+    }
+
+    // 檢查登入狀態
+    if (!liff.isLoggedIn()) {
+      liff.login();
+      return;
+    }
+
+    // 取得用戶資料
+    lineProfile = await liff.getProfile();
+
+    // 預填姓名
+    document.getElementById('name').value = lineProfile.displayName || '';
+
+    // 顯示表單
+    hideLoading();
+    showForm();
+
+  } catch (error) {
+    console.error('LIFF 初始化失敗:', error);
+    showError('系統初始化失敗，請稍後再試');
+  }
+}
+
+// ==========================================
+// 表單驗證
+// ==========================================
+function validateForm() {
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  // 清除舊錯誤
+  clearErrors();
+
+  let isValid = true;
+
+  // 姓名驗證
+  if (!name) {
+    showFieldError('name', '請輸入您的稱呼');
+    isValid = false;
+  }
+
+  // Email 驗證
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email) {
+    showFieldError('email', '請輸入 Email');
+    isValid = false;
+  } else if (!emailRegex.test(email)) {
+    showFieldError('email', 'Email 格式不正確');
+    isValid = false;
+  }
+
+  // 密碼驗證
+  if (!password) {
+    showFieldError('password', '請設定密碼');
+    isValid = false;
+  } else if (password.length < 6) {
+    showFieldError('password', '密碼至少需要 6 個字元');
+    isValid = false;
+  }
+
+  return isValid;
+}
+
+// ==========================================
+// 提交註冊
+// ==========================================
+async function submitRegistration() {
+  if (isSubmitting) return;
+  if (!validateForm()) return;
+
+  isSubmitting = true;
+  showButtonLoading();
+
+  const formData = {
+    name: document.getElementById('name').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    password: document.getElementById('password').value,
+    referralCode: document.getElementById('referral').value.trim(),
+    lineUserId: lineProfile.userId,
+    lineDisplayName: lineProfile.displayName,
+    linePictureUrl: lineProfile.pictureUrl || null
+  };
+
+  try {
+    const response = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      showSuccess(result.data);
+    } else {
+      showFormError(result.error || '註冊失敗，請稍後再試');
+    }
+
+  } catch (error) {
+    console.error('註冊失敗:', error);
+    showFormError('網路連線異常，請稍後再試');
+  } finally {
+    isSubmitting = false;
+    hideButtonLoading();
+  }
+}
+
+// ==========================================
+// UI 輔助函數
+// ==========================================
+function showFieldError(fieldId, message) {
+  const field = document.getElementById(fieldId);
+  const errorEl = document.createElement('p');
+  errorEl.className = 'field-error';
+  errorEl.textContent = message;
+  field.parentNode.appendChild(errorEl);
+  field.classList.add('input-error');
+}
+
+function clearErrors() {
+  document.querySelectorAll('.field-error').forEach(el => el.remove());
+  document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+}
+
+function showFormError(message) {
+  const errorBanner = document.getElementById('form-error');
+  errorBanner.textContent = message;
+  errorBanner.classList.remove('hidden');
+}
+
+function showButtonLoading() {
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 處理中...';
+}
+
+function hideButtonLoading() {
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = false;
+  btn.innerHTML = '🚀 開始 7 天免費試用';
+}
+
+function showSuccess(data) {
+  document.getElementById('register-form').classList.add('hidden');
+  document.getElementById('success').classList.remove('hidden');
+
+  // 顯示用戶資訊
+  document.getElementById('success-name').textContent = data.displayName;
+  document.getElementById('success-email').textContent = data.email;
+  document.getElementById('success-expire').textContent = data.trialExpireDate;
+}
+
+function goToApp() {
+  // 關閉 LIFF 並導向主應用
+  if (liff.isInClient()) {
+    liff.closeWindow();
+  } else {
+    window.location.href = 'https://ultra-advisor.tw';
+  }
+}
+
+// ==========================================
+// 初始化
+// ==========================================
+document.addEventListener('DOMContentLoaded', initializeLiff);
+
+```
+
+### 3.4 Cloud Function
+
+**functions/liffRegister.js**：
+
+```jsx
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+const cors = require('cors')({ origin: true });
+
+/**
+ * LIFF 註冊 API
+ */
+exports.liffRegister = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    // 只接受 POST
+    if (req.method !== 'POST') {
+      return res.status(405).json({ success: false, error: 'Method not allowed' });
+    }
+
+    try {
+      const { name, email, password, referralCode, lineUserId, lineDisplayName, linePictureUrl } = req.body;
+
+      // 驗證必填欄位
+      if (!name || !email || !password || !lineUserId) {
+        return res.status(400).json({ success: false, error: '請填寫所有必填欄位' });
+      }
+
+      // 驗證 Email 格式
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ success: false, error: 'Email 格式不正確' });
+      }
+
+      // 驗證密碼長度
+      if (password.length < 6) {
+        return res.status(400).json({ success: false, error: '密碼至少需要 6 個字元' });
+      }
+
+      // 檢查 Email 是否已存在
+      const existingUser = await admin.auth().getUserByEmail(email).catch(() => null);
+      if (existingUser) {
+        return res.status(400).json({ success: false, error: '此 Email 已經註冊' });
+      }
+
+      // 檢查 LINE User ID 是否已綁定
+      const existingLineUser = await admin.firestore()
+        .collection('users')
+        .where('lineUserId', '==', lineUserId)
+        .get();
+
+      if (!existingLineUser.empty) {
+        return res.status(400).json({ success: false, error: '此 LINE 帳號已綁定其他帳戶' });
+      }
+
+      // 處理推薦碼
+      let referrerUid = null;
+      if (referralCode) {
+        const referrerSnapshot = await admin.firestore()
+          .collection('users')
+          .where('referralCode', '==', referralCode.toUpperCase())
+          .get();
+
+        if (!referrerSnapshot.empty) {
+          referrerUid = referrerSnapshot.docs[0].id;
+        }
+      }
+
+      // 創建 Firebase Auth 帳號
+      const userRecord = await admin.auth().createUser({
+        email: email,
+        password: password,
+        displayName: name,
+        emailVerified: false,
+        disabled: false
+      });
+
+      // 計算試用到期時間（7 天後）
+      const now = admin.firestore.Timestamp.now();
+      const trialExpires = admin.firestore.Timestamp.fromMillis(
+        now.toMillis() + 7 * 24 * 60 * 60 * 1000
+      );
+
+      // 生成推薦碼
+      const myReferralCode = generateReferralCode(name);
+
+      // 寫入 Firestore
+      await admin.firestore().collection('users').doc(userRecord.uid).set({
+        email: email,
+        displayName: name,
+        lineUserId: lineUserId,
+        lineDisplayName: lineDisplayName,
+        linePictureUrl: linePictureUrl,
+        createdAt: now,
+        trialExpiresAt: trialExpires,
+        subscriptionStatus: 'trial',
+        membershipDays: 7,
+        points: referrerUid ? 50 : 0, // 被推薦者獲得 50 點
+        referralCode: myReferralCode,
+        referredBy: referrerUid,
+        isActive: true,
+        isFirstLogin: true, // 標記首次登入，需強制改密碼
+        clients: [],
+        stats: {
+          trialsCompleted: 0,
+          hoursSaved: 0
+        }
+      });
+
+      // 如果有推薦人，給推薦人加點數
+      if (referrerUid) {
+        const batch = admin.firestore().batch();
+
+        // 更新推薦人點數
+        const referrerRef = admin.firestore().collection('users').doc(referrerUid);
+        batch.update(referrerRef, {
+          points: admin.firestore.FieldValue.increment(100)
+        });
+
+        // 記錄點數異動
+        const ledgerRef = admin.firestore().collection('pointsLedger').doc();
+        batch.set(ledgerRef, {
+          uid: referrerUid,
+          type: 'EARN_REFERRAL',
+          amount: 100,
+          relatedUid: userRecord.uid,
+          description: `推薦 ${name} 註冊`,
+          createdAt: now
+        });
+
+        await batch.commit();
+      }
+
+      // 格式化到期日期
+      const expireDate = new Date(trialExpires.toMillis());
+      const expireDateStr = `${expireDate.getFullYear()}/${expireDate.getMonth() + 1}/${expireDate.getDate()}`;
+
+      // 回傳成功
+      return res.status(200).json({
+        success: true,
+        data: {
+          uid: userRecord.uid,
+          email: email,
+          displayName: name,
+          trialExpireDate: expireDateStr,
+          referralCode: myReferralCode,
+          points: referrerUid ? 50 : 0
+        }
+      });
+
+    } catch (error) {
+      console.error('LIFF 註冊錯誤:', error);
+      return res.status(500).json({
+        success: false,
+        error: '系統發生錯誤，請稍後再試'
+      });
+    }
+  });
+});
+
+/**
+ * 生成推薦碼
+ */
+function generateReferralCode(name) {
+  const prefix = name.substring(0, 2).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `${prefix}${random}`;
+}
+
+```
+
+---
+
+## 四、LINE 歡迎訊息更新
+
+### 4.1 新版歡迎 Flex Message
+
+當用戶加入 LINE OA 時，推送以下訊息：
+
+```jsx
+const welcomeMessage = {
+  type: 'flex',
+  altText: '🎉 歡迎加入 Ultra Advisor！點擊開通試用',
+  contents: {
+    type: 'bubble',
+    hero: {
+      type: 'image',
+      url: 'https://ultra-advisor.tw/images/welcome-banner.png',
+      size: 'full',
+      aspectRatio: '20:13',
+      aspectMode: 'cover'
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      contents: [
+        {
+          type: 'text',
+          text: '歡迎加入 Ultra Advisor',
+          weight: 'bold',
+          size: 'xl'
+        },
+        {
+          type: 'text',
+          text: '財務顧問的秘密武器',
+          size: 'sm',
+          color: '#666666',
+          margin: 'md'
+        },
+        {
+          type: 'separator',
+          margin: 'lg'
+        },
+        {
+          type: 'box',
+          layout: 'vertical',
+          margin: 'lg',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'text',
+              text: '🎁 7 天免費試用包含：',
+              size: 'sm',
+              weight: 'bold'
+            },
+            {
+              type: 'text',
+              text: '✓ 18 種專業理財工具',
+              size: 'sm',
+              color: '#666666'
+            },
+            {
+              type: 'text',
+              text: '✓ 無限客戶檔案',
+              size: 'sm',
+              color: '#666666'
+            },
+            {
+              type: 'text',
+              text: '✓ 報表匯出功能',
+              size: 'sm',
+              color: '#666666'
+            }
+          ]
+        }
+      ]
+    },
+    footer: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'sm',
+      contents: [
+        {
+          type: 'button',
+          style: 'primary',
+          height: 'md',
+          action: {
+            type: 'uri',
+            label: '🚀 立即開通試用',
+            uri: 'https://liff.line.me/YOUR_LIFF_ID'
+          },
+          color: '#2E6BFF'
+        },
+        {
+          type: 'button',
+          style: 'link',
+          height: 'sm',
+          action: {
+            type: 'uri',
+            label: '已有帳號？直接登入',
+            uri: 'https://ultra-advisor.tw/login'
+          }
+        }
+      ]
+    }
+  }
+};
+
+```
+
+---
+
+## 五、成功畫面設計
+
+```
+┌─────────────────────────────────────┐
+│  ████  戰情黑背景 #050b14  ████     │
+│                                     │
+│            ✅                       │
+│        (綠色打勾動畫)                │
+│                                     │
+│      🎉 帳號開通成功！               │
+│                                     │
+│  ┌─────────────────────────────┐   │
+│  │                             │   │
+│  │  👤 王大明                   │   │
+│  │  ✉️ example@gmail.com       │   │
+│  │  📅 試用到期：2026/01/21     │   │
+│  │  🎁 推薦碼：WA3K7X           │   │
+│  │                             │   │
+│  └─────────────────────────────┘   │
+│                                     │
+│  💡 小提醒：                        │
+│  首次登入時請修改密碼以確保安全       │
+│                                     │
+│  ┌─────────────────────────────┐   │
+│  │                             │   │
+│  │     🚀 立即前往系統          │   │
+│  │                             │   │
+│  └─────────────────────────────┘   │
+│                                     │
+│  分享推薦碼給朋友，雙方都能獲得獎勵！ │
+│                                     │
+│  [ 📋 複製推薦碼 ]  [ 📤 分享 ]     │
+│                                     │
+└─────────────────────────────────────┘
+
+```
+
+---
+
+## 六、執行檢核清單
+
+### Phase 1：LIFF 設定（Day 1）
+
+- [ ]  LINE Developers Console 建立 LIFF App
+- [ ]  設定 Endpoint URL
+- [ ]  取得 LIFF ID
+- [ ]  設定 Scope（profile, openid）
+
+### Phase 2：前端開發（Day 2-3）
+
+- [ ]  建立 /liff/register 目錄結構
+- [ ]  實作 index.html + styles.css
+- [ ]  實作 app.js（LIFF SDK 整合）
+- [ ]  Logo 動畫效果
+- [ ]  表單驗證邏輯
+- [ ]  成功畫面
+- [ ]  錯誤處理 UI
+
+### Phase 3：後端開發（Day 4）
+
+- [ ]  建立 liffRegister Cloud Function
+- [ ]  整合 Firebase Auth
+- [ ]  整合 Firestore
+- [ ]  推薦碼邏輯
+- [ ]  點數發放邏輯
+- [ ]  部署測試
+
+### Phase 4：整合測試（Day 5）
+
+- [ ]  LINE OA 歡迎訊息更新
+- [ ]  完整流程測試（新用戶）
+- [ ]  錯誤情境測試
+- [ ]  推薦碼流程測試
+- [ ]  跨裝置測試（iOS/Android）
+
+### Phase 5：上線（Day 6）
+
+- [ ]  正式環境部署
+- [ ]  監控設定
+- [ ]  舊流程下線
+
+---
+
+## 七、預期效益
+
+| 指標 | 改善前 | 改善後 | 提升 |
+| --- | --- | --- | --- |
+| 註冊完成時間 | 60 秒 | 20 秒 | **67% ↓** |
+| 註冊轉換率 | ~40% | ~70% | **75% ↑** |
+| 用戶體驗評分 | 6/10 | 9/10 | **50% ↑** |
+| 客服詢問量 | 高 | 低 | **80% ↓** |
+
+---
+
+**設計哲學**：讓用戶在最短時間內體驗到產品價值，而不是在註冊流程中流失。

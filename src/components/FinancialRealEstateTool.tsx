@@ -1,16 +1,16 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { 
-  Building2, 
-  Calculator, 
-  Scale, 
-  Landmark, 
-  ArrowRight, 
-  TrendingUp, 
+import {
+  Building2,
+  Calculator,
+  Scale,
+  Landmark,
+  ArrowRight,
+  TrendingUp,
   CheckCircle2,
   RefreshCw,
-  Settings,    
-  ChevronDown, 
-  ChevronUp,    
+  Settings,
+  ChevronDown,
+  ChevronUp,
   PiggyBank,
   Briefcase,
   ArrowDown,
@@ -27,8 +27,11 @@ import {
   Wallet,
   TrendingDown,
   X,
-  Banknote
+  Banknote,
+  Lock,
+  Crown
 } from 'lucide-react';
+import { useMembership } from '../hooks/useMembership';
 import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceLine } from 'recharts';
 
 // ============================================================
@@ -117,11 +120,19 @@ const PRESET_CONFIGS = {
 // ============================================================
 // 主元件
 // ============================================================
-export const FinancialRealEstateTool = ({ data, setData }: any) => {
+export const FinancialRealEstateTool = ({ data, setData, userId }: any) => {
+  // 會員權限判斷
+  const { membership } = useMembership(userId || null);
+  const isPaidMember = membership?.isPaid || false;
+
   // --- 隱藏小抄狀態 ---
   const [showCheatSheet, setShowCheatSheet] = useState(false);
   const [clickCount, setClickCount] = useState(0);
   const clickTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // --- 首次進入提示狀態 ---
+  const [showTripleClickHint, setShowTripleClickHint] = useState(false);
+  const HINT_STORAGE_KEY = 'ua_estate_cheatsheet_hint_seen';
 
   const handleSecretClick = () => {
     setClickCount(prev => prev + 1);
@@ -135,11 +146,31 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowCheatSheet(false);
+      if (e.key === 'Escape') {
+        setShowCheatSheet(false);
+        setShowTripleClickHint(false);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // 首次進入頁面顯示提示
+  useEffect(() => {
+    const hasSeenHint = localStorage.getItem(HINT_STORAGE_KEY);
+    if (!hasSeenHint) {
+      const timer = setTimeout(() => {
+        setShowTripleClickHint(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // 關閉提示並記錄已看過
+  const dismissHint = () => {
+    setShowTripleClickHint(false);
+    localStorage.setItem(HINT_STORAGE_KEY, 'true');
+  };
 
   // --- 資料初始化 ---
   const safeData = {
@@ -147,24 +178,101 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
     loanTerm: Number(data?.loanTerm) || 30,
     loanRate: Number(data?.loanRate) || 2.2,
     investReturnRate: Number(data?.investReturnRate) || 6,
-    
+
     // 轉增貸參數
     existingLoanBalance: Number(data?.existingLoanBalance) || 700,
     existingMonthlyPayment: Number(data?.existingMonthlyPayment) || 38000,
-    
+
     // v2 新增
     planMode: data?.planMode || 'none', // 'none' | 'newLoan' | 'refinance'
     configType: data?.configType || 'balanced',
     clientAge: Number(data?.clientAge) || 45,
   };
 
-  const { 
+  const {
     loanAmount, loanTerm, loanRate, investReturnRate,
     existingLoanBalance, existingMonthlyPayment,
     planMode, configType, clientAge
   } = safeData;
 
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // --- 暫存輸入狀態（允許用戶自由輸入，onBlur 時驗證）---
+  const [tempLoanAmount, setTempLoanAmount] = useState<string | number>(loanAmount);
+  const [tempLoanTerm, setTempLoanTerm] = useState<string | number>(loanTerm);
+  const [tempLoanRate, setTempLoanRate] = useState<string | number>(loanRate);
+  const [tempInvestReturnRate, setTempInvestReturnRate] = useState<string | number>(investReturnRate);
+  const [tempExistingLoanBalance, setTempExistingLoanBalance] = useState<string | number>(existingLoanBalance);
+  const [tempExistingMonthlyPayment, setTempExistingMonthlyPayment] = useState<string | number>(existingMonthlyPayment);
+  const [tempClientAge, setTempClientAge] = useState<string | number>(clientAge);
+
+  // 同步外部資料變化
+  useEffect(() => { setTempLoanAmount(loanAmount); }, [loanAmount]);
+  useEffect(() => { setTempLoanTerm(loanTerm); }, [loanTerm]);
+  useEffect(() => { setTempLoanRate(loanRate); }, [loanRate]);
+  useEffect(() => { setTempInvestReturnRate(investReturnRate); }, [investReturnRate]);
+  useEffect(() => { setTempExistingLoanBalance(existingLoanBalance); }, [existingLoanBalance]);
+  useEffect(() => { setTempExistingMonthlyPayment(existingMonthlyPayment); }, [existingMonthlyPayment]);
+  useEffect(() => { setTempClientAge(clientAge); }, [clientAge]);
+
+  // --- 輸入驗證函數（onBlur 時觸發）---
+  const finalizeLoanAmount = () => {
+    let val = Number(tempLoanAmount) || 1000;
+    val = Math.max(100, Math.min(10000, val));
+    setData({ ...data, loanAmount: val });
+    setTempLoanAmount(val);
+  };
+
+  const finalizeLoanTerm = () => {
+    let val = Number(tempLoanTerm) || 30;
+    val = Math.max(10, Math.min(40, val));
+    setData({ ...data, loanTerm: val });
+    setTempLoanTerm(val);
+  };
+
+  const finalizeLoanRate = () => {
+    let val = Number(tempLoanRate) || 2.2;
+    val = Math.max(1.5, Math.min(5, val));
+    val = Math.round(val * 10) / 10; // 保留一位小數
+    setData({ ...data, loanRate: val });
+    setTempLoanRate(val);
+  };
+
+  const finalizeInvestReturnRate = () => {
+    let val = Number(tempInvestReturnRate) || 6;
+    val = Math.max(3, Math.min(12, val));
+    val = Math.round(val * 10) / 10;
+    setData({ ...data, investReturnRate: val });
+    setTempInvestReturnRate(val);
+  };
+
+  const finalizeExistingLoanBalance = () => {
+    let val = Number(tempExistingLoanBalance) || 700;
+    val = Math.max(0, Math.min(10000, val));
+    setData({ ...data, existingLoanBalance: val });
+    setTempExistingLoanBalance(val);
+  };
+
+  const finalizeExistingMonthlyPayment = () => {
+    let val = Number(tempExistingMonthlyPayment) || 38000;
+    val = Math.max(10000, Math.min(300000, val));
+    setData({ ...data, existingMonthlyPayment: val });
+    setTempExistingMonthlyPayment(val);
+  };
+
+  const finalizeClientAge = () => {
+    let val = Number(tempClientAge) || 45;
+    val = Math.max(20, Math.min(99, val)); // 年齡上限 99
+    setData({ ...data, clientAge: val });
+    setTempClientAge(val);
+  };
+
+  const handleKeyDown = (finalizer: () => void) => (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      finalizer();
+      e.currentTarget.blur();
+    }
+  };
 
   // --- 計算引擎 ---
   const calculations = useMemo(() => {
@@ -347,12 +455,32 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
             <span className="bg-white/15 px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase">
               Passive Income
             </span>
-            <span 
-              onClick={handleSecretClick}
-              className="bg-orange-400/20 text-orange-100 px-3 py-1 rounded-full text-xs font-bold border border-orange-400/30 cursor-default select-none"
-            >
-              以息養貸・數位包租公
-            </span>
+            <div className="relative">
+              <span
+                onClick={handleSecretClick}
+                className="bg-orange-400/20 text-orange-100 px-3 py-1 rounded-full text-xs font-bold border border-orange-400/30 cursor-default select-none"
+              >
+                以息養貸・數位包租公
+              </span>
+              {/* 首次進入提示氣泡 - 顯示在右側 */}
+              {showTripleClickHint && (
+                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 animate-pulse">
+                  <div className="relative bg-slate-900 text-white px-4 py-2 rounded-lg shadow-xl whitespace-nowrap">
+                    <div className="absolute top-1/2 -left-2 -translate-y-1/2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-transparent border-r-slate-900" />
+                    <p className="text-sm font-bold flex items-center gap-2">
+                      <span className="text-yellow-400">💡</span>
+                      點三下可開啟業務小抄
+                    </p>
+                    <button
+                      onClick={dismissHint}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center text-xs"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight">
             金融房產專案
@@ -382,14 +510,17 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                 <div className="flex items-center gap-1">
                   <input
                     type="number"
-                    value={loanAmount}
-                    onChange={(e) => updateField('loanAmount', Number(e.target.value))}
+                    inputMode="decimal"
+                    value={tempLoanAmount}
+                    onChange={(e) => setTempLoanAmount(e.target.value === '' ? '' : e.target.value)}
+                    onBlur={finalizeLoanAmount}
+                    onKeyDown={handleKeyDown(finalizeLoanAmount)}
                     className="w-24 text-xl font-black text-emerald-600 text-right bg-transparent border-b-2 border-transparent hover:border-emerald-300 focus:border-emerald-500 focus:outline-none transition-colors"
                   />
                   <span className="text-sm text-slate-400">萬</span>
                 </div>
               </div>
-              <input 
+              <input
                 type="range" min={100} max={10000} step={100}
                 value={loanAmount}
                 onChange={(e) => updateField('loanAmount', Number(e.target.value))}
@@ -400,7 +531,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                 <span>1億</span>
               </div>
             </div>
-            
+
             {/* 貸款年期 - 可點擊輸入 */}
             <div>
               <div className="flex justify-between items-center mb-2">
@@ -408,14 +539,17 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                 <div className="flex items-center gap-1">
                   <input
                     type="number"
-                    value={loanTerm}
-                    onChange={(e) => updateField('loanTerm', Number(e.target.value))}
+                    inputMode="numeric"
+                    value={tempLoanTerm}
+                    onChange={(e) => setTempLoanTerm(e.target.value === '' ? '' : e.target.value)}
+                    onBlur={finalizeLoanTerm}
+                    onKeyDown={handleKeyDown(finalizeLoanTerm)}
                     className="w-16 text-xl font-black text-teal-600 text-right bg-transparent border-b-2 border-transparent hover:border-teal-300 focus:border-teal-500 focus:outline-none transition-colors"
                   />
                   <span className="text-sm text-slate-400">年</span>
                 </div>
               </div>
-              <input 
+              <input
                 type="range" min={10} max={40} step={1}
                 value={loanTerm}
                 onChange={(e) => updateField('loanTerm', Number(e.target.value))}
@@ -442,15 +576,18 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                     <div className="flex items-center gap-0.5">
                       <input
                         type="number"
+                        inputMode="decimal"
                         step={0.1}
-                        value={loanRate}
-                        onChange={(e) => updateField('loanRate', Number(e.target.value))}
+                        value={tempLoanRate}
+                        onChange={(e) => setTempLoanRate(e.target.value === '' ? '' : e.target.value)}
+                        onBlur={finalizeLoanRate}
+                        onKeyDown={handleKeyDown(finalizeLoanRate)}
                         className="w-14 font-bold text-slate-700 text-right bg-transparent border-b border-transparent hover:border-slate-300 focus:border-slate-500 focus:outline-none"
                       />
                       <span className="text-slate-400">%</span>
                     </div>
                   </div>
-                  <input 
+                  <input
                     type="range" min={1.5} max={5} step={0.1}
                     value={loanRate}
                     onChange={(e) => updateField('loanRate', Number(e.target.value))}
@@ -463,15 +600,18 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                     <div className="flex items-center gap-0.5">
                       <input
                         type="number"
+                        inputMode="decimal"
                         step={0.1}
-                        value={investReturnRate}
-                        onChange={(e) => updateField('investReturnRate', Number(e.target.value))}
+                        value={tempInvestReturnRate}
+                        onChange={(e) => setTempInvestReturnRate(e.target.value === '' ? '' : e.target.value)}
+                        onBlur={finalizeInvestReturnRate}
+                        onKeyDown={handleKeyDown(finalizeInvestReturnRate)}
                         className="w-14 font-bold text-blue-600 text-right bg-transparent border-b border-transparent hover:border-blue-300 focus:border-blue-500 focus:outline-none"
                       />
                       <span className="text-slate-400">%</span>
                     </div>
                   </div>
-                  <input 
+                  <input
                     type="range" min={3} max={12} step={0.1}
                     value={investReturnRate}
                     onChange={(e) => updateField('investReturnRate', Number(e.target.value))}
@@ -648,7 +788,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                 <h4 className="font-bold text-orange-700 mb-4 flex items-center gap-2 text-sm">
                   <RefreshCw size={16}/> 轉增貸參數
                 </h4>
-                
+
                 <div className="space-y-4">
                   <div>
                     <div className="flex justify-between items-center text-xs mb-1">
@@ -656,14 +796,17 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                       <div className="flex items-center gap-0.5">
                         <input
                           type="number"
-                          value={existingLoanBalance}
-                          onChange={(e) => updateField('existingLoanBalance', Number(e.target.value))}
+                          inputMode="decimal"
+                          value={tempExistingLoanBalance}
+                          onChange={(e) => setTempExistingLoanBalance(e.target.value === '' ? '' : e.target.value)}
+                          onBlur={finalizeExistingLoanBalance}
+                          onKeyDown={handleKeyDown(finalizeExistingLoanBalance)}
                           className="w-20 font-bold text-orange-700 text-right bg-transparent border-b border-transparent hover:border-orange-300 focus:border-orange-500 focus:outline-none"
                         />
                         <span className="text-orange-400">萬</span>
                       </div>
                     </div>
-                    <input 
+                    <input
                       type="range" min={0} max={10000} step={100}
                       value={existingLoanBalance}
                       onChange={(e) => updateField('existingLoanBalance', Number(e.target.value))}
@@ -674,7 +817,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                       <span>1億</span>
                     </div>
                   </div>
-                  
+
                   <div>
                     <div className="flex justify-between items-center text-xs mb-1">
                       <span className="text-orange-600">現有月付金</span>
@@ -682,20 +825,23 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                         <span className="text-orange-400">$</span>
                         <input
                           type="number"
-                          value={existingMonthlyPayment}
-                          onChange={(e) => updateField('existingMonthlyPayment', Number(e.target.value))}
+                          inputMode="decimal"
+                          value={tempExistingMonthlyPayment}
+                          onChange={(e) => setTempExistingMonthlyPayment(e.target.value === '' ? '' : e.target.value)}
+                          onBlur={finalizeExistingMonthlyPayment}
+                          onKeyDown={handleKeyDown(finalizeExistingMonthlyPayment)}
                           className="w-24 font-bold text-orange-700 text-right bg-transparent border-b border-transparent hover:border-orange-300 focus:border-orange-500 focus:outline-none"
                         />
                       </div>
                     </div>
-                    <input 
+                    <input
                       type="range" min={10000} max={300000} step={1000}
                       value={existingMonthlyPayment}
                       onChange={(e) => updateField('existingMonthlyPayment', Number(e.target.value))}
                       className="w-full h-2 bg-orange-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
                     />
                   </div>
-                  
+
                   <div className="pt-3 border-t border-orange-200">
                     <div className="flex justify-between text-sm">
                       <span className="text-orange-700">可增貸金額</span>
@@ -1078,23 +1224,53 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
       {/* ============================================================ */}
       {showCheatSheet && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div 
+          <div
             className="absolute inset-0 bg-black/20 backdrop-blur-sm"
             onClick={() => setShowCheatSheet(false)}
           />
-          
+
           <div className="relative w-full max-w-md bg-slate-900 text-white shadow-2xl overflow-y-auto">
-            <div className="sticky top-0 bg-slate-900 border-b border-slate-700 p-4 flex justify-between items-center">
+            <div className="sticky top-0 bg-slate-900 border-b border-slate-700 p-4 flex justify-between items-center z-10">
               <div>
-                <h3 className="font-bold text-lg">📋 業務小抄</h3>
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  業務小抄
+                  {isPaidMember && <Crown size={16} className="text-amber-400" />}
+                </h3>
                 <p className="text-xs text-slate-400">按 ESC 關閉</p>
               </div>
               <button onClick={() => setShowCheatSheet(false)} className="p-2 hover:bg-slate-700 rounded-lg">
                 <X size={20}/>
               </button>
             </div>
-            
-            <div className="p-4 space-y-6 text-sm">
+
+            {/* 內容區域 - 根據會員等級顯示 */}
+            <div className="relative">
+              {/* 非付費會員：模糊遮罩 */}
+              {!isPaidMember && (
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-md">
+                  <div className="text-center p-8">
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                      <Lock size={40} className="text-white" />
+                    </div>
+                    <h4 className="text-xl font-bold text-white mb-2">會員專屬功能</h4>
+                    <p className="text-slate-400 text-sm mb-4">
+                      業務小抄是付費會員專屬功能<br/>
+                      升級後即可解鎖完整話術庫
+                    </p>
+                    <div className="space-y-2">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg text-white font-bold text-sm">
+                        <Crown size={16} />
+                        升級成為付費會員
+                      </div>
+                      <p className="text-[10px] text-slate-500">
+                        {membership?.tier === 'referral_trial' ? '轉介紹試用會員可享升級折扣' : '解鎖所有工具與進階功能'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className={`p-4 space-y-6 text-sm ${!isPaidMember ? 'blur-sm pointer-events-none select-none' : ''}`}>
               
               {/* 當前數據 */}
               <div className="grid grid-cols-2 gap-2 text-xs">
@@ -1181,6 +1357,7 @@ export const FinancialRealEstateTool = ({ data, setData }: any) => {
                     「讓銀行的錢幫您賺錢」
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           </div>

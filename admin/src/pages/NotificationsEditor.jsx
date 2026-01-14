@@ -232,6 +232,34 @@ export default function NotificationsEditor() {
         </div>
       </div>
 
+      {/* 排版說明 */}
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="text-amber-600 flex-shrink-0 mt-1" size={20} />
+          <div>
+            <h4 className="font-bold text-amber-800 mb-2">排版技巧</h4>
+            <div className="text-amber-700 text-sm space-y-2">
+              <p>支援簡易 Markdown 格式：</p>
+              <ul className="space-y-1 ml-4">
+                <li>• <code className="bg-amber-100 px-1 rounded">## 標題</code> → 顯示為黃色標題</li>
+                <li>• <code className="bg-amber-100 px-1 rounded">**粗體文字**</code> → 顯示為白色粗體</li>
+                <li>• 換行 → 直接按 Enter 換行即可</li>
+              </ul>
+              <div className="mt-3 p-3 bg-amber-100 rounded-lg text-xs">
+                <p className="font-bold mb-1">範例：</p>
+                <pre className="whitespace-pre-wrap text-amber-800">{`## 重大更新公告
+
+**版本 1.2.0** 已上線！
+
+更新內容：
+• 新增通知系統
+• 優化載入速度`}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 新增按鈕 */}
       <div className="mb-6">
         <button

@@ -2371,4 +2371,389 @@ exports.updatePointsRules = functions.https.onCall(async (_data, context) => {
   };
 });
 
+// ==========================================
+// 任務看板系統
+// ==========================================
+
+/**
+ * completeMission - 完成任務並發放點數（原子性操作）
+ *
+ * @param {string} missionId - 任務 ID
+ * @returns {Promise<{success: boolean, pointsAwarded?: number, message: string}>}
+ */
+exports.completeMission = functions.https.onCall(async (data, context) => {
+  // 1. 驗證用戶登入
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', '請先登入');
+  }
+
+  const uid = context.auth.uid;
+  const { missionId } = data;
+
+  if (!missionId) {
+    throw new functions.https.HttpsError('invalid-argument', '缺少任務 ID');
+  }
+
+  try {
+    // 2. 取得任務資料
+    const missionRef = db.collection('missions').doc(missionId);
+    const missionDoc = await missionRef.get();
+
+    if (!missionDoc.exists) {
+      throw new functions.https.HttpsError('not-found', '任務不存在');
+    }
+
+    const mission = missionDoc.data();
+
+    if (!mission.isActive) {
+      throw new functions.https.HttpsError('failed-precondition', '此任務目前已停用');
+    }
+
+    // 3. 檢查是否已完成
+    const completedRef = db
+      .collection('users').doc(uid)
+      .collection('completedMissions').doc(missionId);
+
+    const completedDoc = await completedRef.get();
+
+    // 一次性任務：只能完成一次
+    if (mission.repeatType === 'once' && completedDoc.exists) {
+      throw new functions.https.HttpsError('already-exists', '此任務已完成過');
+    }
+
+    // 每日任務：每天只能完成一次
+    if (mission.repeatType === 'daily' && completedDoc.exists) {
+      const completedAt = completedDoc.data().completedAt?.toDate();
+      if (completedAt) {
+        const today = new Date();
+        const taiwanOffset = 8 * 60 * 60 * 1000; // UTC+8
+        const todayTaiwan = new Date(today.getTime() + taiwanOffset).toDateString();
+        const completedTaiwan = new Date(completedAt.getTime() + taiwanOffset).toDateString();
+
+        if (todayTaiwan === completedTaiwan) {
+          throw new functions.https.HttpsError('already-exists', '今日已完成此任務');
+        }
+      }
+    }
+
+    // 4. 取得用戶資料並執行交易
+    const userRef = db.collection('users').doc(uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      throw new functions.https.HttpsError('not-found', '用戶不存在');
+    }
+
+    const userData = userDoc.data();
+    const currentPoints = userData.points?.current || 0;
+    const newPoints = currentPoints + mission.points;
+
+    // 計算點數過期時間（12 個月後）
+    const expiresAt = new Date();
+    expiresAt.setMonth(expiresAt.getMonth() + 12);
+
+    // 5. 執行交易：發放點數 + 記錄完成
+    await db.runTransaction(async (transaction) => {
+      // 更新用戶點數
+      transaction.update(userRef, {
+        'points.current': newPoints,
+        totalPointsEarned: admin.firestore.FieldValue.increment(mission.points),
+        lastPointsEarnedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // 記錄完成（使用 set 而不是 update，以便處理每日任務覆蓋）
+      transaction.set(completedRef, {
+        missionId: missionId,
+        missionTitle: mission.title,
+        missionCategory: mission.category,
+        pointsAwarded: mission.points,
+        completedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // 記錄點數帳本
+      const ledgerRef = db.collection('pointsLedger').doc();
+      transaction.set(ledgerRef, {
+        userId: uid,
+        userEmail: userData.email,
+        type: 'earn',
+        subType: 'mission',
+        amount: mission.points,
+        balanceBefore: currentPoints,
+        balanceAfter: newPoints,
+        actionId: 'mission_complete',
+        reason: `完成任務：${mission.title}`,
+        referenceType: 'mission',
+        referenceId: missionId,
+        missionCategory: mission.category,
+        expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
+        isExpired: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdBy: 'system',
+      });
+    });
+
+    console.log(`User ${uid} completed mission ${missionId}, awarded ${mission.points} points`);
+
+    return {
+      success: true,
+      pointsAwarded: mission.points,
+      newBalance: newPoints,
+      message: `🎉 任務完成！獲得 +${mission.points} UA 點`,
+    };
+
+  } catch (error) {
+    // 如果是 HttpsError，直接拋出
+    if (error.code) {
+      throw error;
+    }
+    console.error('completeMission error:', error);
+    throw new functions.https.HttpsError('internal', '任務完成處理失敗');
+  }
+});
+
+/**
+ * getMissions - 取得所有啟用的任務（供前台使用）
+ *
+ * @returns {Promise<{missions: Mission[]}>}
+ */
+exports.getMissions = functions.https.onCall(async (_data, context) => {
+  // 可以不需要登入也能查看任務列表
+  try {
+    const missionsSnapshot = await db.collection('missions')
+      .where('isActive', '==', true)
+      .orderBy('category')
+      .orderBy('order')
+      .get();
+
+    const missions = [];
+    missionsSnapshot.forEach(doc => {
+      missions.push({
+        id: doc.id,
+        ...doc.data(),
+      });
+    });
+
+    // 如果用戶已登入，附帶完成狀態
+    if (context.auth) {
+      const uid = context.auth.uid;
+      const completedSnapshot = await db
+        .collection('users').doc(uid)
+        .collection('completedMissions')
+        .get();
+
+      const completedMap = {};
+      completedSnapshot.forEach(doc => {
+        completedMap[doc.id] = {
+          completedAt: doc.data().completedAt,
+          pointsAwarded: doc.data().pointsAwarded,
+        };
+      });
+
+      // 附加完成狀態到每個任務
+      missions.forEach(mission => {
+        const completed = completedMap[mission.id];
+        if (completed) {
+          // 一次性任務：已完成
+          if (mission.repeatType === 'once') {
+            mission.isCompleted = true;
+            mission.completedAt = completed.completedAt;
+          }
+          // 每日任務：檢查是否今天已完成
+          else if (mission.repeatType === 'daily') {
+            const completedAt = completed.completedAt?.toDate();
+            if (completedAt) {
+              const today = new Date();
+              const taiwanOffset = 8 * 60 * 60 * 1000;
+              const todayTaiwan = new Date(today.getTime() + taiwanOffset).toDateString();
+              const completedTaiwan = new Date(completedAt.getTime() + taiwanOffset).toDateString();
+              mission.isCompletedToday = (todayTaiwan === completedTaiwan);
+              mission.completedAt = completed.completedAt;
+            }
+          }
+        }
+      });
+    }
+
+    return { missions };
+
+  } catch (error) {
+    console.error('getMissions error:', error);
+    throw new functions.https.HttpsError('internal', '取得任務列表失敗');
+  }
+});
+
+/**
+ * initMissions - 初始化預設任務（管理員專用）
+ *
+ * @returns {Promise<{success: boolean, message: string}>}
+ */
+exports.initMissions = functions.https.onCall(async (_data, context) => {
+  // 驗證管理員
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', '請先登入');
+  }
+
+  const userDoc = await db.collection('users').doc(context.auth.uid).get();
+  const userEmail = userDoc.exists ? userDoc.data().email : context.auth.token.email;
+  const adminEmails = ['ppcvote@gmail.com', 'admin@ultra-advisor.tw'];
+
+  if (!adminEmails.includes(userEmail)) {
+    throw new functions.https.HttpsError('permission-denied', '無管理員權限');
+  }
+
+  const now = admin.firestore.Timestamp.now();
+
+  // 預設任務
+  const missions = [
+    {
+      id: 'set_avatar',
+      title: '設定個人頭像',
+      description: '上傳一張專業的個人照片，讓客戶更認識你',
+      icon: '📸',
+      points: 20,
+      category: 'onboarding',
+      order: 1,
+      linkType: 'modal',
+      linkTarget: 'editProfile',
+      verificationType: 'auto',
+      verificationField: 'photoURL',
+      repeatType: 'once',
+      isActive: true,
+    },
+    {
+      id: 'set_display_name',
+      title: '設定顯示名稱',
+      description: '設定您的顯示名稱，讓系統更好地稱呼您',
+      icon: '📝',
+      points: 15,
+      category: 'onboarding',
+      order: 2,
+      linkType: 'modal',
+      linkTarget: 'editProfile',
+      verificationType: 'auto',
+      verificationField: 'displayName',
+      repeatType: 'once',
+      isActive: true,
+    },
+    {
+      id: 'first_client',
+      title: '建立第一位客戶',
+      description: '新增您的第一位客戶，開始使用理財工具',
+      icon: '👤',
+      points: 20,
+      category: 'onboarding',
+      order: 3,
+      linkType: 'internal',
+      linkTarget: '/clients',
+      verificationType: 'auto',
+      verificationField: 'clients',
+      verificationCondition: 'count>=1',
+      repeatType: 'once',
+      isActive: true,
+    },
+    {
+      id: 'join_line_official',
+      title: '加入 LINE 官方帳號',
+      description: '加入 Ultra Advisor 官方 LINE，獲取最新資訊',
+      icon: '💬',
+      points: 20,
+      category: 'social',
+      order: 1,
+      linkType: 'external',
+      linkTarget: 'https://line.me/R/ti/p/@ultraadvisor',
+      verificationType: 'auto',
+      verificationField: 'lineUserId',
+      repeatType: 'once',
+      isActive: true,
+    },
+    {
+      id: 'join_line_community',
+      title: '加入 LINE 戰友社群',
+      description: '加入顧問戰友社群，與同行交流經驗',
+      icon: '👥',
+      points: 25,
+      category: 'social',
+      order: 2,
+      linkType: 'external',
+      linkTarget: 'https://line.me/ti/g2/9Cca20iCP8J0KrmVRg5GOe1n5dSatYKO8ETTHw',
+      verificationType: 'manual',
+      repeatType: 'once',
+      isActive: true,
+    },
+    {
+      id: 'pwa_install',
+      title: '將 Ultra 加入主畫面',
+      description: '將 Ultra Advisor 加入手機主畫面，隨時快速開啟',
+      icon: '📱',
+      points: 30,
+      category: 'habit',
+      order: 1,
+      linkType: 'pwa',
+      verificationType: 'manual',
+      repeatType: 'once',
+      isActive: true,
+    },
+    {
+      id: 'use_cheat_sheet_3',
+      title: '使用 3 次業務小抄',
+      description: '善用業務小抄功能，快速掌握話術要點',
+      icon: '📋',
+      points: 15,
+      category: 'habit',
+      order: 2,
+      linkType: 'internal',
+      linkTarget: '/tools',
+      verificationType: 'auto',
+      verificationField: 'cheatSheetUsageCount',
+      verificationCondition: 'count>=3',
+      repeatType: 'once',
+      isActive: true,
+    },
+    {
+      id: 'daily_login',
+      title: '每日登入',
+      description: '每天登入系統，培養使用習慣',
+      icon: '📅',
+      points: 5,
+      category: 'daily',
+      order: 1,
+      linkType: null,
+      verificationType: 'auto',
+      verificationField: 'lastLoginDate',
+      verificationCondition: 'today',
+      repeatType: 'daily',
+      isActive: true,
+    },
+  ];
+
+  const batch = db.batch();
+
+  for (const mission of missions) {
+    const { id, ...missionData } = mission;
+    const docRef = db.collection('missions').doc(id);
+    batch.set(docRef, {
+      ...missionData,
+      createdAt: now,
+      updatedAt: now,
+    }, { merge: true });
+  }
+
+  await batch.commit();
+
+  // 記錄審計日誌
+  await db.collection('auditLogs').add({
+    adminId: context.auth.uid,
+    adminEmail: userEmail,
+    action: 'missions.init',
+    description: `初始化 ${missions.length} 個預設任務`,
+    createdAt: now,
+  });
+
+  return {
+    success: true,
+    message: `成功初始化 ${missions.length} 個任務`,
+    count: missions.length,
+  };
+});
+
 console.log('Ultra Advisor Cloud Functions loaded');

@@ -24,6 +24,7 @@ service cloud.firestore {
     match /redemptionOrders/{doc} { allow read, write: if true; }
     match /referralCodes/{doc} { allow read, write: if true; }
     match /siteContent/{doc} { allow read, write: if true; }
+    match /missions/{doc} { allow read, write: if true; }
     
     // ============================================
     // 2. 用戶資料與管理員

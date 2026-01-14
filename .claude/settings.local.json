@@ -12,7 +12,9 @@
       "Read(//c/Users/User/Downloads/**)",
       "Bash(GOOGLE_APPLICATION_CREDENTIALS=\"/c/Users/User/financial-planner/admin/src/scripts/serviceAccountKey.json\" node:*)",
       "Bash(firebase functions:log:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node initMissions.js:*)"
     ]
   }
 }

@@ -23,7 +23,7 @@ import {
 
 const LOGO_URL = "https://lh3.googleusercontent.com/d/1CEFGRByRM66l-4sMMM78LUBUvAMiAIaJ";
 const COMMUNITY_LINK = "https://line.me/ti/g2/9Cca20iCP8J0KrmVRg5GOe1n5dSatYKO8ETTHw?utm_source=invitation&utm_medium=link_copy&utm_campaign=default";
-const LINE_OFFICIAL_ACCOUNT = "https://lin.ee/RFE8A5A";
+const LINE_OFFICIAL_ACCOUNT = "https://line.me/R/ti/p/@ultraadvisor";
 
 // 🔥 管理員後台網址
 const ADMIN_URL = "https://admin.ultra-advisor.tw/secret-admin-ultra-2026";
