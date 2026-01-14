@@ -33,6 +33,7 @@ import {
   PlusOutlined,
   MinusOutlined,
   SaveOutlined,
+  LockOutlined,
 } from '@ant-design/icons';
 import {
   collection,
@@ -89,6 +90,10 @@ const Users = () => {
   const [saving, setSaving] = useState(false);
   const [processPaymentModalVisible, setProcessPaymentModalVisible] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
+  // 🆕 重設密碼
+  const [resetPasswordModalVisible, setResetPasswordModalVisible] = useState(false);
+  const [resetPasswordForm] = Form.useForm();
+  const [resettingPassword, setResettingPassword] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     trial: 0,
@@ -388,6 +393,36 @@ const Users = () => {
     }
   };
 
+  // 🆕 重設用戶密碼
+  const handleResetPassword = async (values) => {
+    setResettingPassword(true);
+    try {
+      const adminResetPassword = httpsCallable(functions, 'adminResetPassword');
+      const result = await adminResetPassword({
+        userEmail: selectedUser.email,
+        newPassword: values.newPassword,
+      });
+
+      if (result.data.success) {
+        message.success(result.data.message);
+        setResetPasswordModalVisible(false);
+        resetPasswordForm.resetFields();
+      }
+    } catch (error) {
+      console.error('Reset password error:', error);
+      message.error(error.message || '重設密碼失敗');
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
+  // 開啟重設密碼 Modal
+  const openResetPasswordModal = (user) => {
+    setSelectedUser(user);
+    resetPasswordForm.resetFields();
+    setResetPasswordModalVisible(true);
+  };
+
   // 導出用戶資料
   const handleExport = () => {
     try {
@@ -544,6 +579,39 @@ const Users = () => {
       ),
     },
     {
+      title: '推薦',
+      key: 'referral',
+      width: 140,
+      render: (_, record) => {
+        const referredByUser = record.referredBy
+          ? users.find(u => u.id === record.referredBy)
+          : null;
+        return (
+          <div style={{ fontSize: 12 }}>
+            {referredByUser ? (
+              <Tooltip title={`推薦人 UID: ${record.referredBy}`}>
+                <div style={{ color: '#8b5cf6' }}>
+                  ⬆️ {referredByUser.displayName || referredByUser.email?.split('@')[0] || '未知'}
+                </div>
+              </Tooltip>
+            ) : record.referredBy ? (
+              <div style={{ color: '#64748b' }}>⬆️ {record.referredBy.slice(0, 8)}...</div>
+            ) : null}
+            {record.referralCount > 0 && (
+              <Tooltip title={`已推薦 ${record.referralCount} 位好友`}>
+                <div style={{ color: '#10b981', fontWeight: 600 }}>
+                  ⬇️ 推薦了 {record.referralCount} 人
+                </div>
+              </Tooltip>
+            )}
+            {!referredByUser && !record.referredBy && !record.referralCount && (
+              <span style={{ color: '#9ca3af' }}>-</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       title: '快速延長',
       key: 'quickExtend',
       width: 180,
@@ -570,10 +638,10 @@ const Users = () => {
     {
       title: '操作',
       key: 'action',
-      width: 180,
+      width: 220,
       fixed: 'right',
       render: (_, record) => (
-        <Space size="small">
+        <Space size="small" wrap>
           <Tooltip title="編輯用戶">
             <Button
               type="primary"
@@ -582,6 +650,15 @@ const Users = () => {
               onClick={() => openEditModal(record)}
             >
               編輯
+            </Button>
+          </Tooltip>
+          <Tooltip title="重設密碼">
+            <Button
+              size="small"
+              icon={<LockOutlined />}
+              onClick={() => openResetPasswordModal(record)}
+            >
+              改密碼
             </Button>
           </Tooltip>
           <Button
@@ -1112,6 +1189,59 @@ const Users = () => {
               </Col>
             </Row>
 
+            {/* 🆕 推薦資訊 */}
+            <Divider style={{ margin: '12px 0' }} />
+            <Row gutter={16}>
+              <Col span={12}>
+                <div>
+                  <Text type="secondary">⬆️ 推薦人</Text>
+                  <div>
+                    {(() => {
+                      if (!selectedUser.referredBy) return <Text>-</Text>;
+                      const referrer = users.find(u => u.id === selectedUser.referredBy);
+                      return (
+                        <div>
+                          <Text strong style={{ color: '#8b5cf6' }}>
+                            {referrer?.displayName || referrer?.email?.split('@')[0] || '未知'}
+                          </Text>
+                          <br />
+                          <Text code style={{ fontSize: 10 }}>{selectedUser.referredBy}</Text>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div>
+                  <Text type="secondary">⬇️ 推薦人數</Text>
+                  <div>
+                    <Text strong style={{ color: '#10b981', fontSize: 18 }}>
+                      {selectedUser.referralCount || 0} 人
+                    </Text>
+                  </div>
+                </div>
+              </Col>
+            </Row>
+            <Row gutter={16} style={{ marginTop: 8 }}>
+              <Col span={12}>
+                <div>
+                  <Text type="secondary">🎟️ 推薦碼</Text>
+                  <div><Text code copyable>{selectedUser.referralCode || '-'}</Text></div>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div>
+                  <Text type="secondary">🎁 付費獎勵</Text>
+                  <div>
+                    <Tag color={selectedUser.referralRewardClaimed ? 'green' : 'orange'}>
+                      {selectedUser.referralRewardClaimed ? '已領取' : '未領取'}
+                    </Tag>
+                  </div>
+                </div>
+              </Col>
+            </Row>
+
             {selectedUser.adminNote && (
               <>
                 <Divider style={{ margin: '12px 0' }} />
@@ -1240,7 +1370,7 @@ const Users = () => {
               <ul style={{ margin: '8px 0 0 0', paddingLeft: 20 }}>
                 <li>為用戶增加購買天數</li>
                 <li>更新用戶身分為「付費會員」</li>
-                <li>若有推薦人，自動發放 +500 UA 獎勵</li>
+                <li>若有推薦人，自動發放 +1000 UA 獎勵（雙方各得）</li>
                 <li>記錄付款歷史</li>
               </ul>
             </Text>
@@ -1265,6 +1395,131 @@ const Users = () => {
                 style={{ backgroundColor: '#722ed1' }}
               >
                 確認處理
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 🆕 重設密碼 Modal */}
+      <Modal
+        title={
+          <Space>
+            <LockOutlined style={{ color: '#fa8c16' }} />
+            <span>重設用戶密碼</span>
+          </Space>
+        }
+        open={resetPasswordModalVisible}
+        onCancel={() => {
+          setResetPasswordModalVisible(false);
+          resetPasswordForm.resetFields();
+        }}
+        footer={null}
+        width={450}
+        destroyOnClose
+      >
+        <Form
+          form={resetPasswordForm}
+          layout="vertical"
+          onFinish={handleResetPassword}
+          className="mt-4"
+        >
+          {/* 用戶資訊 */}
+          <div style={{
+            background: '#f0f5ff',
+            border: '1px solid #adc6ff',
+            borderRadius: 6,
+            padding: '12px 16px',
+            marginBottom: 16,
+          }}>
+            <Text type="secondary">目標用戶：</Text>
+            <div style={{ marginTop: 4 }}>
+              <Text strong style={{ fontSize: 15 }}>{selectedUser?.email}</Text>
+              {selectedUser?.displayName && (
+                <Text type="secondary" style={{ marginLeft: 8 }}>
+                  ({selectedUser.displayName})
+                </Text>
+              )}
+            </div>
+          </div>
+
+          {/* 新密碼 */}
+          <Form.Item
+            name="newPassword"
+            label="新密碼"
+            rules={[
+              { required: true, message: '請輸入新密碼' },
+              { min: 6, message: '密碼至少需要 6 個字元' },
+            ]}
+          >
+            <Input.Password
+              placeholder="輸入新密碼（至少 6 個字元）"
+              size="large"
+              prefix={<LockOutlined />}
+            />
+          </Form.Item>
+
+          {/* 確認密碼 */}
+          <Form.Item
+            name="confirmPassword"
+            label="確認密碼"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: '請再次輸入密碼' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('兩次輸入的密碼不一致'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password
+              placeholder="再次輸入新密碼"
+              size="large"
+              prefix={<LockOutlined />}
+            />
+          </Form.Item>
+
+          {/* 警告訊息 */}
+          <div style={{
+            background: '#fff7e6',
+            border: '1px solid #ffd591',
+            borderRadius: 6,
+            padding: '12px 16px',
+            marginBottom: 16,
+          }}>
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              ⚠️ 注意事項：
+              <ul style={{ margin: '8px 0 0 0', paddingLeft: 20 }}>
+                <li>重設後用戶需使用新密碼登入</li>
+                <li>此操作會記錄在審計日誌中</li>
+                <li>建議通知用戶新密碼</li>
+              </ul>
+            </Text>
+          </div>
+
+          {/* 操作按鈕 */}
+          <Form.Item className="mb-0">
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+              <Button
+                onClick={() => {
+                  setResetPasswordModalVisible(false);
+                  resetPasswordForm.resetFields();
+                }}
+              >
+                取消
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={resettingPassword}
+                icon={<LockOutlined />}
+                style={{ backgroundColor: '#fa8c16' }}
+              >
+                確認重設
               </Button>
             </Space>
           </Form.Item>

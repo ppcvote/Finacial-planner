@@ -251,7 +251,7 @@ async function getWelcomeMessages() {
 
   // 預設值
   return {
-    newFollower: '🎉 歡迎加入 Ultra Advisor！\n\n我是你的專屬 AI 財務軍師\n━━━━━━━━━━━━━━\n\n💎 立即獲得 7 天免費試用\n✓ 18 種專業理財工具\n✓ 無限客戶檔案\n✓ AI 智能建議\n\n🎁 推薦好友付費後雙方各得 500 UA 點！\n\n━━━━━━━━━━━━━━\n\n📧 請直接傳送你的 Email 開始試用！',
+    newFollower: '🎉 歡迎加入 Ultra Advisor！\n\n我是你的專屬 AI 財務軍師\n━━━━━━━━━━━━━━\n\n💎 立即獲得 7 天免費試用\n✓ 18 種專業理財工具\n✓ 無限客戶檔案\n✓ AI 智能建議\n\n🎁 推薦好友：完成註冊 +100 UA，付費後雙方各得 1000 UA！\n\n━━━━━━━━━━━━━━\n\n📧 請直接傳送你的 Email 開始試用！',
     newFollowerEnabled: true,
     memberLinked: '🎉 綁定成功！\n\n{{name}} 您好，您的帳號已成功綁定。\n\n現在您可以透過 LINE 接收：\n✅ 會員到期提醒\n✅ 最新功能通知\n✅ 專屬優惠資訊',
     memberLinkedEnabled: true
@@ -598,6 +598,14 @@ async function createTrialAccount(email, lineUserId, inputReferralCode = null) {
         await db.collection('users').doc(referredByUid).update({
           referralCount: admin.firestore.FieldValue.increment(1),
         });
+
+        // 🆕 推薦好友完成註冊，推薦人獲得 +100 UA
+        try {
+          await awardPointsSimple(referredByUid, 100, `推薦好友 ${email.split('@')[0]} 完成註冊`);
+          console.log(`Referral registration reward: +100 UA to ${referredByUid}`);
+        } catch (err) {
+          console.error('Referral registration reward error:', err);
+        }
       }
     }
 
@@ -664,7 +672,7 @@ async function createTrialAccount(email, lineUserId, inputReferralCode = null) {
           referralCode: newReferralCode,
           referrerName: referrerName || '',
         })
-      : `🔐 你的登入密碼（請妥善保管）：\n\n${password}\n\n⚠️ 請立即登入並修改密碼以確保安全\n\n📢 分享你的推薦碼「${newReferralCode}」給朋友，付費後雙方都能獲得 500 UA 點！`;
+      : `🔐 你的登入密碼（請妥善保管）：\n\n${password}\n\n⚠️ 請立即登入並修改密碼以確保安全\n\n📢 分享你的推薦碼「${newReferralCode}」給朋友！\n註冊成功 +100 UA，付費後雙方各得 1000 UA！`;
 
     // 加上推薦人和折扣資訊（如果後台訊息沒有包含的話）
     if (!passwordMessageText.includes(referrerNote) && referrerNote) {
@@ -840,7 +848,7 @@ async function handleEvent(event) {
               },
               {
                 type: 'text',
-                text: '🎁 推薦好友付費後雙方各得 500 UA！',
+                text: '🎁 推薦好友：註冊 +100，付費 +1000 UA！',
                 size: 'xs',
                 color: '#f59e0b',
                 margin: 'lg',
@@ -1359,13 +1367,14 @@ exports.processPayment = functions.https.onCall(async (data, context) => {
   await userDoc.ref.update(updateData);
 
   // 4. 發放推薦獎勵（如果有推薦人且尚未領取）
+  // 🆕 付費獎勵改為 1000 UA（原 500）
   let referralRewardGiven = false;
   if (userData.referredBy && !userData.referralRewardClaimed) {
     try {
-      // 推薦人 +500
-      await awardPointsSimple(userData.referredBy, 500, '推薦好友成功付費');
-      // 被推薦人 +500
-      await awardPointsSimple(userId, 500, '使用推薦碼註冊並付費獎勵');
+      // 推薦人 +1000
+      await awardPointsSimple(userData.referredBy, 1000, '推薦好友成功付費');
+      // 被推薦人 +1000
+      await awardPointsSimple(userId, 1000, '使用推薦碼註冊並付費獎勵');
       // 標記已領取
       await userDoc.ref.update({ referralRewardClaimed: true });
 
@@ -1377,7 +1386,7 @@ exports.processPayment = functions.https.onCall(async (data, context) => {
           if (referrerCode) {
             await db.collection('referralCodes').doc(referrerCode).update({
               successCount: admin.firestore.FieldValue.increment(1),
-              totalPointsGenerated: admin.firestore.FieldValue.increment(1000),
+              totalPointsGenerated: admin.firestore.FieldValue.increment(2000),  // 雙方各 1000
             });
           }
         }
@@ -1433,6 +1442,71 @@ exports.processPayment = functions.https.onCall(async (data, context) => {
     referralRewardGiven,
     userId,
   };
+});
+
+// ==========================================
+// 🆕 Admin 重設用戶密碼
+// ==========================================
+
+/**
+ * Admin 重設用戶密碼
+ * 輸入：{ userEmail, newPassword }
+ * 輸出：{ success: true }
+ */
+exports.adminResetPassword = functions.https.onCall(async (data, context) => {
+  // 驗證是否為 Admin
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', '請先登入');
+  }
+
+  // 驗證 Admin 權限（可選：檢查是否在 admins 集合中）
+  const adminDoc = await db.collection('admins').doc(context.auth.uid).get();
+  if (!adminDoc.exists) {
+    throw new functions.https.HttpsError('permission-denied', '需要管理員權限');
+  }
+
+  const { userEmail, newPassword } = data;
+
+  if (!userEmail) {
+    throw new functions.https.HttpsError('invalid-argument', '請提供用戶 Email');
+  }
+
+  if (!newPassword || newPassword.length < 6) {
+    throw new functions.https.HttpsError('invalid-argument', '密碼至少需要 6 個字元');
+  }
+
+  try {
+    // 透過 Email 查找用戶
+    const userRecord = await auth.getUserByEmail(userEmail);
+
+    // 更新密碼
+    await auth.updateUser(userRecord.uid, {
+      password: newPassword,
+    });
+
+    // 記錄操作日誌
+    await db.collection('auditLogs').add({
+      action: 'admin_reset_password',
+      targetEmail: userEmail,
+      targetUid: userRecord.uid,
+      performedBy: context.auth.uid,
+      performedByEmail: context.auth.token.email,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log(`Admin reset password: ${userEmail} by ${context.auth.token.email}`);
+
+    return {
+      success: true,
+      message: `已成功重設 ${userEmail} 的密碼`,
+    };
+  } catch (error) {
+    console.error('Admin reset password error:', error);
+    if (error.code === 'auth/user-not-found') {
+      throw new functions.https.HttpsError('not-found', '找不到該用戶');
+    }
+    throw new functions.https.HttpsError('internal', '重設密碼失敗：' + error.message);
+  }
 });
 
 /**
@@ -2174,7 +2248,7 @@ exports.liffRegister = functions.https.onRequest(async (req, res) => {
         try {
           await sendLineMessage(referrerDoc.data().lineUserId, [{
             type: 'text',
-            text: `🎉 好消息！你推薦的朋友 ${name} 已成功註冊！\n\n當他完成付費後，你們雙方都將獲得 500 UA 點數獎勵！`
+            text: `🎉 好消息！你推薦的朋友 ${name} 已成功註冊！\n\n🎁 你已獲得 +100 UA 推薦獎勵！\n\n當他完成付費後，你們雙方還將各獲得 1000 UA 點數！`
           }]);
         } catch (lineErr) {
           console.error('發送推薦通知失敗:', lineErr);
