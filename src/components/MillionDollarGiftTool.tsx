@@ -22,6 +22,8 @@ import {
   Crown
 } from 'lucide-react';
 import { useMembership } from '../hooks/useMembership';
+import { doc, updateDoc, increment } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -281,6 +283,22 @@ const MillionDollarGiftTool = ({ data, setData, userId }: any) => {
   const [showTripleClickHint, setShowTripleClickHint] = useState(false);
   const HINT_STORAGE_KEY = 'ua_gift_cheatsheet_hint_seen';
 
+  // 追蹤業務小抄使用次數
+  const trackCheatSheetUsage = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        cheatSheetUsageCount: increment(1)
+      });
+      console.log('CheatSheet usage tracked');
+    } catch (error) {
+      console.error('Failed to track cheat sheet usage:', error);
+    }
+  };
+
   // 三連點觸發函式
   const handleSecretClick = () => {
     setClickCount(prev => prev + 1);
@@ -288,6 +306,7 @@ const MillionDollarGiftTool = ({ data, setData, userId }: any) => {
     clickTimer.current = setTimeout(() => setClickCount(0), 800);
     if (clickCount >= 2) {
       setShowCheatSheet(true);
+      trackCheatSheetUsage(); // 追蹤使用次數
       setClickCount(0);
     }
   };

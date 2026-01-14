@@ -30,6 +30,8 @@ import {
   Settings,
   LineChart
 } from 'lucide-react';
+import { doc, updateDoc, increment } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 // 不使用 Recharts，改用純 SVG 繪製
 
 // ============================================================
@@ -216,12 +218,25 @@ export default function MortgageCalculator() {
   const [clickCount, setClickCount] = useState(0);
   const clickTimer = useRef<NodeJS.Timeout | null>(null);
 
+  // 追蹤業務小抄使用次數
+  const trackCheatSheetUsage = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, { cheatSheetUsageCount: increment(1) });
+    } catch (error) {
+      console.error('Failed to track cheat sheet usage:', error);
+    }
+  };
+
   const handleSecretClick = () => {
     setClickCount(prev => prev + 1);
     if (clickTimer.current) clearTimeout(clickTimer.current);
     clickTimer.current = setTimeout(() => setClickCount(0), 800);
     if (clickCount >= 2) {
       setShowCheatSheet(true);
+      trackCheatSheetUsage();
       setClickCount(0);
     }
   };
