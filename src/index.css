@@ -3,39 +3,10 @@
 @tailwind utilities;
 
 /* ==========================================
-   移動端滾動優化 - 修復 iOS Safari 滾動問題
+   移動端滾動優化
    ========================================== */
 
-/* 確保 html 和 body 正確設定 */
-html, body {
-  height: 100%;
-  overflow: hidden;
-  overscroll-behavior: none;
-}
-
-/* 主滾動區域優化 */
+/* 主滾動區域優化 - iOS Safari 滾動流暢度 */
 .overflow-y-auto {
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
-}
-
-/* 防止 Modal 背景滾動時的彈性效果 */
-body.modal-open {
-  position: fixed;
-  width: 100%;
-  overflow: hidden;
-}
-
-/* iOS Safari 下拉重新整理修復 */
-@supports (-webkit-touch-callout: none) {
-  body {
-    /* iOS specific fixes */
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* 防止頁面過度滾動 */
-  #root {
-    height: 100%;
-    overflow: hidden;
-  }
 }

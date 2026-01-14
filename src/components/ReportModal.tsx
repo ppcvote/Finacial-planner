@@ -63,15 +63,7 @@ const ReportModal = ({ isOpen, onClose, user, client, activeTab, data }: any) =>
       if(isOpen) {
           setAdvisorNote('');
           setShowNoteInput(true);
-          // 鎖定背景滾動
-          document.body.style.overflow = 'hidden';
-      } else {
-          // 恢復背景滾動
-          document.body.style.overflow = 'unset';
       }
-      return () => {
-          document.body.style.overflow = 'unset';
-      };
   }, [isOpen]);
    
   if (!isOpen || !mounted) return null;
