@@ -472,7 +472,7 @@ export default function LiffRegister({ onSuccess }: LiffRegisterProps) {
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-500" />
-                試用期滿後可續用 3 種免費工具
+                報表匯出功能
               </li>
             </ul>
           </div>

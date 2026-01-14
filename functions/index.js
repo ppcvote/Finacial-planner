@@ -831,7 +831,7 @@ async function handleEvent(event) {
                 contents: [
                   { type: 'text', text: '✓ 全部 18 種專業理財工具', size: 'sm', color: '#555555' },
                   { type: 'text', text: '✓ 無限客戶檔案', size: 'sm', color: '#555555' },
-                  { type: 'text', text: '✓ 試用期滿後可續用 3 種免費工具', size: 'sm', color: '#888888', wrap: true }
+                  { type: 'text', text: '✓ 報表匯出功能', size: 'sm', color: '#555555' }
                 ]
               },
               {
