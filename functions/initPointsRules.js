@@ -71,22 +71,36 @@ const pointsRules = [
     },
   },
   {
-    actionId: 'referral_success',
-    name: '推薦成功',
-    description: '成功推薦新用戶獲得點數',
-    basePoints: 500,
+    actionId: 'referral_registration',
+    name: '推薦好友註冊',
+    description: '推薦好友完成註冊，推薦人獲得點數',
+    basePoints: 100,
     isActive: true,
     limits: null,  // 無限制
+    category: 'referral',
+    triggerType: 'auto',
+  },
+  {
+    actionId: 'referral_success',
+    name: '推薦成功',
+    description: '推薦新用戶並完成付費（推薦人獎勵）',
+    basePoints: 1000,
+    isActive: true,
+    limits: null,  // 無限制
+    category: 'referral',
+    triggerType: 'auto',
   },
   {
     actionId: 'referred_bonus',
     name: '被推薦獎勵',
-    description: '透過推薦碼註冊獲得點數',
-    basePoints: 500,
+    description: '透過推薦碼註冊並付費（被推薦人獎勵）',
+    basePoints: 1000,
     isActive: true,
     limits: {
       totalMax: 1,  // 總共只能 1 次（只能被推薦一次）
     },
+    category: 'referral',
+    triggerType: 'auto',
   },
 ];
 
