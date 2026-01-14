@@ -23,7 +23,7 @@ interface LiffRegisterProps {
 const API_ENDPOINT = 'https://us-central1-grbt-f87fa.cloudfunctions.net/liffRegister';
 
 // LIFF ID（需要從 LINE Developers Console 取得後替換）
-const LIFF_ID = import.meta.env.VITE_LIFF_ID || '2006838937-J0wvyR4a';
+const LIFF_ID = import.meta.env.VITE_LIFF_ID || '2008863334-CiKr6VBU';
 
 export default function LiffRegister({ onSuccess }: LiffRegisterProps) {
   // 狀態管理

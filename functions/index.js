@@ -790,7 +790,7 @@ async function handleEvent(event) {
 
     // 🆕 LIFF 註冊按鈕（優先使用 Flex Message）
     // LIFF ID 需要從環境變數或設定中取得
-    const LIFF_ID = functions.config().liff?.register_id || '2006838937-J0wvyR4a';
+    const LIFF_ID = functions.config().liff?.register_id || '2008863334-CiKr6VBU';
     const liffRegisterUrl = `https://liff.line.me/${LIFF_ID}`;
 
     // 發送帶有 LIFF 按鈕的 Flex Message
