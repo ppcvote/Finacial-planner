@@ -43,6 +43,9 @@ import ToolLockedOverlay from './components/ToolLockedOverlay';
 // 🆕 公開計算機（傲創計算機）
 import PublicCalculator from './pages/PublicCalculator';
 
+// 🆕 LIFF 註冊頁面
+import LiffRegister from './pages/LiffRegister';
+
 const generateSessionId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
 
 const PrintStyles = () => (
@@ -101,24 +104,22 @@ export default function App() {
   const [minSplashTimePassed, setMinSplashTimePassed] = useState(false); 
   
   // 控制登入頁面顯示邏輯
+  // 🆕 修復：重新整理後維持原介面，不跳回登入頁
+  // - 如果 sessionStorage 有紀錄 = 這個 session 已經登入過
+  // - 如果 localStorage 有 session_id = 曾經登入過（用於跨分頁/重開瀏覽器）
   const [needsLoginInteraction, setNeedsLoginInteraction] = useState(() => {
-    if (!user) return true;
-    const isTrialUser = !user.subscriptionStatus || user.subscriptionStatus === 'trial';
-    if (isTrialUser) {
-      return true;
-    } else {
-      const lastShown = sessionStorage.getItem('last_login_page_shown');
-      const now = Date.now();
-      if (!lastShown) return true;
-      const hoursSinceLastShown = (now - parseInt(lastShown)) / (1000 * 60 * 60);
-      return hoursSinceLastShown > 24;
-    }
+    const hasLoggedInThisSession = sessionStorage.getItem('last_login_page_shown');
+    const hasSessionId = localStorage.getItem('my_app_session_id');
+    // 只要有任一紀錄，就不再顯示登入頁
+    if (hasLoggedInThisSession || hasSessionId) return false;
+    return true;
   });
  
   // 路由與同步狀態
   const [isSecretSignupRoute, setIsSecretSignupRoute] = useState(false); 
   const [isLoginRoute, setIsLoginRoute] = useState(false);
   const [isCalculatorRoute, setIsCalculatorRoute] = useState(false); // 🆕 傲創計算機路由
+  const [isLiffRegisterRoute, setIsLiffRegisterRoute] = useState(false); // 🆕 LIFF 註冊路由
   const [clientLoading, setClientLoading] = useState(false); 
   const [currentClient, setCurrentClient] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('golden_safe'); 
@@ -281,8 +282,9 @@ export default function App() {
       const path = window.location.pathname;
       setIsSecretSignupRoute(path === '/signup-secret');
       setIsLoginRoute(path === '/login');
-      setIsCalculatorRoute(path === '/calculator'); // 🆕
-      if (path === '/') { setIsSecretSignupRoute(false); setIsLoginRoute(false); setIsCalculatorRoute(false); }
+      setIsCalculatorRoute(path === '/calculator');
+      setIsLiffRegisterRoute(path === '/liff/register'); // 🆕 LIFF 註冊
+      if (path === '/') { setIsSecretSignupRoute(false); setIsLoginRoute(false); setIsCalculatorRoute(false); setIsLiffRegisterRoute(false); }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -292,7 +294,8 @@ export default function App() {
     const path = window.location.pathname;
     if (path === '/signup-secret') setIsSecretSignupRoute(true);
     else if (path === '/login') setIsLoginRoute(true);
-    else if (path === '/calculator') setIsCalculatorRoute(true); // 🆕
+    else if (path === '/calculator') setIsCalculatorRoute(true);
+    else if (path === '/liff/register') setIsLiffRegisterRoute(true); // 🆕 LIFF 註冊
     const timer = setTimeout(() => { setMinSplashTimePassed(true); }, 3000); 
     return () => clearTimeout(timer);
   }, []);
@@ -367,6 +370,18 @@ export default function App() {
     }
     return <ToolLockedOverlay toolName={toolName} />;
   };
+
+  // 🆕 LIFF 註冊頁面（不需登入，從 LINE 開啟，跳過 SplashScreen）
+  if (isLiffRegisterRoute) {
+    return (
+      <LiffRegister
+        onSuccess={() => {
+          setIsLiffRegisterRoute(false);
+          window.history.pushState({}, '', '/');
+        }}
+      />
+    );
+  }
 
   if (loading || !minSplashTimePassed) return <SplashScreen />;
 

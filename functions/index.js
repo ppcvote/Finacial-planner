@@ -788,12 +788,99 @@ async function handleEvent(event) {
     // 清除舊狀態
     userStates.delete(lineUserId);
 
-    // 🆕 使用後台設定的歡迎訊息
-    if (welcomeMessages.newFollowerEnabled && welcomeMessages.newFollower) {
-      await sendLineMessage(lineUserId, [
-        { type: 'text', text: welcomeMessages.newFollower }
-      ]);
-    }
+    // 🆕 LIFF 註冊按鈕（優先使用 Flex Message）
+    // LIFF ID 需要從環境變數或設定中取得
+    const LIFF_ID = functions.config().liff?.register_id || '2006838937-J0wvyR4a';
+    const liffRegisterUrl = `https://liff.line.me/${LIFF_ID}`;
+
+    // 發送帶有 LIFF 按鈕的 Flex Message
+    await sendLineMessage(lineUserId, [
+      {
+        type: 'flex',
+        altText: '🎉 歡迎加入 Ultra Advisor！點擊開通試用',
+        contents: {
+          type: 'bubble',
+          hero: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              { type: 'text', text: '歡迎加入 Ultra Advisor', weight: 'bold', size: 'xl', color: '#ffffff' },
+              { type: 'text', text: '財務顧問的秘密武器', size: 'sm', color: '#ffffffcc', margin: 'sm' }
+            ],
+            backgroundColor: '#2E6BFF',
+            paddingAll: '24px',
+            paddingTop: '32px',
+            paddingBottom: '32px'
+          },
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: '🎁 7 天免費試用包含：',
+                weight: 'bold',
+                size: 'md',
+                margin: 'md'
+              },
+              {
+                type: 'box',
+                layout: 'vertical',
+                margin: 'lg',
+                spacing: 'sm',
+                contents: [
+                  { type: 'text', text: '✓ 全部 18 種專業理財工具', size: 'sm', color: '#555555' },
+                  { type: 'text', text: '✓ 無限客戶檔案', size: 'sm', color: '#555555' },
+                  { type: 'text', text: '✓ 試用期滿後可續用 3 種免費工具', size: 'sm', color: '#888888', wrap: true }
+                ]
+              },
+              {
+                type: 'separator',
+                margin: 'xl'
+              },
+              {
+                type: 'text',
+                text: '🎁 推薦好友付費後雙方各得 500 UA！',
+                size: 'xs',
+                color: '#f59e0b',
+                margin: 'lg',
+                weight: 'bold'
+              }
+            ],
+            paddingAll: '20px'
+          },
+          footer: {
+            type: 'box',
+            layout: 'vertical',
+            spacing: 'sm',
+            contents: [
+              {
+                type: 'button',
+                style: 'primary',
+                height: 'md',
+                action: {
+                  type: 'uri',
+                  label: '🚀 立即開通試用',
+                  uri: liffRegisterUrl
+                },
+                color: '#2E6BFF'
+              },
+              {
+                type: 'button',
+                style: 'link',
+                height: 'sm',
+                action: {
+                  type: 'uri',
+                  label: '已有帳號？直接登入',
+                  uri: 'https://ultra-advisor.tw/login'
+                }
+              }
+            ],
+            paddingAll: '16px'
+          }
+        }
+      }
+    ]);
     return;
   }
 
@@ -1899,5 +1986,229 @@ exports.checkMembershipExpiry = functions.pubsub
     console.log('Membership expiry check completed');
     return null;
   });
+
+// ==========================================
+// 🆕 LIFF 註冊 API（HTTP Endpoint）
+// ==========================================
+
+/**
+ * LIFF 註冊 - 一頁式表單提交
+ * POST /liffRegister
+ * Body: { name, email, password, referralCode?, lineUserId, lineDisplayName, linePictureUrl? }
+ */
+exports.liffRegister = functions.https.onRequest(async (req, res) => {
+  // CORS 處理
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(204).send('');
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
+  }
+
+  try {
+    const { name, email, password, referralCode, lineUserId, lineDisplayName, linePictureUrl } = req.body;
+
+    // 驗證必填欄位
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, error: '請填寫所有必填欄位' });
+    }
+
+    // LINE User ID 驗證（允許開發模式跳過）
+    if (!lineUserId) {
+      return res.status(400).json({ success: false, error: '無法取得 LINE 用戶資訊' });
+    }
+
+    // 驗證 Email 格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ success: false, error: 'Email 格式不正確' });
+    }
+
+    // 驗證密碼長度
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, error: '密碼至少需要 6 個字元' });
+    }
+
+    // 檢查 Email 是否已存在
+    const existingUser = await auth.getUserByEmail(email.toLowerCase()).catch(() => null);
+    if (existingUser) {
+      return res.status(400).json({ success: false, error: '此 Email 已經註冊' });
+    }
+
+    // 檢查 LINE User ID 是否已綁定（跳過開發模式的假 ID）
+    if (!lineUserId.startsWith('dev-user-')) {
+      const existingLineUser = await db.collection('users')
+        .where('lineUserId', '==', lineUserId)
+        .limit(1)
+        .get();
+
+      if (!existingLineUser.empty) {
+        return res.status(400).json({ success: false, error: '此 LINE 帳號已綁定其他帳戶' });
+      }
+    }
+
+    // 處理推薦碼
+    let referredByUid = null;
+    let referrerName = null;
+    let tierId = 'trial';
+
+    if (referralCode) {
+      const codeDoc = await db.collection('referralCodes').doc(referralCode.toUpperCase()).get();
+      if (codeDoc.exists && codeDoc.data().isActive) {
+        tierId = 'referral_trial';
+        referredByUid = codeDoc.data().ownerId;
+
+        // 取得推薦人名稱
+        const referrerDoc = await db.collection('users').doc(referredByUid).get();
+        if (referrerDoc.exists) {
+          const referrerData = referrerDoc.data();
+          referrerName = referrerData.displayName || referrerData.email?.split('@')[0] || '會員';
+        }
+      }
+    }
+
+    // 創建 Firebase Auth 帳號
+    const userRecord = await auth.createUser({
+      email: email.toLowerCase(),
+      password: password,
+      displayName: name,
+      emailVerified: false,
+      disabled: false
+    });
+
+    const now = admin.firestore.Timestamp.now();
+
+    // 計算試用到期時間（7 天後）
+    const trialExpires = admin.firestore.Timestamp.fromMillis(
+      now.toMillis() + 7 * 24 * 60 * 60 * 1000
+    );
+
+    // 生成推薦碼
+    const newReferralCode = generateReferralCode(email);
+
+    // 寫入 Firestore
+    await db.collection('users').doc(userRecord.uid).set({
+      email: email.toLowerCase(),
+      displayName: name,
+      lineUserId: lineUserId.startsWith('dev-user-') ? null : lineUserId,
+      lineDisplayName: lineDisplayName || null,
+      linePictureUrl: linePictureUrl || null,
+      createdAt: now,
+      updatedAt: now,
+      // 天數制會員系統
+      primaryTierId: tierId,
+      daysRemaining: 7,
+      lastDayDeducted: null,
+      graceDaysRemaining: 0,
+      trialExpiresAt: trialExpires,
+      // UA 點數（被推薦者獲得 50 點）
+      points: { current: referredByUid ? 50 : 0 },
+      totalPointsEarned: referredByUid ? 50 : 0,
+      totalPointsSpent: 0,
+      totalPointsExpired: 0,
+      // 推薦系統
+      referralCode: newReferralCode,
+      referredBy: referredByUid,
+      referralCount: 0,
+      referralRewardClaimed: false,
+      // 其他
+      isActive: true,
+      isFirstLogin: true,
+      loginStreak: 0,
+      toolUsageCount: 0,
+      clients: [],
+      stats: { trialsCompleted: 0, hoursSaved: 0 }
+    });
+
+    // 建立推薦碼索引
+    await db.collection('referralCodes').doc(newReferralCode).set({
+      code: newReferralCode,
+      ownerId: userRecord.uid,
+      ownerEmail: email.toLowerCase(),
+      usageCount: 0,
+      successCount: 0,
+      totalPointsGenerated: 0,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now
+    });
+
+    // 如果有推薦人，更新推薦人資料並記錄點數
+    if (referredByUid) {
+      const batch = db.batch();
+
+      // 更新推薦人的 referralCount
+      const referrerRef = db.collection('users').doc(referredByUid);
+      batch.update(referrerRef, {
+        referralCount: admin.firestore.FieldValue.increment(1)
+      });
+
+      // 更新推薦碼使用次數
+      const codeRef = db.collection('referralCodes').doc(referralCode.toUpperCase());
+      batch.update(codeRef, {
+        usageCount: admin.firestore.FieldValue.increment(1),
+        updatedAt: now
+      });
+
+      // 記錄被推薦者獲得的點數
+      const ledgerRef = db.collection('pointsLedger').doc();
+      batch.set(ledgerRef, {
+        userId: userRecord.uid,
+        type: 'earn',
+        amount: 50,
+        reason: '使用推薦碼註冊獎勵',
+        relatedUserId: referredByUid,
+        createdAt: now
+      });
+
+      await batch.commit();
+
+      // 發送 LINE 通知給推薦人（如果有 LINE ID）
+      const referrerDoc = await db.collection('users').doc(referredByUid).get();
+      if (referrerDoc.exists && referrerDoc.data().lineUserId) {
+        try {
+          await sendLineMessage(referrerDoc.data().lineUserId, [{
+            type: 'text',
+            text: `🎉 好消息！你推薦的朋友 ${name} 已成功註冊！\n\n當他完成付費後，你們雙方都將獲得 500 UA 點數獎勵！`
+          }]);
+        } catch (lineErr) {
+          console.error('發送推薦通知失敗:', lineErr);
+        }
+      }
+    }
+
+    // 格式化到期日期
+    const expireDate = new Date(trialExpires.toMillis());
+    const expireDateStr = `${expireDate.getFullYear()}/${expireDate.getMonth() + 1}/${expireDate.getDate()}`;
+
+    console.log(`LIFF Register success: ${email}, tier: ${tierId}, referredBy: ${referredByUid || 'none'}`);
+
+    // 回傳成功
+    return res.status(200).json({
+      success: true,
+      data: {
+        uid: userRecord.uid,
+        email: email.toLowerCase(),
+        displayName: name,
+        trialExpireDate: expireDateStr,
+        referralCode: newReferralCode,
+        points: referredByUid ? 50 : 0,
+        tierId: tierId
+      }
+    });
+
+  } catch (error) {
+    console.error('LIFF Register error:', error);
+    return res.status(500).json({
+      success: false,
+      error: '系統發生錯誤，請稍後再試'
+    });
+  }
+});
 
 console.log('Ultra Advisor Cloud Functions loaded');
