@@ -625,6 +625,12 @@ const MillionDollarGiftTool = ({ data, setData, userId }: any) => {
     }
   };
 
+  // 處理輸入值，移除前導零（手機版相容）
+  const sanitizeInput = (val: string): string => {
+    if (val === '') return '';
+    return val.replace(/^0+(?=\d)/, '');
+  };
+
   const handleSyncToFirstCycle = () => {
     setData({
       ...safeData,
@@ -832,7 +838,7 @@ const MillionDollarGiftTool = ({ data, setData, userId }: any) => {
                         type="number"
                         inputMode="decimal"
                         value={tempLoanAmount}
-                        onChange={(e) => setTempLoanAmount(e.target.value === '' ? '' : e.target.value)}
+                        onChange={(e) => setTempLoanAmount(sanitizeInput(e.target.value))}
                         onBlur={finalizeAmount}
                         onKeyDown={handleKeyDown(finalizeAmount)}
                         className="w-16 text-right bg-transparent border-none p-0 font-mono font-bold text-blue-600 text-lg focus:ring-0 focus:border-blue-500 focus:bg-blue-50/50 rounded"
@@ -861,7 +867,7 @@ const MillionDollarGiftTool = ({ data, setData, userId }: any) => {
                         inputMode="decimal"
                         step={0.1}
                         value={tempLoanRate}
-                        onChange={(e) => setTempLoanRate(e.target.value === '' ? '' : e.target.value)}
+                        onChange={(e) => setTempLoanRate(sanitizeInput(e.target.value))}
                         onBlur={finalizeLoanRate}
                         onKeyDown={handleKeyDown(finalizeLoanRate)}
                         className="w-14 text-right bg-transparent border-none p-0 font-mono font-bold text-indigo-600 text-lg focus:ring-0 focus:bg-indigo-50/50 rounded"
@@ -891,7 +897,7 @@ const MillionDollarGiftTool = ({ data, setData, userId }: any) => {
                       inputMode="decimal"
                       step={0.1}
                       value={tempInvestReturnRate}
-                      onChange={(e) => setTempInvestReturnRate(e.target.value === '' ? '' : e.target.value)}
+                      onChange={(e) => setTempInvestReturnRate(sanitizeInput(e.target.value))}
                       onBlur={finalizeInvestReturnRate}
                       onKeyDown={handleKeyDown(finalizeInvestReturnRate)}
                       className="w-14 text-right bg-transparent border-none p-0 font-mono font-bold text-purple-600 text-lg focus:ring-0 focus:bg-purple-50/50 rounded"
@@ -957,7 +963,7 @@ const MillionDollarGiftTool = ({ data, setData, userId }: any) => {
                               type="number"
                               inputMode="decimal"
                               value={tempC2Loan}
-                              onChange={(e) => setTempC2Loan(e.target.value === '' ? '' : e.target.value)}
+                              onChange={(e) => setTempC2Loan(sanitizeInput(e.target.value))}
                               onBlur={finalizeC2Loan}
                               onKeyDown={handleKeyDown(finalizeC2Loan)}
                               className="w-14 text-right bg-transparent border-none p-0 font-mono font-bold text-indigo-700 focus:ring-0 focus:bg-indigo-100 rounded"
@@ -981,7 +987,7 @@ const MillionDollarGiftTool = ({ data, setData, userId }: any) => {
                               inputMode="decimal"
                               step={0.1}
                               value={tempC2Rate}
-                              onChange={(e) => setTempC2Rate(e.target.value === '' ? '' : e.target.value)}
+                              onChange={(e) => setTempC2Rate(sanitizeInput(e.target.value))}
                               onBlur={finalizeC2Rate}
                               onKeyDown={handleKeyDown(finalizeC2Rate)}
                               className="w-12 text-right bg-transparent border-none p-0 font-mono font-bold text-indigo-700 focus:ring-0 focus:bg-indigo-100 rounded"
@@ -1017,7 +1023,7 @@ const MillionDollarGiftTool = ({ data, setData, userId }: any) => {
                               type="number"
                               inputMode="decimal"
                               value={tempC3Loan}
-                              onChange={(e) => setTempC3Loan(e.target.value === '' ? '' : e.target.value)}
+                              onChange={(e) => setTempC3Loan(sanitizeInput(e.target.value))}
                               onBlur={finalizeC3Loan}
                               onKeyDown={handleKeyDown(finalizeC3Loan)}
                               className="w-14 text-right bg-transparent border-none p-0 font-mono font-bold text-purple-700 focus:ring-0 focus:bg-purple-100 rounded"
@@ -1041,7 +1047,7 @@ const MillionDollarGiftTool = ({ data, setData, userId }: any) => {
                               inputMode="decimal"
                               step={0.1}
                               value={tempC3Rate}
-                              onChange={(e) => setTempC3Rate(e.target.value === '' ? '' : e.target.value)}
+                              onChange={(e) => setTempC3Rate(sanitizeInput(e.target.value))}
                               onBlur={finalizeC3Rate}
                               onKeyDown={handleKeyDown(finalizeC3Rate)}
                               className="w-12 text-right bg-transparent border-none p-0 font-mono font-bold text-purple-700 focus:ring-0 focus:bg-purple-100 rounded"
