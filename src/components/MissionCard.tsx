@@ -66,7 +66,41 @@ const MissionCard: React.FC<MissionCardProps> = ({
 
     setErrorMsg(null);
 
-    // 對於自動驗證任務，先嘗試完成（可能用戶已經完成條件）
+    // 對於外部連結，必須立即開啟（避免 popup blocker）
+    // 不管是 auto 還是 manual 驗證，都先開啟連結
+    if (mission.linkType === 'external' && mission.linkTarget) {
+      const link = document.createElement('a');
+      link.href = mission.linkTarget;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // 對於手動驗證的外部連結，延遲後自動嘗試完成任務
+      if (mission.verificationType === 'manual') {
+        setTimeout(() => handleManualComplete(mission), 2000);
+      }
+      // 對於自動驗證的外部連結，延遲後嘗試驗證
+      else if (mission.verificationType === 'auto') {
+        setTimeout(async () => {
+          try {
+            const result = await completeMission(mission.id);
+            if (result?.success) {
+              setEarnedPoints(result.pointsAwarded || 0);
+              setShowSuccess(true);
+              setTimeout(() => setShowSuccess(false), 3000);
+            }
+          } catch (error) {
+            // 自動驗證失敗不顯示錯誤（用戶可能還沒完成操作）
+            console.log('Auto verification pending:', error);
+          }
+        }, 3000);
+      }
+      return;
+    }
+
+    // 對於非外部連結的自動驗證任務，先嘗試完成（可能用戶已經完成條件）
     if (mission.verificationType === 'auto') {
       setCompleting(true);
       try {
@@ -103,21 +137,8 @@ const MissionCard: React.FC<MissionCardProps> = ({
         }
         break;
 
+      // external 已在上面處理，這裡保留以防萬一
       case 'external':
-        if (mission.linkTarget) {
-          // 使用 <a> 標籤方式開啟，避免被 popup blocker 擋住
-          const link = document.createElement('a');
-          link.href = mission.linkTarget;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
-        // 對於手動驗證的外部連結，延遲後自動嘗試完成任務
-        if (mission.verificationType === 'manual') {
-          setTimeout(() => handleManualComplete(mission), 2000);
-        }
         break;
 
       case 'pwa':

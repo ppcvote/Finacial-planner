@@ -43,7 +43,7 @@ const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
   const handleComplete = async () => {
     setCompleting(true);
     try {
-      const result = await missionsApi.completeMission('install_pwa');
+      const result = await missionsApi.completeMission('pwa_install');
       if (result.success && onComplete) {
         onComplete(result.pointsAwarded || 0);
       }
