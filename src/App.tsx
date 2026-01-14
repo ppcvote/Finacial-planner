@@ -122,7 +122,11 @@ export default function App() {
   const [isLiffRegisterRoute, setIsLiffRegisterRoute] = useState(false); // 🆕 LIFF 註冊路由
   const [clientLoading, setClientLoading] = useState(false); 
   const [currentClient, setCurrentClient] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState('golden_safe'); 
+  // 🆕 activeTab 持久化：重新整理後保持在原工具介面
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = localStorage.getItem('ultra_advisor_active_tab');
+    return saved || 'golden_safe';
+  }); 
   const [toast, setToast] = useState<{message: string, type: string} | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false); 
@@ -308,6 +312,11 @@ export default function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  // 🆕 activeTab 變化時保存到 localStorage（重新整理後保持原介面）
+  useEffect(() => {
+    localStorage.setItem('ultra_advisor_active_tab', activeTab);
+  }, [activeTab]);
 
   // 客戶資料監聽
   useEffect(() => {

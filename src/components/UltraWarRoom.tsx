@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
+import {
   Calculator, Lock, User, Camera, Mail, Phone, MessageCircle, Instagram,
   Home, TrendingUp, Coins, Check, AlertCircle, Eye, EyeOff, Info, Zap,
   Users, Search, Plus, Trash2, LogOut, Settings, X,
   Clock, TriangleAlert, ShieldAlert, Activity, Edit3, Save, Loader2,
   Heart, RefreshCw, Download, Sparkles, Crown, BarChart3, Bell,
-  MessageSquarePlus, Send, Lightbulb
+  MessageSquarePlus, Send, Lightbulb, ChevronDown
 } from 'lucide-react';
 import { 
   getAuth, 
@@ -452,9 +452,10 @@ const QuickCalculator = () => {
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 value={loanAmount}
                 onChange={e => setLoanAmount(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
                          text-white font-bold text-sm focus:border-amber-500 outline-none"
               />
             </div>
@@ -465,6 +466,7 @@ const QuickCalculator = () => {
                 </label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   step="0.1"
                   value={loanRate}
                   onChange={e => setLoanRate(Number(e.target.value))}
@@ -478,6 +480,7 @@ const QuickCalculator = () => {
                 </label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   value={loanYears}
                   onChange={e => setLoanYears(Number(e.target.value))}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
@@ -507,6 +510,7 @@ const QuickCalculator = () => {
                 </label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={initialCapital}
                   onChange={e => setInitialCapital(Number(e.target.value))}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
@@ -519,6 +523,7 @@ const QuickCalculator = () => {
                 </label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={monthlyInvest}
                   onChange={e => setMonthlyInvest(Number(e.target.value))}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
@@ -533,6 +538,7 @@ const QuickCalculator = () => {
                 </label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   step="0.1"
                   value={expectedRate}
                   onChange={e => setExpectedRate(Number(e.target.value))}
@@ -546,6 +552,7 @@ const QuickCalculator = () => {
                 </label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   value={investYears}
                   onChange={e => setInvestYears(Number(e.target.value))}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
@@ -574,6 +581,7 @@ const QuickCalculator = () => {
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 value={totalPremium}
                 onChange={e => setTotalPremium(Number(e.target.value))}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
@@ -587,6 +595,7 @@ const QuickCalculator = () => {
                 </label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={maturityValue}
                   onChange={e => setMaturityValue(Number(e.target.value))}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
@@ -599,6 +608,7 @@ const QuickCalculator = () => {
                 </label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   value={irrYears}
                   onChange={e => setIrrYears(Number(e.target.value))}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
@@ -1642,6 +1652,7 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAllNotifications, setShowAllNotifications] = useState(false);
   const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
+  const [expandedNotificationId, setExpandedNotificationId] = useState<string | null>(null);
 
   // 計算未讀通知數（只計算最新 3 則）
   const displayedNotifications = showAllNotifications ? notifications : notifications.slice(0, 3);
@@ -1934,8 +1945,9 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
               {/* 通知面板 */}
               {showNotifications && (
                 <div
-                  className="absolute right-0 top-full mt-2 w-80 bg-slate-900 border border-slate-700
-                               rounded-2xl shadow-2xl z-50 overflow-hidden"
+                  className="fixed md:absolute left-2 right-2 md:left-auto md:right-0 top-16 md:top-full md:mt-2
+                             md:w-96 bg-slate-900 border border-slate-700
+                             rounded-2xl shadow-2xl z-50 overflow-hidden max-h-[calc(100vh-5rem)]"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between p-4 border-b border-slate-700">
@@ -1943,40 +1955,85 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
                       <Bell size={16} className="text-amber-400" />
                       通知中心
                     </h4>
-                    {unreadCount > 0 && (
+                    <div className="flex items-center gap-3">
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={markAllNotificationsRead}
+                          className="text-xs text-blue-400 hover:text-blue-300"
+                        >
+                          全部已讀
+                        </button>
+                      )}
                       <button
-                        onClick={markAllNotificationsRead}
-                        className="text-xs text-blue-400 hover:text-blue-300"
+                        onClick={() => setShowNotifications(false)}
+                        className="md:hidden p-1 text-slate-400 hover:text-white"
                       >
-                        全部已讀
+                        <X size={18} />
                       </button>
-                    )}
+                    </div>
                   </div>
 
-                  <div className="max-h-80 overflow-y-auto">
+                  <div className="max-h-[calc(100vh-12rem)] md:max-h-96 overflow-y-auto">
                     {displayedNotifications.length > 0 ? (
-                      displayedNotifications.map(notif => (
-                        <div
-                          key={notif.id}
-                          onClick={() => markNotificationRead(notif.id)}
-                          className={`p-4 border-b border-slate-800 hover:bg-slate-800/50 cursor-pointer transition-all
-                                    ${!readNotificationIds.includes(notif.id) ? 'bg-blue-900/20' : ''}`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className={`w-2 h-2 rounded-full mt-2 shrink-0
-                                          ${!readNotificationIds.includes(notif.id) ? 'bg-blue-400' : 'bg-slate-600'}`} />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-bold text-white text-sm">{notif.title}</p>
-                              <p className="text-slate-400 text-xs mt-1 line-clamp-2">{notif.content}</p>
-                              {notif.createdAt && (
-                                <p className="text-slate-500 text-[10px] mt-2">
-                                  {new Date(notif.createdAt).toLocaleDateString('zh-TW')}
-                                </p>
-                              )}
+                      displayedNotifications.map(notif => {
+                        const isExpanded = expandedNotificationId === notif.id;
+                        return (
+                          <div
+                            key={notif.id}
+                            onClick={() => {
+                              markNotificationRead(notif.id);
+                              setExpandedNotificationId(isExpanded ? null : notif.id);
+                            }}
+                            className={`p-4 border-b border-slate-800 hover:bg-slate-800/50 cursor-pointer transition-all
+                                      ${!readNotificationIds.includes(notif.id) ? 'bg-blue-900/20' : ''}`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`w-2 h-2 rounded-full mt-2 shrink-0
+                                            ${!readNotificationIds.includes(notif.id) ? 'bg-blue-400' : 'bg-slate-600'}`} />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="font-bold text-white text-sm">{notif.title}</p>
+                                  <ChevronDown
+                                    size={14}
+                                    className={`text-slate-500 shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                  />
+                                </div>
+                                <div className={`text-slate-400 text-xs mt-1 ${isExpanded ? 'max-h-60 overflow-y-auto' : 'line-clamp-2'}`}>
+                                  {isExpanded ? (
+                                    <div className="space-y-2 whitespace-pre-wrap break-words">
+                                      {notif.content?.split('\n').map((line: string, i: number) => {
+                                        // 處理標題行 (## 開頭)
+                                        if (line.startsWith('## ')) {
+                                          return <p key={i} className="font-bold text-amber-400 text-sm mt-2">{line.replace('## ', '')}</p>;
+                                        }
+                                        // 處理粗體 (**text**)
+                                        const parts = line.split(/(\*\*[^*]+\*\*)/g);
+                                        return (
+                                          <p key={i}>
+                                            {parts.map((part, j) => {
+                                              if (part.startsWith('**') && part.endsWith('**')) {
+                                                return <span key={j} className="font-bold text-white">{part.slice(2, -2)}</span>;
+                                              }
+                                              return <span key={j}>{part}</span>;
+                                            })}
+                                          </p>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : (
+                                    <span>{notif.content?.replace(/\*\*/g, '').replace(/## /g, '')}</span>
+                                  )}
+                                </div>
+                                {notif.createdAt && (
+                                  <p className="text-slate-500 text-[10px] mt-2">
+                                    {new Date(notif.createdAt).toLocaleDateString('zh-TW')}
+                                  </p>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
                       <div className="p-8 text-center text-slate-500">
                         <Bell size={32} className="mx-auto mb-2 opacity-30" />
