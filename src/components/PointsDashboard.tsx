@@ -148,7 +148,7 @@ const PointsDashboard: React.FC<PointsDashboardProps> = ({ isOpen, onClose }) =>
                     我的推薦碼
                   </span>
                   <span className="text-xs text-purple-300 bg-purple-500/20 px-2 py-1 rounded">
-                    推薦成功 +500 UA
+                    付費 +1000 UA
                   </span>
                 </div>
                 <div className="flex items-center gap-2">

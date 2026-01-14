@@ -229,7 +229,8 @@ async function init() {
   console.log('\n現在可以測試：');
   console.log('  1. 登入系統應該會觸發 +5 UA 點數');
   console.log('  2. 使用工具應該會觸發 +10 UA 點數（每日最多 10 次）');
-  console.log('  3. 推薦好友雙方各得 +500 UA 點數');
+  console.log('  3. 推薦好友完成註冊 +100 UA（推薦人獲得）');
+  console.log('  4. 推薦好友成功付費雙方各得 +1000 UA 點數');
 }
 
 init()

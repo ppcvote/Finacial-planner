@@ -329,7 +329,7 @@ export default function LiffRegister({ onSuccess }: LiffRegisterProps) {
 
         {/* 分享提示 */}
         <p className="text-slate-500 text-sm mt-6 text-center">
-          分享推薦碼給朋友，雙方都能獲得 500 UA 獎勵！
+          分享推薦碼給朋友，註冊 +100 UA，付費後雙方各得 1000 UA！
         </p>
       </div>
     );

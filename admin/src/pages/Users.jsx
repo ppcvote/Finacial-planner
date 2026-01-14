@@ -379,7 +379,7 @@ const Users = () => {
       if (result.data.success) {
         message.success(
           `處理成功！用戶現有 ${result.data.newDaysRemaining} 天` +
-          (result.data.referralRewardGiven ? '（已發放推薦獎勵 +500 UA）' : '')
+          (result.data.referralRewardGiven ? '（已發放推薦獎勵 +1000 UA）' : '')
         );
         setProcessPaymentModalVisible(false);
         processPaymentForm.resetFields();

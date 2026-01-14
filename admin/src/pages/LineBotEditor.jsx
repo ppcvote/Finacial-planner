@@ -139,7 +139,7 @@ export default function LineBotEditor() {
 
   // 🆕 預設值（與 Cloud Functions 一致）
   const DEFAULT_WELCOME = {
-    newFollower: '🎉 歡迎加入 Ultra Advisor！\n\n我是你的專屬 AI 財務軍師\n━━━━━━━━━━━━━━\n\n💎 立即獲得 7 天免費試用\n✓ 18 種專業理財工具\n✓ 無限客戶檔案\n✓ AI 智能建議\n\n🎁 推薦好友付費後雙方各得 500 UA 點！\n\n━━━━━━━━━━━━━━\n\n📧 請直接傳送你的 Email 開始試用！',
+    newFollower: '🎉 歡迎加入 Ultra Advisor！\n\n我是你的專屬 AI 財務軍師\n━━━━━━━━━━━━━━\n\n💎 立即獲得 7 天免費試用\n✓ 18 種專業理財工具\n✓ 無限客戶檔案\n✓ AI 智能建議\n\n🎁 推薦好友：註冊 +100 UA，付費後雙方各得 1000 UA！\n\n━━━━━━━━━━━━━━\n\n📧 請直接傳送你的 Email 開始試用！',
     newFollowerEnabled: true,
     memberLinked: '🎉 綁定成功！\n\n{{name}} 您好，您的帳號已成功綁定。\n\n現在您可以透過 LINE 接收：\n✅ 會員到期提醒\n✅ 最新功能通知\n✅ 專屬優惠資訊',
     memberLinkedEnabled: true,
@@ -150,7 +150,7 @@ export default function LineBotEditor() {
     accountCreatedTitle: '🎉 帳號開通成功',
     accountCreatedEnabled: true,
     // 🆕 密碼訊息
-    passwordMessage: '🔐 你的登入密碼（請妥善保管）：\n\n{{password}}\n\n⚠️ 請立即登入並修改密碼以確保安全\n\n📢 分享你的推薦碼「{{referralCode}}」給朋友，付費後雙方都能獲得 500 UA 點！',
+    passwordMessage: '🔐 你的登入密碼（請妥善保管）：\n\n{{password}}\n\n⚠️ 請立即登入並修改密碼以確保安全\n\n📢 分享你的推薦碼「{{referralCode}}」給朋友！\n註冊成功 +100 UA，付費後雙方各得 1000 UA！',
     passwordMessageEnabled: true,
   };
 

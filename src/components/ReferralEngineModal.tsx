@@ -62,35 +62,49 @@ const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({
 
   useEffect(() => {
     if (isOpen && userId) {
-      loadSummary();
-      loadUserInfo();
+      loadAllData();
     }
   }, [isOpen, userId]);
 
-  const loadSummary = async () => {
+  // 🆕 並行載入所有數據，大幅提升載入速度
+  const loadAllData = async () => {
     setLoading(true);
     try {
-      const data = await pointsApi.getSummary();
-      setSummary(data);
-      setNewCode(data?.referralCode || '');
-    } catch (err) {
-      console.error('Load summary failed:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      // 並行執行兩個 API 調用
+      const [summaryData, userDoc] = await Promise.all([
+        pointsApi.getSummary(),
+        getDoc(doc(db, 'users', userId))
+      ]);
 
-  // 🆕 載入用戶資訊
-  const loadUserInfo = async () => {
-    try {
-      const userDoc = await getDoc(doc(db, 'users', userId));
+      // 更新摘要資料
+      if (summaryData) {
+        setSummary(summaryData);
+        setNewCode(summaryData.referralCode || '');
+      }
+
+      // 更新用戶資訊
       if (userDoc.exists()) {
         const data = userDoc.data();
         setUserTier(data.primaryTierId || 'trial');
         setReferredBy(data.referredBy || null);
       }
     } catch (err) {
-      console.error('Load user info failed:', err);
+      console.error('Load data failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 重新載入摘要（用於推薦碼提交後）
+  const reloadSummary = async () => {
+    try {
+      const data = await pointsApi.getSummary();
+      if (data) {
+        setSummary(data);
+        setNewCode(data.referralCode || '');
+      }
+    } catch (err) {
+      console.error('Reload summary failed:', err);
     }
   };
 
@@ -114,7 +128,7 @@ const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({
       setEnteringReferralCode(false);
       setInputReferralCode('');
       setReferredBy(inputReferralCode.toUpperCase()); // 更新狀態
-      await loadSummary(); // 重新載入以顯示新點數
+      await reloadSummary(); // 重新載入以顯示新點數
     } catch (err: any) {
       setReferralError(err.message || '推薦碼無效或已使用過');
     } finally {
@@ -146,7 +160,7 @@ const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({
     setSavingCode(true);
     try {
       await pointsApi.updateReferralCode(newCode.toUpperCase());
-      await loadSummary();
+      await reloadSummary();
       setEditingCode(false);
     } catch (err: any) {
       alert(err.message || '修改失敗，此推薦碼可能已被使用');
@@ -211,7 +225,7 @@ const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({
                     我的推薦碼
                   </span>
                   <span className="text-xs text-purple-300 bg-purple-500/20 px-2 py-1 rounded">
-                    推薦成功 +500 UA
+                    付費 +1000 UA
                   </span>
                 </div>
                 
@@ -371,7 +385,7 @@ const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({
                   )}
 
                   <p className="text-xs text-slate-500 mt-3">
-                    有朋友推薦你來嗎？輸入他的推薦碼，雙方各得 500 UA！
+                    有朋友推薦你來嗎？輸入他的推薦碼，付費後雙方各得 1000 UA！
                   </p>
                 </div>
               )}
