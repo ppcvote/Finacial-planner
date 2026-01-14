@@ -5,13 +5,13 @@
  * 檔案位置：src/hooks/useMissions.ts
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, getDoc, collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { getFunctions, httpsCallable, Functions } from 'firebase/functions';
+import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
+import { auth, db } from '../firebase';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 
-// Firebase 設定
+// Firebase 設定（備用，以防主 app 還沒初始化）
 const firebaseConfig = {
   apiKey: "AIzaSyAqS6fhHQVyBNr1LCkCaQPyJ13Rkq7bfHA",
   authDomain: "grbt-f87fa.firebaseapp.com",
@@ -21,11 +21,16 @@ const firebaseConfig = {
   appId: "1:169700005946:web:9b0722f31aa9fe7ad13d03",
 };
 
-// 確保只初始化一次
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const functions = getFunctions(app, 'us-central1');
-const auth = getAuth(app);
-const db = getFirestore(app);
+// 延遲初始化 functions
+let _functions: Functions | null = null;
+const getFunctionsInstance = (): Functions => {
+  if (!_functions) {
+    const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    _functions = getFunctions(app, 'us-central1');
+    console.log('Firebase Functions initialized');
+  }
+  return _functions;
+};
 
 // 類型定義
 export interface Mission {
@@ -82,6 +87,7 @@ export const useMissions = () => {
     setError(null);
 
     try {
+      const functions = getFunctionsInstance();
       const getMissionsFunc = httpsCallable(functions, 'getMissions');
       const result = await getMissionsFunc({});
       const data = result.data as { missions: Mission[] };
@@ -130,20 +136,32 @@ export const useMissions = () => {
    * 完成任務並領取點數
    */
   const completeMission = useCallback(async (missionId: string): Promise<CompleteMissionResult | null> => {
+    console.log('=== useMissions.completeMission ===');
+    console.log('missionId:', missionId);
+    console.log('auth.currentUser:', auth.currentUser?.uid);
+
     setLoading(true);
     setError(null);
 
     try {
+      console.log('Creating callable function...');
+      const functions = getFunctionsInstance();
       const completeMissionFunc = httpsCallable(functions, 'completeMission');
+      console.log('Calling Cloud Function...');
       const result = await completeMissionFunc({ missionId });
+      console.log('Cloud Function result:', result);
       const data = result.data as CompleteMissionResult;
+      console.log('Parsed data:', data);
 
       // 重新載入任務列表以更新狀態
+      console.log('Refreshing missions...');
       await fetchMissions();
 
       return data;
     } catch (err: any) {
       console.error('completeMission error:', err);
+      console.error('Error code:', err.code);
+      console.error('Error details:', err.details);
       const errorMessage = err.message || '任務完成失敗';
       setError(errorMessage);
       return { success: false, message: errorMessage };
@@ -242,12 +260,14 @@ export const useMissions = () => {
 // 靜態 API（不需要 Hook）
 export const missionsApi = {
   async getMissions(): Promise<{ missions: Mission[] }> {
+    const functions = getFunctionsInstance();
     const getMissionsFunc = httpsCallable(functions, 'getMissions');
     const result = await getMissionsFunc({});
     return result.data as { missions: Mission[] };
   },
 
   async completeMission(missionId: string): Promise<CompleteMissionResult> {
+    const functions = getFunctionsInstance();
     const completeMissionFunc = httpsCallable(functions, 'completeMission');
     const result = await completeMissionFunc({ missionId });
     return result.data as CompleteMissionResult;

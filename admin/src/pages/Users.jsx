@@ -34,6 +34,8 @@ import {
   MinusOutlined,
   SaveOutlined,
   LockOutlined,
+  ClearOutlined,
+  ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import {
   collection,
@@ -94,6 +96,12 @@ const Users = () => {
   const [resetPasswordModalVisible, setResetPasswordModalVisible] = useState(false);
   const [resetPasswordForm] = Form.useForm();
   const [resettingPassword, setResettingPassword] = useState(false);
+  // 🆕 孤立帳號清理
+  const [orphanModalVisible, setOrphanModalVisible] = useState(false);
+  const [orphanUsers, setOrphanUsers] = useState([]);
+  const [loadingOrphans, setLoadingOrphans] = useState(false);
+  const [selectedOrphanUids, setSelectedOrphanUids] = useState([]);
+  const [deletingOrphans, setDeletingOrphans] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     trial: 0,
@@ -359,6 +367,49 @@ const Users = () => {
     } catch (error) {
       console.error('Error deleting user:', error);
       message.error('刪除用戶失敗');
+    }
+  };
+
+  // 🆕 查找孤立帳號（在 Auth 但不在 Firestore）
+  const handleFindOrphanUsers = async () => {
+    setLoadingOrphans(true);
+    setOrphanModalVisible(true);
+    try {
+      const listOrphanAuthUsers = httpsCallable(functions, 'listOrphanAuthUsers');
+      const result = await listOrphanAuthUsers();
+      if (result.data.success) {
+        setOrphanUsers(result.data.orphanUsers || []);
+        message.success(`找到 ${result.data.orphanCount} 個孤立帳號`);
+      }
+    } catch (error) {
+      console.error('Find orphan users error:', error);
+      message.error(error.message || '查找孤立帳號失敗');
+    } finally {
+      setLoadingOrphans(false);
+    }
+  };
+
+  // 🆕 刪除選中的孤立帳號
+  const handleDeleteOrphanUsers = async () => {
+    if (selectedOrphanUids.length === 0) {
+      message.warning('請先選擇要刪除的帳號');
+      return;
+    }
+    setDeletingOrphans(true);
+    try {
+      const deleteOrphanAuthUsers = httpsCallable(functions, 'deleteOrphanAuthUsers');
+      const result = await deleteOrphanAuthUsers({ uids: selectedOrphanUids });
+      if (result.data.success) {
+        message.success(result.data.message);
+        // 重新查詢
+        setSelectedOrphanUids([]);
+        handleFindOrphanUsers();
+      }
+    } catch (error) {
+      console.error('Delete orphan users error:', error);
+      message.error(error.message || '刪除孤立帳號失敗');
+    } finally {
+      setDeletingOrphans(false);
     }
   };
 
@@ -793,6 +844,14 @@ const Users = () => {
                   style={{ backgroundColor: '#722ed1' }}
                 >
                   處理訂單
+                </Button>
+                <Button
+                  icon={<ClearOutlined />}
+                  onClick={handleFindOrphanUsers}
+                  size="large"
+                  danger
+                >
+                  清理孤立帳號
                 </Button>
               </Space>
             </Col>
@@ -1524,6 +1583,119 @@ const Users = () => {
             </Space>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 🆕 孤立帳號清理 Modal */}
+      <Modal
+        title={
+          <Space>
+            <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />
+            清理孤立帳號
+          </Space>
+        }
+        open={orphanModalVisible}
+        onCancel={() => {
+          setOrphanModalVisible(false);
+          setOrphanUsers([]);
+          setSelectedOrphanUids([]);
+        }}
+        width={800}
+        footer={
+          <Space>
+            <Button onClick={() => setOrphanModalVisible(false)}>關閉</Button>
+            <Button onClick={handleFindOrphanUsers} loading={loadingOrphans}>
+              重新掃描
+            </Button>
+            <Popconfirm
+              title="確定要刪除選中的帳號嗎？"
+              description="此操作無法復原，將從 Firebase Auth 中永久刪除這些帳號"
+              onConfirm={handleDeleteOrphanUsers}
+              okText="確定刪除"
+              cancelText="取消"
+              okButtonProps={{ danger: true }}
+            >
+              <Button
+                type="primary"
+                danger
+                icon={<DeleteOutlined />}
+                loading={deletingOrphans}
+                disabled={selectedOrphanUids.length === 0}
+              >
+                刪除選中 ({selectedOrphanUids.length})
+              </Button>
+            </Popconfirm>
+          </Space>
+        }
+      >
+        <div className="mb-4">
+          <Text type="secondary">
+            以下帳號存在於 Firebase Authentication，但在 Firestore users 集合中找不到對應資料。
+            這些可能是測試帳號或舊資料殘留。
+          </Text>
+        </div>
+
+        {loadingOrphans ? (
+          <div className="text-center py-8">
+            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+            <Text type="secondary">掃描中...</Text>
+          </div>
+        ) : orphanUsers.length === 0 ? (
+          <div className="text-center py-8">
+            <Text type="secondary">沒有找到孤立帳號，資料庫很乾淨！</Text>
+          </div>
+        ) : (
+          <Table
+            rowSelection={{
+              type: 'checkbox',
+              selectedRowKeys: selectedOrphanUids,
+              onChange: (keys) => setSelectedOrphanUids(keys),
+            }}
+            columns={[
+              {
+                title: 'Email',
+                dataIndex: 'email',
+                key: 'email',
+                render: (email) => <Text copyable>{email}</Text>,
+              },
+              {
+                title: '顯示名稱',
+                dataIndex: 'displayName',
+                key: 'displayName',
+                render: (name) => name || <Text type="secondary">-</Text>,
+              },
+              {
+                title: '建立時間',
+                dataIndex: 'createdAt',
+                key: 'createdAt',
+                render: (time) => time ? dayjs(time).format('YYYY-MM-DD HH:mm') : '-',
+              },
+              {
+                title: '最後登入',
+                dataIndex: 'lastSignIn',
+                key: 'lastSignIn',
+                render: (time) => time ? dayjs(time).format('YYYY-MM-DD HH:mm') : '-',
+              },
+              {
+                title: 'UID',
+                dataIndex: 'uid',
+                key: 'uid',
+                width: 120,
+                render: (uid) => (
+                  <Tooltip title={uid}>
+                    <Text copyable={{ text: uid }} style={{ fontSize: 11 }}>
+                      {uid.slice(0, 8)}...
+                    </Text>
+                  </Tooltip>
+                ),
+              },
+            ]}
+            dataSource={orphanUsers}
+            rowKey="uid"
+            size="small"
+            pagination={{ pageSize: 10 }}
+            scroll={{ y: 400 }}
+          />
+        )}
       </Modal>
     </div>
   );

@@ -62,10 +62,38 @@
   - 根本原因：App.tsx 未傳遞 `userId` prop
   - 解決方案：新增 `userId={user?.uid}` 傳遞給 MillionDollarGiftTool
 
+### 手機版輸入欄位修復
+- **前置零問題修復**：手機版輸入 `00123` 現在會自動轉為 `123`
+- 使用 `sanitizeInput` 函數處理 `/^0+(?=\d)/` 移除前置零
+- 已修復元件：
+  - `FinancialRealEstateTool.tsx` - 6 個輸入欄位
+  - `BigSmallReservoirTool.tsx` - 5 個輸入欄位
+  - `MillionDollarGiftTool.tsx` - 7 個輸入欄位
+
+### 手機版滾動問題修復
+- **症狀**：手機版頁面偶爾會發生頁面滑不動、無法下拉重新整理
+- **根本原因**：多個 Modal 元件開啟/關閉時未正確管理 `body.style.overflow`
+- **解決方案**：
+  - 新增 `src/index.css` 全域滾動優化
+    - `-webkit-overflow-scrolling: touch` iOS 滾動優化
+    - `overscroll-behavior` 防止過度滾動
+  - 修復 Modal 元件的 body overflow 管理：
+    - `PointsDashboard.tsx`
+    - `ReferralEngineModal.tsx`
+    - `PWAInstallModal.tsx`
+    - `ReportModal.tsx`
+
 ### 檔案變更
 - `src/components/LandingPage.jsx` - LINE 連結更新
 - `src/components/MortgageCalculator.tsx` - LINE 連結更新
-- `src/components/MillionDollarGiftTool.tsx` - 循環同步邏輯優化
+- `src/components/MillionDollarGiftTool.tsx` - 循環同步邏輯優化、sanitizeInput
+- `src/components/FinancialRealEstateTool.tsx` - sanitizeInput
+- `src/components/BigSmallReservoirTool.tsx` - sanitizeInput
+- `src/components/PointsDashboard.tsx` - body overflow 管理
+- `src/components/ReferralEngineModal.tsx` - body overflow 管理
+- `src/components/PWAInstallModal.tsx` - body overflow 管理
+- `src/components/ReportModal.tsx` - body overflow 管理
+- `src/index.css` - 全域移動端滾動優化
 - `src/App.tsx` - 傳遞 userId 給百萬禮物元件
 - `CLAUDE.md` - LINE 連結更新
 

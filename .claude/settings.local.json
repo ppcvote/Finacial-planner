@@ -14,7 +14,10 @@
       "Bash(firebase functions:log:*)",
       "Bash(npm run dev:*)",
       "Bash(npx tsc:*)",
-      "Bash(node initMissions.js:*)"
+      "Bash(node initMissions.js:*)",
+      "Bash(npx vercel --prod)",
+      "Bash(curl -s \"https://us-central1-grbt-f87fa.cloudfunctions.net/debugUserData?key=ultra2026init&email=t1st@t1st.com\")",
+      "Bash(curl:*)"
     ]
   }
 }

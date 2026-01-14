@@ -36,7 +36,15 @@ const PointsDashboard: React.FC<PointsDashboardProps> = ({ isOpen, onClose }) =>
   useEffect(() => {
     if (isOpen) {
       loadSummary();
+      // 鎖定背景滾動
+      document.body.style.overflow = 'hidden';
+    } else {
+      // 恢復背景滾動
+      document.body.style.overflow = 'unset';
     }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, [isOpen]);
 
   const loadSummary = async () => {

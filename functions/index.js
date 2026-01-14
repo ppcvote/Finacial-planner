@@ -2294,7 +2294,7 @@ exports.updatePointsRules = functions.https.onCall(async (_data, context) => {
     throw new functions.https.HttpsError('unauthenticated', '請先登入');
   }
 
-  const adminEmails = ['ppcvote@gmail.com', 'admin@ultra-advisor.tw'];
+  const adminEmails = ['ppcvote@gmail.com', 'admin@ultra-advisor.tw', 't1st@t1st.com', 'admin@ultraadvisor.com'];
   const userEmail = context.auth.token.email;
 
   if (!adminEmails.includes(userEmail)) {
@@ -2436,7 +2436,7 @@ exports.completeMission = functions.https.onCall(async (data, context) => {
       }
     }
 
-    // 4. 取得用戶資料並執行交易
+    // 4. 取得用戶資料
     const userRef = db.collection('users').doc(uid);
     const userDoc = await userRef.get();
 
@@ -2445,6 +2445,53 @@ exports.completeMission = functions.https.onCall(async (data, context) => {
     }
 
     const userData = userDoc.data();
+
+    // 5. 自動驗證檢查
+    if (mission.verificationType === 'auto' && mission.verificationField) {
+      const field = mission.verificationField;
+      const condition = mission.verificationCondition;
+
+      let verified = false;
+
+      // 簡單欄位檢查（photoURL, displayName, lineUserId）
+      if (!condition) {
+        // 也檢查 profile 子集合
+        let fieldValue = userData[field];
+        if (!fieldValue) {
+          const profileDoc = await db.collection('users').doc(uid).collection('profile').doc('data').get();
+          if (profileDoc.exists) {
+            fieldValue = profileDoc.data()[field];
+          }
+        }
+        verified = !!fieldValue;
+      }
+      // 條件檢查（如 count>=1, count>=3）
+      else if (condition.startsWith('count>=')) {
+        const requiredCount = parseInt(condition.replace('count>=', ''));
+
+        if (field === 'clients') {
+          const clientsSnapshot = await db.collection('users').doc(uid).collection('clients').get();
+          verified = clientsSnapshot.size >= requiredCount;
+        } else if (field === 'cheatSheetUsageCount') {
+          verified = (userData.cheatSheetUsageCount || 0) >= requiredCount;
+        }
+      }
+      // 每日登入檢查
+      else if (condition === 'today') {
+        const today = new Date();
+        const taiwanOffset = 8 * 60 * 60 * 1000;
+        const todayStr = new Date(today.getTime() + taiwanOffset).toISOString().split('T')[0];
+        verified = userData.lastLoginDate === todayStr;
+      }
+
+      console.log(`Mission ${missionId} verification: field=${field}, condition=${condition}, verified=${verified}`);
+
+      if (!verified) {
+        throw new functions.https.HttpsError('failed-precondition', '尚未達成任務條件');
+      }
+    }
+
+    // 6. 執行交易發放點數
     const currentPoints = userData.points?.current || 0;
     const newPoints = currentPoints + mission.points;
 
@@ -2452,7 +2499,7 @@ exports.completeMission = functions.https.onCall(async (data, context) => {
     const expiresAt = new Date();
     expiresAt.setMonth(expiresAt.getMonth() + 12);
 
-    // 5. 執行交易：發放點數 + 記錄完成
+    // 7. 執行交易：發放點數 + 記錄完成
     await db.runTransaction(async (transaction) => {
       // 更新用戶點數
       transaction.update(userRef, {
@@ -2519,18 +2566,28 @@ exports.completeMission = functions.https.onCall(async (data, context) => {
 exports.getMissions = functions.https.onCall(async (_data, context) => {
   // 可以不需要登入也能查看任務列表
   try {
-    const missionsSnapshot = await db.collection('missions')
-      .where('isActive', '==', true)
-      .orderBy('category')
-      .orderBy('order')
-      .get();
+    // 先取得所有任務，再在程式碼中過濾和排序（避免索引問題）
+    const missionsSnapshot = await db.collection('missions').get();
 
-    const missions = [];
+    // 過濾並排序任務
+    let missions = [];
     missionsSnapshot.forEach(doc => {
-      missions.push({
-        id: doc.id,
-        ...doc.data(),
-      });
+      const data = doc.data();
+      // 只取得啟用的任務
+      if (data.isActive === true) {
+        missions.push({
+          id: doc.id,
+          ...data,
+        });
+      }
+    });
+
+    // 依 category 和 order 排序
+    const categoryOrder = { 'onboarding': 1, 'social': 2, 'habit': 3, 'daily': 4 };
+    missions.sort((a, b) => {
+      const catDiff = (categoryOrder[a.category] || 99) - (categoryOrder[b.category] || 99);
+      if (catDiff !== 0) return catDiff;
+      return (a.order || 0) - (b.order || 0);
     });
 
     // 如果用戶已登入，附帶完成狀態
@@ -2595,7 +2652,7 @@ exports.initMissions = functions.https.onCall(async (_data, context) => {
 
   const userDoc = await db.collection('users').doc(context.auth.uid).get();
   const userEmail = userDoc.exists ? userDoc.data().email : context.auth.token.email;
-  const adminEmails = ['ppcvote@gmail.com', 'admin@ultra-advisor.tw'];
+  const adminEmails = ['ppcvote@gmail.com', 'admin@ultra-advisor.tw', 't1st@t1st.com', 'admin@ultraadvisor.com'];
 
   if (!adminEmails.includes(userEmail)) {
     throw new functions.https.HttpsError('permission-denied', '無管理員權限');
@@ -2754,6 +2811,243 @@ exports.initMissions = functions.https.onCall(async (_data, context) => {
     message: `成功初始化 ${missions.length} 個任務`,
     count: missions.length,
   };
+});
+
+/**
+ * 臨時 HTTP endpoint 重置任務（清除後重新初始化）
+ * 呼叫方式：curl https://us-central1-grbt-f87fa.cloudfunctions.net/initMissionsHttp?key=ultra2026init
+ */
+exports.initMissionsHttp = functions.https.onRequest(async (req, res) => {
+  const secretKey = 'ultra2026init';
+  if (req.query.key !== secretKey) {
+    res.status(403).json({ error: '無效的 key' });
+    return;
+  }
+
+  try {
+    // 先刪除所有現有任務
+    const existingMissions = await db.collection('missions').get();
+    const deleteBatch = db.batch();
+    existingMissions.docs.forEach(doc => {
+      deleteBatch.delete(doc.ref);
+    });
+    await deleteBatch.commit();
+    console.log(`已刪除 ${existingMissions.size} 個舊任務`);
+
+    // 重新建立任務
+    const now = admin.firestore.Timestamp.now();
+    const missions = [
+      { id: 'set_avatar', title: '設定個人頭像', description: '上傳一張專業的個人照片，讓客戶更認識你', icon: '📸', points: 20, category: 'onboarding', order: 1, linkType: 'modal', linkTarget: 'editProfile', verificationType: 'auto', verificationField: 'photoURL', repeatType: 'once', isActive: true },
+      { id: 'set_display_name', title: '設定顯示名稱', description: '設定一個專業的顯示名稱', icon: '📝', points: 15, category: 'onboarding', order: 2, linkType: 'modal', linkTarget: 'editProfile', verificationType: 'auto', verificationField: 'displayName', repeatType: 'once', isActive: true },
+      { id: 'first_client', title: '建立第一位客戶', description: '新增你的第一位客戶資料', icon: '👤', points: 20, category: 'onboarding', order: 3, linkType: 'internal', linkTarget: '/clients', verificationType: 'auto', verificationField: 'clients', verificationCondition: 'count>=1', repeatType: 'once', isActive: true },
+      { id: 'join_line', title: '加入 LINE 官方帳號', description: '加入我們的 LINE 官方帳號，獲取最新資訊', icon: '💬', points: 20, category: 'social', order: 1, linkType: 'external', linkTarget: 'https://line.me/R/ti/p/@ultraadvisor', verificationType: 'auto', verificationField: 'lineUserId', repeatType: 'once', isActive: true },
+      { id: 'join_line_group', title: '加入 LINE 戰友社群', description: '加入我們的 LINE 社群，與其他顧問交流', icon: '👥', points: 25, category: 'social', order: 2, linkType: 'external', linkTarget: 'https://line.me/R/ti/p/@ultraadvisor', verificationType: 'manual', repeatType: 'once', isActive: true },
+      { id: 'install_pwa', title: '將 Ultra 加入主畫面', description: '將 Ultra Advisor 加入手機主畫面，隨時隨地使用', icon: '📱', points: 30, category: 'habit', order: 1, linkType: 'pwa', verificationType: 'manual', repeatType: 'once', isActive: true },
+      { id: 'use_cheat_sheet', title: '使用 3 次業務小抄', description: '使用業務小抄功能 3 次，熟悉產品資訊', icon: '📋', points: 15, category: 'habit', order: 2, linkType: 'internal', linkTarget: '/tools', verificationType: 'auto', verificationField: 'cheatSheetUsageCount', verificationCondition: 'count>=3', repeatType: 'once', isActive: true },
+      { id: 'daily_login', title: '每日登入', description: '每天登入系統，培養使用習慣', icon: '📅', points: 5, category: 'daily', order: 1, linkType: null, verificationType: 'auto', verificationField: 'lastLoginDate', verificationCondition: 'today', repeatType: 'daily', isActive: true },
+    ];
+
+    const createBatch = db.batch();
+    for (const mission of missions) {
+      const { id, ...missionData } = mission;
+      const docRef = db.collection('missions').doc(id);
+      createBatch.set(docRef, { ...missionData, createdAt: now, updatedAt: now });
+    }
+    await createBatch.commit();
+
+    res.json({ success: true, message: `已清除舊任務並重新建立 ${missions.length} 個任務`, deleted: existingMissions.size, created: missions.length });
+  } catch (error) {
+    console.error('Init missions error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Debug: 查看用戶資料（臨時用）
+ */
+exports.debugUserData = functions.https.onRequest(async (req, res) => {
+  const secretKey = 'ultra2026init';
+  if (req.query.key !== secretKey) {
+    res.status(403).json({ error: '無效的 key' });
+    return;
+  }
+
+  const email = req.query.email;
+  if (!email) {
+    res.status(400).json({ error: '請提供 email 參數' });
+    return;
+  }
+
+  try {
+    // 找用戶
+    const usersSnapshot = await db.collection('users').where('email', '==', email).limit(1).get();
+    if (usersSnapshot.empty) {
+      res.json({ error: '找不到用戶', email });
+      return;
+    }
+
+    const userDoc = usersSnapshot.docs[0];
+    const uid = userDoc.id;
+    const userData = userDoc.data();
+
+    // 取得 profile 子集合
+    const profileDoc = await db.collection('users').doc(uid).collection('profile').doc('data').get();
+    const profileData = profileDoc.exists ? profileDoc.data() : null;
+
+    // 取得已完成任務
+    const completedSnapshot = await db.collection('users').doc(uid).collection('completedMissions').get();
+    const completedMissions = completedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    res.json({
+      uid,
+      email,
+      userData: {
+        photoURL: userData.photoURL,
+        displayName: userData.displayName,
+        lineUserId: userData.lineUserId,
+        lastLoginDate: userData.lastLoginDate,
+        cheatSheetUsageCount: userData.cheatSheetUsageCount,
+      },
+      profileData: profileData ? {
+        photoURL: profileData.photoURL,
+        displayName: profileData.displayName,
+      } : null,
+      completedMissions,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+// 孤立用戶清理功能
+// ==========================================
+
+/**
+ * 列出孤立的 Auth 用戶（在 Firebase Auth 但不在 Firestore users 集合）
+ */
+exports.listOrphanAuthUsers = functions.https.onCall(async (_data, context) => {
+  // 驗證管理員
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', '請先登入');
+  }
+
+  const adminEmails = ['ppcvote@gmail.com', 'admin@ultra-advisor.tw', 't1st@t1st.com', 'admin@ultraadvisor.com'];
+  const userEmail = context.auth.token.email;
+
+  if (!adminEmails.includes(userEmail)) {
+    throw new functions.https.HttpsError('permission-denied', '無管理員權限');
+  }
+
+  try {
+    // 取得所有 Firestore users 的 UID
+    const usersSnapshot = await db.collection('users').get();
+    const firestoreUids = new Set(usersSnapshot.docs.map(doc => doc.id));
+
+    // 取得所有 Firebase Auth 用戶
+    const orphanUsers = [];
+    let nextPageToken;
+
+    do {
+      const listResult = await auth.listUsers(1000, nextPageToken);
+
+      for (const userRecord of listResult.users) {
+        // 如果這個 Auth 用戶不在 Firestore users 集合裡
+        if (!firestoreUids.has(userRecord.uid)) {
+          orphanUsers.push({
+            uid: userRecord.uid,
+            email: userRecord.email || '(無 Email)',
+            displayName: userRecord.displayName || '',
+            createdAt: userRecord.metadata.creationTime,
+            lastSignIn: userRecord.metadata.lastSignInTime,
+            disabled: userRecord.disabled,
+          });
+        }
+      }
+
+      nextPageToken = listResult.pageToken;
+    } while (nextPageToken);
+
+    return {
+      success: true,
+      totalAuthUsers: firestoreUids.size + orphanUsers.length,
+      firestoreUsers: firestoreUids.size,
+      orphanCount: orphanUsers.length,
+      orphanUsers: orphanUsers,
+    };
+  } catch (error) {
+    console.error('List orphan users error:', error);
+    throw new functions.https.HttpsError('internal', error.message);
+  }
+});
+
+/**
+ * 刪除指定的孤立 Auth 用戶
+ */
+exports.deleteOrphanAuthUsers = functions.https.onCall(async (data, context) => {
+  // 驗證管理員
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', '請先登入');
+  }
+
+  const adminEmails = ['ppcvote@gmail.com', 'admin@ultra-advisor.tw', 't1st@t1st.com', 'admin@ultraadvisor.com'];
+  const userEmail = context.auth.token.email;
+
+  if (!adminEmails.includes(userEmail)) {
+    throw new functions.https.HttpsError('permission-denied', '無管理員權限');
+  }
+
+  const { uids } = data;
+
+  if (!uids || !Array.isArray(uids) || uids.length === 0) {
+    throw new functions.https.HttpsError('invalid-argument', '請提供要刪除的用戶 UID 列表');
+  }
+
+  // 安全檢查：不能刪除管理員帳號
+  const adminUids = [];
+  for (const adminEmail of adminEmails) {
+    try {
+      const adminUser = await auth.getUserByEmail(adminEmail);
+      adminUids.push(adminUser.uid);
+    } catch (e) {
+      // 忽略找不到的管理員
+    }
+  }
+
+  const safeUids = uids.filter(uid => !adminUids.includes(uid));
+
+  if (safeUids.length === 0) {
+    throw new functions.https.HttpsError('invalid-argument', '無法刪除管理員帳號');
+  }
+
+  try {
+    const deleteResult = await auth.deleteUsers(safeUids);
+
+    // 記錄審計日誌
+    await db.collection('auditLogs').add({
+      adminId: context.auth.uid,
+      adminEmail: userEmail,
+      action: 'auth.deleteOrphanUsers',
+      description: `刪除 ${deleteResult.successCount} 個孤立 Auth 用戶`,
+      details: {
+        requested: safeUids.length,
+        success: deleteResult.successCount,
+        failed: deleteResult.failureCount,
+      },
+      createdAt: admin.firestore.Timestamp.now(),
+    });
+
+    return {
+      success: true,
+      message: `成功刪除 ${deleteResult.successCount} 個用戶`,
+      successCount: deleteResult.successCount,
+      failureCount: deleteResult.failureCount,
+      errors: deleteResult.errors?.map(e => ({ uid: e.index, error: e.error.message })) || [],
+    };
+  } catch (error) {
+    console.error('Delete orphan users error:', error);
+    throw new functions.https.HttpsError('internal', error.message);
+  }
 });
 
 console.log('Ultra Advisor Cloud Functions loaded');
