@@ -17,6 +17,7 @@ import {
   BellOutlined,
   TrophyOutlined,
   UsergroupAddOutlined,
+  ShoppingOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
@@ -107,6 +108,11 @@ const MainLayout = () => {
           key: '/admin/membership/referrals',
           icon: <UsergroupAddOutlined />,
           label: '推薦紀錄',
+        },
+        {
+          key: '/admin/membership/store-orders',
+          icon: <ShoppingOutlined />,
+          label: '兌換訂單',
         },
       ],
     },

@@ -108,7 +108,7 @@ const PointsLedger = () => {
     }
   };
 
-  const fetchEntries = async () => {
+  const fetchEntries = async (showMessage = false) => {
     setLoading(true);
     try {
       let entriesQuery = query(
@@ -128,7 +128,7 @@ const PointsLedger = () => {
       }
 
       const snapshot = await getDocs(entriesQuery);
-      
+
       let entriesList = [];
       snapshot.forEach((doc) => {
         entriesList.push({
@@ -175,7 +175,9 @@ const PointsLedger = () => {
 
       setPagination(prev => ({ ...prev, total: entriesList.length }));
 
-      message.success('點數紀錄載入成功');
+      if (showMessage) {
+        message.success('點數紀錄載入成功');
+      }
     } catch (error) {
       console.error('Error fetching entries:', error);
       message.error('載入點數紀錄失敗');
@@ -416,7 +418,7 @@ const PointsLedger = () => {
           <p className="text-gray-500 mt-1">查詢與管理 UA 點數交易紀錄</p>
         </div>
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={fetchEntries}>
+          <Button icon={<ReloadOutlined />} onClick={() => fetchEntries(true)}>
             重新載入
           </Button>
           <Button icon={<ExportOutlined />} onClick={handleExport}>

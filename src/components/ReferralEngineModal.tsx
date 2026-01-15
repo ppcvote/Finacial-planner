@@ -25,10 +25,12 @@ import {
   Loader2,
   Lock,
   Ticket,
+  ShoppingBag,
 } from 'lucide-react';
 import { pointsApi } from '../hooks/usePoints';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import StoreModal from './StoreModal';
 
 interface ReferralEngineModalProps {
   isOpen: boolean;
@@ -59,6 +61,9 @@ const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({
   const [submittingReferral, setSubmittingReferral] = useState(false);
   const [referralError, setReferralError] = useState<string | null>(null);
   const [referralSuccess, setReferralSuccess] = useState(false);
+
+  // 🆕 商城 Modal 狀態
+  const [storeModalOpen, setStoreModalOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen && userId) {
@@ -183,6 +188,7 @@ const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({
   if (!isOpen) return null;
 
   return (
+    <>
     <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg 
                      shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-hidden flex flex-col">
@@ -419,6 +425,22 @@ const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({
                 </div>
               </div>
 
+              {/* 🛍️ UA 商城入口 */}
+              <button
+                onClick={() => setStoreModalOpen(true)}
+                className="w-full py-4 bg-gradient-to-r from-pink-600 to-purple-600
+                         hover:from-pink-500 hover:to-purple-500
+                         rounded-xl text-white font-bold text-base
+                         flex items-center justify-center gap-3 transition-all
+                         shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40"
+              >
+                <ShoppingBag size={20} />
+                進入 UA 商城
+                <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">
+                  用點數兌換好禮
+                </span>
+              </button>
+
               {/* 點數即將過期提示 */}
               {summary.expiringIn30Days > 0 && (
                 <div className="flex items-center gap-3 p-3 bg-amber-900/20 border border-amber-500/30 rounded-xl">
@@ -522,6 +544,15 @@ const ReferralEngineModal: React.FC<ReferralEngineModalProps> = ({
         </div>
       </div>
     </div>
+
+    {/* UA 商城 Modal */}
+    <StoreModal
+      isOpen={storeModalOpen}
+      onClose={() => setStoreModalOpen(false)}
+      userPoints={summary?.currentPoints || 0}
+      onPointsChange={reloadSummary}
+    />
+    </>
   );
 };
 

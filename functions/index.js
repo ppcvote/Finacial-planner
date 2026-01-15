@@ -13,6 +13,35 @@ const db = admin.firestore();
 const auth = admin.auth();
 
 // ==========================================
+// CORS 白名單設定（資安規格書 1.2）
+// ==========================================
+const ALLOWED_ORIGINS = [
+  'https://ultra-advisor.tw',
+  'https://www.ultra-advisor.tw',
+  'https://admin.ultra-advisor.tw',
+  'https://liff.line.me',  // LIFF 應用程式
+];
+
+// 開發環境允許 localhost（僅限開發）
+if (process.env.FUNCTIONS_EMULATOR) {
+  ALLOWED_ORIGINS.push('http://localhost:5173');
+  ALLOWED_ORIGINS.push('http://localhost:3000');
+}
+
+/**
+ * 設置 CORS 標頭（帶白名單驗證）
+ */
+function setCorsHeaders(req, res) {
+  const origin = req.headers.origin;
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    res.set('Access-Control-Allow-Origin', origin);
+  }
+  res.set('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.set('Access-Control-Allow-Credentials', 'true');
+}
+
+// ==========================================
 // 環境變數配置
 // ==========================================
 
@@ -2071,10 +2100,8 @@ exports.checkMembershipExpiry = functions.pubsub
  * Body: { name, email, password, referralCode?, lineUserId, lineDisplayName, linePictureUrl? }
  */
 exports.liffRegister = functions.https.onRequest(async (req, res) => {
-  // CORS 處理
-  res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  // CORS 處理（使用白名單）
+  setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
     return res.status(204).send('');
@@ -2840,10 +2867,10 @@ exports.initMissionsHttp = functions.https.onRequest(async (req, res) => {
       { id: 'set_avatar', title: '設定個人頭像', description: '上傳一張專業的個人照片，讓客戶更認識你', icon: '📸', points: 20, category: 'onboarding', order: 1, linkType: 'modal', linkTarget: 'editProfile', verificationType: 'auto', verificationField: 'photoURL', repeatType: 'once', isActive: true },
       { id: 'set_display_name', title: '設定顯示名稱', description: '設定一個專業的顯示名稱', icon: '📝', points: 15, category: 'onboarding', order: 2, linkType: 'modal', linkTarget: 'editProfile', verificationType: 'auto', verificationField: 'displayName', repeatType: 'once', isActive: true },
       { id: 'first_client', title: '建立第一位客戶', description: '新增你的第一位客戶資料', icon: '👤', points: 20, category: 'onboarding', order: 3, linkType: 'internal', linkTarget: '/clients', verificationType: 'auto', verificationField: 'clients', verificationCondition: 'count>=1', repeatType: 'once', isActive: true },
-      { id: 'join_line', title: '加入 LINE 官方帳號', description: '加入我們的 LINE 官方帳號，獲取最新資訊', icon: '💬', points: 20, category: 'social', order: 1, linkType: 'external', linkTarget: 'https://line.me/R/ti/p/@ultraadvisor', verificationType: 'auto', verificationField: 'lineUserId', repeatType: 'once', isActive: true },
-      { id: 'join_line_group', title: '加入 LINE 戰友社群', description: '加入我們的 LINE 社群，與其他顧問交流', icon: '👥', points: 25, category: 'social', order: 2, linkType: 'external', linkTarget: 'https://line.me/R/ti/p/@ultraadvisor', verificationType: 'manual', repeatType: 'once', isActive: true },
-      { id: 'install_pwa', title: '將 Ultra 加入主畫面', description: '將 Ultra Advisor 加入手機主畫面，隨時隨地使用', icon: '📱', points: 30, category: 'habit', order: 1, linkType: 'pwa', verificationType: 'manual', repeatType: 'once', isActive: true },
-      { id: 'use_cheat_sheet', title: '使用 3 次業務小抄', description: '使用業務小抄功能 3 次，熟悉產品資訊', icon: '📋', points: 15, category: 'habit', order: 2, linkType: 'internal', linkTarget: '/tools', verificationType: 'auto', verificationField: 'cheatSheetUsageCount', verificationCondition: 'count>=3', repeatType: 'once', isActive: true },
+      { id: 'join_line_official', title: '加入 LINE 官方帳號', description: '加入 Ultra Advisor 官方 LINE，獲取最新資訊', icon: '💬', points: 20, category: 'social', order: 1, linkType: 'external', linkTarget: 'https://line.me/R/ti/p/@ultraadvisor', verificationType: 'auto', verificationField: 'lineUserId', repeatType: 'once', isActive: true },
+      { id: 'join_line_community', title: '加入 LINE 戰友社群', description: '加入顧問戰友社群，與同行交流經驗', icon: '👥', points: 25, category: 'social', order: 2, linkType: 'external', linkTarget: 'https://line.me/ti/g2/9Cca20iCP8J0KrmVRg5GOe1n5dSatYKO8ETTHw', verificationType: 'manual', repeatType: 'once', isActive: true },
+      { id: 'pwa_install', title: '將 Ultra 加入主畫面', description: '將 Ultra Advisor 加入手機主畫面，隨時隨地使用', icon: '📱', points: 30, category: 'habit', order: 1, linkType: 'pwa', verificationType: 'manual', repeatType: 'once', isActive: true },
+      { id: 'use_cheat_sheet_3', title: '使用 3 次業務小抄', description: '使用業務小抄功能 3 次，熟悉產品資訊', icon: '📋', points: 15, category: 'habit', order: 2, linkType: 'internal', linkTarget: '/tools', verificationType: 'auto', verificationField: 'cheatSheetUsageCount', verificationCondition: 'count>=3', repeatType: 'once', isActive: true },
       { id: 'daily_login', title: '每日登入', description: '每天登入系統，培養使用習慣', icon: '📅', points: 5, category: 'daily', order: 1, linkType: null, verificationType: 'auto', verificationField: 'lastLoginDate', verificationCondition: 'today', repeatType: 'daily', isActive: true },
     ];
 
@@ -3047,6 +3074,375 @@ exports.deleteOrphanAuthUsers = functions.https.onCall(async (data, context) => 
   } catch (error) {
     console.error('Delete orphan users error:', error);
     throw new functions.https.HttpsError('internal', error.message);
+  }
+});
+
+// ==========================================
+// 🛍️ UA 商城系統
+// ==========================================
+
+/**
+ * getStoreItems - 取得商城商品列表
+ *
+ * @returns {Promise<{success: boolean, items: Array}>}
+ */
+exports.getStoreItems = functions.https.onCall(async (_data, context) => {
+  // 需要登入才能查看商城
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', '請先登入');
+  }
+
+  try {
+    // 取得上架中的商品，按排序順序
+    const itemsSnapshot = await db.collection('redeemableItems')
+      .where('isActive', '==', true)
+      .orderBy('sortOrder', 'asc')
+      .get();
+
+    const items = itemsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      // 計算剩餘庫存
+      const remaining = data.stock === -1 ? -1 : Math.max(0, data.stock - (data.stockUsed || 0));
+
+      return {
+        id: doc.id,
+        name: data.name,
+        description: data.description || '',
+        image: data.image || '',
+        category: data.category || 'merchandise',
+        pointsCost: data.pointsCost || 0,
+        stock: data.stock,
+        stockUsed: data.stockUsed || 0,
+        remaining,
+        maxPerUser: data.maxPerUser || -1,
+        requiresShipping: data.requiresShipping || false,
+        isFeatured: data.isFeatured || false,
+        autoAction: data.autoAction || null,
+      };
+    });
+
+    return {
+      success: true,
+      items,
+    };
+  } catch (error) {
+    console.error('getStoreItems error:', error);
+    throw new functions.https.HttpsError('internal', '載入商品失敗');
+  }
+});
+
+/**
+ * getUserOrders - 取得用戶的兌換訂單
+ *
+ * @returns {Promise<{success: boolean, orders: Array}>}
+ */
+exports.getUserOrders = functions.https.onCall(async (_data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', '請先登入');
+  }
+
+  const uid = context.auth.uid;
+
+  try {
+    const ordersSnapshot = await db.collection('redemptionOrders')
+      .where('userId', '==', uid)
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get();
+
+    const orders = ordersSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        orderNumber: data.orderNumber || doc.id.substring(0, 8).toUpperCase(),
+        itemId: data.itemId,
+        itemName: data.itemName,
+        itemImage: data.itemImage || '',
+        variant: data.variant || null,
+        pointsCost: data.pointsCost || data.pointsSpent || 0,
+        status: data.status || 'pending',
+        trackingNumber: data.trackingNumber || null,
+        createdAt: data.createdAt?.toDate?.() || null,
+        completedAt: data.completedAt?.toDate?.() || null,
+      };
+    });
+
+    return {
+      success: true,
+      orders,
+    };
+  } catch (error) {
+    console.error('getUserOrders error:', error);
+    throw new functions.https.HttpsError('internal', '載入訂單失敗');
+  }
+});
+
+/**
+ * redeemStoreItem - 兌換商城商品（完整版）
+ *
+ * @param {string} itemId - 商品 ID
+ * @param {string} variant - 規格選項（如尺寸）
+ * @param {object} shippingInfo - 收件資訊（實體商品必填）
+ * @returns {Promise<{success: boolean, orderNumber: string, message: string}>}
+ */
+exports.redeemStoreItem = functions.https.onCall(async (data, context) => {
+  // 1. 驗證登入
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', '請先登入');
+  }
+
+  const uid = context.auth.uid;
+  const { itemId, variant, shippingInfo } = data;
+
+  if (!itemId) {
+    throw new functions.https.HttpsError('invalid-argument', '缺少商品 ID');
+  }
+
+  try {
+    // 2. 取得商品資料
+    const itemRef = db.collection('redeemableItems').doc(itemId);
+    const itemDoc = await itemRef.get();
+
+    if (!itemDoc.exists) {
+      throw new functions.https.HttpsError('not-found', '商品不存在');
+    }
+
+    const item = itemDoc.data();
+
+    if (!item.isActive) {
+      throw new functions.https.HttpsError('failed-precondition', '商品已下架');
+    }
+
+    // 3. 檢查庫存
+    const remaining = item.stock === -1 ? Infinity : Math.max(0, item.stock - (item.stockUsed || 0));
+    if (remaining <= 0) {
+      throw new functions.https.HttpsError('resource-exhausted', '商品已售罄');
+    }
+
+    // 4. 取得用戶資料並檢查點數
+    const userRef = db.collection('users').doc(uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      throw new functions.https.HttpsError('not-found', '用戶不存在');
+    }
+
+    const userData = userDoc.data();
+    const currentPoints = typeof userData.points === 'object'
+      ? (userData.points?.current || 0)
+      : (userData.points || 0);
+
+    if (currentPoints < item.pointsCost) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        `點數不足，需要 ${item.pointsCost} UA，目前僅有 ${currentPoints} UA`
+      );
+    }
+
+    // 5. 檢查每人限購
+    if (item.maxPerUser > 0) {
+      const userOrdersSnapshot = await db.collection('redemptionOrders')
+        .where('userId', '==', uid)
+        .where('itemId', '==', itemId)
+        .where('status', 'in', ['pending', 'processing', 'shipped', 'completed'])
+        .get();
+
+      if (userOrdersSnapshot.size >= item.maxPerUser) {
+        throw new functions.https.HttpsError(
+          'resource-exhausted',
+          `此商品每人限兌換 ${item.maxPerUser} 次，您已達上限`
+        );
+      }
+    }
+
+    // 6. 實體商品檢查收件資訊
+    if (item.requiresShipping) {
+      if (!shippingInfo || !shippingInfo.name || !shippingInfo.phone || !shippingInfo.address) {
+        throw new functions.https.HttpsError('invalid-argument', '請填寫完整收件資訊');
+      }
+    }
+
+    // 7. 執行兌換交易
+    const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}`;
+    const newPoints = currentPoints - item.pointsCost;
+    const now = admin.firestore.Timestamp.now();
+
+    // 判斷是否為虛擬商品（訂閱延長）
+    const isSubscription = item.category === 'subscription';
+    const autoStatus = isSubscription ? 'completed' : 'pending';
+
+    await db.runTransaction(async (transaction) => {
+      // 扣除點數
+      transaction.update(userRef, {
+        'points.current': newPoints,
+        totalPointsSpent: admin.firestore.FieldValue.increment(item.pointsCost),
+        updatedAt: now,
+      });
+
+      // 扣除庫存
+      if (item.stock !== -1) {
+        transaction.update(itemRef, {
+          stockUsed: admin.firestore.FieldValue.increment(1),
+          updatedAt: now,
+        });
+      }
+
+      // 建立訂單
+      const orderRef = db.collection('redemptionOrders').doc();
+      transaction.set(orderRef, {
+        orderNumber,
+        userId: uid,
+        userEmail: userData.email || '',
+        userName: userData.displayName || '',
+        itemId,
+        itemName: item.name,
+        itemImage: item.image || '',
+        category: item.category || 'merchandise',
+        variant: variant || null,
+        pointsCost: item.pointsCost,
+        shippingInfo: item.requiresShipping ? shippingInfo : null,
+        status: autoStatus,
+        createdAt: now,
+        updatedAt: now,
+        completedAt: isSubscription ? now : null,
+      });
+
+      // 記錄點數帳本
+      const ledgerRef = db.collection('pointsLedger').doc();
+      transaction.set(ledgerRef, {
+        userId: uid,
+        userEmail: userData.email || '',
+        type: 'spend',
+        amount: -item.pointsCost,
+        balanceBefore: currentPoints,
+        balanceAfter: newPoints,
+        reason: `兌換商品：${item.name}${variant ? ` (${variant})` : ''}`,
+        orderId: orderRef.id,
+        createdAt: now,
+      });
+
+      // 虛擬商品：執行自動動作
+      if (isSubscription && item.autoAction?.days) {
+        const daysToAdd = item.autoAction.days;
+        const currentDays = userData.daysRemaining || 0;
+        const newDays = currentDays + daysToAdd;
+
+        // 如果是過期/寬限/試用狀態，升級為付費
+        let newTierId = userData.primaryTierId;
+        if (['expired', 'grace', 'trial', 'referral_trial'].includes(newTierId)) {
+          newTierId = 'paid';
+        }
+
+        transaction.update(userRef, {
+          daysRemaining: newDays,
+          primaryTierId: newTierId,
+          graceDaysRemaining: 0,
+        });
+      }
+    });
+
+    console.log(`Store redeem success: ${uid} redeemed ${item.name} for ${item.pointsCost} UA`);
+
+    return {
+      success: true,
+      orderNumber,
+      message: isSubscription ? '🎉 兌換成功！訂閱已自動延長' : '🎉 兌換成功！',
+      isVirtual: isSubscription,
+    };
+  } catch (error) {
+    if (error.code) {
+      throw error; // 重新拋出已知錯誤
+    }
+    console.error('redeemStoreItem error:', error);
+    throw new functions.https.HttpsError('internal', '兌換失敗，請稍後再試');
+  }
+});
+
+/**
+ * updateOrderStatus - 更新訂單狀態（管理員專用）
+ *
+ * @param {string} orderId - 訂單 ID
+ * @param {string} status - 新狀態
+ * @param {string} trackingNumber - 物流追蹤號（選填）
+ * @param {string} adminNote - 備註（選填）
+ */
+exports.updateOrderStatus = functions.https.onCall(async (data, context) => {
+  // 驗證管理員
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', '請先登入');
+  }
+
+  const adminEmails = ['ppcvote@gmail.com', 'admin@ultra-advisor.tw', 't1st@t1st.com', 'admin@ultraadvisor.com'];
+  const userEmail = context.auth.token.email;
+
+  if (!adminEmails.includes(userEmail)) {
+    throw new functions.https.HttpsError('permission-denied', '無管理員權限');
+  }
+
+  const { orderId, status, trackingNumber, adminNote } = data;
+
+  if (!orderId || !status) {
+    throw new functions.https.HttpsError('invalid-argument', '缺少必要參數');
+  }
+
+  const validStatuses = ['pending', 'processing', 'shipped', 'completed', 'cancelled'];
+  if (!validStatuses.includes(status)) {
+    throw new functions.https.HttpsError('invalid-argument', '無效的訂單狀態');
+  }
+
+  try {
+    const orderRef = db.collection('redemptionOrders').doc(orderId);
+    const orderDoc = await orderRef.get();
+
+    if (!orderDoc.exists) {
+      throw new functions.https.HttpsError('not-found', '訂單不存在');
+    }
+
+    const now = admin.firestore.Timestamp.now();
+    const updateData = {
+      status,
+      updatedAt: now,
+    };
+
+    if (trackingNumber !== undefined) {
+      updateData.trackingNumber = trackingNumber;
+    }
+
+    if (adminNote !== undefined) {
+      updateData.adminNote = adminNote;
+    }
+
+    if (status === 'completed') {
+      updateData.completedAt = now;
+    }
+
+    await orderRef.update(updateData);
+
+    // 記錄審計日誌
+    await db.collection('auditLogs').add({
+      adminId: context.auth.uid,
+      adminEmail: userEmail,
+      action: 'order.updateStatus',
+      targetType: 'order',
+      targetId: orderId,
+      changes: {
+        before: { status: orderDoc.data().status },
+        after: { status, trackingNumber, adminNote },
+        description: `更新訂單 ${orderId} 狀態為 ${status}`,
+      },
+      createdAt: now,
+    });
+
+    return {
+      success: true,
+      message: '訂單狀態已更新',
+    };
+  } catch (error) {
+    if (error.code) {
+      throw error;
+    }
+    console.error('updateOrderStatus error:', error);
+    throw new functions.https.HttpsError('internal', '更新失敗');
   }
 });
 

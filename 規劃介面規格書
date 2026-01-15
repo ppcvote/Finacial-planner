@@ -1,0 +1,1348 @@
+# 📋 Ultra Advisor 規劃界面改造規格書
+
+> **版本**：v1.0  
+> **日期**：2026-01-15  
+> **用途**：交付 Claude Code 進行開發  
+> **預估工時**：8-12 小時
+
+---
+
+## 📌 執行摘要
+
+### 改造目標
+
+| 項目 | 現狀 | 目標 |
+|------|------|------|
+| 免費工具標示 | 「已鎖定」（負面） | PRO 徽章（正面） |
+| 分類用語 | 「槓桿與套利」（違規） | 「資產配置」（合規） |
+| 側邊欄 | 固定寬度 | 可收合（72px ↔ 288px） |
+| 存檔機制 | 簡單顯示 | 自動存檔 + 狀態指示 |
+| PRO 工具點擊 | 無反應/錯誤 | 升級引導 Modal |
+
+### 涉及檔案
+
+```
+src/
+├── App.tsx                    # 主應用（需大幅修改側邊欄邏輯）
+├── components/
+│   ├── PlannerSidebar.tsx     # 【新建】獨立側邊欄元件
+│   ├── SaveStatusIndicator.tsx # 【新建】存檔狀態指示器
+│   ├── UpgradeModal.tsx       # 【新建】升級引導彈窗
+│   └── NavItem.tsx            # 【新建】導航項目元件
+├── hooks/
+│   └── useAutoSave.ts         # 【新建】自動存檔 Hook
+└── constants/
+    └── tools.ts               # 【新建】工具定義常數
+```
+
+---
+
+## 一、工具與權限定義
+
+### 1.1 工具常數定義
+
+**檔案路徑**：`src/constants/tools.ts`
+
+```typescript
+// src/constants/tools.ts
+import { 
+  LayoutDashboard, ShieldCheck, Activity, History,
+  Wallet, Building2, GraduationCap, Rocket,
+  Waves, Car, Umbrella, Landmark,
+  LucideIcon
+} from 'lucide-react';
+
+// 工具介面定義
+export interface Tool {
+  id: string;
+  icon: LucideIcon;
+  label: string;
+  description: string;      // 工具簡介（用於升級 Modal）
+  benefits: string[];       // 功能亮點（用於升級 Modal）
+  isFree: boolean;          // 是否為免費工具
+}
+
+// 工具分類介面
+export interface ToolCategory {
+  id: string;
+  title: string;
+  color: 'yellow' | 'emerald' | 'blue' | 'purple';  // 分類顏色
+  colorClasses: {
+    text: string;
+    bg: string;
+    border: string;
+  };
+  isFreeCategory: boolean;  // 該分類是否全部免費
+  tools: Tool[];
+}
+
+// ⚠️ 用語規範修正：
+// ❌ 「槓桿與套利」→ ✅ 「資產配置」
+// ❌ 「現金流防禦」→ ✅ 「風險控管」（可選）
+
+export const TOOL_CATEGORIES: ToolCategory[] = [
+  {
+    id: 'diagnosis',
+    title: '觀念與診斷',
+    color: 'yellow',
+    colorClasses: {
+      text: 'text-yellow-400',
+      bg: 'bg-yellow-500/10',
+      border: 'border-yellow-500/30'
+    },
+    isFreeCategory: true,
+    tools: [
+      {
+        id: 'free_dashboard',
+        icon: LayoutDashboard,
+        label: '自由組合戰情室',
+        description: '自由組合多種工具，打造客製化諮詢場景',
+        benefits: ['拖拉組合任意工具', '多種版面配置', '一鍵切換場景'],
+        isFree: true
+      },
+      {
+        id: 'golden_safe',
+        icon: ShieldCheck,
+        label: '黃金保險箱理論',
+        description: '視覺化呈現保險的保障與儲蓄功能',
+        benefits: ['保障倍數試算', '儲蓄累積曲線', '專業圖卡匯出'],
+        isFree: true
+      },
+      {
+        id: 'market_data',
+        icon: Activity,
+        label: '市場數據戰情',
+        description: '即時市場數據與權威統計資料',
+        benefits: ['癌症時鐘數據', '醫療通膨追蹤', '勞保破產倒數'],
+        isFree: true
+      },
+      {
+        id: 'fund_machine',
+        icon: History,
+        label: '基金時光機',
+        description: '歷史績效回測，驗證投資策略',
+        benefits: ['定期定額回測', '單筆投資模擬', '多基金比較'],
+        isFree: true
+      }
+    ]
+  },
+  {
+    id: 'wealth',
+    title: '創富：資產配置',  // ✅ 已修正用語
+    color: 'emerald',
+    colorClasses: {
+      text: 'text-emerald-400',
+      bg: 'bg-emerald-500/10',
+      border: 'border-emerald-500/30'
+    },
+    isFreeCategory: false,
+    tools: [
+      {
+        id: 'gift',
+        icon: Wallet,
+        label: '百萬禮物專案',
+        description: '利用稅法空間，合法移轉資產給下一代',
+        benefits: ['每年 244 萬免稅贈與額度', '10 年贈與策略規劃', '專業贈與報告匯出'],
+        isFree: false
+      },
+      {
+        id: 'estate',
+        icon: Building2,
+        label: '金融房產專案',
+        description: '房貸增貸活化，釋放不動產價值',
+        benefits: ['房貸增貸試算', '租金投報率分析', '資產活化策略'],
+        isFree: false
+      },
+      {
+        id: 'student',
+        icon: GraduationCap,
+        label: '學貸活化專案',
+        description: '將學貸轉化為人生第一筆投資本金',
+        benefits: ['學貸利差分析', '投資累積試算', '還款策略規劃'],
+        isFree: false
+      },
+      {
+        id: 'super_active',
+        icon: Rocket,
+        label: '超積極存錢法',
+        description: '極致的現金流規劃，加速財富累積',
+        benefits: ['收支配比優化', '強制儲蓄機制', '目標達成追蹤'],
+        isFree: false
+      }
+    ]
+  },
+  {
+    id: 'protect',
+    title: '守富：風險控管',
+    color: 'blue',
+    colorClasses: {
+      text: 'text-blue-400',
+      bg: 'bg-blue-500/10',
+      border: 'border-blue-500/30'
+    },
+    isFreeCategory: false,
+    tools: [
+      {
+        id: 'reservoir',
+        icon: Waves,
+        label: '大小水庫專案',
+        description: '雙層防護機制，確保緊急預備金與長期儲蓄',
+        benefits: ['緊急預備金試算', '定期定額規劃', '風險缺口分析'],
+        isFree: false
+      },
+      {
+        id: 'car',
+        icon: Car,
+        label: '五年換車專案',
+        description: '資產配置與生活夢想的平衡點',
+        benefits: ['購車預算規劃', '頭期款累積試算', '貸款方案比較'],
+        isFree: false
+      },
+      {
+        id: 'pension',
+        icon: Umbrella,
+        label: '退休缺口試算',
+        description: '精算退休金缺口，提前規劃第二人生',
+        benefits: ['替代率計算', '勞保勞退整合', '缺口補足方案'],
+        isFree: false
+      }
+    ]
+  },
+  {
+    id: 'legacy',
+    title: '傳富：稅務傳承',
+    color: 'purple',
+    colorClasses: {
+      text: 'text-purple-400',
+      bg: 'bg-purple-500/10',
+      border: 'border-purple-500/30'
+    },
+    isFreeCategory: false,
+    tools: [
+      {
+        id: 'tax',
+        icon: Landmark,
+        label: '稅務傳承專案',
+        description: '遺產稅 & 贈與稅精算，最佳化傳承策略',
+        benefits: ['遺產稅試算', '贈與稅規劃', '流動性缺口測試'],
+        isFree: false
+      }
+    ]
+  }
+];
+
+// 取得所有工具的扁平列表
+export const ALL_TOOLS = TOOL_CATEGORIES.flatMap(cat => cat.tools);
+
+// 取得免費工具列表
+export const FREE_TOOLS = ALL_TOOLS.filter(tool => tool.isFree);
+
+// 取得 PRO 工具列表
+export const PRO_TOOLS = ALL_TOOLS.filter(tool => !tool.isFree);
+
+// 根據 ID 取得工具
+export const getToolById = (id: string): Tool | undefined => {
+  return ALL_TOOLS.find(tool => tool.id === id);
+};
+
+// 根據 ID 取得工具所屬分類
+export const getCategoryByToolId = (toolId: string): ToolCategory | undefined => {
+  return TOOL_CATEGORIES.find(cat => cat.tools.some(tool => tool.id === toolId));
+};
+```
+
+### 1.2 會員權限判斷
+
+```typescript
+// src/utils/membership.ts
+
+import { User } from 'firebase/auth';
+import { FREE_TOOLS } from '../constants/tools';
+
+export type MembershipStatus = 'trial' | 'active' | 'grace' | 'expired' | 'founder';
+
+export interface MembershipInfo {
+  status: MembershipStatus;
+  isPro: boolean;              // 是否有 PRO 權限
+  isFounder: boolean;          // 是否為創始會員
+  expiresAt: Date | null;
+  daysRemaining: number;
+}
+
+/**
+ * 判斷用戶是否有權限使用某工具
+ */
+export const canAccessTool = (toolId: string, membershipInfo: MembershipInfo): boolean => {
+  // 免費工具：所有人都能用
+  const isFreeToolId = FREE_TOOLS.some(tool => tool.id === toolId);
+  if (isFreeToolId) return true;
+  
+  // PRO 工具：需要 PRO 權限
+  return membershipInfo.isPro;
+};
+
+/**
+ * 根據 Firestore 用戶資料判斷會員狀態
+ */
+export const getMembershipInfo = (userData: any): MembershipInfo => {
+  const status = userData?.subscriptionStatus || 'expired';
+  const expiresAt = userData?.subscriptionEndDate?.toDate() || 
+                    userData?.trialExpiresAt?.toDate() || 
+                    null;
+  
+  const now = new Date();
+  const daysRemaining = expiresAt 
+    ? Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
+  
+  const isPro = ['active', 'trial', 'founder'].includes(status) && daysRemaining > 0;
+  const isFounder = userData?.isFounder === true;
+  
+  return {
+    status,
+    isPro,
+    isFounder,
+    expiresAt,
+    daysRemaining
+  };
+};
+```
+
+---
+
+## 二、側邊欄元件
+
+### 2.1 主側邊欄元件
+
+**檔案路徑**：`src/components/PlannerSidebar.tsx`
+
+```typescript
+// src/components/PlannerSidebar.tsx
+import React, { useState, useEffect } from 'react';
+import { 
+  ChevronLeft, ChevronRight, PanelLeftClose, PanelLeft,
+  FileBarChart, Sparkles
+} from 'lucide-react';
+import { TOOL_CATEGORIES, Tool, ToolCategory } from '../constants/tools';
+import { MembershipInfo, canAccessTool } from '../utils/membership';
+import NavItem from './NavItem';
+import SaveStatusIndicator, { SaveStatus } from './SaveStatusIndicator';
+
+// ==========================================
+// Props 介面
+// ==========================================
+interface Client {
+  id: string;
+  name: string;
+}
+
+interface PlannerSidebarProps {
+  client: Client;
+  activeTab: string;
+  onTabChange: (tabId: string) => void;
+  onBack: () => void;
+  onGenerateReport: () => void;
+  saveStatus: SaveStatus;
+  membershipInfo: MembershipInfo;
+  onUpgradeClick: (tool: Tool) => void;
+}
+
+// ==========================================
+// 側邊欄元件
+// ==========================================
+const PlannerSidebar: React.FC<PlannerSidebarProps> = ({
+  client,
+  activeTab,
+  onTabChange,
+  onBack,
+  onGenerateReport,
+  saveStatus,
+  membershipInfo,
+  onUpgradeClick
+}) => {
+  // 收合狀態（從 localStorage 讀取偏好）
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const saved = localStorage.getItem('planner-sidebar-collapsed');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  // 儲存收合狀態偏好
+  useEffect(() => {
+    localStorage.setItem('planner-sidebar-collapsed', JSON.stringify(isCollapsed));
+  }, [isCollapsed]);
+
+  // 處理工具點擊
+  const handleToolClick = (tool: Tool) => {
+    if (canAccessTool(tool.id, membershipInfo)) {
+      onTabChange(tool.id);
+    } else {
+      onUpgradeClick(tool);
+    }
+  };
+
+  // 切換收合狀態
+  const toggleCollapse = () => setIsCollapsed(!isCollapsed);
+
+  return (
+    <aside 
+      className={`
+        bg-slate-900 text-white flex flex-col shadow-2xl z-10 print:hidden
+        transition-all duration-300 ease-in-out
+        ${isCollapsed ? 'w-16' : 'w-72'}
+      `}
+    >
+      {/* ============================================ */}
+      {/* Header 區塊 */}
+      {/* ============================================ */}
+      <div className="p-4 border-b border-slate-800">
+        {/* 返回按鈕 + 收合按鈕 */}
+        <div className="flex items-center justify-between mb-4">
+          <button 
+            onClick={onBack}
+            className={`
+              flex items-center gap-2 text-slate-400 hover:text-white 
+              hover:bg-slate-800 px-3 py-2 rounded-lg transition-all
+              ${isCollapsed ? 'justify-center w-full px-0' : ''}
+            `}
+            title="返回戰情室"
+          >
+            <ChevronLeft size={18} />
+            {!isCollapsed && <span className="text-sm">返回戰情室</span>}
+          </button>
+          
+          {!isCollapsed && (
+            <button 
+              onClick={toggleCollapse}
+              className="p-2 hover:bg-slate-800 rounded-lg transition-all text-slate-500 hover:text-white"
+              title="收合側邊欄"
+            >
+              <PanelLeftClose size={16} />
+            </button>
+          )}
+        </div>
+        
+        {/* 客戶資訊卡片 */}
+        <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : 'px-2'}`}>
+          {/* 客戶頭像 */}
+          <div 
+            className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg shrink-0"
+            title={isCollapsed ? client.name : undefined}
+          >
+            {client.name.charAt(0)}
+          </div>
+          
+          {/* 客戶名稱（展開時顯示） */}
+          {!isCollapsed && (
+            <div className="flex-1 min-w-0">
+              <div className="text-xs text-blue-400 font-bold uppercase">正在規劃</div>
+              <div className="font-bold text-sm truncate">{client.name}</div>
+            </div>
+          )}
+        </div>
+        
+        {/* 存檔狀態 */}
+        <div className={`mt-3 ${isCollapsed ? 'flex justify-center' : ''}`}>
+          <SaveStatusIndicator status={saveStatus} isCollapsed={isCollapsed} />
+        </div>
+        
+        {/* 展開按鈕（收合時顯示） */}
+        {isCollapsed && (
+          <button 
+            onClick={toggleCollapse}
+            className="w-full mt-4 p-2 hover:bg-slate-800 rounded-lg transition-all text-slate-500 hover:text-white flex justify-center"
+            title="展開側邊欄"
+          >
+            <PanelLeft size={16} />
+          </button>
+        )}
+      </div>
+
+      {/* ============================================ */}
+      {/* 導航區塊 */}
+      {/* ============================================ */}
+      <nav className="flex-1 overflow-y-auto p-2 space-y-4 scrollbar-thin scrollbar-thumb-slate-700">
+        {TOOL_CATEGORIES.map(category => (
+          <CategorySection
+            key={category.id}
+            category={category}
+            activeTab={activeTab}
+            isCollapsed={isCollapsed}
+            membershipInfo={membershipInfo}
+            onToolClick={handleToolClick}
+          />
+        ))}
+      </nav>
+
+      {/* ============================================ */}
+      {/* Footer 區塊 - 生成報表按鈕 */}
+      {/* ============================================ */}
+      <div className="p-4 border-t border-slate-800">
+        <button 
+          onClick={onGenerateReport}
+          className={`
+            w-full flex items-center justify-center gap-2 
+            bg-gradient-to-r from-blue-600 to-blue-500 
+            hover:from-blue-500 hover:to-blue-400
+            text-white font-bold rounded-xl transition-all
+            shadow-lg shadow-blue-500/25
+            ${isCollapsed ? 'p-3' : 'px-4 py-3'}
+          `}
+          title={isCollapsed ? '生成策略報表' : undefined}
+        >
+          <FileBarChart size={18} />
+          {!isCollapsed && <span>生成策略報表</span>}
+        </button>
+      </div>
+    </aside>
+  );
+};
+
+// ==========================================
+// 分類區塊子元件
+// ==========================================
+interface CategorySectionProps {
+  category: ToolCategory;
+  activeTab: string;
+  isCollapsed: boolean;
+  membershipInfo: MembershipInfo;
+  onToolClick: (tool: Tool) => void;
+}
+
+const CategorySection: React.FC<CategorySectionProps> = ({
+  category,
+  activeTab,
+  isCollapsed,
+  membershipInfo,
+  onToolClick
+}) => {
+  const isPro = !category.isFreeCategory;
+  
+  return (
+    <div>
+      {/* 分類標題（展開時顯示） */}
+      {!isCollapsed && (
+        <div className="flex items-center justify-between px-3 py-2">
+          <span className={`text-xs font-bold uppercase tracking-wider ${category.colorClasses.text}`}>
+            {category.title}
+          </span>
+          
+          {/* PRO 徽章 */}
+          {isPro && (
+            <span className={`
+              text-[10px] font-bold px-2 py-0.5 rounded-full 
+              bg-amber-500/15 text-amber-400 border border-amber-500/30
+              flex items-center gap-1
+            `}>
+              <Sparkles size={10} />
+              PRO
+            </span>
+          )}
+        </div>
+      )}
+      
+      {/* 分隔線（收合時顯示） */}
+      {isCollapsed && (
+        <div className="h-px bg-slate-800 my-2 mx-2" />
+      )}
+      
+      {/* 工具列表 */}
+      <div className="space-y-1">
+        {category.tools.map(tool => {
+          const hasAccess = canAccessTool(tool.id, membershipInfo);
+          const isActive = activeTab === tool.id;
+          
+          return (
+            <NavItem
+              key={tool.id}
+              icon={tool.icon}
+              label={tool.label}
+              isActive={isActive}
+              isPro={!tool.isFree}
+              hasAccess={hasAccess}
+              isCollapsed={isCollapsed}
+              onClick={() => onToolClick(tool)}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+export default PlannerSidebar;
+```
+
+### 2.2 導航項目元件
+
+**檔案路徑**：`src/components/NavItem.tsx`
+
+```typescript
+// src/components/NavItem.tsx
+import React from 'react';
+import { LucideIcon, Sparkles } from 'lucide-react';
+
+interface NavItemProps {
+  icon: LucideIcon;
+  label: string;
+  isActive: boolean;
+  isPro: boolean;
+  hasAccess: boolean;
+  isCollapsed: boolean;
+  onClick: () => void;
+}
+
+const NavItem: React.FC<NavItemProps> = ({
+  icon: Icon,
+  label,
+  isActive,
+  isPro,
+  hasAccess,
+  isCollapsed,
+  onClick
+}) => {
+  // 根據狀態決定樣式
+  const getStyles = () => {
+    if (isActive) {
+      return 'bg-blue-600/20 text-blue-400 border border-blue-500/30';
+    }
+    if (!hasAccess) {
+      // PRO 工具但無權限：淡化但不是「鎖定」感
+      return 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50';
+    }
+    return 'text-slate-400 hover:text-white hover:bg-slate-800';
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={`
+        w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all
+        ${getStyles()}
+        ${isCollapsed ? 'justify-center' : ''}
+      `}
+      title={isCollapsed ? label : undefined}
+    >
+      {/* 圖示 */}
+      <Icon size={18} className="shrink-0" />
+      
+      {/* 標籤和 PRO 指示（展開時顯示） */}
+      {!isCollapsed && (
+        <>
+          <span className="flex-1 text-left text-sm font-medium truncate">
+            {label}
+          </span>
+          
+          {/* PRO 工具無權限時顯示小星星提示 */}
+          {isPro && !hasAccess && (
+            <Sparkles size={14} className="text-amber-400/60" />
+          )}
+        </>
+      )}
+    </button>
+  );
+};
+
+export default NavItem;
+```
+
+### 2.3 存檔狀態指示器
+
+**檔案路徑**：`src/components/SaveStatusIndicator.tsx`
+
+```typescript
+// src/components/SaveStatusIndicator.tsx
+import React from 'react';
+import { Check, Loader2, AlertCircle, Cloud, CloudOff } from 'lucide-react';
+
+export type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error' | 'offline';
+
+interface SaveStatusIndicatorProps {
+  status: SaveStatus;
+  isCollapsed?: boolean;
+  lastSavedAt?: Date | null;
+}
+
+const SaveStatusIndicator: React.FC<SaveStatusIndicatorProps> = ({
+  status,
+  isCollapsed = false,
+  lastSavedAt
+}) => {
+  // 狀態配置
+  const config: Record<SaveStatus, {
+    icon: React.ReactNode;
+    text: string;
+    dotColor: string;
+    textColor: string;
+    bgColor: string;
+  }> = {
+    saved: {
+      icon: <Check size={12} />,
+      text: '已同步',
+      dotColor: 'bg-emerald-500',
+      textColor: 'text-emerald-400',
+      bgColor: 'bg-emerald-500/10'
+    },
+    saving: {
+      icon: <Loader2 size={12} className="animate-spin" />,
+      text: '儲存中...',
+      dotColor: 'bg-blue-500 animate-pulse',
+      textColor: 'text-blue-400',
+      bgColor: 'bg-blue-500/10'
+    },
+    unsaved: {
+      icon: <AlertCircle size={12} />,
+      text: '未儲存',
+      dotColor: 'bg-amber-500',
+      textColor: 'text-amber-400',
+      bgColor: 'bg-amber-500/10'
+    },
+    error: {
+      icon: <CloudOff size={12} />,
+      text: '儲存失敗',
+      dotColor: 'bg-red-500',
+      textColor: 'text-red-400',
+      bgColor: 'bg-red-500/10'
+    },
+    offline: {
+      icon: <CloudOff size={12} />,
+      text: '離線中',
+      dotColor: 'bg-slate-500',
+      textColor: 'text-slate-400',
+      bgColor: 'bg-slate-500/10'
+    }
+  };
+
+  const { icon, text, dotColor, textColor, bgColor } = config[status];
+
+  // 收合模式：只顯示圓點
+  if (isCollapsed) {
+    return (
+      <div 
+        className={`w-2.5 h-2.5 rounded-full ${dotColor}`} 
+        title={text}
+      />
+    );
+  }
+
+  // 展開模式：完整顯示
+  return (
+    <div className={`
+      inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
+      ${bgColor} ${textColor}
+    `}>
+      <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+      <span className="text-xs font-medium">{text}</span>
+    </div>
+  );
+};
+
+export default SaveStatusIndicator;
+```
+
+---
+
+## 三、自動存檔系統
+
+### 3.1 自動存檔 Hook
+
+**檔案路徑**：`src/hooks/useAutoSave.ts`
+
+```typescript
+// src/hooks/useAutoSave.ts
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
+import { SaveStatus } from '../components/SaveStatusIndicator';
+
+interface UseAutoSaveOptions {
+  debounceMs?: number;        // Debounce 延遲（毫秒）
+  onSaveSuccess?: () => void; // 儲存成功回調
+  onSaveError?: (error: Error) => void; // 儲存失敗回調
+}
+
+interface UseAutoSaveReturn {
+  saveStatus: SaveStatus;
+  lastSavedAt: Date | null;
+  triggerSave: () => void;    // 手動觸發儲存
+  isSaving: boolean;
+}
+
+/**
+ * 自動存檔 Hook
+ * 
+ * @param data - 要儲存的資料
+ * @param userId - 用戶 ID
+ * @param clientId - 客戶 ID
+ * @param options - 選項配置
+ */
+export const useAutoSave = (
+  data: Record<string, any> | null,
+  userId: string | null,
+  clientId: string | null,
+  options: UseAutoSaveOptions = {}
+): UseAutoSaveReturn => {
+  const { 
+    debounceMs = 2000,  // 預設 2 秒
+    onSaveSuccess,
+    onSaveError
+  } = options;
+
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  
+  // 使用 ref 追蹤前一次資料，避免無謂儲存
+  const prevDataRef = useRef<string | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
+
+  // 清理 timeout
+  const clearSaveTimeout = useCallback(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+  }, []);
+
+  // 執行儲存
+  const performSave = useCallback(async (dataToSave: Record<string, any>) => {
+    if (!userId || !clientId) return;
+    
+    setSaveStatus('saving');
+    
+    try {
+      // 儲存到 Firestore
+      // 路徑: users/{userId}/clients/{clientId}
+      const clientRef = doc(db, 'users', userId, 'clients', clientId);
+      
+      await updateDoc(clientRef, {
+        ...dataToSave,
+        updatedAt: serverTimestamp()
+      });
+      
+      if (isMountedRef.current) {
+        setSaveStatus('saved');
+        setLastSavedAt(new Date());
+        onSaveSuccess?.();
+      }
+    } catch (error) {
+      console.error('自動存檔失敗:', error);
+      if (isMountedRef.current) {
+        setSaveStatus('error');
+        onSaveError?.(error as Error);
+      }
+    }
+  }, [userId, clientId, onSaveSuccess, onSaveError]);
+
+  // 手動觸發儲存
+  const triggerSave = useCallback(() => {
+    if (data) {
+      clearSaveTimeout();
+      performSave(data);
+    }
+  }, [data, clearSaveTimeout, performSave]);
+
+  // 監聽資料變化，Debounce 自動存檔
+  useEffect(() => {
+    if (!data || !userId || !clientId) return;
+    
+    // 序列化資料用於比較
+    const dataString = JSON.stringify(data);
+    
+    // 資料沒變就不處理
+    if (prevDataRef.current === dataString) return;
+    
+    prevDataRef.current = dataString;
+    setSaveStatus('unsaved');
+    
+    // 清除舊的 timeout
+    clearSaveTimeout();
+    
+    // 設定新的 debounce timeout
+    saveTimeoutRef.current = setTimeout(() => {
+      performSave(data);
+    }, debounceMs);
+    
+    return clearSaveTimeout;
+  }, [data, userId, clientId, debounceMs, clearSaveTimeout, performSave]);
+
+  // 元件卸載時清理
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      clearSaveTimeout();
+    };
+  }, [clearSaveTimeout]);
+
+  // 頁面關閉前強制儲存
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (saveStatus === 'unsaved' && data) {
+        // 嘗試同步儲存（不保證成功）
+        triggerSave();
+        
+        // 顯示離開確認
+        e.preventDefault();
+        e.returnValue = '您有未儲存的變更，確定要離開嗎？';
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [saveStatus, data, triggerSave]);
+
+  return {
+    saveStatus,
+    lastSavedAt,
+    triggerSave,
+    isSaving: saveStatus === 'saving'
+  };
+};
+
+export default useAutoSave;
+```
+
+---
+
+## 四、升級引導 Modal
+
+### 4.1 升級 Modal 元件
+
+**檔案路徑**：`src/components/UpgradeModal.tsx`
+
+```typescript
+// src/components/UpgradeModal.tsx
+import React, { useEffect } from 'react';
+import { X, Sparkles, Check, ArrowRight, Zap } from 'lucide-react';
+import { Tool } from '../constants/tools';
+
+interface UpgradeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  tool: Tool | null;
+  onUpgrade: () => void;
+}
+
+const UpgradeModal: React.FC<UpgradeModalProps> = ({
+  isOpen,
+  onClose,
+  tool,
+  onUpgrade
+}) => {
+  // ESC 鍵關閉
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    
+    if (isOpen) {
+      document.addEventListener('keydown', handleEsc);
+      document.body.style.overflow = 'hidden';
+    }
+    
+    return () => {
+      document.removeEventListener('keydown', handleEsc);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen || !tool) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* 背景遮罩 */}
+      <div 
+        className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm animate-fade-in"
+        onClick={onClose}
+      />
+      
+      {/* Modal 內容 */}
+      <div className="relative bg-slate-900 rounded-3xl border border-slate-700 max-w-md w-full overflow-hidden animate-scale-in">
+        {/* 頂部裝飾漸層 */}
+        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-amber-500/10 to-transparent pointer-events-none" />
+        
+        {/* 關閉按鈕 */}
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-all z-10"
+        >
+          <X size={20} />
+        </button>
+        
+        {/* 內容 */}
+        <div className="relative p-8 text-center">
+          {/* 圖示 */}
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center animate-pulse-slow">
+            <Sparkles className="text-amber-400" size={36} />
+          </div>
+          
+          {/* 標題 */}
+          <h2 className="text-2xl font-black text-white mb-2">
+            解鎖「{tool.label}」
+          </h2>
+          <p className="text-slate-400 mb-6">
+            {tool.description}
+          </p>
+          
+          {/* 功能列表 */}
+          <div className="bg-slate-800/50 rounded-2xl p-5 mb-6 text-left">
+            <p className="text-sm text-slate-400 mb-4 flex items-center gap-2">
+              <Zap size={14} className="text-amber-400" />
+              此工具可協助您：
+            </p>
+            <ul className="space-y-3">
+              {tool.benefits.map((benefit, index) => (
+                <li key={index} className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={12} className="text-emerald-400" />
+                  </div>
+                  <span className="text-white text-sm">{benefit}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          
+          {/* 價格提示 */}
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-6">
+            <p className="text-blue-300 text-sm">
+              <span className="font-bold">PRO 會員</span> 可使用全部 18 種專業工具
+            </p>
+            <p className="text-blue-400/80 text-xs mt-1">
+              年繳 NT$6,999（平均每天不到 20 元）
+            </p>
+          </div>
+          
+          {/* CTA 按鈕 */}
+          <button 
+            onClick={onUpgrade}
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-amber-500/25 group"
+          >
+            <Sparkles size={18} />
+            升級 PRO 解鎖所有工具
+            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+          </button>
+          
+          {/* 次要選項 */}
+          <button 
+            onClick={onClose}
+            className="mt-4 text-slate-500 hover:text-slate-300 text-sm transition-colors"
+          >
+            稍後再說
+          </button>
+        </div>
+      </div>
+      
+      {/* 動畫樣式 */}
+      <style>{`
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scale-in {
+          from { transform: scale(0.95); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        @keyframes pulse-slow {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.8; }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out;
+        }
+        .animate-scale-in {
+          animation: scale-in 0.3s ease-out;
+        }
+        .animate-pulse-slow {
+          animation: pulse-slow 2s ease-in-out infinite;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default UpgradeModal;
+```
+
+---
+
+## 五、App.tsx 整合
+
+### 5.1 修改要點
+
+在 `App.tsx` 中進行以下修改：
+
+```typescript
+// App.tsx 修改要點
+
+// 1. 引入新元件和 hooks
+import PlannerSidebar from './components/PlannerSidebar';
+import UpgradeModal from './components/UpgradeModal';
+import { useAutoSave } from './hooks/useAutoSave';
+import { Tool } from './constants/tools';
+import { getMembershipInfo, MembershipInfo } from './utils/membership';
+
+// 2. 新增狀態
+const [upgradeModalTool, setUpgradeModalTool] = useState<Tool | null>(null);
+const [membershipInfo, setMembershipInfo] = useState<MembershipInfo | null>(null);
+
+// 3. 從 Firestore 讀取會員狀態
+useEffect(() => {
+  if (user) {
+    const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+      if (doc.exists()) {
+        setMembershipInfo(getMembershipInfo(doc.data()));
+      }
+    });
+    return () => unsubscribe();
+  }
+}, [user]);
+
+// 4. 整合自動存檔
+const allClientData = {
+  goldenSafeData,
+  giftData,
+  estateData,
+  // ... 其他工具資料
+};
+
+const { saveStatus, triggerSave } = useAutoSave(
+  currentClient ? allClientData : null,
+  user?.uid || null,
+  currentClient?.id || null,
+  {
+    debounceMs: 2000,
+    onSaveSuccess: () => console.log('自動存檔成功'),
+    onSaveError: (err) => console.error('自動存檔失敗', err)
+  }
+);
+
+// 5. 升級引導處理
+const handleUpgradeClick = (tool: Tool) => {
+  setUpgradeModalTool(tool);
+};
+
+const handleUpgradeConfirm = () => {
+  // 導向付款頁面
+  window.open('https://portaly.cc/ultraadvisor/plans', '_blank');
+  setUpgradeModalTool(null);
+};
+
+// 6. 替換側邊欄 JSX
+// 移除原本的 <aside> 區塊，改用：
+<PlannerSidebar
+  client={currentClient}
+  activeTab={activeTab}
+  onTabChange={setActiveTab}
+  onBack={() => setCurrentClient(null)}
+  onGenerateReport={() => setIsReportOpen(true)}
+  saveStatus={saveStatus}
+  membershipInfo={membershipInfo || { status: 'expired', isPro: false, isFounder: false, expiresAt: null, daysRemaining: 0 }}
+  onUpgradeClick={handleUpgradeClick}
+/>
+
+// 7. 加入升級 Modal
+<UpgradeModal
+  isOpen={!!upgradeModalTool}
+  onClose={() => setUpgradeModalTool(null)}
+  tool={upgradeModalTool}
+  onUpgrade={handleUpgradeConfirm}
+/>
+```
+
+### 5.2 完整的 App.tsx 側邊欄替換區塊
+
+```tsx
+// 替換原本的桌面版側邊欄
+{currentClient && (
+  <>
+    {/* 桌面版：使用新側邊欄元件 */}
+    <div className="hidden md:block">
+      <PlannerSidebar
+        client={currentClient}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onBack={() => setCurrentClient(null)}
+        onGenerateReport={() => setIsReportOpen(true)}
+        saveStatus={saveStatus}
+        membershipInfo={membershipInfo || defaultMembershipInfo}
+        onUpgradeClick={handleUpgradeClick}
+      />
+    </div>
+    
+    {/* 手機版側邊欄保持原本邏輯，但套用新的 NavItem */}
+    {isMobileMenuOpen && (
+      <MobileSidebar
+        client={currentClient}
+        activeTab={activeTab}
+        onTabChange={(tab) => { setActiveTab(tab); setIsMobileMenuOpen(false); }}
+        onBack={() => { setCurrentClient(null); setIsMobileMenuOpen(false); }}
+        onClose={() => setIsMobileMenuOpen(false)}
+        membershipInfo={membershipInfo || defaultMembershipInfo}
+        onUpgradeClick={handleUpgradeClick}
+      />
+    )}
+    
+    {/* 升級引導 Modal */}
+    <UpgradeModal
+      isOpen={!!upgradeModalTool}
+      onClose={() => setUpgradeModalTool(null)}
+      tool={upgradeModalTool}
+      onUpgrade={handleUpgradeConfirm}
+    />
+  </>
+)}
+```
+
+---
+
+## 六、樣式補充
+
+### 6.1 Tailwind 配置補充
+
+確保 `tailwind.config.js` 包含以下擴充：
+
+```javascript
+// tailwind.config.js
+module.exports = {
+  content: ['./src/**/*.{js,jsx,ts,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        'strategy-blue': { light: '#4DA3FF', DEFAULT: '#2E6BFF' },
+        'signal-red': { light: '#FF6A6A', DEFAULT: '#FF3A3A' },
+        'ultra-purple': { start: '#8A5CFF', mid: '#CE4DFF', center: '#E8E0FF' },
+        'amber-gold': '#F59E0B',
+        'war-room': '#050b14',
+      },
+      animation: {
+        'fade-in': 'fade-in 0.2s ease-out',
+        'scale-in': 'scale-in 0.3s ease-out',
+        'pulse-slow': 'pulse-slow 2s ease-in-out infinite',
+      },
+      keyframes: {
+        'fade-in': {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
+        'scale-in': {
+          from: { transform: 'scale(0.95)', opacity: '0' },
+          to: { transform: 'scale(1)', opacity: '1' },
+        },
+        'pulse-slow': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.8' },
+        },
+      },
+    },
+  },
+  plugins: [
+    require('tailwind-scrollbar')({ nocompatible: true }),
+  ],
+};
+```
+
+### 6.2 安裝依賴
+
+```bash
+npm install tailwind-scrollbar
+```
+
+---
+
+## 七、測試檢核清單
+
+### 7.1 功能測試
+
+- [ ] **側邊欄收合/展開**
+  - [ ] 點擊收合按鈕，側邊欄寬度從 288px 變為 64px
+  - [ ] 點擊展開按鈕，側邊欄恢復 288px
+  - [ ] 收合狀態正確儲存到 localStorage
+  - [ ] 重新整理頁面後維持收合狀態
+
+- [ ] **自動存檔**
+  - [ ] 修改資料後 2 秒，狀態變為「儲存中」
+  - [ ] 儲存成功後，狀態變為「已同步」
+  - [ ] 持續修改時，正確 debounce（不會連續儲存）
+  - [ ] 儲存失敗時，狀態變為「儲存失敗」
+
+- [ ] **PRO 工具權限**
+  - [ ] 免費會員點擊 PRO 工具，彈出升級 Modal
+  - [ ] PRO 會員點擊 PRO 工具，正常切換
+  - [ ] 免費工具所有人都能正常使用
+
+- [ ] **升級 Modal**
+  - [ ] ESC 鍵可關閉
+  - [ ] 點擊背景可關閉
+  - [ ] 點擊「升級」按鈕導向付款頁面
+  - [ ] 點擊「稍後再說」關閉 Modal
+
+### 7.2 響應式測試
+
+- [ ] **桌面版（≥768px）**
+  - [ ] 側邊欄正常顯示
+  - [ ] 收合功能正常
+  
+- [ ] **行動版（<768px）**
+  - [ ] 側邊欄隱藏，漢堡選單正常
+  - [ ] 手機側邊欄套用新樣式
+
+### 7.3 邊界情況
+
+- [ ] 用戶未登入時，不觸發自動存檔
+- [ ] 無客戶選擇時，不顯示側邊欄
+- [ ] 網路斷線時，正確顯示「離線」狀態
+
+---
+
+## 八、檔案清單總覽
+
+```
+src/
+├── constants/
+│   └── tools.ts              # 【新建】工具定義常數
+├── utils/
+│   └── membership.ts         # 【新建】會員權限判斷
+├── hooks/
+│   └── useAutoSave.ts        # 【新建】自動存檔 Hook
+├── components/
+│   ├── PlannerSidebar.tsx    # 【新建】側邊欄主元件
+│   ├── NavItem.tsx           # 【新建】導航項目元件
+│   ├── SaveStatusIndicator.tsx # 【新建】存檔狀態指示器
+│   └── UpgradeModal.tsx      # 【新建】升級引導 Modal
+├── App.tsx                   # 【修改】整合新元件
+└── tailwind.config.js        # 【修改】新增動畫配置
+```
+
+---
+
+## 九、注意事項
+
+### 9.1 用語規範（務必遵守）
+
+| ❌ 禁止使用 | ✅ 正確用語 |
+|-------------|-------------|
+| 槓桿 | 保障倍數 |
+| 套利 | 資產累積 |
+| 利差 | 收益差額 |
+| 需自行負擔 | 只需負擔 |
+| 已鎖定 | PRO |
+
+### 9.2 設計原則
+
+1. **PRO 不是懲罰**：PRO 徽章要讓人「想要」而非「被排斥」
+2. **自動存檔要無感**：用戶不需要手動點儲存
+3. **收合要記憶**：用戶偏好應該被尊重
+4. **升級要正向**：展示價值而非強調限制
+
+### 9.3 品牌色彩速查
+
+```
+藍色主色: #4DA3FF → #2E6BFF
+琥珀金（PRO）: #F59E0B
+翡翠綠（成功）: #10B981
+戰情黑: #050b14
+```
+
+---
+
+**此規格書包含完整程式碼，可直接交付 Claude Code 進行開發。**

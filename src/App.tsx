@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart, 
+import {
+  Wallet, Building2, Coins, Check, ShieldAlert, Menu, X, LogOut, FileBarChart,
   GraduationCap, Umbrella, Waves, Landmark, Lock, Rocket, Car, Loader2,
-  ChevronLeft, Users, ShieldCheck, Activity, History, LayoutDashboard, Flame
+  ChevronLeft, Users, ShieldCheck, Activity, History, LayoutDashboard, Flame,
+  Sparkles
 } from 'lucide-react';
 
 import { signOut, onAuthStateChanged } from 'firebase/auth';
@@ -12,10 +13,16 @@ import { auth, db } from './firebase';
 // 組件匯入
 import { LoginPage } from './components/auth/LoginPage';
 import { SecretSignupPage } from './components/auth/SecretSignupPage';
-import { LandingPage } from './components/LandingPage'; 
+import { LandingPage } from './components/LandingPage';
 
 import ReportModal from './components/ReportModal';
-import SplashScreen from './components/SplashScreen'; 
+import SplashScreen from './components/SplashScreen';
+
+// 🆕 規劃界面改造新元件
+import PlannerSidebar from './components/PlannerSidebar';
+import UpgradeModal from './components/UpgradeModal';
+import { Tool } from './constants/tools';
+import { getMembershipInfo, MembershipInfo, defaultMembershipInfo } from './utils/membership'; 
 
 // ✅ 新版戰情室（整合個人資料、密碼修改、客戶管理）
 import UltraWarRoom from './components/UltraWarRoom';
@@ -130,22 +137,29 @@ export default function App() {
   const [toast, setToast] = useState<{message: string, type: string} | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false); 
-  const [isSaving, setIsSaving] = useState(false); 
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);  // 🆕 追蹤未儲存狀態
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   
   // 🆕 點數系統狀態
   const [isPointsDashboardOpen, setIsPointsDashboardOpen] = useState(false);
   const [pointsNotification, setPointsNotification] = useState<{points: number, reason: string, streak?: number} | null>(null);
-  
+
   // 🆕 會員權限
   const { membership } = useMembership(user?.uid || null);
+
+  // 🆕 升級 Modal 狀態
+  const [upgradeModalTool, setUpgradeModalTool] = useState<Tool | null>(null);
+
+  // 🆕 會員資訊狀態（用於 PlannerSidebar）
+  const [membershipInfo, setMembershipInfo] = useState<MembershipInfo>(defaultMembershipInfo);
   
   const lastSavedDataStr = useRef<string>("");
   const isRegistering = useRef(false);
 
   // 工具數據狀態
   const defaultStates = {
-    golden_safe: { mode: 'time', amount: 60000, years: 10, rate: 6, isLocked: false }, 
+    golden_safe: { mode: 'time', amount: 6, years: 10, rate: 6, isLocked: false, medicalLoss: 200, marketLoss: 30, taxLoss: 100 }, 
     gift: { loanAmount: 100, loanTerm: 7, loanRate: 2.8, investReturnRate: 6 },
     estate: { loanAmount: 1000, loanTerm: 30, loanRate: 2.2, investReturnRate: 6, existingLoanBalance: 700, existingMonthlyPayment: 38000 },
     student: { loanAmount: 40, investReturnRate: 6, years: 8, gracePeriod: 1, interestOnlyPeriod: 0, isQualified: false },
@@ -228,37 +242,60 @@ export default function App() {
     return JSON.parse(JSON.stringify(obj, (key, value) => value === undefined ? null : value));
   };
 
+  // 🆕 建立資料 payload（供自動存檔與手動存檔共用）
+  const getDataPayload = () => ({
+    goldenSafeData, giftData, estateData, studentData, superActiveData,
+    carData, pensionData, reservoirData, taxData, freeDashboardLayout
+  });
+
+  // 🆕 執行存檔的共用函數
+  const performSave = async (dataPayload: ReturnType<typeof getDataPayload>) => {
+    if (!user || !currentClient) return;
+
+    setIsSaving(true);
+    setHasUnsavedChanges(false);
+    try {
+      const cleanedPayload = cleanDataForFirebase(dataPayload);
+      await setDoc(doc(db, 'users', user.uid, 'clients', currentClient.id), {
+        ...cleanedPayload,
+        updatedAt: Timestamp.now()
+      }, { merge: true });
+      lastSavedDataStr.current = JSON.stringify(dataPayload);
+      setTimeout(() => setIsSaving(false), 500);
+    } catch (error) {
+      console.error("Auto-save failed:", error);
+      setIsSaving(false);
+      setHasUnsavedChanges(true);  // 儲存失敗，標記為未儲存
+    }
+  };
+
+  // 🆕 手動存檔函數
+  const handleManualSave = () => {
+    if (!user || !currentClient || !isDataLoaded) return;
+    performSave(getDataPayload());
+  };
+
+  // 自動存檔邏輯
   useEffect(() => {
     if (!user || !currentClient || !isDataLoaded) return;
 
-    const dataPayload = {
-        goldenSafeData, giftData, estateData, studentData, superActiveData, 
-        carData, pensionData, reservoirData, taxData, freeDashboardLayout 
-    };
-    
+    const dataPayload = getDataPayload();
     const currentDataStr = JSON.stringify(dataPayload);
+
+    // 資料沒變就不處理
     if (currentDataStr === lastSavedDataStr.current) return;
 
-    const saveData = async () => {
-        setIsSaving(true);
-        try {
-            const cleanedPayload = cleanDataForFirebase(dataPayload);
-            await setDoc(doc(db, 'users', user.uid, 'clients', currentClient.id), {
-                ...cleanedPayload,
-                updatedAt: Timestamp.now()
-            }, { merge: true });
-            lastSavedDataStr.current = currentDataStr;
-            setTimeout(() => setIsSaving(false), 500);
-        } catch (error) {
-            console.error("Auto-save failed:", error);
-            setIsSaving(false);
-        }
-    };
+    // 標記為未儲存
+    setHasUnsavedChanges(true);
 
-    const handler = setTimeout(saveData, 10000);
+    // 設定自動存檔延遲（10秒後自動儲存）
+    const handler = setTimeout(() => {
+      performSave(dataPayload);
+    }, 10000);
+
     return () => clearTimeout(handler);
   }, [
-    goldenSafeData, giftData, estateData, studentData, superActiveData, 
+    goldenSafeData, giftData, estateData, studentData, superActiveData,
     carData, pensionData, reservoirData, taxData, freeDashboardLayout,
     user, currentClient, isDataLoaded
   ]);
@@ -317,6 +354,32 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('ultra_advisor_active_tab', activeTab);
   }, [activeTab]);
+
+  // 🆕 監聽 Firestore 用戶資料，更新會員資訊
+  useEffect(() => {
+    if (!user) {
+      setMembershipInfo(defaultMembershipInfo);
+      return;
+    }
+    const userRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setMembershipInfo(getMembershipInfo(docSnap.data()));
+      }
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  // 🆕 升級引導處理
+  const handleUpgradeClick = (tool: Tool) => {
+    setUpgradeModalTool(tool);
+  };
+
+  const handleUpgradeConfirm = () => {
+    // 導向付款頁面
+    window.open('https://portaly.cc/ultraadvisor/plans', '_blank');
+    setUpgradeModalTool(null);
+  };
 
   // 客戶資料監聽
   useEffect(() => {
@@ -554,21 +617,36 @@ export default function App() {
               <NavItem icon={History} label="基金時光機" active={activeTab === 'fund_machine'} onClick={() => { setActiveTab('fund_machine'); setIsMobileMenuOpen(false); }} locked={!canAccessTool('fund_machine')} />
               
               {/* 創富 */}
-              <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">創富：槓桿與套利</div>
+              <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
+                創富：資產配置
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                  <Sparkles size={10} />PRO
+                </span>
+              </div>
               <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => { setActiveTab('gift'); setIsMobileMenuOpen(false); }} locked={!canAccessTool('gift')} />
               <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => { setActiveTab('estate'); setIsMobileMenuOpen(false); }} />
               <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => { setActiveTab('student'); setIsMobileMenuOpen(false); }} locked={!canAccessTool('student')} />
               <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => { setActiveTab('super_active'); setIsMobileMenuOpen(false); }} locked={!canAccessTool('super_active')} />
               
               {/* 守富 */}
-              <div className="text-xs font-bold text-blue-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">守富：現金流防禦</div>
+              <div className="text-xs font-bold text-blue-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
+                守富：風險控管
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                  <Sparkles size={10} />PRO
+                </span>
+              </div>
               <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => { setActiveTab('reservoir'); setIsMobileMenuOpen(false); }} />
               <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => { setActiveTab('car'); setIsMobileMenuOpen(false); }} locked={!canAccessTool('car')} />
               <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => { setActiveTab('pension'); setIsMobileMenuOpen(false); }} locked={!canAccessTool('pension')} />
               
               {/* 傳富 */}
-              <div className="text-xs font-bold text-purple-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">傳富：稅務與傳承</div>
-              <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => { setActiveTab('tax'); setIsMobileMenuOpen(false); }} />
+              <div className="text-xs font-bold text-purple-400 px-4 py-2 uppercase tracking-wider flex items-center gap-2 mt-4">
+                傳富：稅務傳承
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                  <Sparkles size={10} />PRO
+                </span>
+              </div>
+              <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => { setActiveTab('tax'); setIsMobileMenuOpen(false); }} locked={!canAccessTool('tax')} />
             </div>
             <div className="p-4 border-t border-slate-800 space-y-2">
               <button onClick={() => { setIsReportOpen(true); setIsMobileMenuOpen(false); }} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-3 rounded-xl w-full">
@@ -579,60 +657,28 @@ export default function App() {
         </div>
       )}
 
-      {/* 桌面版側邊欄 */}
-      <aside className="w-72 bg-slate-900 text-white flex-col hidden md:flex shadow-2xl z-10 print:hidden">
-        <div className="p-4 border-b border-slate-800">
-            <button onClick={() => setCurrentClient(null)} className="w-full flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-lg transition-all mb-4">
-              <ChevronLeft size={18}/> 返回戰情室
-            </button>
-            <div className="flex items-center gap-3 px-2">
-              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-lg text-white shrink-0">
-                {currentClient.name.charAt(0)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-blue-400 font-bold uppercase truncate">正在規劃</div>
-                <div className="font-bold text-sm truncate text-white">{currentClient.name}</div>
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 bg-black/20 px-2 py-1 rounded">
-              {isSaving ? (
-                <><Loader2 size={12} className="animate-spin text-blue-400"/><span>儲存中...</span></>
-              ) : (
-                <><div className="w-2 h-2 rounded-full bg-green-500"></div><span>已同步</span></>
-              )}
-            </div>
-        </div>
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {/* 觀念與診斷 */}
-          <div className="text-xs font-bold text-yellow-400 px-4 py-2 uppercase tracking-wider mt-2">觀念與診斷</div>
-          <NavItem icon={LayoutDashboard} label="自由組合戰情室" active={activeTab === 'free_dashboard'} onClick={() => setActiveTab('free_dashboard')} locked={!canAccessTool('free_dashboard')} />
-          <NavItem icon={ShieldCheck} label="黃金保險箱理論" active={activeTab === 'golden_safe'} onClick={() => setActiveTab('golden_safe')} locked={!canAccessTool('golden_safe')} />
-          <NavItem icon={Activity} label="市場數據戰情室" active={activeTab === 'market_data'} onClick={() => setActiveTab('market_data')} locked={!canAccessTool('market_data')} />
-          <NavItem icon={History} label="基金時光機" active={activeTab === 'fund_machine'} onClick={() => setActiveTab('fund_machine')} locked={!canAccessTool('fund_machine')} />
-          
-          {/* 創富 */}
-          <div className="text-xs font-bold text-emerald-400 px-4 py-2 uppercase tracking-wider mt-4">創富：槓桿與套利</div>
-          <NavItem icon={Wallet} label="百萬禮物專案" active={activeTab === 'gift'} onClick={() => setActiveTab('gift')} locked={!canAccessTool('gift')} />
-          <NavItem icon={Building2} label="金融房產專案" active={activeTab === 'estate'} onClick={() => setActiveTab('estate')} />
-          <NavItem icon={GraduationCap} label="學貸活化專案" active={activeTab === 'student'} onClick={() => setActiveTab('student')} locked={!canAccessTool('student')} />
-          <NavItem icon={Rocket} label="超積極存錢法" active={activeTab === 'super_active'} onClick={() => setActiveTab('super_active')} locked={!canAccessTool('super_active')} />
-          
-          {/* 守富 */}
-          <div className="text-xs font-bold text-blue-400 px-4 py-2 uppercase tracking-wider mt-4">守富：現金流防禦</div>
-          <NavItem icon={Waves} label="大小水庫專案" active={activeTab === 'reservoir'} onClick={() => setActiveTab('reservoir')} />
-          <NavItem icon={Car} label="五年換車專案" active={activeTab === 'car'} onClick={() => setActiveTab('car')} locked={!canAccessTool('car')} />
-          <NavItem icon={Umbrella} label="退休缺口試算" active={activeTab === 'pension'} onClick={() => setActiveTab('pension')} locked={!canAccessTool('pension')} />
-          
-          {/* 傳富 */}
-          <div className="text-xs font-bold text-purple-400 px-4 py-2 uppercase tracking-wider mt-4">傳富：稅務與傳承</div>
-          <NavItem icon={Landmark} label="稅務傳承專案" active={activeTab === 'tax'} onClick={() => setActiveTab('tax')} />
-        </nav>
-        <div className="p-4 border-t border-slate-800 space-y-2">
-           <button onClick={() => setIsReportOpen(true)} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-3 rounded-xl w-full transition-all shadow-lg shadow-blue-900/50">
-             <FileBarChart size={18} /> 生成策略報表
-           </button>
-        </div>
-      </aside>
+      {/* 🆕 桌面版側邊欄（使用新的 PlannerSidebar 元件） */}
+      <div className="hidden md:block">
+        <PlannerSidebar
+          client={currentClient}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onBack={() => setCurrentClient(null)}
+          onGenerateReport={() => setIsReportOpen(true)}
+          saveStatus={isSaving ? 'saving' : (hasUnsavedChanges ? 'unsaved' : 'saved')}
+          membershipInfo={membershipInfo}
+          onUpgradeClick={handleUpgradeClick}
+          onManualSave={handleManualSave}
+        />
+      </div>
+
+      {/* 🆕 升級引導 Modal */}
+      <UpgradeModal
+        isOpen={!!upgradeModalTool}
+        onClose={() => setUpgradeModalTool(null)}
+        tool={upgradeModalTool}
+        onUpgrade={handleUpgradeConfirm}
+      />
 
       {/* 主內容區塊 */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
@@ -650,7 +696,7 @@ export default function App() {
             <div className="max-w-5xl mx-auto pb-20 md:pb-0">
               {/* 🆕 帶權限檢查的工具渲染 */}
               {activeTab === 'market_data' && renderTool('market_data', <MarketDataZone />, '市場數據戰情室')}
-              {activeTab === 'golden_safe' && renderTool('golden_safe', <GoldenSafeVault data={goldenSafeData} setData={setGoldenSafeData} />, '黃金保險箱理論')}
+              {activeTab === 'golden_safe' && renderTool('golden_safe', <GoldenSafeVault data={goldenSafeData} setData={setGoldenSafeData} userId={user?.uid} />, '黃金保險箱理論')}
               {activeTab === 'fund_machine' && renderTool('fund_machine', <FundTimeMachine />, '基金時光機')}
               {activeTab === 'gift' && renderTool('gift', <MillionDollarGiftTool data={giftData} setData={setGiftData} userId={user?.uid} />, '百萬禮物專案')}
               {activeTab === 'estate' && <FinancialRealEstateTool data={estateData} setData={setEstateData} />}

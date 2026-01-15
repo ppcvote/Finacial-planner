@@ -6,52 +6,98 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
-    
+
     // --- helper function: 檢查是否是存取自己的資料 ---
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
+    // --- helper function: 檢查是否為管理員 ---
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
     // ============================================
-    // 1. 公開/系統配置 (參考你原本的列表)
-    // 建議：如果是純讀取設定，allow write 應該要鎖住，但為了恢復原狀我們先全開
+    // 1. 系統配置（公開讀取，管理員可寫）
     // ============================================
-    match /membershipTiers/{doc} { allow read, write: if true; }
-    match /pointsRules/{doc} { allow read, write: if true; }
-    match /redeemableItems/{doc} { allow read, write: if true; }
-    match /pointsLedger/{doc} { allow read, write: if true; }
-    match /auditLogs/{doc} { allow read, write: if true; }
-    match /redemptionOrders/{doc} { allow read, write: if true; }
-    match /referralCodes/{doc} { allow read, write: if true; }
-    match /siteContent/{doc} { allow read, write: if true; }
-    match /missions/{doc} { allow read, write: if true; }
-    
+    match /membershipTiers/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /pointsRules/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /missions/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /siteContent/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /redeemableItems/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // ============================================
-    // 2. 用戶資料與管理員
+    // 2. 用戶相關資料
     // ============================================
-    
-    // 用戶資料：這裡最容易報錯。
-    // 我們設定：如果是讀寫自己的資料(isOwner) -> 允許
-    // 或是如果之前邏輯較寬鬆，暫時允許所有已登入者讀取
+
+    // 用戶資料：自己或管理員可讀寫
     match /users/{userId} {
-      allow read, write: if isSignedIn();
-      
-      // 關鍵修正：允許讀寫底下的所有子集合 (例如 preferences, settings)
+      allow read: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow write: if isSignedIn() && (isOwner(userId) || isAdmin());
+
+      // 子集合（profile, preferences 等）
       match /{allSubcollections=**} {
-         allow read, write: if isSignedIn();
+         allow read, write: if isSignedIn() && (isOwner(userId) || isAdmin());
       }
     }
 
-    match /admins/{doc} { allow read, write: if true; }
-    match /backups/{doc} { allow read, write: if true; }
+    // 點數帳本：自己可讀、管理員可讀，寫入由後端處理
+    match /pointsLedger/{doc} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if false;
+    }
+
+    // 兌換訂單：自己可讀、管理員可讀寫
+    match /redemptionOrders/{doc} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // 推薦碼：公開讀取（用於驗證推薦碼），寫入由後端處理
+    match /referralCodes/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
 
     // ============================================
-    // 3. 安全保底 (Catch-all)
+    // 3. 管理員/系統資料
     // ============================================
-    // 如果程式碼讀取了上面沒列到的集合，只要用戶有登入，就先讓過
-    // 這樣可以避免因為漏寫規則導致服務掛掉
+    match /admins/{doc} {
+      allow read: if isSignedIn();  // 登入者可讀（用於驗證身份）
+      allow write: if false;        // 僅後端可寫（防止自行加入管理員）
+    }
+    match /backups/{doc} {
+      allow read, write: if isAdmin();
+    }
+    match /auditLogs/{doc} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    match /rateLimits/{doc} {
+      allow read, write: if false;
+    }
+
+    // ============================================
+    // 4. 安全保底（預設拒絕）
+    // ============================================
     match /{document=**} {
-      allow read, write: if isSignedIn();
+      allow read, write: if false;
     }
   }
 }

@@ -4,6 +4,226 @@
 
 ## 2026-01-15
 
+### 資訊安全強化（P0/P1 優先級）
+
+依據《資訊安全規格書 v1.0》實施以下安全措施：
+
+#### 1. HTTP 安全標頭（vercel.json）
+前台與後台皆已加入：
+- `X-Frame-Options: DENY` - 防禦 Clickjacking
+- `X-Content-Type-Options: nosniff` - 防禦 MIME Sniffing
+- `Referrer-Policy: strict-origin-when-cross-origin` - 保護用戶隱私
+- `Strict-Transport-Security: max-age=63072000` - 強制 HTTPS (HSTS)
+- `Permissions-Policy: camera=(), microphone=(), geolocation=()` - 禁用不必要 API
+
+#### 2. Firestore Rules 收緊
+- 系統配置集合（membershipTiers, pointsRules, missions 等）改為**唯讀**
+- 用戶資料改為 `isOwner(userId)` 嚴格驗證
+- 點數帳本、兌換訂單僅允許讀取自己的資料
+- 管理員/系統資料完全鎖定（admins, backups, auditLogs, rateLimits）
+- 預設規則改為 `allow read, write: if false`
+
+#### 3. Cloud Functions CORS 白名單
+- 新增 `ALLOWED_ORIGINS` 白名單陣列
+- 僅允許 `ultra-advisor.tw`、`admin.ultra-advisor.tw`、`liff.line.me`
+- 開發環境自動加入 localhost
+- `liffRegister` 已套用新的 `setCorsHeaders()` 函數
+
+#### 檔案變更
+- `vercel.json` - 新增 headers 區塊
+- `admin/vercel.json` - 新增 headers 區塊
+- `firestore.rules` - 重寫為嚴格權限控制
+- `functions/index.js` - 新增 CORS 白名單設定
+
+---
+
+### 規劃界面改造（深夜更新）
+
+依據《規劃介面規格書 v1.0》實施以下改造：
+
+#### 1. 側邊欄可收合功能
+- 桌面版側邊欄支援收合/展開（72px ↔ 288px）
+- 收合狀態儲存於 `localStorage`，重新整理維持偏好
+- 收合時顯示圖示，展開時顯示完整標籤
+
+#### 2. PRO 徽章取代「已鎖定」
+- 將負面「已鎖定」標示改為正面「PRO」徽章
+- PRO 工具分類標題旁顯示金色 PRO 標籤
+- 無權限時顯示淡化樣式 + 小星星提示
+
+#### 3. 分類用語修正（合規）
+| 舊用語 | 新用語 |
+|--------|--------|
+| 槓桿與套利 | 資產配置 |
+| 現金流防禦 | 風險控管 |
+
+#### 4. 存檔狀態指示器
+- 新增 `SaveStatusIndicator` 元件
+- 五種狀態：已同步、儲存中、未儲存、錯誤、離線
+- 收合時顯示圓點，展開時顯示完整文字
+
+#### 5. 升級引導 Modal
+- 點擊無權限的 PRO 工具時彈出升級引導
+- 顯示工具功能亮點和 PRO 會員價值
+- CTA 按鈕導向付款頁面
+
+#### 新增檔案
+- `src/constants/tools.ts` - 工具定義常數
+- `src/utils/membership.ts` - 會員權限判斷
+- `src/components/PlannerSidebar.tsx` - 可收合側邊欄
+- `src/components/NavItem.tsx` - 導航項目元件
+- `src/components/SaveStatusIndicator.tsx` - 存檔狀態指示器
+- `src/components/UpgradeModal.tsx` - 升級引導 Modal
+- `src/hooks/useAutoSave.ts` - 自動存檔 Hook（備用）
+
+#### 修改檔案
+- `src/App.tsx` - 整合新元件、更新分類用語
+- `tailwind.config.js` - 新增動畫配置
+
+---
+
+### 黃金保險箱理論工具優化（晚間更新）
+
+#### 新增個人資料輸入欄位
+在「路徑選擇」和「設定參數」卡片之間新增年齡與年收入輸入區：
+- **年齡**：20~70 歲，預設 35 歲
+- **年收入**：30~3000 萬，預設 100 萬
+
+#### 重大傷病彈窗動態計算
+根據用戶年收入，動態計算個人化損失估算：
+- **看護費用**：每月 6-8 萬 × 24 個月 = 168 萬
+- **收入中斷**：年收入 × 2 年（動態計算）
+- **總損失估算**：治療費 + 看護費 + 收入損失（深色區塊醒目顯示）
+
+#### 資料結構更新
+`safeData` 新增欄位：
+- `age`: 年齡（預設 35）
+- `annualIncome`: 年收入萬元（預設 100）
+
+#### 檔案變更
+- `src/components/GoldenSafeVault.tsx` - 新增年齡/年收入輸入、動態損失計算
+
+---
+
+### UA 商城系統（全新功能）
+
+用戶可用累積的 UA 點數兌換周邊商品或服務。
+
+#### Cloud Functions（新增 4 個）
+- `getStoreItems` - 取得商城商品列表
+- `getUserOrders` - 取得用戶的兌換訂單
+- `redeemStoreItem` - 兌換商品（完整版：庫存檢查、點數扣除、訂閱延長）
+- `updateOrderStatus` - 更新訂單狀態（管理員專用）
+
+#### 前台元件
+- `src/hooks/useStore.ts` - 商城系統 Hook
+- `src/components/StoreModal.tsx` - 商城 Modal（商品列表、詳情、兌換流程、訂單紀錄）
+- `src/components/ReferralEngineModal.tsx` - 新增「進入 UA 商城」入口按鈕
+
+#### 後台頁面
+- `admin/src/pages/membership/StoreOrders.jsx` - 兌換訂單管理
+- 側邊欄新增「兌換訂單」選單項目
+
+#### 功能特色
+- 商品分類：訂閱延長、實體商品、數位商品、體驗服務
+- 庫存管理：支援限量商品、無限庫存
+- 每人限購：可設定每人兌換上限
+- 實體商品：需填寫收件資訊（姓名、手機、地址）
+- 虛擬商品：訂閱延長自動執行，立即完成
+- 訂單狀態：待處理 → 處理中 → 已出貨 → 已完成
+- 物流追蹤：可填寫追蹤號碼
+
+#### 資料結構
+- 商品集合：`redeemableItems/{itemId}`
+- 訂單集合：`redemptionOrders/{orderId}`
+
+#### 檔案變更
+- `functions/index.js` - 新增 4 個 Cloud Functions
+- `src/hooks/useStore.ts` - 新建
+- `src/components/StoreModal.tsx` - 新建
+- `src/components/ReferralEngineModal.tsx` - 新增商城入口
+- `admin/src/pages/membership/StoreOrders.jsx` - 新建
+- `admin/src/App.jsx` - 新增路由
+- `admin/src/components/Layout.jsx` - 新增選單項目
+
+---
+
+### 商城系統問題修復（晚間更新 #2）
+
+#### Firestore 索引問題
+- **問題**：商城載入商品失敗，顯示「internal」錯誤
+- **原因**：缺少複合查詢所需的 Firestore 索引
+- **解決方案**：在 `firestore.indexes.json` 新增索引
+  ```json
+  // redeemableItems 商品查詢索引
+  { "collectionGroup": "redeemableItems", "fields": ["isActive", "sortOrder"] }
+  // redemptionOrders 訂單查詢索引
+  { "collectionGroup": "redemptionOrders", "fields": ["userId", "createdAt"] }
+  ```
+- 部署指令：`firebase deploy --only firestore:indexes`
+
+#### 後台雙重「載入成功」訊息
+- **問題**：進入後台頁面時，會顯示兩次「載入成功」訊息
+- **原因**：React StrictMode 在開發環境會執行兩次 useEffect
+- **解決方案**：修改所有 fetch 函數，新增 `showMessage` 參數（預設 false）
+  - 頁面載入時不顯示訊息
+  - 僅在點擊「重新載入」按鈕時顯示成功訊息
+- **修改檔案**：
+  - `admin/src/pages/membership/RedeemableItems.jsx`
+  - `admin/src/pages/membership/PointsRules.jsx`
+  - `admin/src/pages/membership/StoreOrders.jsx`
+  - `admin/src/pages/membership/MembershipTiers.jsx`
+  - `admin/src/pages/membership/PointsLedger.jsx`
+  - `admin/src/pages/membership/AuditLogs.jsx`
+
+#### 點數規則重複項目
+- **問題**：後台點數規則頁面顯示重複項目
+- **原因**：`pointsRules` 集合中有相同 `actionId` 但不同 document ID 的重複文件
+- **解決方案**：使用清理腳本刪除 5 筆重複資料
+  - 刪除的 document IDs：
+    - `hgPPekON8LMi0aX6LK1A` (daily_login)
+    - `gQwwdgiThZCXE2Dfd1Eb` (login_streak_7)
+    - `03g0iLV2sJk5o98ZkPNt` (first_client)
+    - `SdIuXTX6QkS3cRfEKppp` (referred_bonus)
+    - `Nqs0yEGP4RTaD4qnWtYb` (tool_use)
+- **保留的正確 document IDs**：使用有意義名稱（如 `daily_login`、`tool_use` 等）
+
+---
+
+### 任務系統問題修復（下午更新）
+
+#### 外部連結任務導向問題
+- **問題**：點擊「加入 LINE 官方帳號」等外部連結任務時，連結沒有開啟
+- **原因**：瀏覽器 popup blocker 阻擋異步操作後開啟的連結
+- **解決方案**：修改 `MissionCard.tsx`，外部連結任務優先開啟連結，再進行驗證
+
+#### PWA 任務無法完成
+- **問題**：點擊「我已完成安裝」按鈕後任務沒有完成
+- **原因**：`PWAInstallModal.tsx` 中任務 ID 錯誤（`install_pwa` → `pwa_install`）
+- **解決方案**：修正任務 ID 為正確的 `pwa_install`
+
+#### 業務小抄任務無法完成
+- **問題**：使用多次業務小抄後任務仍無法驗證通過
+- **原因**：工具元件沒有追蹤業務小抄使用次數
+- **解決方案**：在 5 個工具中新增 `trackCheatSheetUsage()` 函數
+  - `MillionDollarGiftTool.tsx`
+  - `MortgageCalculator.tsx`
+  - `BigSmallReservoirTool.tsx`
+  - `FinancialRealEstateTool.tsx`
+  - `TaxPlannerTool.tsx`
+- 開啟業務小抄時自動更新 Firestore `users/{uid}.cheatSheetUsageCount`
+
+#### 檔案變更
+- `src/components/MissionCard.tsx` - 外部連結優先開啟
+- `src/components/PWAInstallModal.tsx` - 修正任務 ID
+- `src/components/MillionDollarGiftTool.tsx` - 新增小抄追蹤
+- `src/components/MortgageCalculator.tsx` - 新增小抄追蹤
+- `src/components/BigSmallReservoirTool.tsx` - 新增小抄追蹤
+- `src/components/FinancialRealEstateTool.tsx` - 新增小抄追蹤
+- `src/components/TaxPlannerTool.tsx` - 新增小抄追蹤
+
+---
+
 ### 任務看板系統（全新功能）
 
 #### Cloud Functions
@@ -72,28 +292,19 @@
 
 ### 手機版滾動問題修復
 - **症狀**：手機版頁面偶爾會發生頁面滑不動、無法下拉重新整理
-- **根本原因**：多個 Modal 元件開啟/關閉時未正確管理 `body.style.overflow`
 - **解決方案**：
   - 新增 `src/index.css` 全域滾動優化
-    - `-webkit-overflow-scrolling: touch` iOS 滾動優化
-    - `overscroll-behavior` 防止過度滾動
-  - 修復 Modal 元件的 body overflow 管理：
-    - `PointsDashboard.tsx`
-    - `ReferralEngineModal.tsx`
-    - `PWAInstallModal.tsx`
-    - `ReportModal.tsx`
+  - 為 `.overflow-y-auto` 添加 `-webkit-overflow-scrolling: touch` iOS Safari 滾動優化
+- **注意**：App.tsx 使用巢狀滾動容器結構（外層 `overflow-hidden` + 內層 `overflow-y-auto`），不可修改全域 `html, body` 的 overflow 設定
 
 ### 檔案變更
 - `src/components/LandingPage.jsx` - LINE 連結更新
 - `src/components/MortgageCalculator.tsx` - LINE 連結更新
-- `src/components/MillionDollarGiftTool.tsx` - 循環同步邏輯優化、sanitizeInput
-- `src/components/FinancialRealEstateTool.tsx` - sanitizeInput
-- `src/components/BigSmallReservoirTool.tsx` - sanitizeInput
-- `src/components/PointsDashboard.tsx` - body overflow 管理
-- `src/components/ReferralEngineModal.tsx` - body overflow 管理
-- `src/components/PWAInstallModal.tsx` - body overflow 管理
-- `src/components/ReportModal.tsx` - body overflow 管理
-- `src/index.css` - 全域移動端滾動優化
+- `src/components/MillionDollarGiftTool.tsx` - 循環同步邏輯優化、sanitizeInput、小抄追蹤
+- `src/components/FinancialRealEstateTool.tsx` - sanitizeInput、小抄追蹤
+- `src/components/BigSmallReservoirTool.tsx` - sanitizeInput、小抄追蹤
+- `src/components/TaxPlannerTool.tsx` - 小抄追蹤
+- `src/index.css` - iOS Safari 滾動優化
 - `src/App.tsx` - 傳遞 userId 給百萬禮物元件
 - `CLAUDE.md` - LINE 連結更新
 

@@ -73,7 +73,7 @@ const RedeemableItems = () => {
     fetchItems();
   }, []);
 
-  const fetchItems = async () => {
+  const fetchItems = async (showMessage = false) => {
     setLoading(true);
     try {
       const itemsQuery = query(
@@ -81,7 +81,7 @@ const RedeemableItems = () => {
         orderBy('sortOrder', 'asc')
       );
       const snapshot = await getDocs(itemsQuery);
-      
+
       const itemsList = [];
       snapshot.forEach((doc) => {
         itemsList.push({
@@ -102,7 +102,9 @@ const RedeemableItems = () => {
         totalRedeemed,
       });
 
-      message.success('兌換商品載入成功');
+      if (showMessage) {
+        message.success('兌換商品載入成功');
+      }
     } catch (error) {
       console.error('Error fetching items:', error);
       message.error('載入兌換商品失敗');
@@ -432,7 +434,7 @@ const RedeemableItems = () => {
           <p className="text-gray-500 mt-1">管理 UA 點數可兌換的商品與服務</p>
         </div>
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={fetchItems}>
+          <Button icon={<ReloadOutlined />} onClick={() => fetchItems(true)}>
             重新載入
           </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>

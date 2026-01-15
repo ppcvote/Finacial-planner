@@ -1,0 +1,146 @@
+# 
+
+> 版本：v1.0
+> 
+> 
+> 日期：2026-01-14
+> 
+> 適用範圍：前端應用 (Vercel)、後端資料庫 (Firebase)、自動化服務 (Zapier/Portaly)
+> 
+> 最高指導原則：Defense in Depth (縱深防禦) —— 從瀏覽器端到資料庫端的多層次保護。
+> 
+
+---
+
+## 1. 網路傳輸與基礎設施安全 (Network & Infrastructure)
+
+### 1.1 HTTP 安全標頭 (Security Headers) [強制]
+
+針對 Vercel 部署環境，必須透過 `vercel.json` 強制啟用以下安全標頭，以防禦 XSS、Clickjacking 與 MIME Sniffing 攻擊。
+
+| **Header 名稱** | **設定值** | **目的** |
+| --- | --- | --- |
+| **X-Frame-Options** | `DENY` | 禁止被嵌入 iframe，防禦 Clickjacking。 |
+| **X-Content-Type-Options** | `nosniff` | 禁止瀏覽器猜測檔案類型，防禦 MIME Sniffing。 |
+| **Referrer-Policy** | `strict-origin-when-cross-origin` | 保護用戶隱私，不洩露完整路徑。 |
+| **Strict-Transport-Security** | `max-age=63072000; includeSubDomains; preload` | 強制全站 HTTPS (HSTS)，時效 2 年。 |
+| **Permissions-Policy** | `camera=(), microphone=(), geolocation=()` | 禁用不必要的瀏覽器 API (麥克風/相機)。 |
+
+### 1.2 跨來源資源共享 (CORS) 策略
+
+- **靜態資源 (CDN)**：允許 `Access-Control-Allow-Origin: *` (如圖片、字體)。
+- **API 端點 (Cloud Functions)**：
+    - **禁止**使用  通配符。
+    - **必須**設置白名單，僅允許 `https://ultraadvisor.com` 與 `https://*.ultraadvisor.com` 呼叫。
+
+---
+
+## 2. 身份認證與授權 (Identity & Access)
+
+### 2.1 雙重裝置限制 (Concurrent Session Control)
+
+- **規格**：單一帳號僅允許同時在 **2 台裝置** (Session) 登入。
+- **實作**：
+    - 每次登入時，寫入 `deviceId` 與 `timestamp` 至 Firestore `users/{uid}/activeSessions`。
+    - 當 `activeSessions.length > 2`，系統將自動剔除最舊的 Session。
+    - 前端需監聽 Session 狀態，若被剔除則強制登出。
+
+### 2.2 密碼與權限政策
+
+- **密碼強度**：最少 8 字元，需包含英文大小寫與數字。
+- **暴力破解防護**：單一 IP 連續登入失敗 5 次，暫時封鎖 15 分鐘 (Firebase Auth 內建機制)。
+- **VIP 權限驗證**：
+    - **禁止**僅在前端判斷 `if (user.isVip)`。
+    - **必須**透過 Firebase Custom Claims 或 Firestore Security Rules 在後端進行二次驗證。
+
+---
+
+## 3. 資料庫安全 (Database Security)
+
+### 3.1 Firestore 安全規則 (Security Rules)
+
+所有資料庫存取必須通過以下規則驗證，**預設為拒絕 (Deny All)**。
+
+JavaScript
+
+`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 規則 1: 用戶只能讀寫「自己的」資料
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // 規則 2: 試算存檔繼承用戶權限
+    match /calculations/{userId}/{calcId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // 規則 3: 其他所有路徑禁止存取 (防禦爬蟲)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}`
+
+### 3.2 資料淨化 (Data Sanitization)
+
+- **寫入保護**：在寫入 Firestore 前，必須執行 `cleanDataForFirebase()`，過濾所有 `undefined` 值，防止資料庫崩潰。
+- **讀取過濾**：後端回傳資料時，不得包含敏感欄位 (如 `password_hash`, `stripe_token`)。
+
+---
+
+## 4. 前端應用安全 (Client-Side Security)
+
+### 4.1 敏感資訊管理 (Secrets Management)
+
+- **公開金鑰 (Public)**：`FIREBASE_API_KEY`, `AUTH_DOMAIN` 可存在於前端代碼中 (非機密)。
+- **私密金鑰 (Private)**：`SERVICE_ACCOUNT_KEY`, `ADMIN_SDK`, `PORTALY_SECRET` **絕對禁止**出現於前端 bundle。
+- **檢測機制**：CI/CD 流程中需加入 `git secrets` 或類似工具掃描，防止私鑰提交至 Repo。
+
+### 4.2 XSS 防禦
+
+- **輸入驗證**：所有用戶輸入 (Input) 需進行長度與型別檢查。
+- **輸出編碼**：React 預設會對變數進行 Escape，**禁止**使用 `dangerouslySetInnerHTML` 除非經過嚴格的 Sanitize (如使用 DOMPurify)。
+
+---
+
+## 5. 資料隱私與合規 (Privacy & Compliance)
+
+### 5.1 個人資料保護 (PII)
+
+- **最小化收集**：僅收集必要的 Email 與暱稱，不收集真實姓名、身分證號或信用卡號 (金流由 Portaly 託管)。
+- **資料權利**：需提供「匯出資料」與「刪除帳號」功能 (GDPR Right to be Forgotten)。
+
+### 5.2 日誌與稽核 (Logging)
+
+- **關鍵行為記錄**：任何「權限變更」、「大量匯出」、「登入失敗」皆需記錄於後端日誌。
+- **日誌脫敏**：日誌中不得包含用戶密碼或明文 PII。
+
+---
+
+## 6. 應變與維運 (Incident Response)
+
+### 6.1 安全事件分級
+
+| **等級** | **定義** | **響應時間 (SLA)** |
+| --- | --- | --- |
+| **P0 (Critical)** | 資料外洩、系統被入侵、核心服務中斷 | < 1 小時 |
+| **P1 (High)** | 權限繞過、部分功能失效 | < 4 小時 |
+| **P2 (Medium)** | 瀏覽器警告、非核心 Bug | < 24 小時 |
+
+### 6.2 漏洞修補流程
+
+1. **確認**：重現漏洞並評估影響範圍。
+2. **修復**：在 Dev 環境修復並通過測試。
+3. **部署**：緊急部署至 Prod 環境。
+4. **公告**：若涉及個資，需於 72 小時內通知受影響用戶。
+
+---
+
+### 📝 總指揮簽核
+
+- **核准人**：[總指揮]
+- **生效日期**：2026-01-14
+- **下次審查**：2026-04-14 (每季審查)

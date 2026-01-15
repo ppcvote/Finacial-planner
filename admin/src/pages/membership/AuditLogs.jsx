@@ -110,7 +110,7 @@ const AuditLogs = () => {
     fetchLogs();
   }, [filters]);
 
-  const fetchLogs = async () => {
+  const fetchLogs = async (showMessage = false) => {
     setLoading(true);
     try {
       let logsQuery = query(
@@ -120,10 +120,10 @@ const AuditLogs = () => {
       );
 
       const snapshot = await getDocs(logsQuery);
-      
+
       let logsList = [];
       const adminSet = new Set();
-      
+
       snapshot.forEach((doc) => {
         const data = doc.data();
         logsList.push({
@@ -179,7 +179,9 @@ const AuditLogs = () => {
         thisWeek: weekCount,
       });
 
-      message.success('操作日誌載入成功');
+      if (showMessage) {
+        message.success('操作日誌載入成功');
+      }
     } catch (error) {
       console.error('Error fetching logs:', error);
       message.error('載入操作日誌失敗');
@@ -336,7 +338,7 @@ const AuditLogs = () => {
           <p className="text-gray-500 mt-1">追蹤所有管理員操作紀錄</p>
         </div>
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={fetchLogs}>
+          <Button icon={<ReloadOutlined />} onClick={() => fetchLogs(true)}>
             重新載入
           </Button>
           <Button icon={<ExportOutlined />} onClick={handleExport}>

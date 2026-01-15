@@ -85,7 +85,7 @@ const MembershipTiers = () => {
     fetchTiers();
   }, []);
 
-  const fetchTiers = async () => {
+  const fetchTiers = async (showMessage = false) => {
     setLoading(true);
     try {
       const tiersQuery = query(
@@ -93,7 +93,7 @@ const MembershipTiers = () => {
         orderBy('priority', 'asc')
       );
       const snapshot = await getDocs(tiersQuery);
-      
+
       const tiersList = [];
       snapshot.forEach((doc) => {
         tiersList.push({
@@ -106,11 +106,11 @@ const MembershipTiers = () => {
 
       // 計算統計
       const activeCount = tiersList.filter(t => t.isActive).length;
-      
+
       // 取得每個身分組的用戶數
       const usersSnapshot = await getDocs(collection(db, 'users'));
       const usersPerTier = {};
-      
+
       usersSnapshot.forEach((doc) => {
         const userData = doc.data();
         const tierId = userData.primaryTierId || 'trial';
@@ -123,7 +123,9 @@ const MembershipTiers = () => {
         usersPerTier,
       });
 
-      message.success('身分組資料載入成功');
+      if (showMessage) {
+        message.success('身分組資料載入成功');
+      }
     } catch (error) {
       console.error('Error fetching tiers:', error);
       message.error('載入身分組資料失敗');
@@ -497,7 +499,7 @@ const MembershipTiers = () => {
           <p className="text-gray-500 mt-1">管理會員身分組的權限與設定</p>
         </div>
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={fetchTiers}>
+          <Button icon={<ReloadOutlined />} onClick={() => fetchTiers(true)}>
             重新載入
           </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>

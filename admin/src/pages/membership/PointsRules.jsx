@@ -97,7 +97,7 @@ const PointsRules = () => {
     fetchRules();
   }, []);
 
-  const fetchRules = async () => {
+  const fetchRules = async (showMessage = false) => {
     setLoading(true);
     try {
       const rulesQuery = query(
@@ -105,7 +105,7 @@ const PointsRules = () => {
         orderBy('priority', 'asc')
       );
       const snapshot = await getDocs(rulesQuery);
-      
+
       const rulesList = [];
       snapshot.forEach((doc) => {
         rulesList.push({
@@ -137,7 +137,9 @@ const PointsRules = () => {
         totalPointsIssued: totalIssued,
       });
 
-      message.success('點數規則載入成功');
+      if (showMessage) {
+        message.success('點數規則載入成功');
+      }
     } catch (error) {
       console.error('Error fetching rules:', error);
       message.error('載入點數規則失敗');
@@ -385,7 +387,7 @@ const PointsRules = () => {
           >
             更新推薦獎勵
           </Button>
-          <Button icon={<ReloadOutlined />} onClick={fetchRules}>
+          <Button icon={<ReloadOutlined />} onClick={() => fetchRules(true)}>
             重新載入
           </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
