@@ -57,27 +57,36 @@
 | 槓桿與套利 | 資產配置 |
 | 現金流防禦 | 風險控管 |
 
-#### 4. 存檔狀態指示器
-- 新增 `SaveStatusIndicator` 元件
-- 五種狀態：已同步、儲存中、未儲存、錯誤、離線
-- 收合時顯示圓點，展開時顯示完整文字
+#### 4. 存檔機制強化
+- **自動存檔**：資料變更後 10 秒自動儲存至雲端
+- **手動存檔**：點擊「點擊儲存」按鈕可立即存檔（不需等待 10 秒）
+- **狀態指示器**：
+  - 🟢 已同步（綠色）- 資料已儲存
+  - 🟡 點擊儲存（琥珀色，可點擊）- 有未儲存變更
+  - 🔵 儲存中...（藍色動畫）- 正在儲存
+  - 🔴 儲存失敗（紅色，可點擊重試）- 發生錯誤
+- 收合時顯示圓點（可點擊），展開時顯示完整文字與按鈕
 
 #### 5. 升級引導 Modal
 - 點擊無權限的 PRO 工具時彈出升級引導
 - 顯示工具功能亮點和 PRO 會員價值
 - CTA 按鈕導向付款頁面
 
+#### 5. Ultra Advisor LOGO
+- 側邊欄使用正確的 SVG LOGO（藍紅曲線 + 紫色橫槓）
+- 取代原本的閃電圖示
+
 #### 新增檔案
 - `src/constants/tools.ts` - 工具定義常數
 - `src/utils/membership.ts` - 會員權限判斷
-- `src/components/PlannerSidebar.tsx` - 可收合側邊欄
+- `src/components/PlannerSidebar.tsx` - 可收合側邊欄（含 UltraLogo SVG）
 - `src/components/NavItem.tsx` - 導航項目元件
-- `src/components/SaveStatusIndicator.tsx` - 存檔狀態指示器
+- `src/components/SaveStatusIndicator.tsx` - 存檔狀態指示器（支援手動存檔）
 - `src/components/UpgradeModal.tsx` - 升級引導 Modal
 - `src/hooks/useAutoSave.ts` - 自動存檔 Hook（備用）
 
 #### 修改檔案
-- `src/App.tsx` - 整合新元件、更新分類用語
+- `src/App.tsx` - 整合新元件、新增 `hasUnsavedChanges` 狀態、手動存檔函數
 - `tailwind.config.js` - 新增動畫配置
 
 ---
