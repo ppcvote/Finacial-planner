@@ -25,6 +25,9 @@ const LOGO_URL = "https://lh3.googleusercontent.com/d/1CEFGRByRM66l-4sMMM78LUBUv
 const COMMUNITY_LINK = "https://line.me/ti/g2/9Cca20iCP8J0KrmVRg5GOe1n5dSatYKO8ETTHw?utm_source=invitation&utm_medium=link_copy&utm_campaign=default";
 const LINE_OFFICIAL_ACCOUNT = "https://line.me/R/ti/p/@ultraadvisor";
 
+// 🔥 註冊頁面路徑（LINE 免費訊息額度已滿，改導向網頁註冊）
+const SIGNUP_PATH = '/register';
+
 // 🔥 管理員後台網址
 const ADMIN_URL = "https://admin.ultra-advisor.tw/secret-admin-ultra-2026";
 
@@ -932,8 +935,10 @@ export function LandingPage({ onStart, onSignup, onHome }) {
     };
   }, []);
 
+  // 🔥 LINE 免費訊息額度已滿，改導向網頁註冊
   const handleFreeTrial = () => {
-    window.open(LINE_OFFICIAL_ACCOUNT, '_blank');
+    window.history.pushState({}, '', SIGNUP_PATH);
+    window.location.reload();
   };
 
   // ✅ 修改：檢查是否有影片可以播放
@@ -953,7 +958,9 @@ export function LandingPage({ onStart, onSignup, onHome }) {
 
   const handleSelectPlan = (plan) => {
     if (plan === 'free') {
-      window.open(LINE_OFFICIAL_ACCOUNT, '_blank');
+      // 🔥 LINE 免費訊息額度已滿，改導向網頁註冊
+      window.history.pushState({}, '', SIGNUP_PATH);
+      window.location.reload();
     } else {
       window.open('https://portaly.cc/GinRollBT', '_blank');
     }
@@ -1067,12 +1074,12 @@ export function LandingPage({ onStart, onSignup, onHome }) {
               社群
             </a>
             
-            {/* ✅ 登入按鈕 */}
-            <button 
-              onClick={onStart}
+            {/* ✅ 登入/註冊按鈕 - 統一導向註冊頁 */}
+            <button
+              onClick={handleFreeTrial}
               className="flex items-center gap-2 text-slate-400 hover:text-white font-bold transition-colors">
               <LogIn size={18} />
-              登入系統
+              登入 / 註冊
             </button>
             
             <button 
@@ -1083,18 +1090,18 @@ export function LandingPage({ onStart, onSignup, onHome }) {
             </button>
           </nav>
 
-          {/* ✅ 手機版按鈕 */}
+          {/* ✅ 手機版按鈕 - 統一導向註冊頁 */}
           <div className="md:hidden flex items-center gap-3">
-            <button 
-              onClick={onStart}
+            <button
+              onClick={handleFreeTrial}
               className="text-slate-400 hover:text-white font-bold text-sm">
               登入
             </button>
-            <button 
+            <button
               onClick={handleFreeTrial}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold text-sm
                        transition-all">
-              試用
+              註冊
             </button>
           </div>
         </div>

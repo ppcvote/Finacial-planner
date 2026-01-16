@@ -1,34 +1,20 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
-  Home,
   Calculator,
   TrendingUp,
-  DollarSign,
   Calendar,
   Percent,
   AlertTriangle,
-  Info,
-  ChevronRight,
-  ChevronDown,
-  ChevronUp,
   BarChart3,
   Table,
-  GitCompare,
   Zap,
   Car,
   Plane,
   Building2,
   PiggyBank,
-  Clock,
-  Target,
-  Sparkles,
   X,
-  CheckCircle2,
-  AlertCircle,
-  Coins,
   Banknote,
   Settings,
-  LineChart
 } from 'lucide-react';
 import { doc, updateDoc, increment } from 'firebase/firestore';
 import { auth, db } from '../firebase';
@@ -354,13 +340,13 @@ export default function MortgageCalculator() {
               <Calculator className="text-blue-400" size={24} />
             </div>
             <div>
-              <h1 
+              <h1
                 onClick={handleSecretClick}
                 className="text-lg md:text-xl font-black tracking-tight cursor-default select-none"
               >
                 智能房貸戰情室
               </h1>
-              <p className="text-slate-500 text-xs hidden md:block">精算每一分利息</p>
+              <h2 className="text-slate-500 text-xs hidden md:block">免費房貸計算機 - 精算每一分利息</h2>
             </div>
           </div>
           <span className="text-[10px] text-slate-500 bg-slate-800 px-2 py-1 rounded">
@@ -373,99 +359,121 @@ export default function MortgageCalculator() {
           
           {/* ===== 左側：輸入區 ===== */}
           <div className="lg:col-span-4 xl:col-span-3 space-y-3">
-            
-            {/* 貸款金額 */}
-            <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700/50">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-400 flex items-center gap-1">
-                  <Banknote size={12} /> 貸款數額
-                </span>
-                <span className="text-slate-500 text-xs">萬元</span>
+
+            {/* 手機版：2x2 網格佈局 */}
+            <div className="grid grid-cols-2 gap-2 lg:hidden">
+              {/* 貸款金額 - 精簡版 */}
+              <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/50">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <Banknote size={10} /> 貸款
+                  </span>
+                  <span className="text-slate-500 text-[10px]">萬元</span>
+                </div>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={loanAmount}
+                  onChange={(e) => setLoanAmount(Number(e.target.value))}
+                  className="w-full bg-transparent text-2xl font-black text-white text-right focus:outline-none border-b border-slate-600 focus:border-blue-500 pb-1"
+                />
               </div>
-              <input
-                type="number"
-                inputMode="decimal"
-                value={loanAmount}
-                onChange={(e) => setLoanAmount(Number(e.target.value))}
-                className="w-full bg-transparent text-3xl font-black text-white text-right focus:outline-none border-b-2 border-slate-600 focus:border-blue-500 pb-1 mb-2"
-              />
-              <input
-                type="range"
-                min={100}
-                max={5000}
-                step={50}
-                value={loanAmount}
-                onChange={(e) => setLoanAmount(Number(e.target.value))}
-                className="w-full h-1.5 bg-slate-700 rounded-full accent-blue-500 cursor-pointer"
-              />
+
+              {/* 利率 - 精簡版 */}
+              <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/50">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <Percent size={10} /> 利率
+                  </span>
+                  <span className="text-slate-500 text-[10px]">%/年</span>
+                </div>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step={0.01}
+                  value={interestRate}
+                  onChange={(e) => setInterestRate(Number(e.target.value))}
+                  className="w-full bg-transparent text-2xl font-black text-amber-400 text-right focus:outline-none border-b border-slate-600 focus:border-amber-500 pb-1"
+                />
+              </div>
+
+              {/* 期限 - 精簡版 */}
+              <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/50">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <Calendar size={10} /> 期限
+                  </span>
+                  <span className="text-slate-500 text-[10px]">年</span>
+                </div>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={loanTerm}
+                  onChange={(e) => setLoanTerm(Number(e.target.value))}
+                  className="w-full bg-transparent text-2xl font-black text-emerald-400 text-right focus:outline-none border-b border-slate-600 focus:border-emerald-500 pb-1"
+                />
+              </div>
+
+              {/* 付款方式 - 精簡版 */}
+              <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/50">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                    <Settings size={10} /> 付款
+                  </span>
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setRepaymentMethod('equal_payment')}
+                    className={`flex-1 py-1.5 rounded text-[10px] font-bold transition-all ${
+                      repaymentMethod === 'equal_payment'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-slate-700 text-slate-400'
+                    }`}
+                  >
+                    本息
+                  </button>
+                  <button
+                    onClick={() => setRepaymentMethod('equal_principal')}
+                    className={`flex-1 py-1.5 rounded text-[10px] font-bold transition-all ${
+                      repaymentMethod === 'equal_principal'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-slate-700 text-slate-400'
+                    }`}
+                  >
+                    本金
+                  </button>
+                </div>
+              </div>
             </div>
 
-            {/* 利率 */}
-            <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700/50">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-400 flex items-center gap-1">
-                  <Percent size={12} /> 利率%
-                </span>
-                <span className="text-slate-500 text-xs">/ 年</span>
-              </div>
-              <input
-                type="number"
-                inputMode="decimal"
-                step={0.01}
-                value={interestRate}
-                onChange={(e) => setInterestRate(Number(e.target.value))}
-                className="w-full bg-transparent text-3xl font-black text-amber-400 text-right focus:outline-none border-b-2 border-slate-600 focus:border-amber-500 pb-1 mb-2"
-              />
+            {/* 手機版：快速選項列 */}
+            <div className="lg:hidden">
+              {/* 利率快捷 */}
               <div className="flex gap-1 mb-2">
                 {ratePresets.map((p) => (
                   <button
                     key={p.label}
                     onClick={() => setInterestRate(p.rate)}
-                    className={`flex-1 py-1.5 rounded text-xs font-bold transition-all ${
+                    className={`flex-1 py-1 rounded text-[10px] font-medium transition-all ${
                       interestRate === p.rate
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                        ? 'bg-amber-500/80 text-white'
+                        : 'bg-slate-800 text-slate-400'
                     }`}
                   >
-                    {p.label} {p.rate}%
+                    {p.label}
                   </button>
                 ))}
               </div>
-              <input
-                type="range"
-                min={0.5}
-                max={8}
-                step={0.05}
-                value={interestRate}
-                onChange={(e) => setInterestRate(Number(e.target.value))}
-                className="w-full h-1.5 bg-slate-700 rounded-full accent-amber-500 cursor-pointer"
-              />
-            </div>
-
-            {/* 期限 */}
-            <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700/50">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-400 flex items-center gap-1">
-                  <Calendar size={12} /> 期限
-                </span>
-                <span className="text-slate-500 text-xs">年度</span>
-              </div>
-              <input
-                type="number"
-                inputMode="numeric"
-                value={loanTerm}
-                onChange={(e) => setLoanTerm(Number(e.target.value))}
-                className="w-full bg-transparent text-3xl font-black text-emerald-400 text-right focus:outline-none border-b-2 border-slate-600 focus:border-emerald-500 pb-1 mb-2"
-              />
+              {/* 期限快捷 */}
               <div className="flex gap-1">
                 {termPresets.map((t) => (
                   <button
                     key={t}
                     onClick={() => setLoanTerm(t)}
-                    className={`flex-1 py-1.5 rounded text-xs font-bold transition-all ${
+                    className={`flex-1 py-1 rounded text-[10px] font-medium transition-all ${
                       loanTerm === t
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                        ? 'bg-emerald-500/80 text-white'
+                        : 'bg-slate-800 text-slate-400'
                     }`}
                   >
                     {t}年
@@ -474,59 +482,162 @@ export default function MortgageCalculator() {
               </div>
             </div>
 
-            {/* 還款方式 + 額外還款 - 折疊 */}
-            <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700/50 space-y-3">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span className="flex items-center gap-1"><Settings size={12} /> 付款</span>
-                <span>每月</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setRepaymentMethod('equal_payment')}
-                  className={`py-2 rounded text-xs font-bold transition-all ${
-                    repaymentMethod === 'equal_payment'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-slate-700 text-slate-400'
-                  }`}
-                >
-                  本息均攤
-                </button>
-                <button
-                  onClick={() => setRepaymentMethod('equal_principal')}
-                  className={`py-2 rounded text-xs font-bold transition-all ${
-                    repaymentMethod === 'equal_principal'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-slate-700 text-slate-400'
-                  }`}
-                >
-                  本金均攤
-                </button>
-              </div>
-              
-              {/* 額外付款 */}
-              <div>
-                <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-                  <span className="flex items-center gap-1"><Zap size={12} /> 額外付款</span>
-                  <span>每月</span>
+            {/* 桌面版：原有完整佈局 */}
+            <div className="hidden lg:block space-y-3">
+              {/* 貸款金額 */}
+              <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700/50">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                    <Banknote size={12} /> 貸款數額
+                  </span>
+                  <span className="text-slate-500 text-xs">萬元</span>
                 </div>
                 <input
                   type="number"
                   inputMode="decimal"
-                  value={extraMonthly}
-                  onChange={(e) => setExtraMonthly(Number(e.target.value))}
-                  placeholder="0"
-                  className="w-full bg-slate-900/50 border border-slate-600 rounded px-3 py-2 text-right text-white text-sm focus:outline-none focus:border-yellow-500"
+                  value={loanAmount}
+                  onChange={(e) => setLoanAmount(Number(e.target.value))}
+                  className="w-full bg-transparent text-3xl font-black text-white text-right focus:outline-none border-b-2 border-slate-600 focus:border-blue-500 pb-1 mb-2"
+                />
+                <input
+                  type="range"
+                  min={100}
+                  max={5000}
+                  step={50}
+                  value={loanAmount}
+                  onChange={(e) => setLoanAmount(Number(e.target.value))}
+                  className="w-full h-1.5 bg-slate-700 rounded-full accent-blue-500 cursor-pointer"
                 />
               </div>
 
-              {extraMonthly > 0 && (
-                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded p-2 text-xs">
-                  <p className="text-emerald-400">✓ 提前還款效益</p>
-                  <p className="text-emerald-300 text-[10px] mt-1">
-                    預計提早 {Math.floor((calculations.yearlySchedule.length * 12 - calculations.actualMonths) / 12)} 年還清
-                  </p>
+              {/* 利率 */}
+              <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700/50">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                    <Percent size={12} /> 利率%
+                  </span>
+                  <span className="text-slate-500 text-xs">/ 年</span>
                 </div>
-              )}
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step={0.01}
+                  value={interestRate}
+                  onChange={(e) => setInterestRate(Number(e.target.value))}
+                  className="w-full bg-transparent text-3xl font-black text-amber-400 text-right focus:outline-none border-b-2 border-slate-600 focus:border-amber-500 pb-1 mb-2"
+                />
+                <div className="flex gap-1 mb-2">
+                  {ratePresets.map((p) => (
+                    <button
+                      key={p.label}
+                      onClick={() => setInterestRate(p.rate)}
+                      className={`flex-1 py-1.5 rounded text-xs font-bold transition-all ${
+                        interestRate === p.rate
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                      }`}
+                    >
+                      {p.label} {p.rate}%
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="range"
+                  min={0.5}
+                  max={8}
+                  step={0.05}
+                  value={interestRate}
+                  onChange={(e) => setInterestRate(Number(e.target.value))}
+                  className="w-full h-1.5 bg-slate-700 rounded-full accent-amber-500 cursor-pointer"
+                />
+              </div>
+
+              {/* 期限 */}
+              <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700/50">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                    <Calendar size={12} /> 期限
+                  </span>
+                  <span className="text-slate-500 text-xs">年度</span>
+                </div>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={loanTerm}
+                  onChange={(e) => setLoanTerm(Number(e.target.value))}
+                  className="w-full bg-transparent text-3xl font-black text-emerald-400 text-right focus:outline-none border-b-2 border-slate-600 focus:border-emerald-500 pb-1 mb-2"
+                />
+                <div className="flex gap-1">
+                  {termPresets.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setLoanTerm(t)}
+                      className={`flex-1 py-1.5 rounded text-xs font-bold transition-all ${
+                        loanTerm === t
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                      }`}
+                    >
+                      {t}年
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 還款方式 + 額外還款 */}
+              <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700/50 space-y-3">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="flex items-center gap-1"><Settings size={12} /> 付款</span>
+                  <span>每月</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setRepaymentMethod('equal_payment')}
+                    className={`py-2 rounded text-xs font-bold transition-all ${
+                      repaymentMethod === 'equal_payment'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-slate-700 text-slate-400'
+                    }`}
+                  >
+                    本息均攤
+                  </button>
+                  <button
+                    onClick={() => setRepaymentMethod('equal_principal')}
+                    className={`py-2 rounded text-xs font-bold transition-all ${
+                      repaymentMethod === 'equal_principal'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-slate-700 text-slate-400'
+                    }`}
+                  >
+                    本金均攤
+                  </button>
+                </div>
+
+                {/* 額外付款 */}
+                <div>
+                  <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                    <span className="flex items-center gap-1"><Zap size={12} /> 額外付款</span>
+                    <span>每月</span>
+                  </div>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={extraMonthly}
+                    onChange={(e) => setExtraMonthly(Number(e.target.value))}
+                    placeholder="0"
+                    className="w-full bg-slate-900/50 border border-slate-600 rounded px-3 py-2 text-right text-white text-sm focus:outline-none focus:border-yellow-500"
+                  />
+                </div>
+
+                {extraMonthly > 0 && (
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded p-2 text-xs">
+                    <p className="text-emerald-400">✓ 提前還款效益</p>
+                    <p className="text-emerald-300 text-[10px] mt-1">
+                      預計提早 {Math.floor((loanTerm * 12 - calculations.actualMonths) / 12)} 年還清
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 通貨膨脹率 */}
@@ -600,7 +711,7 @@ export default function MortgageCalculator() {
                     <div className="flex items-center justify-end gap-4 mb-3 text-xs">
                       <span className="flex items-center gap-1.5">
                         <span className="w-3 h-3 rounded" style={{ backgroundColor: '#ef4444' }}></span>
-                        總利率
+                        累計利息
                       </span>
                       <span className="flex items-center gap-1.5">
                         <span className="w-3 h-3 rounded" style={{ backgroundColor: '#86efac' }}></span>
@@ -739,22 +850,34 @@ export default function MortgageCalculator() {
                         {/* X 軸 */}
                         <line x1="40" y1="310" x2="780" y2="310" stroke="#475569" strokeWidth="1" />
                         
-                        {/* X 軸標籤 */}
-                        {[0, 5, 10, 15, 20, 25, 30].filter(y => y <= loanTerm).map((year, i, arr) => {
-                          const x = 40 + (year / loanTerm) * 740;
-                          return (
-                            <text 
-                              key={year}
-                              x={x} 
-                              y="325" 
-                              fill="#64748b" 
-                              fontSize="11" 
-                              textAnchor="middle"
-                            >
-                              {year}
-                            </text>
-                          );
-                        })}
+                        {/* X 軸標籤 - 動態計算間距 */}
+                        {(() => {
+                          // 根據期限動態計算標籤間距
+                          const step = loanTerm <= 20 ? 5 : loanTerm <= 30 ? 5 : 10;
+                          const labels = [];
+                          for (let y = 0; y <= loanTerm; y += step) {
+                            labels.push(y);
+                          }
+                          // 確保最後一個標籤是期限年份
+                          if (labels[labels.length - 1] !== loanTerm) {
+                            labels.push(loanTerm);
+                          }
+                          return labels.map((year) => {
+                            const x = 40 + (year / loanTerm) * 740;
+                            return (
+                              <text
+                                key={year}
+                                x={x}
+                                y="325"
+                                fill="#64748b"
+                                fontSize="11"
+                                textAnchor="middle"
+                              >
+                                {year}
+                              </text>
+                            );
+                          });
+                        })()}
                         
                         {/* 年標籤 */}
                         <text x="20" y="325" fill="#64748b" fontSize="11">年</text>
@@ -771,7 +894,7 @@ export default function MortgageCalculator() {
                         <tr className="text-slate-400 border-b border-slate-700 text-xs">
                           <th className="text-center py-2 px-2 font-medium">年</th>
                           <th className="text-right py-2 px-3 font-medium">付款總計</th>
-                          <th className="text-right py-2 px-3 font-medium">總利率</th>
+                          <th className="text-right py-2 px-3 font-medium">累計利息</th>
                           <th className="text-right py-2 px-3 font-medium">餘貸款額</th>
                           <th className="text-right py-2 px-3 font-medium">
                             <span className="text-purple-400">支付</span>
@@ -847,7 +970,7 @@ export default function MortgageCalculator() {
               </div>
               <div className="bg-red-900/30 rounded-xl p-4 border border-red-500/30">
                 <p className="text-xs text-red-300 mb-1 flex items-center gap-1">
-                  <AlertTriangle size={12} /> 總利率
+                  <AlertTriangle size={12} /> 累計利息
                 </p>
                 <p className="text-2xl md:text-3xl font-black text-red-400 font-mono">
                   {formatMoneyFull(Math.round(calculations.totalInterest))}
@@ -907,17 +1030,18 @@ export default function MortgageCalculator() {
             {/* CTA */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-3">
               <div>
-                <p className="text-blue-100 text-sm">想找到最適合的房貸方案？</p>
-                <p className="text-white font-bold">讓專業顧問為您量身規劃</p>
+                <p className="text-blue-100 text-sm">想使用更多專業理財工具？</p>
+                <p className="text-white font-bold">免費註冊試用 7 天完整功能</p>
               </div>
-              <a
-                href="https://line.me/R/ti/p/@ultraadvisor"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full md:w-auto px-6 py-2.5 bg-white text-blue-600 rounded-lg font-bold hover:bg-blue-50 transition-all text-sm text-center inline-block"
+              <button
+                onClick={() => {
+                  window.history.pushState({}, '', '/register');
+                  window.location.reload();
+                }}
+                className="w-full md:w-auto px-6 py-2.5 bg-white text-blue-600 rounded-lg font-bold hover:bg-blue-50 transition-all text-sm text-center"
               >
-                預約免費諮詢
-              </a>
+                免費註冊試用
+              </button>
             </div>
           </div>
         </div>

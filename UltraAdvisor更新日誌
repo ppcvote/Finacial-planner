@@ -2,6 +2,25 @@
 
 ---
 
+## 2026-01-16
+
+### 房貸計算機優化（漏斗第一層）
+
+免費對外工具優化，提升專業形象與載入速度。
+
+#### 變更項目
+| 項目 | 說明 |
+|------|------|
+| **用語修正** | 「總利率」→「累計利息」（更精確的專業用語） |
+| **移除未使用 imports** | 刪除 14 個未使用圖示，減少 bundle size |
+| **提前還清計算修正** | 修正公式錯誤：`yearlySchedule.length * 12` → `loanTerm * 12` |
+| **X軸標籤動態化** | 支援 20/30/40 年期限，自動調整間距並顯示最終年份 |
+
+#### 檔案變更
+- `src/components/MortgageCalculator.tsx`
+
+---
+
 ## 2026-01-15
 
 ### 資訊安全強化（P0/P1 優先級）
@@ -16,12 +35,19 @@
 - `Strict-Transport-Security: max-age=63072000` - 強制 HTTPS (HSTS)
 - `Permissions-Policy: camera=(), microphone=(), geolocation=()` - 禁用不必要 API
 
-#### 2. Firestore Rules 收緊
-- 系統配置集合（membershipTiers, pointsRules, missions 等）改為**唯讀**
-- 用戶資料改為 `isOwner(userId)` 嚴格驗證
-- 點數帳本、兌換訂單僅允許讀取自己的資料
-- 管理員/系統資料完全鎖定（admins, backups, auditLogs, rateLimits）
+#### 2. Firestore Rules 收緊 + 管理員認證系統
+- 新增 `isAdmin()` helper function，透過 `admins/{uid}` 集合驗證身份
+- 系統配置集合（membershipTiers, pointsRules, missions 等）：公開讀取，**管理員可寫**
+- 用戶資料改為 `isOwner(userId) || isAdmin()` 驗證
+- 點數帳本、兌換訂單：自己或管理員可讀
+- `admins` 集合：登入者可讀（驗證身份用），僅後端可寫（防止自行提權）
 - 預設規則改為 `allow read, write: if false`
+
+**管理員設定方式**：
+1. 前往 Firebase Console → Firestore
+2. 新增 `admins` 集合
+3. 以用戶 UID 為文件 ID 建立文件
+4. 欄位：`email`, `role: "admin"`, `createdAt`
 
 #### 3. Cloud Functions CORS 白名單
 - 新增 `ALLOWED_ORIGINS` 白名單陣列

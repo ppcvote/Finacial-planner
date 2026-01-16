@@ -1,0 +1,20 @@
+# Ultra Advisor - robots.txt
+# https://ultra-advisor.tw
+
+User-agent: *
+Allow: /
+Allow: /calculator
+
+# 禁止索引私密頁面
+Disallow: /admin/
+Disallow: /signup-secret
+Disallow: /liff/
+Disallow: /login
+Disallow: /api/
+
+# 禁止索引資源檔案
+Disallow: /*.json$
+Disallow: /*.js.map$
+
+# Sitemap 位置
+Sitemap: https://ultra-advisor.tw/sitemap.xml

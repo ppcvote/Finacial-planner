@@ -23,12 +23,13 @@ const NavItem: React.FC<NavItemProps> = ({
 }) => {
   // 根據狀態決定樣式
   const getStyles = () => {
+    // 先檢查權限 - 沒有權限的工具永遠不顯示為選中狀態
+    if (!hasAccess) {
+      // PRO 工具但無權限：淡化顯示（鎖定狀態）
+      return 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50';
+    }
     if (isActive) {
       return 'bg-blue-600/20 text-blue-400 border border-blue-500/30';
-    }
-    if (!hasAccess) {
-      // PRO 工具但無權限：淡化但不是「鎖定」感
-      return 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50';
     }
     return 'text-slate-400 hover:text-white hover:bg-slate-800';
   };

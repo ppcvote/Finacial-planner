@@ -26,6 +26,14 @@
       ]
     },
     {
+      "collectionGroup": "missions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "order", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "pointsLedger",
       "queryScope": "COLLECTION",
       "fields": [

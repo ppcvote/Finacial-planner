@@ -53,6 +53,9 @@ import PublicCalculator from './pages/PublicCalculator';
 // 🆕 LIFF 註冊頁面
 import LiffRegister from './pages/LiffRegister';
 
+// 🆕 公開註冊頁面
+import RegisterPage from './pages/RegisterPage';
+
 const generateSessionId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
 
 const PrintStyles = () => (
@@ -127,6 +130,7 @@ export default function App() {
   const [isLoginRoute, setIsLoginRoute] = useState(false);
   const [isCalculatorRoute, setIsCalculatorRoute] = useState(false); // 🆕 傲創計算機路由
   const [isLiffRegisterRoute, setIsLiffRegisterRoute] = useState(false); // 🆕 LIFF 註冊路由
+  const [isRegisterRoute, setIsRegisterRoute] = useState(false); // 🆕 公開註冊路由
   const [clientLoading, setClientLoading] = useState(false); 
   const [currentClient, setCurrentClient] = useState<any>(null);
   // 🆕 activeTab 持久化：重新整理後保持在原工具介面
@@ -324,8 +328,9 @@ export default function App() {
       setIsSecretSignupRoute(path === '/signup-secret');
       setIsLoginRoute(path === '/login');
       setIsCalculatorRoute(path === '/calculator');
-      setIsLiffRegisterRoute(path === '/liff/register'); // 🆕 LIFF 註冊
-      if (path === '/') { setIsSecretSignupRoute(false); setIsLoginRoute(false); setIsCalculatorRoute(false); setIsLiffRegisterRoute(false); }
+      setIsLiffRegisterRoute(path === '/liff/register');
+      setIsRegisterRoute(path === '/register'); // 🆕 公開註冊
+      if (path === '/') { setIsSecretSignupRoute(false); setIsLoginRoute(false); setIsCalculatorRoute(false); setIsLiffRegisterRoute(false); setIsRegisterRoute(false); }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -336,7 +341,8 @@ export default function App() {
     if (path === '/signup-secret') setIsSecretSignupRoute(true);
     else if (path === '/login') setIsLoginRoute(true);
     else if (path === '/calculator') setIsCalculatorRoute(true);
-    else if (path === '/liff/register') setIsLiffRegisterRoute(true); // 🆕 LIFF 註冊
+    else if (path === '/liff/register') setIsLiffRegisterRoute(true);
+    else if (path === '/register') setIsRegisterRoute(true); // 🆕 公開註冊
     const timer = setTimeout(() => { setMinSplashTimePassed(true); }, 3000); 
     return () => clearTimeout(timer);
   }, []);
@@ -455,6 +461,28 @@ export default function App() {
     );
   }
 
+  // 🆕 公開註冊頁面（不需登入，跳過 SplashScreen）
+  if (isRegisterRoute) {
+    return (
+      <RegisterPage
+        onSuccess={() => {
+          setIsRegisterRoute(false);
+          setIsLoginRoute(true);
+          window.history.pushState({}, '', '/login');
+        }}
+        onBack={() => {
+          setIsRegisterRoute(false);
+          window.history.pushState({}, '', '/');
+        }}
+        onLogin={() => {
+          setIsRegisterRoute(false);
+          setIsLoginRoute(true);
+          window.history.pushState({}, '', '/login');
+        }}
+      />
+    );
+  }
+
   if (loading || !minSplashTimePassed) return <SplashScreen />;
 
   // 🆕 公開計算機（不需登入）
@@ -466,9 +494,10 @@ export default function App() {
           window.history.pushState({}, '', '/');
         }}
         onLogin={() => {
+          // 🔥 LINE 免費訊息額度已滿，改導向公開註冊頁
           setIsCalculatorRoute(false);
-          setIsLoginRoute(true);
-          window.history.pushState({}, '', '/login');
+          setIsRegisterRoute(true);
+          window.history.pushState({}, '', '/register');
         }}
       />
     );
