@@ -249,23 +249,23 @@ export const article: BlogArticle = {
         </ol>
       </div>
 
-      <h2 id="advisor-tips">八、給金融從業人員的建議</h2>
+      <h2 id="advisor-tips">八、購買前必須了解的事</h2>
 
       <div class="bg-purple-900/30 border border-purple-500/30 rounded-2xl p-6 my-8">
-        <h4 class="text-purple-400 font-bold mb-3">📋 話術建議</h4>
+        <h4 class="text-purple-400 font-bold mb-3">📋 購買儲蓄險前的重要提醒</h4>
         <p class="text-slate-300 mb-0">
-          「王太太，儲蓄險確實比定存利率高一點，但有幾件事我要先跟您說清楚：<br/><br/>
+          儲蓄險確實比定存利率高一點，但有幾件事需要了解：<br/><br/>
           第一，這筆錢要放 6 年以上才划算，中途解約會虧本金。<br/>
-          第二，我們看的是 IRR 內部報酬率，不是宣告利率，實際報酬大約是 2% 左右。<br/>
-          第三，如果您有可能需要用到這筆錢，放定存會更安全。<br/><br/>
-          您確定這筆錢 6 年內不會動用嗎？如果確定，我再幫您詳細規劃。」
+          第二，要看的是 IRR 內部報酬率，不是宣告利率，實際報酬大約是 2% 左右。<br/>
+          第三，如果有可能需要用到這筆錢，放定存會更安全。<br/><br/>
+          購買前請確認這筆錢 6 年內不會動用！
         </p>
       </div>
 
       <div class="bg-blue-900/30 border border-blue-500/30 rounded-2xl p-6 my-8">
         <h4 class="text-blue-400 font-bold mb-3">🛠️ 財務規劃計算工具</h4>
         <p class="text-slate-300 mb-4">
-          使用傲創計算機，幫助客戶比較不同理財工具的報酬率，
+          使用免費的計算工具，比較不同理財工具的報酬率，
           做出最適合自己的選擇。
         </p>
         <a href="/calculator" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl transition-colors">

@@ -17,7 +17,7 @@ export const article: BlogArticle = {
     <article class="prose prose-invert max-w-none">
       <p class="lead text-xl text-slate-300 mb-8">
         2026 年房屋稅 2.0（囤房稅 2.0）正式上路，全國單一自住房屋稅率降至 1%！
-        本文整理房屋稅、地價稅的自用住宅申請條件與優惠稅率，幫助客戶合法節稅。
+        本文整理房屋稅、地價稅的自用住宅申請條件與優惠稅率，幫你合法節稅。
       </p>
 
       <div class="bg-green-900/30 border border-green-500/30 rounded-2xl p-6 my-8">
@@ -222,12 +222,11 @@ export const article: BlogArticle = {
       </table>
 
       <div class="bg-blue-900/30 border border-blue-500/30 rounded-2xl p-6 my-8">
-        <h4 class="text-blue-400 font-bold mb-3">💡 業務話術建議</h4>
+        <h4 class="text-blue-400 font-bold mb-3">💡 省錢小提醒</h4>
         <p class="text-slate-300 mb-0">
-          「林先生，您知道今年公告地價有調漲嗎？台北市調了 3.9%。
-          不過如果您還沒申請自用住宅稅率的話，地價稅可能會貴很多。
+          今年公告地價有調漲（台北市調了 3.9%），如果還沒申請自用住宅稅率的話，地價稅可能會貴很多。
           自用住宅稅率是 2‰，一般是 10‰ 起跳，差了 5 倍！
-          要不要我幫您確認一下有沒有申請？」
+          建議確認一下自己有沒有申請。
         </p>
       </div>
 
@@ -303,7 +302,7 @@ export const article: BlogArticle = {
       <div class="bg-blue-900/30 border border-blue-500/30 rounded-2xl p-6 my-8">
         <h4 class="text-blue-400 font-bold mb-3">🛠️ 房貸房產計算工具</h4>
         <p class="text-slate-300 mb-4">
-          使用傲創計算機，幫助客戶計算房貸負擔、
+          使用免費的房貸計算工具，
           評估購屋成本與持有稅費。
         </p>
         <a href="/calculator" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl transition-colors">

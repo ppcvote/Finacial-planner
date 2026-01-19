@@ -332,20 +332,20 @@ export const article: BlogArticle = {
       </p>
 
       <div class="bg-purple-900/30 border border-purple-500/30 rounded-2xl p-6 my-8">
-        <h4 class="text-purple-400 font-bold mb-3">📋 給金融從業人員的話術</h4>
+        <h4 class="text-purple-400 font-bold mb-3">📋 實際節稅試算範例</h4>
         <p class="text-slate-300 mb-0">
-          「張先生，您年薪 120 萬的話，扣掉免稅額、標準扣除額、薪資扣除額，
+          假設年薪 120 萬，扣掉免稅額、標準扣除額、薪資扣除額，
           所得淨額大約 73.6 萬，適用 12% 稅率，要繳大約 5.2 萬的稅。<br/><br/>
-          不過如果您有房貸，房貸利息最高可以扣 30 萬，
+          如果有房貸，房貸利息最高可以扣 30 萬，
           這樣所得淨額降到 43.6 萬，稅率變 5%，只要繳 2.18 萬，
-          一年可以省下 3 萬的稅喔！」
+          一年可以省下 3 萬的稅！
         </p>
       </div>
 
       <div class="bg-blue-900/30 border border-blue-500/30 rounded-2xl p-6 my-8">
         <h4 class="text-blue-400 font-bold mb-3">🛠️ 稅務試算工具</h4>
         <p class="text-slate-300 mb-4">
-          使用傲創計算機，幫助客戶快速試算所得稅、
+          使用免費的計算工具，快速試算所得稅、
           找出最佳的節稅方式。
         </p>
         <a href="/calculator" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl transition-colors">

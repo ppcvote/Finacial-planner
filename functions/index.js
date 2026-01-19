@@ -3558,4 +3558,155 @@ exports.updateOrderStatus = functions.https.onCall(async (data, context) => {
   }
 });
 
+// ==========================================
+// Blog SEO Prerender（為社交媒體爬蟲提供動態 meta tags）
+// ==========================================
+
+// 文章資料對照表（簡化版，僅供 OG meta 使用）
+const blogArticles = {
+  'mortgage-principal-vs-equal-payment': { title: '房貸還款方式比較：本金均攤 vs 本息均攤', category: 'mortgage', description: '詳細比較本金均攤與本息均攤的利息差異、月付金變化、適合對象。' },
+  'retirement-planning-basics': { title: '退休規劃入門：勞保勞退年金怎麼算？', category: 'retirement', description: '台灣勞保、勞退年金詳細解說。計算您的退休金缺口，規劃充足的退休生活。' },
+  'estate-tax-planning-2026': { title: '2026 遺產稅節稅完整攻略', category: 'tax', description: '2026年最新遺產稅免稅額1,333萬元。完整說明遺產稅計算方式、扣除額項目、累進稅率。' },
+  'compound-interest-power': { title: '複利的威力：25歲開始投資 vs 35歲', category: 'investment', description: '愛因斯坦說複利是世界第八大奇蹟。實際計算差距超過1000萬！' },
+  'how-to-use-mortgage-calculator': { title: '傲創計算機完整教學', category: 'tools', description: '3分鐘學會使用傲創計算機。免費試算本金均攤、本息均攤等進階功能。' },
+  'gift-tax-annual-exemption': { title: '2026 贈與稅免稅額完整攻略', category: 'tax', description: '2026年贈與稅免稅額244萬元。教您善用夫妻合計488萬免稅額度。' },
+  'credit-card-installment-2026': { title: '2026 信用卡分期零利率完整比較表', category: 'tools', description: '2026 年最新 14 家銀行信用卡分期零利率優惠比較。' },
+  'labor-insurance-pension-2026': { title: '2026 勞保勞退新制完整攻略', category: 'retirement', description: '2026 年勞保法定退休年齡正式調至 65 歲，基本工資調漲至 29,500 元。' },
+  'estate-gift-tax-quick-reference-2026': { title: '2026 遺產稅贈與稅免稅額速查表', category: 'tax', description: '2026 年遺產稅免稅額 1,333 萬、贈與稅免稅額 244 萬，完整整理稅率表。' },
+  'property-tax-self-use-residence-2026': { title: '2026 房屋稅地價稅自用住宅攻略', category: 'tax', description: '2026 年房屋稅 2.0 全國單一自住稅率降至 1%，地價稅自用住宅 2‰ 優惠稅率。' },
+  'bank-deposit-rates-comparison-2026': { title: '2026 台幣定存利率銀行比較表', category: 'investment', description: '2026 年 1 月最新台幣定存利率比較，最高 1.81%。' },
+  'nhi-supplementary-premium-2026': { title: '2026 健保補充保費完整攻略', category: 'tax', description: '健保補充保費費率 2.11%，單筆超過 2 萬就要扣。完整說明六大課徵項目。' },
+  'savings-insurance-vs-deposit-2026': { title: '2026 儲蓄險 vs 定存完整比較', category: 'investment', description: '用白話文解釋 IRR 內部報酬率、優缺點比較，幫你判斷什麼情況下儲蓄險比定存划算。' },
+  'mortgage-refinance-cost-2026': { title: '2026 房貸轉貸成本試算', category: 'mortgage', description: '房貸轉貸成本約 2.5～3 萬元，利差要多少才划算？' },
+  'income-tax-brackets-2026': { title: '2026 所得稅級距與扣除額速查表', category: 'tax', description: '2026 年報稅免稅額 10.1 萬、標準扣除額 13.6 萬、薪資扣除額 22.7 萬。' },
+  'high-dividend-etf-calendar-2026': { title: '2026 台股高股息 ETF 配息月曆', category: 'investment', description: '0056、00878、00919 配息時間、殖利率、選股邏輯分析，教你月月領息。' },
+};
+
+// 分類對應的 OG 圖片
+const categoryOgImages = {
+  mortgage: 'og-mortgage.png',
+  retirement: 'og-retirement.png',
+  tax: 'og-tax.png',
+  investment: 'og-investment.png',
+  tools: 'og-tools.png',
+  sales: 'og-sales.png',
+};
+
+// 爬蟲 User-Agent 檢測
+const crawlerUserAgents = [
+  'facebookexternalhit',
+  'Facebot',
+  'Twitterbot',
+  'LinkedInBot',
+  'WhatsApp',
+  'Slackbot',
+  'TelegramBot',
+  'Line',
+  'LineBot',
+  'line-poker',  // LINE URL Preview
+  'Googlebot',
+  'bingbot',
+  'Discordbot',
+  'applebot',
+  'PinterestBot',
+];
+
+function isCrawler(userAgent) {
+  if (!userAgent) return false;
+  return crawlerUserAgents.some(crawler => userAgent.toLowerCase().includes(crawler.toLowerCase()));
+}
+
+/**
+ * 部落格 SEO 預渲染
+ * 為社交媒體爬蟲返回帶有正確 meta tags 的 HTML
+ */
+exports.blogSeo = functions.https.onRequest(async (req, res) => {
+  const userAgent = req.headers['user-agent'] || '';
+  const path = req.path;
+
+  // 解析 slug
+  const match = path.match(/^\/blog\/([^/]+)\/?$/);
+  if (!match) {
+    // 不是文章頁面，返回 index.html
+    res.redirect('/');
+    return;
+  }
+
+  const slug = match[1];
+  const article = blogArticles[slug];
+
+  // 如果不是爬蟲，從 Firebase Hosting 的備用網址取得 index.html
+  if (!isCrawler(userAgent)) {
+    try {
+      // 使用 Firebase Hosting 的 .web.app 網址（不會觸發 rewrite）
+      const response = await axios.get('https://grbt-f87fa.web.app/index.html', {
+        timeout: 5000,
+      });
+      res.set('Content-Type', 'text/html');
+      res.set('Cache-Control', 'no-cache');
+      res.send(response.data);
+      return;
+    } catch (error) {
+      console.error('Error fetching index.html:', error.message);
+      // 失敗時使用 JavaScript redirect
+      res.set('Content-Type', 'text/html');
+      res.send(`<!DOCTYPE html>
+<html><head>
+<meta http-equiv="refresh" content="0; url=https://grbt-f87fa.web.app/blog/${slug}">
+</head><body></body></html>`);
+      return;
+    }
+  }
+
+  // 如果是爬蟲但文章不存在，使用預設值
+  const finalArticle = article || {
+    title: 'Ultra Advisor 理財知識庫',
+    category: 'tools',
+    description: '專業財務顧問工具與理財知識，幫助您做出更好的財務決策。',
+  };
+
+  // 為爬蟲返回完整的 meta tags
+  const ogImage = categoryOgImages[finalArticle.category] || 'og-image.png';
+  const fullUrl = `https://ultra-advisor.tw/blog/${slug}`;
+
+  const html = `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${finalArticle.title} | Ultra Advisor</title>
+  <meta name="description" content="${finalArticle.description}">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="${fullUrl}">
+  <meta property="og:title" content="${finalArticle.title}">
+  <meta property="og:description" content="${finalArticle.description}">
+  <meta property="og:image" content="https://ultra-advisor.tw/${ogImage}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="zh_TW">
+  <meta property="og:site_name" content="Ultra Advisor">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="${fullUrl}">
+  <meta name="twitter:title" content="${finalArticle.title}">
+  <meta name="twitter:description" content="${finalArticle.description}">
+  <meta name="twitter:image" content="https://ultra-advisor.tw/${ogImage}">
+
+  <link rel="canonical" href="${fullUrl}">
+</head>
+<body>
+  <h1>${finalArticle.title}</h1>
+  <p>${finalArticle.description}</p>
+  <p><a href="${fullUrl}">閱讀完整文章</a></p>
+</body>
+</html>`;
+
+  res.set('Content-Type', 'text/html');
+  res.set('Cache-Control', 'public, max-age=3600');
+  res.send(html);
+});
+
 console.log('Ultra Advisor Cloud Functions loaded');

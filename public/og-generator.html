@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OG Image Generator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans TC', sans-serif;
+      background: #1e1e1e;
+      padding: 40px;
+    }
+
+    .og-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 40px;
+      justify-content: center;
+    }
+
+    .og-card {
+      width: 1200px;
+      height: 630px;
+      border-radius: 0;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: white;
+    }
+
+    /* 房貸知識 - 藍綠漸層 */
+    .og-mortgage {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0d9488 100%);
+    }
+
+    /* 退休規劃 - 紫藍漸層 */
+    .og-retirement {
+      background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #7c3aed 100%);
+    }
+
+    /* 稅務傳承 - 深藍金漸層 */
+    .og-tax {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #b45309 100%);
+    }
+
+    /* 投資理財 - 綠色漸層 */
+    .og-investment {
+      background: linear-gradient(135deg, #052e16 0%, #166534 50%, #22c55e 100%);
+    }
+
+    /* 工具教學 - 藍紫漸層 */
+    .og-tools {
+      background: linear-gradient(135deg, #0c4a6e 0%, #1d4ed8 50%, #8b5cf6 100%);
+    }
+
+    /* 銷售技巧 - 紅橙漸層 */
+    .og-sales {
+      background: linear-gradient(135deg, #450a0a 0%, #b91c1c 50%, #f97316 100%);
+    }
+
+    .og-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background:
+        radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 40%);
+      pointer-events: none;
+    }
+
+    .og-content {
+      position: relative;
+      z-index: 1;
+      padding: 60px;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .og-header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .og-logo {
+      width: 60px;
+      height: 60px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: bold;
+      backdrop-filter: blur(10px);
+    }
+
+    .og-brand {
+      font-size: 24px;
+      font-weight: 600;
+      opacity: 0.9;
+    }
+
+    .og-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .og-icon {
+      width: 120px;
+      height: 120px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 60px;
+      margin-bottom: 40px;
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255,255,255,0.2);
+    }
+
+    .og-title {
+      font-size: 72px;
+      font-weight: 800;
+      margin-bottom: 20px;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      letter-spacing: 2px;
+    }
+
+    .og-subtitle {
+      font-size: 32px;
+      opacity: 0.85;
+      font-weight: 400;
+    }
+
+    .og-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      opacity: 0.7;
+      font-size: 20px;
+    }
+
+    .og-url {
+      font-weight: 500;
+    }
+
+    .og-tagline {
+      font-style: italic;
+    }
+
+    .label {
+      background: #333;
+      color: #fff;
+      padding: 10px 20px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .card-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* 縮放顯示用 */
+    .scaled {
+      transform: scale(0.4);
+      transform-origin: top left;
+      margin-bottom: -378px;
+      margin-right: -720px;
+    }
+  </style>
+</head>
+<body>
+  <h1 style="color: white; text-align: center; margin-bottom: 40px;">OG Image 預覽（右鍵 > 檢視 > 截圖）</h1>
+  <p style="color: #888; text-align: center; margin-bottom: 40px;">實際尺寸：1200 x 630 像素，下方為縮小預覽</p>
+
+  <div class="og-container">
+
+    <!-- 房貸知識 -->
+    <div class="card-wrapper">
+      <div class="label">og-mortgage.png</div>
+      <div class="og-card og-mortgage scaled">
+        <div class="og-content">
+          <div class="og-header">
+            <div class="og-logo">U</div>
+            <div class="og-brand">Ultra Advisor</div>
+          </div>
+          <div class="og-main">
+            <div class="og-icon">🏠</div>
+            <div class="og-title">房貸知識</div>
+            <div class="og-subtitle">本金均攤、本息均攤、轉貸成本完整解析</div>
+          </div>
+          <div class="og-footer">
+            <div class="og-url">ultra-advisor.tw/blog</div>
+            <div class="og-tagline">讓複雜的房貸變簡單</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 退休規劃 -->
+    <div class="card-wrapper">
+      <div class="label">og-retirement.png</div>
+      <div class="og-card og-retirement scaled">
+        <div class="og-content">
+          <div class="og-header">
+            <div class="og-logo">U</div>
+            <div class="og-brand">Ultra Advisor</div>
+          </div>
+          <div class="og-main">
+            <div class="og-icon">🎯</div>
+            <div class="og-title">退休規劃</div>
+            <div class="og-subtitle">勞保勞退、退休金試算、所得替代率分析</div>
+          </div>
+          <div class="og-footer">
+            <div class="og-url">ultra-advisor.tw/blog</div>
+            <div class="og-tagline">為美好退休生活做準備</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 稅務傳承 -->
+    <div class="card-wrapper">
+      <div class="label">og-tax.png</div>
+      <div class="og-card og-tax scaled">
+        <div class="og-content">
+          <div class="og-header">
+            <div class="og-logo">U</div>
+            <div class="og-brand">Ultra Advisor</div>
+          </div>
+          <div class="og-main">
+            <div class="og-icon">📋</div>
+            <div class="og-title">稅務傳承</div>
+            <div class="og-subtitle">遺產稅、贈與稅、所得稅完整攻略</div>
+          </div>
+          <div class="og-footer">
+            <div class="og-url">ultra-advisor.tw/blog</div>
+            <div class="og-tagline">合法節稅，聰明傳承</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 投資理財 -->
+    <div class="card-wrapper">
+      <div class="label">og-investment.png</div>
+      <div class="og-card og-investment scaled">
+        <div class="og-content">
+          <div class="og-header">
+            <div class="og-logo">U</div>
+            <div class="og-brand">Ultra Advisor</div>
+          </div>
+          <div class="og-main">
+            <div class="og-icon">📈</div>
+            <div class="og-title">投資理財</div>
+            <div class="og-subtitle">ETF、定存、儲蓄險比較與複利試算</div>
+          </div>
+          <div class="og-footer">
+            <div class="og-url">ultra-advisor.tw/blog</div>
+            <div class="og-tagline">用數據做出明智決策</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 工具教學 -->
+    <div class="card-wrapper">
+      <div class="label">og-tools.png</div>
+      <div class="og-card og-tools scaled">
+        <div class="og-content">
+          <div class="og-header">
+            <div class="og-logo">U</div>
+            <div class="og-brand">Ultra Advisor</div>
+          </div>
+          <div class="og-main">
+            <div class="og-icon">🔧</div>
+            <div class="og-title">工具教學</div>
+            <div class="og-subtitle">計算機使用教學與實用工具比較</div>
+          </div>
+          <div class="og-footer">
+            <div class="og-url">ultra-advisor.tw/blog</div>
+            <div class="og-tagline">免費好用的理財工具</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 銷售技巧 -->
+    <div class="card-wrapper">
+      <div class="label">og-sales.png</div>
+      <div class="og-card og-sales scaled">
+        <div class="og-content">
+          <div class="og-header">
+            <div class="og-logo">U</div>
+            <div class="og-brand">Ultra Advisor</div>
+          </div>
+          <div class="og-main">
+            <div class="og-icon">💼</div>
+            <div class="og-title">顧問專欄</div>
+            <div class="og-subtitle">財務顧問的專業知識與經驗分享</div>
+          </div>
+          <div class="og-footer">
+            <div class="og-url">ultra-advisor.tw/blog</div>
+            <div class="og-tagline">提升專業，服務更多客戶</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <hr style="margin: 60px 0; border-color: #333;">
+
+  <h2 style="color: white; text-align: center; margin-bottom: 40px;">原尺寸預覽（用於截圖）</h2>
+  <p style="color: #888; text-align: center; margin-bottom: 40px;">使用 Chrome DevTools > More tools > Screenshot 截取單一元素</p>
+
+  <!-- 原尺寸版本，用於截圖 -->
+  <div id="og-mortgage-full" class="og-card og-mortgage" style="margin: 40px auto;">
+    <div class="og-content">
+      <div class="og-header">
+        <div class="og-logo">U</div>
+        <div class="og-brand">Ultra Advisor</div>
+      </div>
+      <div class="og-main">
+        <div class="og-icon">🏠</div>
+        <div class="og-title">房貸知識</div>
+        <div class="og-subtitle">本金均攤、本息均攤、轉貸成本完整解析</div>
+      </div>
+      <div class="og-footer">
+        <div class="og-url">ultra-advisor.tw/blog</div>
+        <div class="og-tagline">讓複雜的房貸變簡單</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="og-retirement-full" class="og-card og-retirement" style="margin: 40px auto;">
+    <div class="og-content">
+      <div class="og-header">
+        <div class="og-logo">U</div>
+        <div class="og-brand">Ultra Advisor</div>
+      </div>
+      <div class="og-main">
+        <div class="og-icon">🎯</div>
+        <div class="og-title">退休規劃</div>
+        <div class="og-subtitle">勞保勞退、退休金試算、所得替代率分析</div>
+      </div>
+      <div class="og-footer">
+        <div class="og-url">ultra-advisor.tw/blog</div>
+        <div class="og-tagline">為美好退休生活做準備</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="og-tax-full" class="og-card og-tax" style="margin: 40px auto;">
+    <div class="og-content">
+      <div class="og-header">
+        <div class="og-logo">U</div>
+        <div class="og-brand">Ultra Advisor</div>
+      </div>
+      <div class="og-main">
+        <div class="og-icon">📋</div>
+        <div class="og-title">稅務傳承</div>
+        <div class="og-subtitle">遺產稅、贈與稅、所得稅完整攻略</div>
+      </div>
+      <div class="og-footer">
+        <div class="og-url">ultra-advisor.tw/blog</div>
+        <div class="og-tagline">合法節稅，聰明傳承</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="og-investment-full" class="og-card og-investment" style="margin: 40px auto;">
+    <div class="og-content">
+      <div class="og-header">
+        <div class="og-logo">U</div>
+        <div class="og-brand">Ultra Advisor</div>
+      </div>
+      <div class="og-main">
+        <div class="og-icon">📈</div>
+        <div class="og-title">投資理財</div>
+        <div class="og-subtitle">ETF、定存、儲蓄險比較與複利試算</div>
+      </div>
+      <div class="og-footer">
+        <div class="og-url">ultra-advisor.tw/blog</div>
+        <div class="og-tagline">用數據做出明智決策</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="og-tools-full" class="og-card og-tools" style="margin: 40px auto;">
+    <div class="og-content">
+      <div class="og-header">
+        <div class="og-logo">U</div>
+        <div class="og-brand">Ultra Advisor</div>
+      </div>
+      <div class="og-main">
+        <div class="og-icon">🔧</div>
+        <div class="og-title">工具教學</div>
+        <div class="og-subtitle">計算機使用教學與實用工具比較</div>
+      </div>
+      <div class="og-footer">
+        <div class="og-url">ultra-advisor.tw/blog</div>
+        <div class="og-tagline">免費好用的理財工具</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="og-sales-full" class="og-card og-sales" style="margin: 40px auto;">
+    <div class="og-content">
+      <div class="og-header">
+        <div class="og-logo">U</div>
+        <div class="og-brand">Ultra Advisor</div>
+      </div>
+      <div class="og-main">
+        <div class="og-icon">💼</div>
+        <div class="og-title">顧問專欄</div>
+        <div class="og-subtitle">財務顧問的專業知識與經驗分享</div>
+      </div>
+      <div class="og-footer">
+        <div class="og-url">ultra-advisor.tw/blog</div>
+        <div class="og-tagline">提升專業，服務更多客戶</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 自動截圖功能（需要在本地運行）
+    console.log('OG Image Generator');
+    console.log('使用方式：');
+    console.log('1. 在 Chrome 中打開此頁面');
+    console.log('2. 按 F12 開啟 DevTools');
+    console.log('3. 點擊元素選擇工具（左上角箭頭）');
+    console.log('4. 點擊要截圖的卡片');
+    console.log('5. 右鍵 > Capture node screenshot');
+    console.log('6. 將截圖重命名為對應的檔名（如 og-mortgage.png）');
+  </script>
+</body>
+</html>

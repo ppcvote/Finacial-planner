@@ -168,10 +168,25 @@ const BlogPage: React.FC<BlogPageProps> = ({ onBack, onLogin }) => {
       const ogDescription = document.querySelector('meta[property="og:description"]');
       const ogUrl = document.querySelector('meta[property="og:url"]');
       const ogType = document.querySelector('meta[property="og:type"]');
+      const ogImage = document.querySelector('meta[property="og:image"]');
+      const twitterImage = document.querySelector('meta[name="twitter:image"]');
       if (ogTitle) ogTitle.setAttribute('content', currentArticle.metaTitle);
       if (ogDescription) ogDescription.setAttribute('content', currentArticle.metaDescription);
       if (ogUrl) ogUrl.setAttribute('content', `https://ultra-advisor.tw/blog/${currentArticle.slug}`);
       if (ogType) ogType.setAttribute('content', 'article');
+
+      // 動態生成 OG Image URL（使用分類圖片或動態生成）
+      const categoryImageMap: Record<string, string> = {
+        mortgage: 'og-mortgage.png',
+        retirement: 'og-retirement.png',
+        tax: 'og-tax.png',
+        investment: 'og-investment.png',
+        tools: 'og-tools.png',
+        sales: 'og-sales.png',
+      };
+      const ogImageUrl = `https://ultra-advisor.tw/${categoryImageMap[currentArticle.category] || 'og-image.png'}`;
+      if (ogImage) ogImage.setAttribute('content', ogImageUrl);
+      if (twitterImage) twitterImage.setAttribute('content', ogImageUrl);
 
       const canonical = document.querySelector('link[rel="canonical"]');
       if (canonical) canonical.setAttribute('href', `https://ultra-advisor.tw/blog/${currentArticle.slug}`);

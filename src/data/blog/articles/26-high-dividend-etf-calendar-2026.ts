@@ -352,20 +352,19 @@ export const article: BlogArticle = {
       </p>
 
       <div class="bg-purple-900/30 border border-purple-500/30 rounded-2xl p-6 my-8">
-        <h4 class="text-purple-400 font-bold mb-3">📋 給金融從業人員的話術</h4>
+        <h4 class="text-purple-400 font-bold mb-3">📋 月月領息配置範例</h4>
         <p class="text-slate-300 mb-0">
-          「李太太，您說想要每個月都有現金流入帳，高股息 ETF 很適合您。<br/><br/>
-          我建議您可以把 0056、00878、00919 三檔各買一些，
+          如果想要每個月都有現金流入帳，可以把 0056、00878、00919 三檔各買一些，
           這三檔的配息月份剛好錯開，這樣每個月都有股息進來。<br/><br/>
           以 100 萬來說，一年大約可以領 8 萬股息，平均每月 6,600 元左右。
-          而且如果把股息再投入，10 年後資產可能翻倍喔！」
+          而且如果把股息再投入，10 年後資產可能翻倍！
         </p>
       </div>
 
       <div class="bg-blue-900/30 border border-blue-500/30 rounded-2xl p-6 my-8">
         <h4 class="text-blue-400 font-bold mb-3">🛠️ 投資報酬試算工具</h4>
         <p class="text-slate-300 mb-4">
-          使用傲創計算機，幫助客戶試算複利成長、
+          使用免費的計算工具，試算複利成長、
           規劃長期投資目標。
         </p>
         <a href="/calculator" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl transition-colors">

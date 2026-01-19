@@ -115,9 +115,23 @@ const NavItem = ({ icon: Icon, label, active, onClick, disabled = false, locked 
 );
 
 export default function App() {
+  // 🆕 網域重導向：非正式網域自動跳轉到 ultra-advisor.tw
+  useEffect(() => {
+    const hostname = window.location.hostname;
+    const allowedHosts = ['ultra-advisor.tw', 'www.ultra-advisor.tw', 'localhost', '127.0.0.1'];
+    if (!allowedHosts.includes(hostname)) {
+      // 保留原本的路徑和查詢參數
+      const newUrl = `https://ultra-advisor.tw${window.location.pathname}${window.location.search}${window.location.hash}`;
+      window.location.replace(newUrl);
+    }
+  }, []);
+
   const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true); 
-  const [minSplashTimePassed, setMinSplashTimePassed] = useState(false); 
+  const [loading, setLoading] = useState(true);
+  // 🆕 SplashScreen 只在這個 session 第一次進入時顯示
+  const [minSplashTimePassed, setMinSplashTimePassed] = useState(() => {
+    return sessionStorage.getItem('splash_shown') === 'true';
+  }); 
   
   // 控制登入頁面顯示邏輯
   // 🆕 修復：重新整理後維持原介面，不跳回登入頁
@@ -137,7 +151,7 @@ export default function App() {
   const [isCalculatorRoute, setIsCalculatorRoute] = useState(false); // 🆕 傲創計算機路由
   const [isLiffRegisterRoute, setIsLiffRegisterRoute] = useState(false); // 🆕 LIFF 註冊路由
   const [isRegisterRoute, setIsRegisterRoute] = useState(false); // 🆕 公開註冊路由
-  const [isBlogRoute, setIsBlogRoute] = useState(false); // 🆕 部落格路由
+  const [isBlogRoute, setIsBlogRoute] = useState(() => window.location.pathname.startsWith('/blog')); // 🆕 部落格路由（初始化時檢查 URL）
   const [clientLoading, setClientLoading] = useState(false); 
   const [currentClient, setCurrentClient] = useState<any>(null);
   // 🆕 activeTab 持久化：重新整理後保持在原工具介面
@@ -337,7 +351,7 @@ export default function App() {
       setIsCalculatorRoute(path === '/calculator');
       setIsLiffRegisterRoute(path === '/liff/register');
       setIsRegisterRoute(path === '/register'); // 🆕 公開註冊
-      setIsBlogRoute(path === '/blog'); // 🆕 部落格
+      setIsBlogRoute(path.startsWith('/blog')); // 🆕 部落格（包含 /blog/xxx 文章頁）
       if (path === '/') { setIsSecretSignupRoute(false); setIsLoginRoute(false); setIsCalculatorRoute(false); setIsLiffRegisterRoute(false); setIsRegisterRoute(false); setIsBlogRoute(false); }
     };
     window.addEventListener('popstate', handlePopState);
@@ -351,9 +365,16 @@ export default function App() {
     else if (path === '/calculator') setIsCalculatorRoute(true);
     else if (path === '/liff/register') setIsLiffRegisterRoute(true);
     else if (path === '/register') setIsRegisterRoute(true); // 🆕 公開註冊
-    else if (path === '/blog') setIsBlogRoute(true); // 🆕 部落格
-    const timer = setTimeout(() => { setMinSplashTimePassed(true); }, 3000); 
-    return () => clearTimeout(timer);
+    else if (path.startsWith('/blog')) setIsBlogRoute(true); // 🆕 部落格（包含 /blog/xxx 文章頁）
+
+    // 🆕 SplashScreen 只在這個 session 第一次進入時顯示
+    if (sessionStorage.getItem('splash_shown') !== 'true') {
+      const timer = setTimeout(() => {
+        setMinSplashTimePassed(true);
+        sessionStorage.setItem('splash_shown', 'true');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   useEffect(() => {
@@ -493,12 +514,14 @@ export default function App() {
   }
 
   // 🆕 部落格頁面（不需登入，跳過 SplashScreen）
-  if (isBlogRoute) {
+  // 使用雙重檢查：state 或直接檢查 URL
+  if (isBlogRoute || window.location.pathname.startsWith('/blog')) {
     return (
       <BlogPage
         onBack={() => {
           setIsBlogRoute(false);
           window.history.pushState({}, '', '/');
+          window.location.reload(); // 強制重載以確保狀態正確
         }}
         onLogin={() => {
           setIsBlogRoute(false);

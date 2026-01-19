@@ -282,19 +282,19 @@ export const article: BlogArticle = {
       </p>
 
       <div class="bg-purple-900/30 border border-purple-500/30 rounded-2xl p-6 my-8">
-        <h4 class="text-purple-400 font-bold mb-3">📋 給金融從業人員的話術</h4>
+        <h4 class="text-purple-400 font-bold mb-3">📋 實際節省補充保費範例</h4>
         <p class="text-slate-300 mb-0">
-          「陳先生，您的定存利息如果超過 2 萬，會被扣 2.11% 的健保補充保費。
-          以您 200 萬的定存來說，一年利息約 3.6 萬，會被扣 760 元。<br/><br/>
+          假設定存利息超過 2 萬，會被扣 2.11% 的健保補充保費。
+          以 200 萬的定存來說，一年利息約 3.6 萬，會被扣 760 元。<br/><br/>
           如果把定存拆成 2 筆各 100 萬，利息各 1.8 萬都不到 2 萬，
-          就可以省下這筆補充保費。要不要我幫您調整一下？」
+          就可以省下這筆補充保費。
         </p>
       </div>
 
       <div class="bg-blue-900/30 border border-blue-500/30 rounded-2xl p-6 my-8">
         <h4 class="text-blue-400 font-bold mb-3">🛠️ 財務規劃計算工具</h4>
         <p class="text-slate-300 mb-4">
-          使用傲創計算機，幫助客戶計算投資收益、
+          使用免費的計算工具，計算投資收益、
           規劃資產配置與稅務成本。
         </p>
         <a href="/calculator" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl transition-colors">
