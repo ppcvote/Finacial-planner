@@ -364,19 +364,82 @@ const BlogPage: React.FC<BlogPageProps> = ({ onBack, onLogin }) => {
           </div>
 
           {/* 文章內容 */}
-          <article
-            className="prose prose-invert prose-lg max-w-none
-                       prose-headings:text-white prose-headings:font-bold
-                       prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:border-b prose-h2:border-slate-800 prose-h2:pb-3
-                       prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-4
-                       prose-p:text-slate-300 prose-p:leading-relaxed
-                       prose-li:text-slate-300
-                       prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
-                       prose-strong:text-white
-                       prose-table:border-collapse prose-th:bg-slate-800 prose-th:p-3 prose-td:p-3
-                       prose-td:border prose-td:border-slate-700 prose-th:border prose-th:border-slate-700"
+          <div
+            className="article-content prose prose-invert prose-lg max-w-none"
             dangerouslySetInnerHTML={{ __html: currentArticle.content }}
           />
+
+          {/* 文章內容樣式覆蓋 */}
+          <style>{`
+            .article-content,
+            .article-content article,
+            .article-content .prose {
+              color: #cbd5e1 !important; /* slate-300 */
+            }
+            .article-content h1,
+            .article-content h2,
+            .article-content h3,
+            .article-content h4,
+            .article-content h5,
+            .article-content h6 {
+              color: #ffffff !important;
+              font-weight: 700;
+            }
+            .article-content h2 {
+              font-size: 1.5rem;
+              margin-top: 3rem;
+              margin-bottom: 1.5rem;
+              padding-bottom: 0.75rem;
+              border-bottom: 1px solid #334155;
+            }
+            .article-content h3 {
+              font-size: 1.25rem;
+              margin-top: 2rem;
+              margin-bottom: 1rem;
+            }
+            .article-content p {
+              color: #cbd5e1 !important; /* slate-300 */
+              line-height: 1.75;
+              margin-bottom: 1rem;
+            }
+            .article-content li {
+              color: #cbd5e1 !important; /* slate-300 */
+            }
+            .article-content strong {
+              color: #ffffff !important;
+            }
+            .article-content a {
+              color: #60a5fa !important; /* blue-400 */
+            }
+            .article-content a:hover {
+              text-decoration: underline;
+            }
+            .article-content table {
+              border-collapse: collapse;
+              width: 100%;
+            }
+            .article-content th {
+              background-color: #1e293b;
+              padding: 0.75rem;
+              border: 1px solid #475569;
+              color: #ffffff !important;
+            }
+            .article-content td {
+              padding: 0.75rem;
+              border: 1px solid #475569;
+              color: #cbd5e1 !important;
+            }
+            .article-content ul,
+            .article-content ol {
+              padding-left: 1.5rem;
+            }
+            .article-content ul li {
+              list-style-type: disc;
+            }
+            .article-content ol li {
+              list-style-type: decimal;
+            }
+          `}</style>
 
           {/* CTA 區塊 */}
           <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-2xl p-8 mt-16">
