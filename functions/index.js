@@ -54,6 +54,95 @@ const APP_LOGIN_URL = functions.config().app?.login_url || 'https://ultra-adviso
 // ==========================================
 
 /**
+ * 🔒 Rate Limiting - 防止惡意註冊攻擊
+ * 同一 IP 每小時最多 5 次註冊嘗試
+ */
+async function checkRateLimit(ip, action = 'register') {
+  const rateLimitRef = db.collection('rateLimits').doc(`${action}_${ip.replace(/[.:/]/g, '_')}`);
+  const now = Date.now();
+  const windowMs = 60 * 60 * 1000; // 1 小時
+  const maxAttempts = 5;
+
+  try {
+    const doc = await rateLimitRef.get();
+
+    if (doc.exists) {
+      const data = doc.data();
+      const windowStart = data.windowStart || 0;
+
+      // 如果還在同一個時間窗口內
+      if (now - windowStart < windowMs) {
+        if (data.attempts >= maxAttempts) {
+          return { allowed: false, remaining: 0, resetIn: Math.ceil((windowStart + windowMs - now) / 1000 / 60) };
+        }
+        // 增加嘗試次數
+        await rateLimitRef.update({ attempts: admin.firestore.FieldValue.increment(1) });
+        return { allowed: true, remaining: maxAttempts - data.attempts - 1 };
+      }
+    }
+
+    // 重置或建立新的時間窗口
+    await rateLimitRef.set({ windowStart: now, attempts: 1 });
+    return { allowed: true, remaining: maxAttempts - 1 };
+  } catch (error) {
+    console.error('Rate limit check error:', error);
+    // 發生錯誤時允許通過，避免阻擋正常用戶
+    return { allowed: true, remaining: maxAttempts };
+  }
+}
+
+/**
+ * 🔒 驗證 reCAPTCHA v3 token
+ */
+async function verifyRecaptcha(token, expectedAction = 'register') {
+  if (!token) {
+    return { success: false, score: 0, error: '缺少驗證碼' };
+  }
+
+  const secretKey = functions.config().recaptcha?.secret_key;
+  if (!secretKey) {
+    console.warn('reCAPTCHA secret key not configured, skipping verification');
+    return { success: true, score: 1 }; // 未設定時跳過驗證
+  }
+
+  try {
+    const response = await axios.post(
+      'https://www.google.com/recaptcha/api/siteverify',
+      null,
+      {
+        params: {
+          secret: secretKey,
+          response: token
+        }
+      }
+    );
+
+    const data = response.data;
+
+    // 驗證 action 和分數
+    if (data.success && data.action === expectedAction && data.score >= 0.5) {
+      return { success: true, score: data.score };
+    }
+
+    console.warn('reCAPTCHA verification failed:', data);
+    return { success: false, score: data.score || 0, error: '驗證失敗，請重試' };
+  } catch (error) {
+    console.error('reCAPTCHA verification error:', error);
+    return { success: false, score: 0, error: '驗證服務暫時無法使用' };
+  }
+}
+
+/**
+ * 取得用戶真實 IP
+ */
+function getClientIp(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+         req.headers['x-real-ip'] ||
+         req.connection?.remoteAddress ||
+         'unknown';
+}
+
+/**
  * 生成隨機密碼
  */
 function generateRandomPassword() {
@@ -2112,17 +2201,40 @@ exports.liffRegister = functions.https.onRequest(async (req, res) => {
   }
 
   try {
-    const { name, email, password, referralCode, lineUserId, lineDisplayName, linePictureUrl } = req.body;
+    const { name, email, password, referralCode, lineUserId, lineDisplayName, linePictureUrl, recaptchaToken } = req.body;
+
+    // 🔒 Step 1: Rate Limiting 檢查
+    const clientIp = getClientIp(req);
+    const rateLimit = await checkRateLimit(clientIp, 'register');
+
+    if (!rateLimit.allowed) {
+      console.warn(`Rate limit exceeded for IP: ${clientIp}`);
+      return res.status(429).json({
+        success: false,
+        error: `註冊請求過於頻繁，請 ${rateLimit.resetIn} 分鐘後再試`
+      });
+    }
+
+    // 🔒 Step 2: reCAPTCHA 驗證（僅網頁註冊需要）
+    if (!lineUserId && recaptchaToken) {
+      const recaptchaResult = await verifyRecaptcha(recaptchaToken, 'register');
+      if (!recaptchaResult.success) {
+        console.warn(`reCAPTCHA failed for IP: ${clientIp}, score: ${recaptchaResult.score}`);
+        return res.status(400).json({
+          success: false,
+          error: recaptchaResult.error || '人機驗證失敗，請重新整理頁面後再試'
+        });
+      }
+    }
 
     // 驗證必填欄位
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, error: '請填寫所有必填欄位' });
     }
 
-    // LINE User ID 驗證（允許開發模式跳過）
-    if (!lineUserId) {
-      return res.status(400).json({ success: false, error: '無法取得 LINE 用戶資訊' });
-    }
+    // LINE User ID 驗證（允許網頁註冊跳過）
+    // 網頁註冊時 lineUserId 為 null，不需要 LINE 帳號
+    const isWebRegister = !lineUserId;
 
     // 驗證 Email 格式
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -2141,8 +2253,8 @@ exports.liffRegister = functions.https.onRequest(async (req, res) => {
       return res.status(400).json({ success: false, error: '此 Email 已經註冊' });
     }
 
-    // 檢查 LINE User ID 是否已綁定（跳過開發模式的假 ID）
-    if (!lineUserId.startsWith('dev-user-')) {
+    // 檢查 LINE User ID 是否已綁定（跳過網頁註冊和開發模式的假 ID）
+    if (!isWebRegister && !lineUserId.startsWith('dev-user-')) {
       const existingLineUser = await db.collection('users')
         .where('lineUserId', '==', lineUserId)
         .limit(1)
@@ -2196,7 +2308,7 @@ exports.liffRegister = functions.https.onRequest(async (req, res) => {
     await db.collection('users').doc(userRecord.uid).set({
       email: email.toLowerCase(),
       displayName: name,
-      lineUserId: lineUserId.startsWith('dev-user-') ? null : lineUserId,
+      lineUserId: isWebRegister ? null : (lineUserId.startsWith('dev-user-') ? null : lineUserId),
       lineDisplayName: lineDisplayName || null,
       linePictureUrl: linePictureUrl || null,
       createdAt: now,

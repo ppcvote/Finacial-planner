@@ -7,18 +7,20 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Zap, LogIn, Building2, Calculator } from 'lucide-react';
+import { ArrowLeft, Zap, LogIn, Building2, Calculator, User } from 'lucide-react';
 import MortgageCalculator from '../components/MortgageCalculator';
 import SimpleCalculator from '../components/SimpleCalculator';
+import { User as FirebaseUser } from 'firebase/auth';
 
 interface PublicCalculatorProps {
   onBack: () => void;
   onLogin: () => void;
+  user?: FirebaseUser | null;  // 🆕 可選的用戶資訊
 }
 
 type ToolTab = 'mortgage' | 'calculator';
 
-const PublicCalculator: React.FC<PublicCalculatorProps> = ({ onBack, onLogin }) => {
+const PublicCalculator: React.FC<PublicCalculatorProps> = ({ onBack, onLogin, user }) => {
   // 🆕 持久化 activeTab：重新整理後保持在原工具
   const [activeTab, setActiveTab] = useState<ToolTab>(() => {
     const saved = localStorage.getItem('public_calculator_tab');
@@ -100,18 +102,38 @@ const PublicCalculator: React.FC<PublicCalculatorProps> = ({ onBack, onLogin }) 
               <span className="text-sm">返回首頁</span>
             </button>
 
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-slate-500 hidden sm:block">
-                想要更多專業工具？
-              </span>
-              <button
-                onClick={onLogin}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2 rounded-lg transition-all"
-              >
-                <LogIn size={16} />
-                免費試用
-              </button>
-            </div>
+            {/* 🆕 依登入狀態顯示：會員顯示頭貼+名稱，非會員顯示免費試用 */}
+            {user ? (
+              <div className="flex items-center gap-2">
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt="Avatar"
+                    className="w-8 h-8 rounded-full border-2 border-emerald-500"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center">
+                    <User size={16} className="text-white" />
+                  </div>
+                )}
+                <span className="text-sm text-white font-medium hidden sm:block max-w-[100px] truncate">
+                  {user.displayName || user.email?.split('@')[0] || '會員'}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-500 hidden sm:block">
+                  想要更多專業工具？
+                </span>
+                <button
+                  onClick={onLogin}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2 rounded-lg transition-all"
+                >
+                  <LogIn size={16} />
+                  免費試用
+                </button>
+              </div>
+            )}
           </div>
 
           {/* 第二行：工具標籤 */}
@@ -150,7 +172,7 @@ const PublicCalculator: React.FC<PublicCalculatorProps> = ({ onBack, onLogin }) 
 
       {/* 工具主體 */}
       {activeTab === 'mortgage' && <MortgageCalculator />}
-      {activeTab === 'calculator' && <SimpleCalculator />}
+      {activeTab === 'calculator' && <SimpleCalculator user={user} onLogin={onLogin} />}
 
       {/* 底部 CTA */}
       <div className="bg-gradient-to-r from-blue-900 to-purple-900 py-8 px-4">

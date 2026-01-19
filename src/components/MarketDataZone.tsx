@@ -1,24 +1,22 @@
-import React, { useState } from 'react';
-import { 
-  AlertTriangle, 
-  TrendingUp, 
-  Activity, 
-  Clock, 
-  Bed, 
-  Users, 
+import React, { useState, useEffect } from 'react';
+import {
+  AlertTriangle,
+  TrendingUp,
+  Activity,
+  Clock,
+  Bed,
+  Users,
   Info,
   BarChart3,
   User,
   Siren,
   FileText,
-  Coins, 
+  Coins,
   ArrowRight,
   TrendingDown,
-  RefreshCcw,
   ShieldAlert,
   Banknote,
   Umbrella,
-  AlertOctagon,
   ExternalLink,
   ChevronRight,
   Target,
@@ -28,81 +26,224 @@ import {
   Utensils,
   HeartPulse,
   Crosshair,
-  Lock,
-  Wallet,
-  ShieldCheck
+  ShieldCheck,
+  MessageCircle,
+  ChevronDown,
+  Lightbulb,
+  Copy,
+  Check
 } from 'lucide-react';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar, Cell } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
+
+// ==========================================
+// 常數定義（避免每次 render 重建）
+// ==========================================
+const TAB_CONFIG = [
+  { id: 'inflation', label: '通膨碎鈔機', icon: TrendingDown, colorClass: 'bg-amber-500' },
+  { id: 'unhealthy', label: '不健康餘命', icon: Bed, colorClass: 'bg-slate-700' },
+  { id: 'pension', label: '勞保破產危機', icon: TrendingUp, colorClass: 'bg-red-600' },
+  { id: 'medical', label: '醫療通膨現況', icon: Activity, colorClass: 'bg-blue-600' },
+  { id: 'cancer', label: '癌症時鐘', icon: Clock, colorClass: 'bg-orange-500' }
+] as const;
+
+const CONSUMER_GOODS = [
+  { name: '排骨便當', price2010: 75, price2026: 135, icon: Utensils, color: 'text-orange-500' },
+  { name: '大麥克餐', price2010: 115, price2026: 195, icon: ShoppingBag, color: 'text-red-500' },
+  { name: '珍珠奶茶', price2010: 45, price2026: 85, icon: Coffee, color: 'text-amber-600' },
+  { name: '每度電費', price2010: 2.6, price2026: 4.8, icon: Zap, color: 'text-yellow-500' },
+].map(item => ({
+  ...item,
+  changePercent: Math.round(((item.price2026 - item.price2010) / item.price2010) * 100)
+}));
+
+const LABOR_DATA = [
+  { year: '2020', 逆差: 487 }, { year: '2022', 逆差: 386 },
+  { year: '2023', 逆差: 446 }, { year: '2024', 逆差: 665 },
+  { year: '2025預', 逆差: 850 }, { year: '2026預', 逆差: 1120 },
+];
+
+const BANKRUPT_YEAR = 2031;
+const UNHEALTHY_YEARS = 8.4; // 2026 最新精算預期
+const ROOM_COST_SINGLE = 8000;
+const NURSING_COST = 3800;
+
+const STORAGE_KEY = 'marketDataZone_activeTab';
+
+// ==========================================
+// 業務小抄資料
+// ==========================================
+const SALES_CHEATSHEET: Record<string, {
+  title: string;
+  color: string;
+  hooks: { label: string; script: string }[];
+  objections: { q: string; a: string }[];
+  closingLines: string[];
+}> = {
+  inflation: {
+    title: '通膨碎鈔機',
+    color: 'amber',
+    hooks: [
+      { label: '便當切入法', script: '您還記得 10 年前便當一個多少錢嗎？從 75 漲到 135，漲幅 80%。但您的存款利率有跟上嗎？' },
+      { label: '退休金貶值法', script: '如果您準備了 1000 萬退休，20 年後實際購買力只剩 500 萬。這筆錢夠用嗎？' },
+      { label: '隱形稅收法', script: '通膨是政府不用立法就能收的稅。每年 3.5% 的通膨，等於您的錢每年自動繳稅給空氣。' },
+    ],
+    objections: [
+      { q: '我放定存很安全啊', a: '定存確實保本，但 1.5% 的利率追不上 3.5% 的通膨，您的錢其實每年縮水 2%。安全的代價是購買力流失。' },
+      { q: '通膨不會一直這麼高', a: '過去 20 年平均通膨約 2-3%，但 2024-2026 體感通膨更高。重點不是預測通膨，而是讓資產增值率大於通膨。' },
+    ],
+    closingLines: [
+      '您希望退休時的 1000 萬是「帳面數字」還是「實際購買力」？',
+      '現在開始規劃，讓您的錢跑贏通膨，而不是被通膨吃掉。',
+    ],
+  },
+  unhealthy: {
+    title: '不健康餘命',
+    color: 'rose',
+    hooks: [
+      { label: '8.4 年震撼法', script: '統計顯示，國人平均有 8.4 年是在「不健康」狀態下度過的。這段時間誰來照顧您？' },
+      { label: '尊嚴代價法', script: '8.4 年 × 每月 6 萬照護費 = 超過 600 萬。這筆錢您準備好了嗎？還是要讓子女負擔？' },
+      { label: '夾心世代法', script: '您的子女未來可能同時要養小孩、還房貸、照顧您。您忍心讓他們在您的尊嚴和他們的生活間做選擇嗎？' },
+    ],
+    objections: [
+      { q: '我身體很健康', a: '健康是現在式，失能是未來式。統計是平均值，不分健康或不健康的人。而且越健康的人可能活越久，失能期間也可能更長。' },
+      { q: '到時候再說', a: '長照險 50 歲後保費幾乎翻倍，60 歲後可能被拒保。現在規劃是用最低成本買最大保障。' },
+    ],
+    closingLines: [
+      '長照險不是開銷，是給未來的自己一個有尊嚴的選擇。',
+      '與其讓子女為難，不如現在就把這筆錢撥好。',
+    ],
+  },
+  pension: {
+    title: '勞保破產危機',
+    color: 'red',
+    hooks: [
+      { label: '倒數計時法', script: '勞保基金預計 2031 年破產。屆時您 XX 歲，正準備退休，卻可能領不到預期的退休金。' },
+      { label: '海砂屋比喻', script: '依靠勞保退休，就像住在海砂屋裡。看起來有屋頂，但不知道哪天會塌。' },
+      { label: '數學必然法', script: '3.2 個工作人口扶養 1 個老人，繳的人變少、領的人變多。這道數學題只有一個答案：少領、多繳、延退。' },
+    ],
+    objections: [
+      { q: '政府會補助', a: '政府撥補創新高，但也只是延緩而非解決。而且撥補的錢從哪來？還是全民買單。' },
+      { q: '不可能讓勞保倒', a: '沒錯，但「不倒」不代表「領得到預期金額」。希臘退休金改革砍了 40%，這在台灣也可能發生。' },
+    ],
+    closingLines: [
+      '退休規劃應建立在「沒有勞保也能活」的前提上。',
+      '把退休金掌握在自己手中，才是真正的自由。',
+    ],
+  },
+  medical: {
+    title: '醫療通膨現況',
+    color: 'emerald',
+    hooks: [
+      { label: '五天損失法', script: '住院 5 天，單人房差額 4 萬 + 看護 2 萬 + 薪資損失。一場小病可能讓您損失超過 7 萬。' },
+      { label: '健保限縮法', script: '健保為了維持運作，自付額一直調漲。以前健保買單的，現在很多要自費。' },
+      { label: '收入中斷法', script: '生病最可怕的不是醫療費，是收入中斷。房貸、生活費、小孩學費不會因為您住院就暫停。' },
+    ],
+    objections: [
+      { q: '我有健保就夠了', a: '健保是基本款，但單人房、自費藥、標靶治療都不給付。您生病時想住健保房還是單人房？' },
+      { q: '我有公司團保', a: '團保是福利，離職就沒了。而且額度通常不高，一場大病可能不夠用。' },
+    ],
+    closingLines: [
+      '醫療險規劃重點：薪資補償 + 高額實支實付雜費。',
+      '不要讓一場病，毀掉多年的財務規劃。',
+    ],
+  },
+  cancer: {
+    title: '癌症時鐘',
+    color: 'orange',
+    hooks: [
+      { label: '3分48秒法', script: '每 3 分 48 秒就有一人罹癌。在我們談話的這 30 分鐘裡，已經有 8 個人確診癌症。' },
+      { label: '慢性病化法', script: '癌症已經從「急性死亡」變成「慢性病」。五年存活率提高，但也代表 10 年以上的昂貴療程。' },
+      { label: '標靶療程法', script: '最新標靶藥一個療程 150-350 萬，健保給付門檻極高。沒有足夠保障，只能選便宜的療法。' },
+    ],
+    objections: [
+      { q: '我家沒有癌症病史', a: '癌症 70% 是後天因素造成的：飲食、壓力、環境。家族沒病史不代表您不會得。' },
+      { q: '現在醫學很進步', a: '沒錯，但進步的療法也更貴。您希望有選擇最好療法的權利，還是只能選健保給付的？' },
+    ],
+    closingLines: [
+      '癌症險不是買死亡，是買「選擇權」——選擇最好療法的權利。',
+      '重大傷病險額度建議：年收入的 3 倍以上。',
+    ],
+  },
+};
+
+type TabId = typeof TAB_CONFIG[number]['id'];
 
 export default function MarketDataZone() {
   // ==========================================
   // 核心狀態管理
   // ==========================================
-  const [activeTab, setActiveTab] = useState('inflation'); 
-  const [age, setAge] = useState(40); 
-  const [gender, setGender] = useState('male');
-  const [dailySalary, setDailySalary] = useState(2500); 
-  
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && TAB_CONFIG.some(t => t.id === saved)) {
+      return saved as TabId;
+    }
+    return 'inflation';
+  });
+
+  // P2: 持久化 activeTab 到 localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, activeTab);
+  }, [activeTab]);
+
+  const [age, setAge] = useState(40);
+  const [gender, setGender] = useState<'male' | 'female'>('male');
+  const [dailySalary, setDailySalary] = useState(2500);
+
+  // 業務小抄狀態
+  const [showCheatsheet, setShowCheatsheet] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
+
+  // 複製到剪貼簿
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(id);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
   // ==========================================
   // 1. 不健康餘命 (Unhealthy Years) 2026 數據校準
   // ==========================================
-  const [monthlyCareCost, setMonthlyCareCost] = useState(60000); 
+  const [monthlyCareCost, setMonthlyCareCost] = useState(60000);
   const lifeExpectancy = gender === 'male' ? 78.0 : 84.5;
-  const unhealthyYears = 8.4; // 2026 最新精算預期
-  const healthyLife = lifeExpectancy - unhealthyYears;
+  const healthyLife = lifeExpectancy - UNHEALTHY_YEARS;
   
   // 三段式連動邏輯
   const passedYears = age;
   const remainingHealthy = Math.max(0, healthyLife - age);
-  const totalCareCost = Math.round(monthlyCareCost * 12 * unhealthyYears);
-  
+  const totalCareCost = Math.round(monthlyCareCost * 12 * UNHEALTHY_YEARS);
+
   const lifeData = [
-    { name: '人生發展線', '已過歲月': passedYears, '健康餘命': remainingHealthy, '臥床失能': unhealthyYears }
+    { name: '人生發展線', '已過歲月': passedYears, '健康餘命': remainingHealthy, '臥床失能': UNHEALTHY_YEARS }
   ];
 
   // ==========================================
   // 2. 通膨碎鈔機 (Inflation Shredder) 2026 參數
   // ==========================================
-  const [inflationPrincipal, setInflationPrincipal] = useState(1000); 
+  const [inflationPrincipal, setInflationPrincipal] = useState(1000);
   const [inflationYears, setInflationYears] = useState(20);
-  const [inflationRate, setInflationRate] = useState(3.5); 
-  
-  const purchasingPower = Math.round(inflationPrincipal / Math.pow(1 + inflationRate/100, inflationYears));
+  const [inflationRate, setInflationRate] = useState(3.5);
+
+  const purchasingPower = Math.round(inflationPrincipal / Math.pow(1 + inflationRate / 100, inflationYears));
   const vanishedWealth = inflationPrincipal - purchasingPower;
   const vanishedPercent = ((vanishedWealth / inflationPrincipal) * 100).toFixed(1);
-
-  const consumerGoods = [
-    { name: '排骨便當', price2010: 75, price2026: 135, icon: Utensils, color: 'text-orange-500' },
-    { name: '大麥克餐', price2010: 115, price2026: 195, icon: ShoppingBag, color: 'text-red-500' },
-    { name: '珍珠奶茶', price2010: 45, price2026: 85, icon: Coffee, color: 'text-amber-600' },
-    { name: '每度電費', price2010: 2.6, price2026: 4.8, icon: Zap, color: 'text-yellow-500' },
-  ];
 
   // ==========================================
   // 3. 勞保破產 (Pension Crisis) 趨勢
   // ==========================================
-  const laborData = [
-    { year: '2020', 逆差: 487 }, { year: '2022', 逆差: 386 },
-    { year: '2023', 逆差: 446 }, { year: '2024', 逆差: 665 },
-    { year: '2025預', 逆差: 850 }, { year: '2026預', 逆差: 1120 },
-  ];
-  const bankruptYear = 2031; 
   const currentYear = new Date().getFullYear();
-  const yearsLeft = Math.max(0, bankruptYear - currentYear);
+  const yearsLeft = Math.max(0, BANKRUPT_YEAR - currentYear);
   const ageAtBankrupt = age + yearsLeft;
 
   // ==========================================
   // 4. 醫療通膨 (Medical Inflation) 2026 行情
   // ==========================================
-  const roomCostSingle = 8000;
-  const nursingCost = 3800;
   const medicalCostData = [
-    { name: '每日薪資(損)', cost: dailySalary, type: '收入' }, 
-    { name: '雙人房差額', cost: 3500, type: '支出' }, 
-    { name: '單人房差額', cost: roomCostSingle, type: '支出' }, 
-    { name: '全日看護', cost: nursingCost, type: '支出' }, 
+    { name: '每日薪資(損)', cost: dailySalary, type: '收入' },
+    { name: '雙人房差額', cost: 3500, type: '支出' },
+    { name: '單人房差額', cost: ROOM_COST_SINGLE, type: '支出' },
+    { name: '全日看護', cost: NURSING_COST, type: '支出' },
   ];
-  const totalMedicalLoss5Days = (roomCostSingle * 5) + (nursingCost * 5) + (dailySalary * 5);
+  const totalMedicalLoss5Days = (ROOM_COST_SINGLE * 5) + (NURSING_COST * 5) + (dailySalary * 5);
 
   return (
     <div className="space-y-6 animate-fade-in font-sans pb-20">
@@ -134,21 +275,17 @@ export default function MarketDataZone() {
       {/* 分頁切換 Tabs */}
       {/* --------------------------------------------------------------------------- */}
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        {[
-          { id: 'inflation', label: '通膨碎鈔機', icon: TrendingDown, color: 'amber-500' },
-          { id: 'unhealthy', label: '不健康餘命', icon: Bed, color: 'slate-700' },
-          { id: 'pension', label: '勞保破產危機', icon: TrendingUp, color: 'red-600' },
-          { id: 'medical', label: '醫療通膨現況', icon: Activity, color: 'blue-600' },
-          { id: 'cancer', label: '癌症時鐘', icon: Clock, color: 'orange-500' }
-        ].map(t => (
-          <button 
-            key={t.id} 
-            onClick={() => setActiveTab(t.id)} 
+        {TAB_CONFIG.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
             className={`px-5 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-sm whitespace-nowrap ${
-              activeTab === t.id ? `bg-${t.color} text-white shadow-lg ring-2 ring-white/20` : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+              activeTab === t.id
+                ? `${t.colorClass} text-white shadow-lg ring-2 ring-white/20`
+                : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
             }`}
           >
-            <t.icon size={20}/> {t.label}
+            <t.icon size={20} /> {t.label}
           </button>
         ))}
       </div>
@@ -175,7 +312,29 @@ export default function MarketDataZone() {
                 <p className="text-xs text-amber-600 font-bold uppercase mb-2 tracking-widest">Vanished Wealth</p>
                 <p className="text-6xl font-black text-red-600 font-mono tracking-tighter">-{vanishedWealth} 萬</p>
                 <p className="text-sm text-red-400 font-bold mt-2 tracking-wide">資產實質價值縮水了 {vanishedPercent}%</p>
-                <div className="mt-6 p-4 bg-amber-50 rounded-2xl text-amber-700 text-sm font-bold border border-amber-100">實質購買力僅剩 <span className="text-xl font-mono">${purchasingPower}</span> 萬</div>
+
+                {/* 購買力視覺化進度條 */}
+                <div className="mt-6 space-y-2">
+                  <div className="flex justify-between text-xs text-slate-500 font-bold">
+                    <span>原始本金</span>
+                    <span>實質購買力</span>
+                  </div>
+                  <div className="h-6 bg-slate-100 rounded-full overflow-hidden relative">
+                    <div
+                      className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full transition-all duration-500 flex items-center justify-end pr-2"
+                      style={{ width: `${100 - Number(vanishedPercent)}%` }}
+                    >
+                      <span className="text-[10px] font-black text-white">{purchasingPower}萬</span>
+                    </div>
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">
+                      {inflationPrincipal}萬
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 p-4 bg-amber-50 rounded-2xl text-amber-700 text-sm font-bold border border-amber-100">
+                  {inflationYears}年後購買力僅剩 <span className="text-xl font-mono text-red-600">{(100 - Number(vanishedPercent)).toFixed(0)}%</span>
+                </div>
               </div>
             </div>
             
@@ -184,11 +343,17 @@ export default function MarketDataZone() {
               <div className="space-y-6">
                 <h4 className="font-black text-slate-800 flex items-center gap-2 text-xl"><Target className="text-amber-500" size={24}/> 2026 民生通膨真相</h4>
                 <div className="grid grid-cols-1 gap-3">
-                  {consumerGoods.map((g, i) => (
+                  {CONSUMER_GOODS.map((g, i) => (
                     <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:border-amber-200 transition-all group">
-                      <div className="flex items-center gap-4"><div className={`p-2 bg-white rounded-lg shadow-sm ${g.color}`}><g.icon size={20}/></div><span className="font-bold text-slate-700">{g.name}</span></div>
                       <div className="flex items-center gap-4">
-                        <span className="text-xs text-slate-400 font-mono">${g.price2010}</span><ArrowRight size={12} className="text-slate-300"/><span className="text-xl font-black text-amber-600 font-mono">${g.price2026}</span>
+                        <div className={`p-2 bg-white rounded-lg shadow-sm ${g.color}`}><g.icon size={20} /></div>
+                        <span className="font-bold text-slate-700">{g.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-400 font-mono">${g.price2010}</span>
+                        <ArrowRight size={12} className="text-slate-300" />
+                        <span className="text-xl font-black text-amber-600 font-mono">${g.price2026}</span>
+                        <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">+{g.changePercent}%</span>
                       </div>
                     </div>
                   ))}
@@ -220,6 +385,104 @@ export default function MarketDataZone() {
                 </div>
               </div>
             </div>
+
+            {/* 業務小抄 - 通膨碎鈔機 */}
+            <div className="mt-8 border-t border-slate-200 pt-6">
+              <button
+                onClick={() => setShowCheatsheet(!showCheatsheet)}
+                className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
+                  showCheatsheet
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg'
+                    : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <MessageCircle size={24} />
+                  <div className="text-left">
+                    <p className="font-black text-lg">業務小抄</p>
+                    <p className={`text-xs ${showCheatsheet ? 'text-white/70' : 'text-amber-600'}`}>
+                      銷售話術、異議處理、成交金句
+                    </p>
+                  </div>
+                </div>
+                <ChevronDown
+                  size={24}
+                  className={`transition-transform duration-300 ${showCheatsheet ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {showCheatsheet && SALES_CHEATSHEET['inflation'] && (
+                <div className="mt-4 space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                  {/* 開場切入話術 */}
+                  <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-100">
+                    <h5 className="font-black text-purple-800 flex items-center gap-2 mb-4">
+                      <Lightbulb size={20} className="text-purple-500" />
+                      開場切入話術
+                    </h5>
+                    <div className="space-y-3">
+                      {SALES_CHEATSHEET['inflation'].hooks.map((hook, i) => (
+                        <div key={i} className="bg-white rounded-xl p-4 border border-purple-100 hover:border-purple-300 transition-all group">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <span className="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">{hook.label}</span>
+                              <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{hook.script}」</p>
+                            </div>
+                            <button onClick={() => copyToClipboard(hook.script, `inflation-hook-${i}`)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all shrink-0" title="複製話術">
+                              {copiedIndex === `inflation-hook-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 異議處理 */}
+                  <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-100">
+                    <h5 className="font-black text-amber-800 flex items-center gap-2 mb-4">
+                      <ShieldAlert size={20} className="text-amber-500" />
+                      異議處理
+                    </h5>
+                    <div className="space-y-3">
+                      {SALES_CHEATSHEET['inflation'].objections.map((obj, i) => (
+                        <div key={i} className="bg-white rounded-xl p-4 border border-amber-100 hover:border-amber-300 transition-all">
+                          <div className="flex items-start gap-3 mb-2">
+                            <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">客戶說</span>
+                            <p className="text-slate-600 font-bold">「{obj.q}」</p>
+                          </div>
+                          <div className="flex items-start justify-between gap-3 mt-3 pl-4 border-l-2 border-emerald-400">
+                            <div className="flex-1">
+                              <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">這樣回應</span>
+                              <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{obj.a}」</p>
+                            </div>
+                            <button onClick={() => copyToClipboard(obj.a, `inflation-obj-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製回應">
+                              {copiedIndex === `inflation-obj-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 成交金句 */}
+                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-100">
+                    <h5 className="font-black text-emerald-800 flex items-center gap-2 mb-4">
+                      <Target size={20} className="text-emerald-500" />
+                      成交金句
+                    </h5>
+                    <div className="space-y-3">
+                      {SALES_CHEATSHEET['inflation'].closingLines.map((line, i) => (
+                        <div key={i} className="bg-white rounded-xl p-4 border border-emerald-100 hover:border-emerald-300 transition-all flex items-center justify-between gap-3">
+                          <p className="text-slate-700 font-bold leading-relaxed">「{line}」</p>
+                          <button onClick={() => copyToClipboard(line, `inflation-close-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製金句">
+                            {copiedIndex === `inflation-close-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -231,8 +494,8 @@ export default function MarketDataZone() {
               {/* 1. 核心圖表與交互 */}
               <div className="flex flex-col md:flex-row gap-8 bg-slate-50 p-6 rounded-3xl border border-slate-100">
                  <div className="flex bg-white rounded-2xl p-2 border shadow-sm h-fit">
-                    {['male', 'female'].map(g => (
-                      <button key={g} onClick={()=>setGender(g)} className={`px-8 py-3 rounded-xl text-sm font-bold transition-all ${gender === g ? 'bg-slate-800 text-white shadow-xl scale-105' : 'text-slate-400 hover:text-slate-600'}`}>{g === 'male' ? '男性' : '女性'}</button>
+                    {(['male', 'female'] as const).map(g => (
+                      <button key={g} onClick={() => setGender(g)} className={`px-8 py-3 rounded-xl text-sm font-bold transition-all ${gender === g ? 'bg-slate-800 text-white shadow-xl scale-105' : 'text-slate-400 hover:text-slate-600'}`}>{g === 'male' ? '男性' : '女性'}</button>
                     ))}
                  </div>
                  <div className="flex-1 w-full"><div className="flex justify-between text-sm mb-3 font-black tracking-widest text-slate-700 uppercase"><span className="flex items-center gap-2"><Coins size={16} className="text-rose-500"/> 2026 預估每月照護規費</span><span className="text-rose-600 text-3xl font-mono">${monthlyCareCost.toLocaleString()}</span></div>
@@ -255,7 +518,7 @@ export default function MarketDataZone() {
                  <div className="flex justify-between text-[11px] text-slate-400 px-6 mt-4 font-black tracking-widest text-center uppercase">
                     <div className="flex flex-col"><span className="text-slate-500">PAST</span><span>已過 ({age}歲)</span></div>
                     <div className="flex flex-col"><span className="text-emerald-600">HEALTHY</span><span>剩餘健康 ({remainingHealthy.toFixed(1)}年)</span></div>
-                    <div className="flex flex-col"><span className="text-orange-500">UNHEALTHY</span><span>臥床預期 ({unhealthyYears}年)</span></div>
+                    <div className="flex flex-col"><span className="text-orange-500">UNHEALTHY</span><span>臥床預期 ({UNHEALTHY_YEARS}年)</span></div>
                  </div>
               </div>
 
@@ -294,6 +557,104 @@ export default function MarketDataZone() {
                   </div>
                 </div>
               </div>
+
+              {/* 業務小抄 - 不健康餘命 */}
+              <div className="mt-8 border-t border-slate-200 pt-6">
+                <button
+                  onClick={() => setShowCheatsheet(!showCheatsheet)}
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
+                    showCheatsheet
+                      ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg'
+                      : 'bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <MessageCircle size={24} />
+                    <div className="text-left">
+                      <p className="font-black text-lg">業務小抄</p>
+                      <p className={`text-xs ${showCheatsheet ? 'text-white/70' : 'text-rose-600'}`}>
+                        銷售話術、異議處理、成交金句
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronDown
+                    size={24}
+                    className={`transition-transform duration-300 ${showCheatsheet ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {showCheatsheet && SALES_CHEATSHEET['unhealthy'] && (
+                  <div className="mt-4 space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                    {/* 開場切入話術 */}
+                    <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-100">
+                      <h5 className="font-black text-purple-800 flex items-center gap-2 mb-4">
+                        <Lightbulb size={20} className="text-purple-500" />
+                        開場切入話術
+                      </h5>
+                      <div className="space-y-3">
+                        {SALES_CHEATSHEET['unhealthy'].hooks.map((hook, i) => (
+                          <div key={i} className="bg-white rounded-xl p-4 border border-purple-100 hover:border-purple-300 transition-all group">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1">
+                                <span className="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">{hook.label}</span>
+                                <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{hook.script}」</p>
+                              </div>
+                              <button onClick={() => copyToClipboard(hook.script, `unhealthy-hook-${i}`)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all shrink-0" title="複製話術">
+                                {copiedIndex === `unhealthy-hook-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 異議處理 */}
+                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-100">
+                      <h5 className="font-black text-amber-800 flex items-center gap-2 mb-4">
+                        <ShieldAlert size={20} className="text-amber-500" />
+                        異議處理
+                      </h5>
+                      <div className="space-y-3">
+                        {SALES_CHEATSHEET['unhealthy'].objections.map((obj, i) => (
+                          <div key={i} className="bg-white rounded-xl p-4 border border-amber-100 hover:border-amber-300 transition-all">
+                            <div className="flex items-start gap-3 mb-2">
+                              <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">客戶說</span>
+                              <p className="text-slate-600 font-bold">「{obj.q}」</p>
+                            </div>
+                            <div className="flex items-start justify-between gap-3 mt-3 pl-4 border-l-2 border-emerald-400">
+                              <div className="flex-1">
+                                <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">這樣回應</span>
+                                <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{obj.a}」</p>
+                              </div>
+                              <button onClick={() => copyToClipboard(obj.a, `unhealthy-obj-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製回應">
+                                {copiedIndex === `unhealthy-obj-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 成交金句 */}
+                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-100">
+                      <h5 className="font-black text-emerald-800 flex items-center gap-2 mb-4">
+                        <Target size={20} className="text-emerald-500" />
+                        成交金句
+                      </h5>
+                      <div className="space-y-3">
+                        {SALES_CHEATSHEET['unhealthy'].closingLines.map((line, i) => (
+                          <div key={i} className="bg-white rounded-xl p-4 border border-emerald-100 hover:border-emerald-300 transition-all flex items-center justify-between gap-3">
+                            <p className="text-slate-700 font-bold leading-relaxed">「{line}」</p>
+                            <button onClick={() => copyToClipboard(line, `unhealthy-close-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製金句">
+                              {copiedIndex === `unhealthy-close-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
            </div>
         )}
 
@@ -317,7 +678,7 @@ export default function MarketDataZone() {
              
              <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                   <LineChart data={laborData} margin={{top:10, right:30, left:0, bottom:10}}>
+                   <LineChart data={LABOR_DATA} margin={{top:10, right:30, left:0, bottom:10}}>
                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9"/>
                      <XAxis dataKey="year" tick={{fill: '#64748b', fontWeight:'black', fontSize:14}} axisLine={false} tickLine={false} dy={10}/>
                      <YAxis unit="億" tick={{fill: '#64748b', fontWeight:'bold'}} axisLine={false} tickLine={false} dx={-10}/>
@@ -367,6 +728,104 @@ export default function MarketDataZone() {
                      </div>
                    </div>
                 </div>
+             </div>
+
+             {/* 業務小抄 - 勞保破產危機 */}
+             <div className="mt-8 border-t border-slate-200 pt-6">
+               <button
+                 onClick={() => setShowCheatsheet(!showCheatsheet)}
+                 className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
+                   showCheatsheet
+                     ? 'bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-lg'
+                     : 'bg-red-50 hover:bg-red-100 text-red-800 border border-red-200'
+                 }`}
+               >
+                 <div className="flex items-center gap-3">
+                   <MessageCircle size={24} />
+                   <div className="text-left">
+                     <p className="font-black text-lg">業務小抄</p>
+                     <p className={`text-xs ${showCheatsheet ? 'text-white/70' : 'text-red-600'}`}>
+                       銷售話術、異議處理、成交金句
+                     </p>
+                   </div>
+                 </div>
+                 <ChevronDown
+                   size={24}
+                   className={`transition-transform duration-300 ${showCheatsheet ? 'rotate-180' : ''}`}
+                 />
+               </button>
+
+               {showCheatsheet && SALES_CHEATSHEET['pension'] && (
+                 <div className="mt-4 space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                   {/* 開場切入話術 */}
+                   <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-100">
+                     <h5 className="font-black text-purple-800 flex items-center gap-2 mb-4">
+                       <Lightbulb size={20} className="text-purple-500" />
+                       開場切入話術
+                     </h5>
+                     <div className="space-y-3">
+                       {SALES_CHEATSHEET['pension'].hooks.map((hook, i) => (
+                         <div key={i} className="bg-white rounded-xl p-4 border border-purple-100 hover:border-purple-300 transition-all group">
+                           <div className="flex items-start justify-between gap-3">
+                             <div className="flex-1">
+                               <span className="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">{hook.label}</span>
+                               <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{hook.script}」</p>
+                             </div>
+                             <button onClick={() => copyToClipboard(hook.script, `pension-hook-${i}`)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all shrink-0" title="複製話術">
+                               {copiedIndex === `pension-hook-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                             </button>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+
+                   {/* 異議處理 */}
+                   <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-100">
+                     <h5 className="font-black text-amber-800 flex items-center gap-2 mb-4">
+                       <ShieldAlert size={20} className="text-amber-500" />
+                       異議處理
+                     </h5>
+                     <div className="space-y-3">
+                       {SALES_CHEATSHEET['pension'].objections.map((obj, i) => (
+                         <div key={i} className="bg-white rounded-xl p-4 border border-amber-100 hover:border-amber-300 transition-all">
+                           <div className="flex items-start gap-3 mb-2">
+                             <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">客戶說</span>
+                             <p className="text-slate-600 font-bold">「{obj.q}」</p>
+                           </div>
+                           <div className="flex items-start justify-between gap-3 mt-3 pl-4 border-l-2 border-emerald-400">
+                             <div className="flex-1">
+                               <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">這樣回應</span>
+                               <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{obj.a}」</p>
+                             </div>
+                             <button onClick={() => copyToClipboard(obj.a, `pension-obj-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製回應">
+                               {copiedIndex === `pension-obj-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                             </button>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+
+                   {/* 成交金句 */}
+                   <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-100">
+                     <h5 className="font-black text-emerald-800 flex items-center gap-2 mb-4">
+                       <Target size={20} className="text-emerald-500" />
+                       成交金句
+                     </h5>
+                     <div className="space-y-3">
+                       {SALES_CHEATSHEET['pension'].closingLines.map((line, i) => (
+                         <div key={i} className="bg-white rounded-xl p-4 border border-emerald-100 hover:border-emerald-300 transition-all flex items-center justify-between gap-3">
+                           <p className="text-slate-700 font-bold leading-relaxed">「{line}」</p>
+                           <button onClick={() => copyToClipboard(line, `pension-close-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製金句">
+                             {copiedIndex === `pension-close-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                           </button>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+                 </div>
+               )}
              </div>
           </div>
         )}
@@ -460,6 +919,104 @@ export default function MarketDataZone() {
                   </div>
                </div>
              </div>
+
+             {/* 業務小抄 - 醫療通膨 */}
+             <div className="mt-8 border-t border-slate-200 pt-6">
+               <button
+                 onClick={() => setShowCheatsheet(!showCheatsheet)}
+                 className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
+                   showCheatsheet
+                     ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
+                     : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
+                 }`}
+               >
+                 <div className="flex items-center gap-3">
+                   <MessageCircle size={24} />
+                   <div className="text-left">
+                     <p className="font-black text-lg">業務小抄</p>
+                     <p className={`text-xs ${showCheatsheet ? 'text-white/70' : 'text-emerald-600'}`}>
+                       銷售話術、異議處理、成交金句
+                     </p>
+                   </div>
+                 </div>
+                 <ChevronDown
+                   size={24}
+                   className={`transition-transform duration-300 ${showCheatsheet ? 'rotate-180' : ''}`}
+                 />
+               </button>
+
+               {showCheatsheet && SALES_CHEATSHEET['medical'] && (
+                 <div className="mt-4 space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                   {/* 開場切入話術 */}
+                   <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-100">
+                     <h5 className="font-black text-purple-800 flex items-center gap-2 mb-4">
+                       <Lightbulb size={20} className="text-purple-500" />
+                       開場切入話術
+                     </h5>
+                     <div className="space-y-3">
+                       {SALES_CHEATSHEET['medical'].hooks.map((hook, i) => (
+                         <div key={i} className="bg-white rounded-xl p-4 border border-purple-100 hover:border-purple-300 transition-all group">
+                           <div className="flex items-start justify-between gap-3">
+                             <div className="flex-1">
+                               <span className="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">{hook.label}</span>
+                               <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{hook.script}」</p>
+                             </div>
+                             <button onClick={() => copyToClipboard(hook.script, `medical-hook-${i}`)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all shrink-0" title="複製話術">
+                               {copiedIndex === `medical-hook-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                             </button>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+
+                   {/* 異議處理 */}
+                   <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-100">
+                     <h5 className="font-black text-amber-800 flex items-center gap-2 mb-4">
+                       <ShieldAlert size={20} className="text-amber-500" />
+                       異議處理
+                     </h5>
+                     <div className="space-y-3">
+                       {SALES_CHEATSHEET['medical'].objections.map((obj, i) => (
+                         <div key={i} className="bg-white rounded-xl p-4 border border-amber-100 hover:border-amber-300 transition-all">
+                           <div className="flex items-start gap-3 mb-2">
+                             <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">客戶說</span>
+                             <p className="text-slate-600 font-bold">「{obj.q}」</p>
+                           </div>
+                           <div className="flex items-start justify-between gap-3 mt-3 pl-4 border-l-2 border-emerald-400">
+                             <div className="flex-1">
+                               <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">這樣回應</span>
+                               <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{obj.a}」</p>
+                             </div>
+                             <button onClick={() => copyToClipboard(obj.a, `medical-obj-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製回應">
+                               {copiedIndex === `medical-obj-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                             </button>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+
+                   {/* 成交金句 */}
+                   <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-100">
+                     <h5 className="font-black text-emerald-800 flex items-center gap-2 mb-4">
+                       <Target size={20} className="text-emerald-500" />
+                       成交金句
+                     </h5>
+                     <div className="space-y-3">
+                       {SALES_CHEATSHEET['medical'].closingLines.map((line, i) => (
+                         <div key={i} className="bg-white rounded-xl p-4 border border-emerald-100 hover:border-emerald-300 transition-all flex items-center justify-between gap-3">
+                           <p className="text-slate-700 font-bold leading-relaxed">「{line}」</p>
+                           <button onClick={() => copyToClipboard(line, `medical-close-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製金句">
+                             {copiedIndex === `medical-close-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                           </button>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+                 </div>
+               )}
+             </div>
           </div>
         )}
 
@@ -552,6 +1109,104 @@ export default function MarketDataZone() {
                       </div>
                    </div>
                 </div>
+             </div>
+
+             {/* 業務小抄 - 癌症時鐘 */}
+             <div className="mt-8 border-t border-slate-200 pt-6">
+               <button
+                 onClick={() => setShowCheatsheet(!showCheatsheet)}
+                 className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
+                   showCheatsheet
+                     ? 'bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg'
+                     : 'bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-200'
+                 }`}
+               >
+                 <div className="flex items-center gap-3">
+                   <MessageCircle size={24} />
+                   <div className="text-left">
+                     <p className="font-black text-lg">業務小抄</p>
+                     <p className={`text-xs ${showCheatsheet ? 'text-white/70' : 'text-orange-600'}`}>
+                       銷售話術、異議處理、成交金句
+                     </p>
+                   </div>
+                 </div>
+                 <ChevronDown
+                   size={24}
+                   className={`transition-transform duration-300 ${showCheatsheet ? 'rotate-180' : ''}`}
+                 />
+               </button>
+
+               {showCheatsheet && SALES_CHEATSHEET['cancer'] && (
+                 <div className="mt-4 space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                   {/* 開場切入話術 */}
+                   <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-100">
+                     <h5 className="font-black text-purple-800 flex items-center gap-2 mb-4">
+                       <Lightbulb size={20} className="text-purple-500" />
+                       開場切入話術
+                     </h5>
+                     <div className="space-y-3">
+                       {SALES_CHEATSHEET['cancer'].hooks.map((hook, i) => (
+                         <div key={i} className="bg-white rounded-xl p-4 border border-purple-100 hover:border-purple-300 transition-all group">
+                           <div className="flex items-start justify-between gap-3">
+                             <div className="flex-1">
+                               <span className="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">{hook.label}</span>
+                               <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{hook.script}」</p>
+                             </div>
+                             <button onClick={() => copyToClipboard(hook.script, `cancer-hook-${i}`)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all shrink-0" title="複製話術">
+                               {copiedIndex === `cancer-hook-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                             </button>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+
+                   {/* 異議處理 */}
+                   <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-100">
+                     <h5 className="font-black text-amber-800 flex items-center gap-2 mb-4">
+                       <ShieldAlert size={20} className="text-amber-500" />
+                       異議處理
+                     </h5>
+                     <div className="space-y-3">
+                       {SALES_CHEATSHEET['cancer'].objections.map((obj, i) => (
+                         <div key={i} className="bg-white rounded-xl p-4 border border-amber-100 hover:border-amber-300 transition-all">
+                           <div className="flex items-start gap-3 mb-2">
+                             <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">客戶說</span>
+                             <p className="text-slate-600 font-bold">「{obj.q}」</p>
+                           </div>
+                           <div className="flex items-start justify-between gap-3 mt-3 pl-4 border-l-2 border-emerald-400">
+                             <div className="flex-1">
+                               <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">這樣回應</span>
+                               <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{obj.a}」</p>
+                             </div>
+                             <button onClick={() => copyToClipboard(obj.a, `cancer-obj-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製回應">
+                               {copiedIndex === `cancer-obj-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                             </button>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+
+                   {/* 成交金句 */}
+                   <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-100">
+                     <h5 className="font-black text-emerald-800 flex items-center gap-2 mb-4">
+                       <Target size={20} className="text-emerald-500" />
+                       成交金句
+                     </h5>
+                     <div className="space-y-3">
+                       {SALES_CHEATSHEET['cancer'].closingLines.map((line, i) => (
+                         <div key={i} className="bg-white rounded-xl p-4 border border-emerald-100 hover:border-emerald-300 transition-all flex items-center justify-between gap-3">
+                           <p className="text-slate-700 font-bold leading-relaxed">「{line}」</p>
+                           <button onClick={() => copyToClipboard(line, `cancer-close-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製金句">
+                             {copiedIndex === `cancer-close-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                           </button>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+                 </div>
+               )}
              </div>
           </div>
         )}

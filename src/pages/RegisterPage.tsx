@@ -17,6 +17,19 @@ interface RegisterPageProps {
 // Cloud Function API 端點
 const API_ENDPOINT = 'https://us-central1-grbt-f87fa.cloudfunctions.net/liffRegister';
 
+// reCAPTCHA v3 Site Key
+const RECAPTCHA_SITE_KEY = '6LdpoU4sAAAAAKu2HkuSIfBSPF7w2Ukoqk8QX2z-';
+
+// 宣告 grecaptcha 全域變數
+declare global {
+  interface Window {
+    grecaptcha: {
+      ready: (callback: () => void) => void;
+      execute: (siteKey: string, options: { action: string }) => Promise<string>;
+    };
+  }
+}
+
 // Ultra Advisor LOGO 元件
 const UltraLogo: React.FC<{ size?: number }> = ({ size = 60 }) => {
   return (
@@ -141,6 +154,29 @@ export default function RegisterPage({ onSuccess, onBack, onLogin }: RegisterPag
     return Object.keys(newErrors).length === 0;
   };
 
+  // 取得 reCAPTCHA token
+  const getRecaptchaToken = async (): Promise<string | null> => {
+    try {
+      if (window.grecaptcha) {
+        return new Promise((resolve) => {
+          window.grecaptcha.ready(async () => {
+            try {
+              const token = await window.grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: 'register' });
+              resolve(token);
+            } catch (err) {
+              console.error('reCAPTCHA execute error:', err);
+              resolve(null);
+            }
+          });
+        });
+      }
+      return null;
+    } catch (err) {
+      console.error('reCAPTCHA error:', err);
+      return null;
+    }
+  };
+
   // 提交註冊
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,6 +187,9 @@ export default function RegisterPage({ onSuccess, onBack, onLogin }: RegisterPag
     setErrors({});
 
     try {
+      // 🔒 取得 reCAPTCHA token
+      const recaptchaToken = await getRecaptchaToken();
+
       const response = await fetch(API_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -162,7 +201,9 @@ export default function RegisterPage({ onSuccess, onBack, onLogin }: RegisterPag
           // 網頁註冊不帶 LINE 資料
           lineUserId: null,
           lineDisplayName: null,
-          linePictureUrl: null
+          linePictureUrl: null,
+          // 🔒 reCAPTCHA token
+          recaptchaToken
         })
       });
 
@@ -175,6 +216,9 @@ export default function RegisterPage({ onSuccess, onBack, onLogin }: RegisterPag
         // 處理特定錯誤
         if (result.error?.includes('Email')) {
           setErrors({ email: result.error });
+        } else if (result.error?.includes('頻繁') || result.error?.includes('分鐘')) {
+          // Rate limit 錯誤
+          setErrors({ form: result.error });
         } else {
           setErrors({ form: result.error || '註冊失敗，請稍後再試' });
         }

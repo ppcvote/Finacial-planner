@@ -15,6 +15,7 @@ import {
   X,
   Banknote,
   Settings,
+  HelpCircle,
 } from 'lucide-react';
 import { doc, updateDoc, increment } from 'firebase/firestore';
 import { auth, db } from '../firebase';
@@ -248,6 +249,7 @@ export default function MortgageCalculator() {
   const [inflationRate, setInflationRate] = useState(0);
 
   const [showAllYears, setShowAllYears] = useState(false);
+  const [showRateExplain, setShowRateExplain] = useState(false);
 
   // ==========================================
   // 計算結果
@@ -277,9 +279,11 @@ export default function MortgageCalculator() {
     const actualYears = Math.ceil(actualMonths / 12);
     
     const interestRatio = totalPayment > 0 ? (totalInterest / totalPayment) * 100 : 0;
-    
-    // 實際利率（考慮複利）
-    const effectiveRate = totalMonths > 0 ? (Math.pow(totalPayment / principal, 1 / (loanTerm)) - 1) * 100 : 0;
+
+    // 實際年利率 (EAR - Effective Annual Rate)
+    // 考慮月複利：EAR = (1 + 月利率)^12 - 1
+    const monthlyRateDecimal = interestRate / 100 / 12;
+    const effectiveRate = (Math.pow(1 + monthlyRateDecimal, 12) - 1) * 100;
 
     // 圖表數據 - 堆疊面積圖（與原版iPad一致）
     // 堆疊順序（從下到上）：餘額 → 已繳本金 → 累計利息
@@ -907,11 +911,14 @@ export default function MortgageCalculator() {
                         {(showAllYears ? calculations.yearlySchedule : calculations.yearlySchedule.slice(0, 8)).map((item, idx) => {
                           const cumulativePaid = calculations.yearlySchedule.slice(0, idx + 1).reduce((sum, y) => sum + y.totalPayment, 0);
                           const cumulativeInterest = calculations.yearlySchedule.slice(0, idx + 1).reduce((sum, y) => sum + y.totalInterest, 0);
-                          // 通脹貼現：將未來的付款換算成今日購買力
-                          const inflationAdjusted = inflationRate > 0 
-                            ? cumulativePaid / Math.pow(1 + inflationRate / 100, item.year)
+                          // 通脹貼現：將每年的付款分別折現到今日價值後加總
+                          // 正確做法：第 n 年的付款除以 (1 + 通膨率)^n
+                          const inflationAdjusted = inflationRate > 0
+                            ? calculations.yearlySchedule.slice(0, idx + 1).reduce((sum, y) => {
+                                return sum + y.totalPayment / Math.pow(1 + inflationRate / 100, y.year);
+                              }, 0)
                             : cumulativePaid;
-                          
+
                           return (
                             <tr key={idx} className="border-b border-slate-800 hover:bg-slate-700/30">
                               <td className="py-2 px-2 text-center text-slate-400">{item.year}</td>
@@ -976,11 +983,52 @@ export default function MortgageCalculator() {
                   {formatMoneyFull(Math.round(calculations.totalInterest))}
                 </p>
               </div>
-              <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700/50">
-                <p className="text-xs text-slate-400 mb-1">實際利率%</p>
+              <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700/50 relative">
+                <div className="flex items-center gap-1 mb-1">
+                  <p className="text-xs text-slate-400">實際年利率%</p>
+                  <button
+                    onClick={() => setShowRateExplain(true)}
+                    className="text-slate-500 hover:text-amber-400 transition-colors"
+                  >
+                    <HelpCircle size={12} />
+                  </button>
+                </div>
                 <p className="text-2xl md:text-3xl font-black text-amber-400 font-mono">
-                  {((calculations.totalInterest / calculations.principal) * 100 / loanTerm).toFixed(2)}
+                  {calculations.effectiveRate.toFixed(2)}
                 </p>
+
+                {/* 實際利率說明彈窗 */}
+                {showRateExplain && (
+                  <div className="absolute bottom-full left-0 right-0 mb-2 z-50">
+                    <div className="bg-slate-900 border border-slate-600 rounded-xl p-3 shadow-xl text-xs">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-amber-400">什麼是實際年利率？</span>
+                        <button
+                          onClick={() => setShowRateExplain(false)}
+                          className="text-slate-500 hover:text-white"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                      <div className="space-y-2 text-slate-300">
+                        <p>
+                          <span className="text-white font-medium">名目利率</span>（你輸入的 {interestRate}%）是銀行公告的年利率。
+                        </p>
+                        <p>
+                          <span className="text-amber-400 font-medium">實際年利率</span>（{calculations.effectiveRate.toFixed(2)}%）考慮了<span className="text-white">每月複利</span>的影響。
+                        </p>
+                        <div className="bg-slate-800 rounded p-2 mt-2">
+                          <p className="text-[10px] text-slate-400 mb-1">計算公式：</p>
+                          <p className="font-mono text-[11px]">EAR = (1 + {interestRate}%/12)¹² - 1</p>
+                          <p className="font-mono text-[11px] text-amber-400">= {calculations.effectiveRate.toFixed(4)}%</p>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1">
+                          💡 實際年利率會比名目利率略高，因為利息每月計入本金再生利息。
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -485,10 +485,10 @@ export default function App() {
 
   if (loading || !minSplashTimePassed) return <SplashScreen />;
 
-  // 🆕 公開計算機（不需登入）
+  // 🆕 公開計算機（不需登入，但會員可使用額外功能）
   if (isCalculatorRoute) {
     return (
-      <PublicCalculator 
+      <PublicCalculator
         onBack={() => {
           setIsCalculatorRoute(false);
           window.history.pushState({}, '', '/');
@@ -499,6 +499,7 @@ export default function App() {
           setIsRegisterRoute(true);
           window.history.pushState({}, '', '/register');
         }}
+        user={user}  // 🆕 傳遞用戶資訊
       />
     );
   }
