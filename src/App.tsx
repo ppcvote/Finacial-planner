@@ -577,17 +577,21 @@ export default function App() {
         }} 
       />;
     }
-    return <LandingPage 
-      onStart={() => navigateTo('/login', () => setIsLoginRoute(true))} 
-      onSignup={() => navigateTo('/signup-secret', () => setIsSecretSignupRoute(true))}
-      onHome={() => navigateTo('/', () => { setIsLoginRoute(false); setIsSecretSignupRoute(false); })}
-    />;
+    return (
+      <ThemeProvider>
+        <LandingPage
+          onStart={() => navigateTo('/login', () => setIsLoginRoute(true))}
+          onSignup={() => navigateTo('/signup-secret', () => setIsSecretSignupRoute(true))}
+          onHome={() => navigateTo('/', () => { setIsLoginRoute(false); setIsSecretSignupRoute(false); })}
+        />
+      </ThemeProvider>
+    );
   }
 
   // ✅ 使用新版 UltraWarRoom 取代舊的 ClientDashboard
   if (!currentClient) {
       return (
-          <>
+          <ThemeProvider>
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
             {/* 🆕 點數獲得通知 */}
             {pointsNotification && (
@@ -599,16 +603,16 @@ export default function App() {
               />
             )}
             {/* 🆕 點數儀表板 */}
-            <PointsDashboard 
-              isOpen={isPointsDashboardOpen} 
-              onClose={() => setIsPointsDashboardOpen(false)} 
+            <PointsDashboard
+              isOpen={isPointsDashboardOpen}
+              onClose={() => setIsPointsDashboardOpen(false)}
             />
-            <UltraWarRoom 
-              user={user} 
-              onSelectClient={setCurrentClient} 
+            <UltraWarRoom
+              user={user}
+              onSelectClient={setCurrentClient}
               onLogout={handleLogout}
             />
-          </>
+          </ThemeProvider>
       );
   }
 
