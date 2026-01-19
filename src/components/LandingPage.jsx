@@ -1369,17 +1369,40 @@ export function LandingPage({ onStart, onSignup, onHome }) {
             </button>
           </nav>
 
-          {/* ✅ 手機版按鈕 - 統一導向註冊頁 */}
-          <div className="md:hidden flex items-center gap-3">
+          {/* ✅ 手機版按鈕 */}
+          <div className="md:hidden flex items-center gap-2">
+            {/* 傲創計算機 */}
+            <button
+              onClick={() => {
+                window.history.pushState({}, '', '/calculator');
+                window.location.reload();
+              }}
+              className="p-2 text-emerald-400 hover:text-emerald-300 transition-colors"
+              title="傲創計算機"
+            >
+              <Calculator size={20} />
+            </button>
+            {/* 知識庫 */}
+            <button
+              onClick={() => {
+                window.history.pushState({}, '', '/blog');
+                window.location.reload();
+              }}
+              className="p-2 text-slate-400 hover:text-blue-400 transition-colors"
+              title="知識庫"
+            >
+              <FileText size={20} />
+            </button>
+            {/* 登入 */}
             <button
               onClick={handleFreeTrial}
-              className="text-slate-400 hover:text-white font-bold text-sm">
+              className="text-slate-400 hover:text-white font-bold text-sm px-2">
               登入
             </button>
+            {/* 註冊 */}
             <button
               onClick={handleFreeTrial}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold text-sm
-                       transition-all">
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold text-sm transition-all">
               註冊
             </button>
           </div>

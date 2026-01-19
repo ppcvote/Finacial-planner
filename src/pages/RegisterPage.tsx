@@ -392,6 +392,20 @@ export default function RegisterPage({ onSuccess, onBack, onLogin }: RegisterPag
             <span className="text-blue-400">Advisor</span>
           </h1>
           <p className="text-slate-400 text-sm mt-1">財務顧問的秘密武器</p>
+
+          {/* 已有帳號？登入連結 - 放在最醒目的位置 */}
+          <div className="mt-4 py-3 px-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
+            <p className="text-slate-300 text-sm">
+              已有帳號？
+              <button
+                type="button"
+                onClick={goToLogin}
+                className="ml-2 text-[#4DA3FF] font-bold hover:text-[#6db8ff] transition-colors underline underline-offset-2"
+              >
+                立即登入
+              </button>
+            </p>
+          </div>
         </div>
       </div>
 
@@ -522,15 +536,18 @@ export default function RegisterPage({ onSuccess, onBack, onLogin }: RegisterPag
             </ul>
           </div>
 
-          {/* 已有帳號 */}
-          <div className="text-center pt-4">
-            <button
-              type="button"
-              onClick={goToLogin}
-              className="text-slate-400 text-sm hover:text-[#4DA3FF] transition-colors"
-            >
-              已有帳號？直接登入
-            </button>
+          {/* 已有帳號 - 底部再次提醒 */}
+          <div className="text-center pt-6 pb-2">
+            <div className="inline-flex items-center gap-2 py-2 px-4 bg-slate-800/30 rounded-lg border border-slate-700/30">
+              <span className="text-slate-400 text-sm">已是會員？</span>
+              <button
+                type="button"
+                onClick={goToLogin}
+                className="text-[#4DA3FF] font-bold text-sm hover:text-[#6db8ff] transition-colors"
+              >
+                點此登入 →
+              </button>
+            </div>
           </div>
         </div>
       </form>
