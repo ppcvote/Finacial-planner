@@ -618,7 +618,8 @@ export default function App() {
 
   return (
     <ThemeProvider>
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 font-sans overflow-hidden transition-colors duration-300">
+    {/* 規劃系統強制使用淺色背景，不受主題切換影響 */}
+    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       <PrintStyles />
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       

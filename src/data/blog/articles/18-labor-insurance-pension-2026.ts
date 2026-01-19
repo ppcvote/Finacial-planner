@@ -4,7 +4,7 @@ export const article: BlogArticle = {
   id: '18',
   slug: 'labor-insurance-pension-2026',
   title: '2026 勞保勞退新制完整攻略｜退休年齡、級距、計算一次看',
-  excerpt: '2026 年勞保重大變革！法定退休年齡延至 65 歲、基本工資調漲至 29,500 元。本文整理最新勞保勞退級距、費率計算，金融顧問必備。',
+  excerpt: '2026 年勞保重大變革！法定退休年齡延至 65 歲、基本工資調漲至 29,500 元。本文整理最新勞保勞退級距、費率計算與退休金試算。',
   category: 'retirement',
   tags: ['勞保', '勞退', '退休金', '2026', '基本工資', '退休規劃', '社會保險'],
   readTime: 12,
@@ -12,13 +12,13 @@ export const article: BlogArticle = {
   author: 'Ultra Advisor 理財團隊',
   featured: true,
   metaTitle: '2026 勞保勞退新制攻略｜退休年齡 65 歲、基本工資 29,500 元完整說明',
-  metaDescription: '2026 年勞保法定退休年齡正式調至 65 歲，基本工資調漲至 29,500 元。完整解析勞保勞退級距、費率計算、退休金試算，金融從業人員必備工具。',
+  metaDescription: '2026 年勞保法定退休年齡正式調至 65 歲，基本工資調漲至 29,500 元。完整解析勞保勞退級距、費率計算、退休金試算。',
   content: `
     <article class="prose prose-invert max-w-none">
       <p class="lead text-xl text-slate-300 mb-8">
         2026 年是台灣勞工退休制度的重要里程碑！法定退休年齡正式延至 65 歲，
         基本工資連續第 10 年調漲至 29,500 元。本文整理所有重要變化，
-        幫助金融從業人員快速掌握最新資訊。
+        幫你快速掌握最新資訊。
       </p>
 
       <div class="bg-red-900/30 border border-red-500/30 rounded-2xl p-6 my-8">
@@ -280,19 +280,19 @@ export const article: BlogArticle = {
       </ul>
 
       <div class="bg-purple-900/30 border border-purple-500/30 rounded-2xl p-6 my-8">
-        <h4 class="text-purple-400 font-bold mb-3">📋 給金融從業人員的建議</h4>
+        <h4 class="text-purple-400 font-bold mb-3">📋 關於退休金缺口</h4>
         <p class="text-slate-300 mb-0">
-          當客戶詢問退休規劃時，可以這樣切入：<br/><br/>
-          「陳先生，2026 年起法定退休年齡已經延到 65 歲了，而且勞保年金的替代率大約只有 30-40%。
-          如果您希望退休後維持現在的生活水準，建議我們來計算一下退休金缺口...」
+          2026 年起法定退休年齡延至 65 歲，勞保年金的所得替代率大約只有 30-40%。
+          如果希望退休後維持目前的生活水準，建議先計算一下退休金缺口，
+          提早規劃才能安心退休。
         </p>
       </div>
 
       <div class="bg-blue-900/30 border border-blue-500/30 rounded-2xl p-6 my-8">
         <h4 class="text-blue-400 font-bold mb-3">🛠️ 退休規劃計算工具</h4>
         <p class="text-slate-300 mb-4">
-          使用傲創計算機的退休規劃工具，
-          幫助客戶視覺化退休金缺口與準備方案。
+          使用免費的退休規劃計算工具，
+          試算你的退休金缺口與準備方案。
         </p>
         <a href="/calculator" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl transition-colors">
           免費使用計算機 →

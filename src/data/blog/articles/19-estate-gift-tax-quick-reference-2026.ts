@@ -4,7 +4,7 @@ export const article: BlogArticle = {
   id: '19',
   slug: 'estate-gift-tax-quick-reference-2026',
   title: '2026 遺產稅贈與稅免稅額速查表｜課稅級距、扣除額一覽',
-  excerpt: '2026 年最新遺產稅免稅額 1,333 萬、贈與稅免稅額 244 萬，課稅級距有調整。金融從業人員必備的稅務速查工具表。',
+  excerpt: '2026 年最新遺產稅免稅額 1,333 萬、贈與稅免稅額 244 萬，課稅級距有調整。完整整理免稅額、扣除額、稅率表。',
   category: 'tax',
   tags: ['遺產稅', '贈與稅', '免稅額', '2026', '稅務規劃', '資產傳承', '節稅'],
   readTime: 8,
@@ -12,12 +12,12 @@ export const article: BlogArticle = {
   author: 'Ultra Advisor 理財團隊',
   featured: true,
   metaTitle: '2026 遺產稅贈與稅免稅額速查表｜課稅級距、扣除額完整整理',
-  metaDescription: '2026 年遺產稅免稅額 1,333 萬、贈與稅免稅額 244 萬，課稅級距金額上調。完整整理免稅額、扣除額、稅率表，金融從業人員必備速查工具。',
+  metaDescription: '2026 年遺產稅免稅額 1,333 萬、贈與稅免稅額 244 萬，課稅級距金額上調。完整整理免稅額、扣除額、稅率表，附計算範例。',
   content: `
     <article class="prose prose-invert max-w-none">
       <p class="lead text-xl text-slate-300 mb-8">
         2026 年遺產稅及贈與稅的免稅額維持不變，但課稅級距因 CPI 上漲而調整。
-        本文整理最新稅率表與節稅額度，方便金融從業人員快速查詢與客戶溝通。
+        本文整理最新稅率表與節稅額度，方便你快速查詢。
       </p>
 
       <div class="bg-green-900/30 border border-green-500/30 rounded-2xl p-6 my-8">
@@ -242,11 +242,10 @@ export const article: BlogArticle = {
       </table>
 
       <div class="bg-purple-900/30 border border-purple-500/30 rounded-2xl p-6 my-8">
-        <h4 class="text-purple-400 font-bold mb-3">📋 業務話術範例</h4>
+        <h4 class="text-purple-400 font-bold mb-3">📋 婚嫁贈與實例</h4>
         <p class="text-slate-300 mb-0">
-          「張先生，您女兒明年要結婚對吧？其實我們可以規劃一下，
-          善用跨年度贈與，您跟太太兩人合計可以給女兒最多 1,176 萬都免贈與稅。
-          如果女婿那邊父母也這樣規劃，小倆口結婚就能收到 2,352 萬的免稅禮金！」
+          假設女兒明年結婚，善用跨年度贈與，父母兩人合計可以給女兒最多 1,176 萬都免贈與稅。
+          如果女婿那邊父母也這樣規劃，小倆口結婚就能收到 2,352 萬的免稅禮金！
         </p>
       </div>
 
@@ -320,8 +319,8 @@ export const article: BlogArticle = {
       <div class="bg-blue-900/30 border border-blue-500/30 rounded-2xl p-6 my-8">
         <h4 class="text-blue-400 font-bold mb-3">🛠️ 稅務傳承計算工具</h4>
         <p class="text-slate-300 mb-4">
-          使用傲創計算機的稅務傳承工具，
-          快速為客戶試算遺產稅、規劃贈與策略。
+          使用免費的稅務傳承計算工具，
+          試算遺產稅、規劃贈與策略。
         </p>
         <a href="/calculator" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl transition-colors">
           免費使用計算機 →
