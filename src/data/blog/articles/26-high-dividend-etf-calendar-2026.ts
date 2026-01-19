@@ -13,7 +13,7 @@ export const article: BlogArticle = {
   featured: true,
   metaTitle: '2026 台股高股息 ETF 配息月曆｜0056、00878、00919 殖利率、配息比較',
   metaDescription: '2026 年高股息 ETF 完整比較！0056、00878、00919 配息時間、殖利率、選股邏輯分析，教你組合搭配月月領息。',
-  content: \`
+  content: `
     <article class="prose prose-invert max-w-none">
       <p class="lead text-xl text-slate-300 mb-8">
         「買 ETF 每個月都有錢入帳，感覺很棒！」這是很多存股族的想法。
@@ -386,5 +386,5 @@ export const article: BlogArticle = {
         本文資訊僅供參考，投資有風險，請審慎評估。
       </p>
     </article>
-  \`
+  `
 };

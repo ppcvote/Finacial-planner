@@ -13,7 +13,7 @@ export const article: BlogArticle = {
   featured: true,
   metaTitle: '2026 所得稅級距與扣除額速查表｜免稅額、標準扣除額、報稅門檻完整整理',
   metaDescription: '2026 年報稅（115 年度所得）免稅額 10.1 萬、標準扣除額 13.6 萬、薪資扣除額 22.7 萬。完整整理五級稅率、各項扣除額，告訴你免繳稅門檻。',
-  content: \`
+  content: `
     <article class="prose prose-invert max-w-none">
       <p class="lead text-xl text-slate-300 mb-8">
         每年報稅最想知道的就是：「我要繳多少稅？」、「月薪多少以下不用繳稅？」
@@ -366,5 +366,5 @@ export const article: BlogArticle = {
         本文資訊僅供參考，實際稅務規定以財政部公告為準。
       </p>
     </article>
-  \`
+  `
 };

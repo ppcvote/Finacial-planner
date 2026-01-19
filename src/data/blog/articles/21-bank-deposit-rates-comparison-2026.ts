@@ -13,7 +13,7 @@ export const article: BlogArticle = {
   featured: false,
   metaTitle: '2026 台幣定存利率銀行比較表｜41 家銀行一年期定存利率完整整理',
   metaDescription: '2026 年 1 月最新台幣定存利率比較，LINE Bank、樂天銀行最高 1.81%。完整整理 41 家銀行定存定儲利率，含利息計算與注意事項。',
-  content: \`
+  content: `
     <article class="prose prose-invert max-w-none">
       <p class="lead text-xl text-slate-300 mb-8">
         2026 年 1 月最新台幣定存利率整理！目前一年期定儲利率最高為 1.81%，
@@ -408,5 +408,5 @@ export const article: BlogArticle = {
         本文利率資訊僅供參考，實際利率以各銀行官網公告為準，且可能隨時調整。
       </p>
     </article>
-  \`
+  `
 };

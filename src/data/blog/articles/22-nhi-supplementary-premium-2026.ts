@@ -13,7 +13,7 @@ export const article: BlogArticle = {
   featured: true,
   metaTitle: '2026 健保補充保費攻略｜費率 2.11%、六大課徵項目、節省方法完整說明',
   metaDescription: '健保補充保費費率 2.11%，單筆超過 2 萬就要扣。完整說明股利、利息、租金等六大課徵項目，以及合法節省補充保費的實用方法。',
-  content: \`
+  content: `
     <article class="prose prose-invert max-w-none">
       <p class="lead text-xl text-slate-300 mb-8">
         「為什麼我的股利被扣了一筆錢？」很多人第一次領到股利時都會問這個問題。
@@ -315,5 +315,5 @@ export const article: BlogArticle = {
         本文資訊僅供參考，實際規定以衛福部健保署公告為準。
       </p>
     </article>
-  \`
+  `
 };

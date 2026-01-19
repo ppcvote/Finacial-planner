@@ -13,7 +13,7 @@ export const article: BlogArticle = {
   featured: false,
   metaTitle: '2026 房屋稅地價稅自用住宅攻略｜囤房稅 2.0、稅率、申請期限完整說明',
   metaDescription: '2026 年房屋稅 2.0 全國單一自住稅率降至 1%，地價稅自用住宅 2‰ 優惠稅率。完整說明申請條件、期限、公告地價調整影響。',
-  content: \`
+  content: `
     <article class="prose prose-invert max-w-none">
       <p class="lead text-xl text-slate-300 mb-8">
         2026 年房屋稅 2.0（囤房稅 2.0）正式上路，全國單一自住房屋稅率降至 1%！
@@ -324,5 +324,5 @@ export const article: BlogArticle = {
         本文資訊僅供參考，實際稅務規定以各地稅捐稽徵處公告為準。
       </p>
     </article>
-  \`
+  `
 };

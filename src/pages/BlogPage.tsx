@@ -5,11 +5,11 @@
  * 檔案位置：src/pages/BlogPage.tsx
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft, Calendar, Clock, ChevronRight, Search, Tag, User,
   TrendingUp, BookOpen, Calculator, Home, Landmark, PiggyBank,
-  Share2, ArrowUp, MessageSquare
+  Share2, ArrowUp, MessageSquare, List
 } from 'lucide-react';
 import {
   blogArticles,
@@ -34,11 +34,95 @@ const categories = [
   { id: 'sales', name: '銷售技巧', icon: MessageSquare },
 ];
 
+// 從 HTML 內容提取標題結構（用於生成目錄）
+interface TocItem {
+  id: string;
+  text: string;
+  level: number;
+}
+
+const extractHeadings = (html: string): TocItem[] => {
+  const headings: TocItem[] = [];
+  // 匹配 h2 和 h3 標籤
+  const regex = /<h([23])[^>]*>(.*?)<\/h[23]>/gi;
+  let match;
+  let index = 0;
+
+  while ((match = regex.exec(html)) !== null) {
+    const level = parseInt(match[1]);
+    // 移除 HTML 標籤，只保留文字
+    const text = match[2].replace(/<[^>]*>/g, '').trim();
+    if (text) {
+      headings.push({
+        id: `heading-${index}`,
+        text,
+        level
+      });
+      index++;
+    }
+  }
+
+  return headings;
+};
+
+// 文章目錄元件
+const TableOfContents: React.FC<{ headings: TocItem[]; onScrollTo: (id: string) => void }> = ({
+  headings,
+  onScrollTo
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (headings.length === 0) return null;
+
+  return (
+    <div className="bg-slate-900/80 border border-slate-800 rounded-xl mb-8">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between p-4 text-left"
+      >
+        <span className="flex items-center gap-2 text-white font-bold">
+          <List size={18} />
+          文章目錄
+        </span>
+        <ChevronRight
+          size={18}
+          className={`text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+        />
+      </button>
+
+      {isExpanded && (
+        <nav className="px-4 pb-4">
+          <ul className="space-y-1">
+            {headings.map((heading) => (
+              <li
+                key={heading.id}
+                className={heading.level === 3 ? 'ml-4' : ''}
+              >
+                <button
+                  onClick={() => onScrollTo(heading.id)}
+                  className={`
+                    w-full text-left py-1.5 px-3 rounded-lg text-sm transition-colors
+                    hover:bg-slate-800 hover:text-white
+                    ${heading.level === 2 ? 'text-slate-300' : 'text-slate-500'}
+                  `}
+                >
+                  {heading.text}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+    </div>
+  );
+};
+
 const BlogPage: React.FC<BlogPageProps> = ({ onBack, onLogin }) => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentArticle, setCurrentArticle] = useState<BlogArticle | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [readingProgress, setReadingProgress] = useState(0);
 
   // 處理 URL 中的文章 slug
   useEffect(() => {
@@ -53,14 +137,23 @@ const BlogPage: React.FC<BlogPageProps> = ({ onBack, onLogin }) => {
     }
   }, []);
 
-  // 監聽滾動顯示回到頂部按鈕
+  // 監聽滾動顯示回到頂部按鈕 + 閱讀進度條
   useEffect(() => {
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 500);
+
+      // 計算閱讀進度
+      if (currentArticle) {
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight - windowHeight;
+        const scrolled = window.scrollY;
+        const progress = Math.min(100, Math.max(0, (scrolled / documentHeight) * 100));
+        setReadingProgress(progress);
+      }
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [currentArticle]);
 
   // SEO: 動態更新頁面 Meta 和 Article Schema
   useEffect(() => {
@@ -159,6 +252,44 @@ const BlogPage: React.FC<BlogPageProps> = ({ onBack, onLogin }) => {
       breadcrumbScript.type = 'application/ld+json';
       breadcrumbScript.textContent = JSON.stringify(breadcrumbSchema);
       document.head.appendChild(breadcrumbScript);
+
+      // 從文章內容提取 FAQ（尋找 Q: 或 問: 開頭的段落）
+      const faqRegex = /<p[^>]*>(?:<strong>)?(?:Q[:：]|問[:：])\s*(.+?)(?:<\/strong>)?<\/p>\s*<p[^>]*>(?:A[:：]|答[:：])?\s*(.+?)<\/p>/gi;
+      const faqs: { question: string; answer: string }[] = [];
+      let faqMatch;
+
+      while ((faqMatch = faqRegex.exec(currentArticle.content)) !== null) {
+        const question = faqMatch[1].replace(/<[^>]*>/g, '').trim();
+        const answer = faqMatch[2].replace(/<[^>]*>/g, '').trim();
+        if (question && answer) {
+          faqs.push({ question, answer });
+        }
+      }
+
+      // 如果文章包含 FAQ，注入 FAQPage Schema
+      if (faqs.length > 0) {
+        const faqSchema = {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": faqs.map(faq => ({
+            "@type": "Question",
+            "name": faq.question,
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": faq.answer
+            }
+          }))
+        };
+
+        const existingFaq = document.getElementById('article-faq-schema');
+        if (existingFaq) existingFaq.remove();
+
+        const faqScript = document.createElement('script');
+        faqScript.id = 'article-faq-schema';
+        faqScript.type = 'application/ld+json';
+        faqScript.textContent = JSON.stringify(faqSchema);
+        document.head.appendChild(faqScript);
+      }
     } else {
       // 文章列表頁 SEO
       const seoConfig = {
@@ -188,8 +319,10 @@ const BlogPage: React.FC<BlogPageProps> = ({ onBack, onLogin }) => {
       // 清理動態注入的 schema
       const articleSchema = document.getElementById('article-schema');
       const breadcrumbSchema = document.getElementById('article-breadcrumb-schema');
+      const faqSchema = document.getElementById('article-faq-schema');
       if (articleSchema) articleSchema.remove();
       if (breadcrumbSchema) breadcrumbSchema.remove();
+      if (faqSchema) faqSchema.remove();
     };
   }, [currentArticle]);
 
@@ -262,6 +395,45 @@ const BlogPage: React.FC<BlogPageProps> = ({ onBack, onLogin }) => {
     return score;
   };
 
+  // 提取文章目錄（Memoized）
+  const articleHeadings = useMemo(() => {
+    if (!currentArticle) return [];
+    return extractHeadings(currentArticle.content);
+  }, [currentArticle]);
+
+  // 處理目錄點擊滾動
+  const scrollToHeading = (headingId: string) => {
+    const index = parseInt(headingId.replace('heading-', ''));
+    const articleContent = document.querySelector('.article-content');
+    if (!articleContent) return;
+
+    const headings = articleContent.querySelectorAll('h2, h3');
+    if (headings[index]) {
+      headings[index].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // 為文章內容添加 heading IDs（用於目錄跳轉）
+  const processedContent = useMemo(() => {
+    if (!currentArticle) return '';
+
+    let content = currentArticle.content;
+    let headingIndex = 0;
+
+    // 為每個 h2/h3 標籤添加 id
+    content = content.replace(/<h([23])([^>]*)>/gi, (match, level, attrs) => {
+      const id = `heading-${headingIndex}`;
+      headingIndex++;
+      // 如果已經有 id，不重複添加
+      if (attrs.includes('id=')) {
+        return match;
+      }
+      return `<h${level}${attrs} id="${id}">`;
+    });
+
+    return content;
+  }, [currentArticle]);
+
   // ========================================
   // 文章詳情頁
   // ========================================
@@ -279,6 +451,12 @@ const BlogPage: React.FC<BlogPageProps> = ({ onBack, onLogin }) => {
 
     return (
       <div className="min-h-screen bg-slate-950">
+        {/* 閱讀進度條 */}
+        <div
+          className="fixed top-0 left-0 h-1 bg-gradient-to-r from-blue-500 to-purple-500 z-[60] transition-all duration-150"
+          style={{ width: `${readingProgress}%` }}
+        />
+
         {/* 頂部導航 */}
         <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800">
           <div className="max-w-4xl mx-auto px-4 py-4">
@@ -358,16 +536,19 @@ const BlogPage: React.FC<BlogPageProps> = ({ onBack, onLogin }) => {
           </header>
 
           {/* 文章摘要 */}
-          <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 mb-12">
+          <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 mb-8">
             <p className="text-slate-300 text-lg leading-relaxed">
               {currentArticle.excerpt}
             </p>
           </div>
 
+          {/* 文章目錄 */}
+          <TableOfContents headings={articleHeadings} onScrollTo={scrollToHeading} />
+
           {/* 文章內容 */}
           <div
             className="article-content prose prose-invert prose-lg max-w-none"
-            dangerouslySetInnerHTML={{ __html: currentArticle.content }}
+            dangerouslySetInnerHTML={{ __html: processedContent }}
           />
 
           {/* 文章內容樣式覆蓋 */}

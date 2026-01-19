@@ -13,7 +13,7 @@ export const article: BlogArticle = {
   featured: true,
   metaTitle: '2026 遺產稅贈與稅免稅額速查表｜課稅級距、扣除額完整整理',
   metaDescription: '2026 年遺產稅免稅額 1,333 萬、贈與稅免稅額 244 萬，課稅級距金額上調。完整整理免稅額、扣除額、稅率表，金融從業人員必備速查工具。',
-  content: \`
+  content: `
     <article class="prose prose-invert max-w-none">
       <p class="lead text-xl text-slate-300 mb-8">
         2026 年遺產稅及贈與稅的免稅額維持不變，但課稅級距因 CPI 上漲而調整。
@@ -341,5 +341,5 @@ export const article: BlogArticle = {
         本文資訊僅供參考，實際稅務規劃請諮詢專業會計師或稅務顧問。
       </p>
     </article>
-  \`
+  `
 };

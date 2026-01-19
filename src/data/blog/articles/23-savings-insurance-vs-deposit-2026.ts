@@ -13,7 +13,7 @@ export const article: BlogArticle = {
   featured: true,
   metaTitle: '2026 儲蓄險 vs 定存比較｜IRR 怎麼算？IFRS17 影響？完整分析',
   metaDescription: '儲蓄險和定存哪個好？用白話文解釋 IRR 內部報酬率、IFRS 17 對儲蓄險的影響、優缺點比較，幫你判斷什麼情況下儲蓄險比定存划算。',
-  content: \`
+  content: `
     <article class="prose prose-invert max-w-none">
       <p class="lead text-xl text-slate-300 mb-8">
         「業務員說儲蓄險利率比定存高，是真的嗎？」這是最常被問到的理財問題之一。
@@ -286,5 +286,5 @@ export const article: BlogArticle = {
         本文資訊僅供參考，實際保單條款以各保險公司公告為準。
       </p>
     </article>
-  \`
+  `
 };

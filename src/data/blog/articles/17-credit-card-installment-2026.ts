@@ -13,7 +13,7 @@ export const article: BlogArticle = {
   featured: true,
   metaTitle: '2026 信用卡分期零利率比較表｜繳保費、消費分期各銀行優惠整理',
   metaDescription: '2026 年最新 14 家銀行信用卡分期零利率優惠比較，含繳保費分期、特約商店分期、回饋比較。金融從業人員必備的客戶諮詢工具。',
-  content: \`
+  content: `
     <article class="prose prose-invert max-w-none">
       <p class="lead text-xl text-slate-300 mb-8">
         2026 年信用卡分期零利率市場有重大變化！多數銀行已取消分期後的刷卡回饋，
@@ -212,5 +212,5 @@ export const article: BlogArticle = {
         本文資訊僅供參考，實際優惠以各銀行官網公告為準，優惠內容可能隨時變動。
       </p>
     </article>
-  \`
+  `
 };

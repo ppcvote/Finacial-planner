@@ -13,7 +13,7 @@ export const article: BlogArticle = {
   featured: true,
   metaTitle: '2026 勞保勞退新制攻略｜退休年齡 65 歲、基本工資 29,500 元完整說明',
   metaDescription: '2026 年勞保法定退休年齡正式調至 65 歲，基本工資調漲至 29,500 元。完整解析勞保勞退級距、費率計算、退休金試算，金融從業人員必備工具。',
-  content: \`
+  content: `
     <article class="prose prose-invert max-w-none">
       <p class="lead text-xl text-slate-300 mb-8">
         2026 年是台灣勞工退休制度的重要里程碑！法定退休年齡正式延至 65 歲，
@@ -312,5 +312,5 @@ export const article: BlogArticle = {
         本文資訊僅供參考，實際權益請以勞動部、勞保局官方公告為準。
       </p>
     </article>
-  \`
+  `
 };

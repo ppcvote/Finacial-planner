@@ -13,7 +13,7 @@ export const article: BlogArticle = {
   featured: false,
   metaTitle: '2026 房貸轉貸成本試算｜利差多少划算？費用、流程完整分析',
   metaDescription: '房貸轉貸成本約 2.5～3 萬元，利差要多少才划算？完整分析轉貸費用明細、回本時間試算、轉貸前必問的 5 個問題。',
-  content: \`
+  content: `
     <article class="prose prose-invert max-w-none">
       <p class="lead text-xl text-slate-300 mb-8">
         「隔壁鄰居說他房貸轉貸省了好幾萬，我是不是也該轉？」
@@ -326,5 +326,5 @@ export const article: BlogArticle = {
         本文資訊僅供參考，實際費用與利率以各銀行公告為準。
       </p>
     </article>
-  \`
+  `
 };
