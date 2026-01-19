@@ -5,8 +5,9 @@ import {
   Users, Search, Plus, Trash2, LogOut, Settings, X,
   Clock, TriangleAlert, ShieldAlert, Activity, Edit3, Save, Loader2,
   Heart, RefreshCw, Download, Sparkles, Crown, BarChart3, Bell,
-  MessageSquarePlus, Send, Lightbulb, ChevronDown
+  MessageSquarePlus, Send, Lightbulb, ChevronDown, BookOpen, Sun, Moon
 } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 import { 
   getAuth, 
   updatePassword, 
@@ -47,6 +48,7 @@ import PWAInstallModal from './PWAInstallModal';
 // ==========================================
 const MarketTicker = () => {
   const [cancerSeconds, setCancerSeconds] = useState(228);
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -104,6 +106,29 @@ const MarketTicker = () => {
         <span className="hidden sm:inline">傲創計算機</span>
       </a>
 
+      {/* 知識庫按鈕 */}
+      <a
+        href="https://ultra-advisor.tw/blog"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="ml-2 flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500
+                 text-white text-xs font-bold rounded-lg transition-all shrink-0"
+      >
+        <BookOpen size={14} />
+        <span className="hidden sm:inline">知識庫</span>
+      </a>
+
+      {/* 主題切換按鈕 */}
+      <button
+        onClick={toggleTheme}
+        className="ml-2 flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30
+                 text-amber-300 text-xs font-bold rounded-lg transition-all shrink-0 border border-amber-500/30"
+        title={theme === 'dark' ? '切換至亮色模式' : '切換至深色模式'}
+      >
+        {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+        <span className="hidden sm:inline">{theme === 'dark' ? '亮色' : '深色'}</span>
+      </button>
+
       <style>{`
         @keyframes marquee {
           0% { transform: translateX(0); }
@@ -149,7 +174,7 @@ const ProfileCard = ({
   onOpenPayment: (isReferral: boolean) => void;
 }) => {
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 
+    <div className="dark:bg-slate-900/50 bg-white border dark:border-slate-800 border-slate-200 rounded-2xl p-6 
                     hover:border-blue-500/30 transition-all">
       <div className="flex items-start gap-4">
         {/* 大頭貼 */}
@@ -331,7 +356,7 @@ const ProfileCard = ({
 // ==========================================
 const MarketDataCard = () => {
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+    <div className="dark:bg-slate-900/50 bg-white border dark:border-slate-800 border-slate-200 rounded-2xl p-6">
       <div className="flex items-center gap-2 mb-4">
         <Activity size={18} className="text-blue-400" />
         <h3 className="text-sm font-black text-white uppercase tracking-wider">市場快訊</h3>
@@ -417,7 +442,7 @@ const QuickCalculator = () => {
   };
 
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+    <div className="dark:bg-slate-900/50 bg-white border dark:border-slate-800 border-slate-200 rounded-2xl p-6">
       <div className="flex items-center gap-2 mb-4">
         <Calculator size={18} className="text-amber-400" />
         <h3 className="text-sm font-black text-white uppercase tracking-wider">快速試算</h3>
@@ -664,7 +689,7 @@ const ClientList = ({
   );
 
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+    <div className="dark:bg-slate-900/50 bg-white border dark:border-slate-800 border-slate-200 rounded-2xl p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -1689,8 +1714,12 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
       clearTimeout(logoClickTimer.current);
     }
     logoClickTimer.current = setTimeout(() => {
+      // 如果不是連點 5 次（進後台），則單擊返回官網首頁
+      if (logoClickCount < 4) {
+        window.location.href = 'https://ultra-advisor.tw';
+      }
       setLogoClickCount(0);
-    }, 2000); // 2 秒內要點完 5 次
+    }, 500); // 0.5 秒後判斷是否為單擊
   };
 
   // 載入用戶資料
@@ -1891,9 +1920,10 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
 
   return (
     <div
-      className="min-h-screen bg-[#050b14]
-                    bg-[linear-gradient(rgba(77,163,255,0.03)_1px,transparent_1px),
-                       linear-gradient(90deg,rgba(77,163,255,0.03)_1px,transparent_1px)]
+      className="min-h-screen transition-colors duration-300
+                    dark:bg-[#050b14] bg-slate-50
+                    dark:bg-[linear-gradient(rgba(77,163,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(77,163,255,0.03)_1px,transparent_1px)]
+                    bg-[linear-gradient(rgba(100,116,139,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(100,116,139,0.1)_1px,transparent_1px)]
                     bg-[length:40px_40px]"
       onClick={() => setShowNotifications(false)}
     >
@@ -1902,7 +1932,7 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
       <MarketTicker />
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#050b14]/90 backdrop-blur-xl border-b border-white/5">
+      <header className="sticky top-0 z-40 dark:bg-[#050b14]/90 bg-white/90 backdrop-blur-xl border-b dark:border-white/5 border-slate-200 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex justify-between items-center">
           <div
             className="flex items-center gap-3 cursor-pointer select-none"
@@ -1918,8 +1948,8 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
               }}
             />
             <div>
-              <h1 className="text-lg md:text-xl font-black text-white tracking-tight">
-                <span style={{color: '#FF3A3A'}}>Ultra</span> <span className="text-blue-400">戰情室</span>
+              <h1 className="text-lg md:text-xl font-black dark:text-white text-slate-900 tracking-tight">
+                <span style={{color: '#FF3A3A'}}>Ultra</span> <span className="text-blue-500">戰情室</span>
               </h1>
               <p className="text-[10px] text-slate-500 hidden md:block">
                 專業財務顧問的作戰指揮中心
@@ -1935,7 +1965,7 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
                   e.stopPropagation();
                   setShowNotifications(!showNotifications);
                 }}
-                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all relative"
+                className="p-2 dark:text-slate-400 text-slate-600 dark:hover:text-white hover:text-slate-900 dark:hover:bg-slate-800 hover:bg-slate-100 rounded-lg transition-all relative"
                 title="通知"
               >
                 <Bell size={20} />
@@ -1951,7 +1981,7 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
               {showNotifications && (
                 <div
                   className="fixed md:absolute left-2 right-2 md:left-auto md:right-0 top-16 md:top-full md:mt-2
-                             md:w-96 bg-slate-900 border border-slate-700
+                             md:w-96 dark:bg-slate-900 bg-white border dark:border-slate-700 border-slate-200
                              rounded-2xl shadow-2xl z-50 overflow-hidden max-h-[calc(100vh-5rem)]"
                   onClick={(e) => e.stopPropagation()}
                 >

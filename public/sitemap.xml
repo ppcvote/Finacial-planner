@@ -114,6 +114,46 @@
     <priority>0.8</priority>
   </url>
 
+  <!-- 文章 12: 2026銀行房貸利率比較表（精選） -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/bank-mortgage-rates-comparison-2026</loc>
+    <lastmod>2026-01-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- 文章 13: 財務顧問話術（精選） -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/financial-advisor-objection-handling-scripts</loc>
+    <lastmod>2026-01-18</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- 文章 14: 遺產稅vs贈與稅比較 -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/estate-tax-vs-gift-tax-comparison</loc>
+    <lastmod>2026-01-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 文章 15: 2026報稅季節稅技巧 -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/tax-season-2026-advisor-tips</loc>
+    <lastmod>2026-01-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 文章 16: 財務顧問收入調查（精選） -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/financial-advisor-income-survey-2026</loc>
+    <lastmod>2026-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
   <!-- ==================== 其他頁面 ==================== -->
 
   <!-- 註冊頁面 -->

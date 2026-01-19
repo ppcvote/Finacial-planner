@@ -59,6 +59,9 @@ import RegisterPage from './pages/RegisterPage';
 // 🆕 部落格頁面（SEO 內容行銷）
 import BlogPage from './pages/BlogPage';
 
+// 🆕 主題切換
+import { ThemeProvider } from './context/ThemeContext';
+
 const generateSessionId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
 
 const PrintStyles = () => (
@@ -610,7 +613,8 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
+    <ThemeProvider>
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 font-sans overflow-hidden transition-colors duration-300">
       <PrintStyles />
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       
@@ -777,5 +781,6 @@ export default function App() {
         .animate-fade-in { animation: fade-in 0.2s ease-out forwards; }
       `}</style>
     </div>
+    </ThemeProvider>
   );
 }

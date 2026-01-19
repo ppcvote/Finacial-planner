@@ -16,7 +16,7 @@ import {
   getArticleBySlug,
   getFeaturedArticles,
   BlogArticle
-} from '../data/blogArticles';
+} from '../data/blog';
 
 interface BlogPageProps {
   onBack: () => void;
@@ -31,6 +31,7 @@ const categories = [
   { id: 'tax', name: '稅務傳承', icon: Landmark },
   { id: 'investment', name: '投資理財', icon: TrendingUp },
   { id: 'tools', name: '工具教學', icon: Calculator },
+  { id: 'sales', name: '銷售技巧', icon: MessageSquare },
 ];
 
 const BlogPage: React.FC<BlogPageProps> = ({ onBack, onLogin }) => {
@@ -441,8 +442,58 @@ const BlogPage: React.FC<BlogPageProps> = ({ onBack, onLogin }) => {
             }
           `}</style>
 
+          {/* 分享區塊 */}
+          <div className="bg-slate-900 rounded-2xl p-6 mt-12 border border-slate-800">
+            <p className="text-white font-bold text-center mb-4">覺得這篇文章實用嗎？分享給同事吧！</p>
+            <div className="flex flex-wrap justify-center gap-3">
+              {/* LINE 分享 */}
+              <button
+                onClick={() => {
+                  const url = encodeURIComponent(window.location.href);
+                  const text = encodeURIComponent(currentArticle.title);
+                  window.open(`https://social-plugins.line.me/lineit/share?url=${url}&text=${text}`, '_blank', 'width=600,height=500');
+                }}
+                className="flex items-center gap-2 bg-[#00B900] hover:bg-[#00a000] text-white font-bold px-5 py-2.5 rounded-xl transition-all"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.349 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
+                </svg>
+                LINE 分享
+              </button>
+
+              {/* Facebook 分享 */}
+              <button
+                onClick={() => {
+                  const url = encodeURIComponent(window.location.href);
+                  window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=600,height=500');
+                }}
+                className="flex items-center gap-2 bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold px-5 py-2.5 rounded-xl transition-all"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+                Facebook
+              </button>
+
+              {/* 複製連結 */}
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  alert('已複製連結！可以貼到 LINE 或 Email 分享給同事');
+                }}
+                className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-bold px-5 py-2.5 rounded-xl transition-all"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                </svg>
+                複製連結
+              </button>
+            </div>
+          </div>
+
           {/* CTA 區塊 */}
-          <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-2xl p-8 mt-16">
+          <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-2xl p-8 mt-8">
             <h3 className="text-2xl font-bold text-white mb-4 text-center">
               想要更專業的理財工具？
             </h3>

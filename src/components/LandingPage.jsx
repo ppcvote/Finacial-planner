@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { 
-  Activity, TrendingUp, TrendingDown, ShieldAlert, FileBarChart, Clock, 
-  ChevronRight, Users, Rocket, Target, ShoppingBag, Zap, HeartPulse, 
-  Crosshair, ShieldCheck, ArrowRight, Monitor, Smartphone, Database, 
-  Lock, CheckCircle2, Globe, Mail, MessageSquare, PlayCircle, 
-  TriangleAlert, OctagonAlert, Landmark, ChevronLeft, Wallet, X, 
+import {
+  Activity, TrendingUp, TrendingDown, ShieldAlert, FileBarChart, Clock,
+  ChevronRight, Users, Rocket, Target, ShoppingBag, Zap, HeartPulse,
+  Crosshair, ShieldCheck, ArrowRight, Monitor, Smartphone, Database,
+  Lock, CheckCircle2, Globe, Mail, MessageSquare, PlayCircle,
+  TriangleAlert, OctagonAlert, Landmark, ChevronLeft, Wallet, X,
   Car, Heart, ExternalLink, LayoutDashboard, BarChart3, FileText,
   Sparkles, Crown, Award, Star, TrendingUpIcon, Calculator,
-  PieChart, DollarSign, Gift, Shield, LineChart, Home, LogIn
+  PieChart, DollarSign, Gift, Shield, LineChart, Home, LogIn, Sun, Moon
 } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 // ==========================================
 // 🎯 整合版本：
@@ -1115,6 +1116,7 @@ const PricingSection = ({ onSelectPlan }) => {
 export function LandingPage({ onStart, onSignup, onHome }) {
   const [view, setView] = useState('home');
   const [logoError, setLogoError] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   // ✅ 動態內容狀態
   const [dynamicContent, setDynamicContent] = useState({
@@ -1266,7 +1268,7 @@ export function LandingPage({ onStart, onSignup, onHome }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#050b14] text-white font-sans">
+    <div className="min-h-screen dark:bg-[#050b14] bg-slate-50 dark:text-white text-slate-900 font-sans transition-colors duration-300">
       
       {/* ✅ 動態公告橫幅 */}
       {showAnnouncement && dynamicContent.announcement?.enabled && (
@@ -1281,8 +1283,8 @@ export function LandingPage({ onStart, onSignup, onHome }) {
       {/* ✅ Header - 滾動優化 */}
       <header className={`sticky top-0 z-40 backdrop-blur-xl border-b transition-all duration-300
                         ${isScrolled
-                          ? 'bg-[#050b14]/95 border-blue-500/20 shadow-[0_4px_30px_rgba(59,130,246,0.1)]'
-                          : 'bg-[#050b14]/80 border-white/5'}`}>
+                          ? 'dark:bg-[#050b14]/95 bg-white/95 dark:border-blue-500/20 border-slate-200 shadow-[0_4px_30px_rgba(59,130,246,0.1)]'
+                          : 'dark:bg-[#050b14]/80 bg-white/80 dark:border-white/5 border-slate-100'}`}>
         <div className={`max-w-7xl mx-auto px-6 flex justify-between items-center transition-all duration-300
                        ${isScrolled ? 'py-2' : 'py-4'}`}>
           <div className="flex items-center gap-3 cursor-pointer relative" 
@@ -1350,7 +1352,18 @@ export function LandingPage({ onStart, onSignup, onHome }) {
      className="text-slate-400 hover:text-blue-400 font-bold transition-colors">
     社群
   </a>
-            
+
+            {/* ✅ 主題切換按鈕 */}
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30
+                       text-amber-300 text-xs font-bold rounded-lg transition-all border border-amber-500/30"
+              title={theme === 'dark' ? '切換至亮色模式' : '切換至深色模式'}
+            >
+              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+              <span>{theme === 'dark' ? '亮色' : '深色'}</span>
+            </button>
+
             {/* ✅ 登入/註冊按鈕 - 統一導向註冊頁 */}
             <button
               onClick={handleFreeTrial}
