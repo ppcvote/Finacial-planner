@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   AlertTriangle,
   TrendingUp,
@@ -28,10 +28,11 @@ import {
   Crosshair,
   ShieldCheck,
   MessageCircle,
-  ChevronDown,
   Lightbulb,
   Copy,
-  Check
+  Check,
+  X,
+  Crown
 } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
 
@@ -189,9 +190,57 @@ export default function MarketDataZone() {
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [dailySalary, setDailySalary] = useState(2500);
 
-  // 業務小抄狀態
+  // ==========================================
+  // 業務小抄狀態（三連點觸發）
+  // ==========================================
   const [showCheatsheet, setShowCheatsheet] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
+  const [clickCount, setClickCount] = useState(0);
+  const clickTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // 首次進入提示狀態
+  const HINT_STORAGE_KEY = 'ua_market_data_cheatsheet_hint_seen';
+  const [showTripleClickHint, setShowTripleClickHint] = useState(false);
+
+  // 三連點觸發函式
+  const handleSecretClick = () => {
+    setClickCount(prev => prev + 1);
+    if (clickTimer.current) clearTimeout(clickTimer.current);
+    clickTimer.current = setTimeout(() => setClickCount(0), 800); // 800ms 內要完成三連點
+    if (clickCount >= 2) {
+      setShowCheatsheet(true);
+      setClickCount(0);
+    }
+  };
+
+  // ESC 鍵關閉（同時關閉小抄和首次提示）
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowCheatsheet(false);
+        setShowTripleClickHint(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // 首次進入頁面顯示提示
+  useEffect(() => {
+    const hasSeenHint = localStorage.getItem(HINT_STORAGE_KEY);
+    if (!hasSeenHint) {
+      const timer = setTimeout(() => {
+        setShowTripleClickHint(true);
+      }, 1500); // 延遲 1.5 秒顯示
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // 關閉提示並記錄已看過
+  const dismissHint = () => {
+    setShowTripleClickHint(false);
+    localStorage.setItem(HINT_STORAGE_KEY, 'true');
+  };
 
   // 複製到剪貼簿
   const copyToClipboard = (text: string, id: string) => {
@@ -255,8 +304,36 @@ export default function MarketDataZone() {
         <div className="absolute top-0 right-0 p-4 opacity-10"><BarChart3 size={180} /></div>
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className="bg-cyan-500/20 text-cyan-300 text-[10px] font-bold px-2 py-0.5 rounded tracking-wider border border-cyan-500/30 uppercase">Market Reality Check 2026</span>
+              {/* 🔥 業務小抄秘密觸發點 */}
+              <div className="relative">
+                <span
+                  onClick={handleSecretClick}
+                  className="bg-amber-400/20 text-amber-200 px-3 py-1 rounded-full text-[10px] font-bold border border-amber-400/30 cursor-default select-none hover:bg-amber-400/30 transition-colors"
+                >
+                  數據驅動 · 專業提案
+                </span>
+                {/* 首次進入提示氣泡 */}
+                {showTripleClickHint && (
+                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 animate-pulse">
+                    <div className="relative bg-slate-900 text-white px-4 py-2 rounded-lg shadow-xl whitespace-nowrap border border-amber-500/50">
+                      {/* 左側箭頭指向觸發標籤 */}
+                      <div className="absolute top-1/2 -left-2 -translate-y-1/2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-transparent border-r-slate-900" />
+                      <p className="text-sm font-bold flex items-center gap-2">
+                        <span className="text-yellow-400">💡</span>
+                        點三下可開啟業務小抄
+                      </p>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); dismissHint(); }}
+                        className="absolute -top-2 -right-2 w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center text-xs border border-slate-500"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2 flex items-center gap-3"><Activity className="text-cyan-400" size={36}/> 市場數據戰情室</h1>
             <p className="text-slate-400 text-lg max-w-xl font-medium">數據不會說謊，但會示警。校準至 2026 年最新官方統計預估，讓數字告訴您未來的風險。</p>
@@ -385,104 +462,6 @@ export default function MarketDataZone() {
                 </div>
               </div>
             </div>
-
-            {/* 業務小抄 - 通膨碎鈔機 */}
-            <div className="mt-8 border-t border-slate-200 pt-6">
-              <button
-                onClick={() => setShowCheatsheet(!showCheatsheet)}
-                className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
-                  showCheatsheet
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg'
-                    : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <MessageCircle size={24} />
-                  <div className="text-left">
-                    <p className="font-black text-lg">業務小抄</p>
-                    <p className={`text-xs ${showCheatsheet ? 'text-white/70' : 'text-amber-600'}`}>
-                      銷售話術、異議處理、成交金句
-                    </p>
-                  </div>
-                </div>
-                <ChevronDown
-                  size={24}
-                  className={`transition-transform duration-300 ${showCheatsheet ? 'rotate-180' : ''}`}
-                />
-              </button>
-
-              {showCheatsheet && SALES_CHEATSHEET['inflation'] && (
-                <div className="mt-4 space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                  {/* 開場切入話術 */}
-                  <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-100">
-                    <h5 className="font-black text-purple-800 flex items-center gap-2 mb-4">
-                      <Lightbulb size={20} className="text-purple-500" />
-                      開場切入話術
-                    </h5>
-                    <div className="space-y-3">
-                      {SALES_CHEATSHEET['inflation'].hooks.map((hook, i) => (
-                        <div key={i} className="bg-white rounded-xl p-4 border border-purple-100 hover:border-purple-300 transition-all group">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1">
-                              <span className="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">{hook.label}</span>
-                              <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{hook.script}」</p>
-                            </div>
-                            <button onClick={() => copyToClipboard(hook.script, `inflation-hook-${i}`)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all shrink-0" title="複製話術">
-                              {copiedIndex === `inflation-hook-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* 異議處理 */}
-                  <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-100">
-                    <h5 className="font-black text-amber-800 flex items-center gap-2 mb-4">
-                      <ShieldAlert size={20} className="text-amber-500" />
-                      異議處理
-                    </h5>
-                    <div className="space-y-3">
-                      {SALES_CHEATSHEET['inflation'].objections.map((obj, i) => (
-                        <div key={i} className="bg-white rounded-xl p-4 border border-amber-100 hover:border-amber-300 transition-all">
-                          <div className="flex items-start gap-3 mb-2">
-                            <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">客戶說</span>
-                            <p className="text-slate-600 font-bold">「{obj.q}」</p>
-                          </div>
-                          <div className="flex items-start justify-between gap-3 mt-3 pl-4 border-l-2 border-emerald-400">
-                            <div className="flex-1">
-                              <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">這樣回應</span>
-                              <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{obj.a}」</p>
-                            </div>
-                            <button onClick={() => copyToClipboard(obj.a, `inflation-obj-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製回應">
-                              {copiedIndex === `inflation-obj-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* 成交金句 */}
-                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-100">
-                    <h5 className="font-black text-emerald-800 flex items-center gap-2 mb-4">
-                      <Target size={20} className="text-emerald-500" />
-                      成交金句
-                    </h5>
-                    <div className="space-y-3">
-                      {SALES_CHEATSHEET['inflation'].closingLines.map((line, i) => (
-                        <div key={i} className="bg-white rounded-xl p-4 border border-emerald-100 hover:border-emerald-300 transition-all flex items-center justify-between gap-3">
-                          <p className="text-slate-700 font-bold leading-relaxed">「{line}」</p>
-                          <button onClick={() => copyToClipboard(line, `inflation-close-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製金句">
-                            {copiedIndex === `inflation-close-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         )}
 
@@ -558,103 +537,6 @@ export default function MarketDataZone() {
                 </div>
               </div>
 
-              {/* 業務小抄 - 不健康餘命 */}
-              <div className="mt-8 border-t border-slate-200 pt-6">
-                <button
-                  onClick={() => setShowCheatsheet(!showCheatsheet)}
-                  className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
-                    showCheatsheet
-                      ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg'
-                      : 'bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <MessageCircle size={24} />
-                    <div className="text-left">
-                      <p className="font-black text-lg">業務小抄</p>
-                      <p className={`text-xs ${showCheatsheet ? 'text-white/70' : 'text-rose-600'}`}>
-                        銷售話術、異議處理、成交金句
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronDown
-                    size={24}
-                    className={`transition-transform duration-300 ${showCheatsheet ? 'rotate-180' : ''}`}
-                  />
-                </button>
-
-                {showCheatsheet && SALES_CHEATSHEET['unhealthy'] && (
-                  <div className="mt-4 space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                    {/* 開場切入話術 */}
-                    <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-100">
-                      <h5 className="font-black text-purple-800 flex items-center gap-2 mb-4">
-                        <Lightbulb size={20} className="text-purple-500" />
-                        開場切入話術
-                      </h5>
-                      <div className="space-y-3">
-                        {SALES_CHEATSHEET['unhealthy'].hooks.map((hook, i) => (
-                          <div key={i} className="bg-white rounded-xl p-4 border border-purple-100 hover:border-purple-300 transition-all group">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1">
-                                <span className="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">{hook.label}</span>
-                                <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{hook.script}」</p>
-                              </div>
-                              <button onClick={() => copyToClipboard(hook.script, `unhealthy-hook-${i}`)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all shrink-0" title="複製話術">
-                                {copiedIndex === `unhealthy-hook-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* 異議處理 */}
-                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-100">
-                      <h5 className="font-black text-amber-800 flex items-center gap-2 mb-4">
-                        <ShieldAlert size={20} className="text-amber-500" />
-                        異議處理
-                      </h5>
-                      <div className="space-y-3">
-                        {SALES_CHEATSHEET['unhealthy'].objections.map((obj, i) => (
-                          <div key={i} className="bg-white rounded-xl p-4 border border-amber-100 hover:border-amber-300 transition-all">
-                            <div className="flex items-start gap-3 mb-2">
-                              <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">客戶說</span>
-                              <p className="text-slate-600 font-bold">「{obj.q}」</p>
-                            </div>
-                            <div className="flex items-start justify-between gap-3 mt-3 pl-4 border-l-2 border-emerald-400">
-                              <div className="flex-1">
-                                <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">這樣回應</span>
-                                <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{obj.a}」</p>
-                              </div>
-                              <button onClick={() => copyToClipboard(obj.a, `unhealthy-obj-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製回應">
-                                {copiedIndex === `unhealthy-obj-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* 成交金句 */}
-                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-100">
-                      <h5 className="font-black text-emerald-800 flex items-center gap-2 mb-4">
-                        <Target size={20} className="text-emerald-500" />
-                        成交金句
-                      </h5>
-                      <div className="space-y-3">
-                        {SALES_CHEATSHEET['unhealthy'].closingLines.map((line, i) => (
-                          <div key={i} className="bg-white rounded-xl p-4 border border-emerald-100 hover:border-emerald-300 transition-all flex items-center justify-between gap-3">
-                            <p className="text-slate-700 font-bold leading-relaxed">「{line}」</p>
-                            <button onClick={() => copyToClipboard(line, `unhealthy-close-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製金句">
-                              {copiedIndex === `unhealthy-close-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
            </div>
         )}
 
@@ -730,103 +612,6 @@ export default function MarketDataZone() {
                 </div>
              </div>
 
-             {/* 業務小抄 - 勞保破產危機 */}
-             <div className="mt-8 border-t border-slate-200 pt-6">
-               <button
-                 onClick={() => setShowCheatsheet(!showCheatsheet)}
-                 className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
-                   showCheatsheet
-                     ? 'bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-lg'
-                     : 'bg-red-50 hover:bg-red-100 text-red-800 border border-red-200'
-                 }`}
-               >
-                 <div className="flex items-center gap-3">
-                   <MessageCircle size={24} />
-                   <div className="text-left">
-                     <p className="font-black text-lg">業務小抄</p>
-                     <p className={`text-xs ${showCheatsheet ? 'text-white/70' : 'text-red-600'}`}>
-                       銷售話術、異議處理、成交金句
-                     </p>
-                   </div>
-                 </div>
-                 <ChevronDown
-                   size={24}
-                   className={`transition-transform duration-300 ${showCheatsheet ? 'rotate-180' : ''}`}
-                 />
-               </button>
-
-               {showCheatsheet && SALES_CHEATSHEET['pension'] && (
-                 <div className="mt-4 space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                   {/* 開場切入話術 */}
-                   <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-100">
-                     <h5 className="font-black text-purple-800 flex items-center gap-2 mb-4">
-                       <Lightbulb size={20} className="text-purple-500" />
-                       開場切入話術
-                     </h5>
-                     <div className="space-y-3">
-                       {SALES_CHEATSHEET['pension'].hooks.map((hook, i) => (
-                         <div key={i} className="bg-white rounded-xl p-4 border border-purple-100 hover:border-purple-300 transition-all group">
-                           <div className="flex items-start justify-between gap-3">
-                             <div className="flex-1">
-                               <span className="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">{hook.label}</span>
-                               <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{hook.script}」</p>
-                             </div>
-                             <button onClick={() => copyToClipboard(hook.script, `pension-hook-${i}`)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all shrink-0" title="複製話術">
-                               {copiedIndex === `pension-hook-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                             </button>
-                           </div>
-                         </div>
-                       ))}
-                     </div>
-                   </div>
-
-                   {/* 異議處理 */}
-                   <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-100">
-                     <h5 className="font-black text-amber-800 flex items-center gap-2 mb-4">
-                       <ShieldAlert size={20} className="text-amber-500" />
-                       異議處理
-                     </h5>
-                     <div className="space-y-3">
-                       {SALES_CHEATSHEET['pension'].objections.map((obj, i) => (
-                         <div key={i} className="bg-white rounded-xl p-4 border border-amber-100 hover:border-amber-300 transition-all">
-                           <div className="flex items-start gap-3 mb-2">
-                             <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">客戶說</span>
-                             <p className="text-slate-600 font-bold">「{obj.q}」</p>
-                           </div>
-                           <div className="flex items-start justify-between gap-3 mt-3 pl-4 border-l-2 border-emerald-400">
-                             <div className="flex-1">
-                               <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">這樣回應</span>
-                               <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{obj.a}」</p>
-                             </div>
-                             <button onClick={() => copyToClipboard(obj.a, `pension-obj-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製回應">
-                               {copiedIndex === `pension-obj-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                             </button>
-                           </div>
-                         </div>
-                       ))}
-                     </div>
-                   </div>
-
-                   {/* 成交金句 */}
-                   <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-100">
-                     <h5 className="font-black text-emerald-800 flex items-center gap-2 mb-4">
-                       <Target size={20} className="text-emerald-500" />
-                       成交金句
-                     </h5>
-                     <div className="space-y-3">
-                       {SALES_CHEATSHEET['pension'].closingLines.map((line, i) => (
-                         <div key={i} className="bg-white rounded-xl p-4 border border-emerald-100 hover:border-emerald-300 transition-all flex items-center justify-between gap-3">
-                           <p className="text-slate-700 font-bold leading-relaxed">「{line}」</p>
-                           <button onClick={() => copyToClipboard(line, `pension-close-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製金句">
-                             {copiedIndex === `pension-close-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                           </button>
-                         </div>
-                       ))}
-                     </div>
-                   </div>
-                 </div>
-               )}
-             </div>
           </div>
         )}
 
@@ -920,103 +705,6 @@ export default function MarketDataZone() {
                </div>
              </div>
 
-             {/* 業務小抄 - 醫療通膨 */}
-             <div className="mt-8 border-t border-slate-200 pt-6">
-               <button
-                 onClick={() => setShowCheatsheet(!showCheatsheet)}
-                 className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
-                   showCheatsheet
-                     ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
-                     : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
-                 }`}
-               >
-                 <div className="flex items-center gap-3">
-                   <MessageCircle size={24} />
-                   <div className="text-left">
-                     <p className="font-black text-lg">業務小抄</p>
-                     <p className={`text-xs ${showCheatsheet ? 'text-white/70' : 'text-emerald-600'}`}>
-                       銷售話術、異議處理、成交金句
-                     </p>
-                   </div>
-                 </div>
-                 <ChevronDown
-                   size={24}
-                   className={`transition-transform duration-300 ${showCheatsheet ? 'rotate-180' : ''}`}
-                 />
-               </button>
-
-               {showCheatsheet && SALES_CHEATSHEET['medical'] && (
-                 <div className="mt-4 space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                   {/* 開場切入話術 */}
-                   <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-100">
-                     <h5 className="font-black text-purple-800 flex items-center gap-2 mb-4">
-                       <Lightbulb size={20} className="text-purple-500" />
-                       開場切入話術
-                     </h5>
-                     <div className="space-y-3">
-                       {SALES_CHEATSHEET['medical'].hooks.map((hook, i) => (
-                         <div key={i} className="bg-white rounded-xl p-4 border border-purple-100 hover:border-purple-300 transition-all group">
-                           <div className="flex items-start justify-between gap-3">
-                             <div className="flex-1">
-                               <span className="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">{hook.label}</span>
-                               <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{hook.script}」</p>
-                             </div>
-                             <button onClick={() => copyToClipboard(hook.script, `medical-hook-${i}`)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all shrink-0" title="複製話術">
-                               {copiedIndex === `medical-hook-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                             </button>
-                           </div>
-                         </div>
-                       ))}
-                     </div>
-                   </div>
-
-                   {/* 異議處理 */}
-                   <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-100">
-                     <h5 className="font-black text-amber-800 flex items-center gap-2 mb-4">
-                       <ShieldAlert size={20} className="text-amber-500" />
-                       異議處理
-                     </h5>
-                     <div className="space-y-3">
-                       {SALES_CHEATSHEET['medical'].objections.map((obj, i) => (
-                         <div key={i} className="bg-white rounded-xl p-4 border border-amber-100 hover:border-amber-300 transition-all">
-                           <div className="flex items-start gap-3 mb-2">
-                             <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">客戶說</span>
-                             <p className="text-slate-600 font-bold">「{obj.q}」</p>
-                           </div>
-                           <div className="flex items-start justify-between gap-3 mt-3 pl-4 border-l-2 border-emerald-400">
-                             <div className="flex-1">
-                               <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">這樣回應</span>
-                               <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{obj.a}」</p>
-                             </div>
-                             <button onClick={() => copyToClipboard(obj.a, `medical-obj-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製回應">
-                               {copiedIndex === `medical-obj-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                             </button>
-                           </div>
-                         </div>
-                       ))}
-                     </div>
-                   </div>
-
-                   {/* 成交金句 */}
-                   <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-100">
-                     <h5 className="font-black text-emerald-800 flex items-center gap-2 mb-4">
-                       <Target size={20} className="text-emerald-500" />
-                       成交金句
-                     </h5>
-                     <div className="space-y-3">
-                       {SALES_CHEATSHEET['medical'].closingLines.map((line, i) => (
-                         <div key={i} className="bg-white rounded-xl p-4 border border-emerald-100 hover:border-emerald-300 transition-all flex items-center justify-between gap-3">
-                           <p className="text-slate-700 font-bold leading-relaxed">「{line}」</p>
-                           <button onClick={() => copyToClipboard(line, `medical-close-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製金句">
-                             {copiedIndex === `medical-close-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                           </button>
-                         </div>
-                       ))}
-                     </div>
-                   </div>
-                 </div>
-               )}
-             </div>
           </div>
         )}
 
@@ -1111,107 +799,163 @@ export default function MarketDataZone() {
                 </div>
              </div>
 
-             {/* 業務小抄 - 癌症時鐘 */}
-             <div className="mt-8 border-t border-slate-200 pt-6">
-               <button
-                 onClick={() => setShowCheatsheet(!showCheatsheet)}
-                 className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
-                   showCheatsheet
-                     ? 'bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg'
-                     : 'bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-200'
-                 }`}
-               >
-                 <div className="flex items-center gap-3">
-                   <MessageCircle size={24} />
-                   <div className="text-left">
-                     <p className="font-black text-lg">業務小抄</p>
-                     <p className={`text-xs ${showCheatsheet ? 'text-white/70' : 'text-orange-600'}`}>
-                       銷售話術、異議處理、成交金句
-                     </p>
-                   </div>
-                 </div>
-                 <ChevronDown
-                   size={24}
-                   className={`transition-transform duration-300 ${showCheatsheet ? 'rotate-180' : ''}`}
-                 />
-               </button>
-
-               {showCheatsheet && SALES_CHEATSHEET['cancer'] && (
-                 <div className="mt-4 space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                   {/* 開場切入話術 */}
-                   <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-100">
-                     <h5 className="font-black text-purple-800 flex items-center gap-2 mb-4">
-                       <Lightbulb size={20} className="text-purple-500" />
-                       開場切入話術
-                     </h5>
-                     <div className="space-y-3">
-                       {SALES_CHEATSHEET['cancer'].hooks.map((hook, i) => (
-                         <div key={i} className="bg-white rounded-xl p-4 border border-purple-100 hover:border-purple-300 transition-all group">
-                           <div className="flex items-start justify-between gap-3">
-                             <div className="flex-1">
-                               <span className="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">{hook.label}</span>
-                               <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{hook.script}」</p>
-                             </div>
-                             <button onClick={() => copyToClipboard(hook.script, `cancer-hook-${i}`)} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all shrink-0" title="複製話術">
-                               {copiedIndex === `cancer-hook-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                             </button>
-                           </div>
-                         </div>
-                       ))}
-                     </div>
-                   </div>
-
-                   {/* 異議處理 */}
-                   <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-100">
-                     <h5 className="font-black text-amber-800 flex items-center gap-2 mb-4">
-                       <ShieldAlert size={20} className="text-amber-500" />
-                       異議處理
-                     </h5>
-                     <div className="space-y-3">
-                       {SALES_CHEATSHEET['cancer'].objections.map((obj, i) => (
-                         <div key={i} className="bg-white rounded-xl p-4 border border-amber-100 hover:border-amber-300 transition-all">
-                           <div className="flex items-start gap-3 mb-2">
-                             <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">客戶說</span>
-                             <p className="text-slate-600 font-bold">「{obj.q}」</p>
-                           </div>
-                           <div className="flex items-start justify-between gap-3 mt-3 pl-4 border-l-2 border-emerald-400">
-                             <div className="flex-1">
-                               <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">這樣回應</span>
-                               <p className="text-slate-700 mt-2 leading-relaxed font-medium">「{obj.a}」</p>
-                             </div>
-                             <button onClick={() => copyToClipboard(obj.a, `cancer-obj-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製回應">
-                               {copiedIndex === `cancer-obj-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                             </button>
-                           </div>
-                         </div>
-                       ))}
-                     </div>
-                   </div>
-
-                   {/* 成交金句 */}
-                   <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6 border border-emerald-100">
-                     <h5 className="font-black text-emerald-800 flex items-center gap-2 mb-4">
-                       <Target size={20} className="text-emerald-500" />
-                       成交金句
-                     </h5>
-                     <div className="space-y-3">
-                       {SALES_CHEATSHEET['cancer'].closingLines.map((line, i) => (
-                         <div key={i} className="bg-white rounded-xl p-4 border border-emerald-100 hover:border-emerald-300 transition-all flex items-center justify-between gap-3">
-                           <p className="text-slate-700 font-bold leading-relaxed">「{line}」</p>
-                           <button onClick={() => copyToClipboard(line, `cancer-close-${i}`)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0" title="複製金句">
-                             {copiedIndex === `cancer-close-${i}` ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
-                           </button>
-                         </div>
-                       ))}
-                     </div>
-                   </div>
-                 </div>
-               )}
-             </div>
           </div>
         )}
 
       </div>
+
+      {/* =========================================================================== */}
+      {/* 業務小抄側邊面板（三連點觸發） */}
+      {/* =========================================================================== */}
+      {showCheatsheet && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* 背景遮罩 */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowCheatsheet(false)}
+          />
+
+          {/* 側邊面板 */}
+          <div className="relative w-full max-w-md bg-slate-900 text-white shadow-2xl overflow-y-auto animate-in slide-in-from-right duration-300">
+            {/* 標題列 */}
+            <div className="sticky top-0 bg-slate-900 border-b border-slate-700 p-4 flex justify-between items-center z-10">
+              <div>
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  <MessageCircle size={20} className="text-cyan-400" />
+                  業務小抄
+                  <Crown size={16} className="text-amber-400" />
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {SALES_CHEATSHEET[activeTab]?.title || '市場數據戰情室'} · 按 ESC 關閉
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCheatsheet(false)}
+                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* 小抄內容 */}
+            {SALES_CHEATSHEET[activeTab] && (
+              <div className="p-4 space-y-6 text-sm">
+                {/* ========== 1. 開場話術 ========== */}
+                <div>
+                  <h4 className="font-bold text-cyan-400 mb-3 flex items-center gap-2">
+                    <Lightbulb size={16} />
+                    開場切入話術
+                  </h4>
+                  <div className="space-y-2">
+                    {SALES_CHEATSHEET[activeTab].hooks.map((hook, i) => (
+                      <div key={i} className="bg-slate-800 rounded-xl p-3 hover:bg-slate-700 transition-all">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <span className="text-[10px] font-bold text-cyan-400 bg-cyan-900/50 px-2 py-0.5 rounded-full">
+                              {hook.label}
+                            </span>
+                            <p className="text-slate-300 mt-2 leading-relaxed text-xs">
+                              「{hook.script}」
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => copyToClipboard(hook.script, `panel-hook-${i}`)}
+                            className="p-1.5 text-slate-500 hover:text-cyan-400 hover:bg-slate-600 rounded transition-all shrink-0"
+                            title="複製話術"
+                          >
+                            {copiedIndex === `panel-hook-${i}` ? (
+                              <Check size={14} className="text-emerald-400" />
+                            ) : (
+                              <Copy size={14} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ========== 2. 異議處理 ========== */}
+                <div>
+                  <h4 className="font-bold text-amber-400 mb-3 flex items-center gap-2">
+                    <ShieldAlert size={16} />
+                    異議處理
+                  </h4>
+                  <div className="space-y-2">
+                    {SALES_CHEATSHEET[activeTab].objections.map((obj, i) => (
+                      <div key={i} className="bg-slate-800 rounded-xl p-3">
+                        <div className="flex items-start gap-2 mb-2">
+                          <span className="text-[10px] font-bold text-rose-400 bg-rose-900/50 px-2 py-0.5 rounded-full shrink-0">
+                            客戶說
+                          </span>
+                          <p className="text-slate-400 text-xs">「{obj.q}」</p>
+                        </div>
+                        <div className="flex items-start justify-between gap-2 mt-2 pl-3 border-l-2 border-emerald-500">
+                          <div className="flex-1">
+                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-900/50 px-2 py-0.5 rounded-full">
+                              這樣回應
+                            </span>
+                            <p className="text-slate-300 mt-1.5 leading-relaxed text-xs">
+                              「{obj.a}」
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => copyToClipboard(obj.a, `panel-obj-${i}`)}
+                            className="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-slate-600 rounded transition-all shrink-0"
+                            title="複製回應"
+                          >
+                            {copiedIndex === `panel-obj-${i}` ? (
+                              <Check size={14} className="text-emerald-400" />
+                            ) : (
+                              <Copy size={14} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ========== 3. 成交金句 ========== */}
+                <div>
+                  <h4 className="font-bold text-purple-400 mb-3 flex items-center gap-2">
+                    <Target size={16} />
+                    成交金句
+                  </h4>
+                  <div className="space-y-2">
+                    {SALES_CHEATSHEET[activeTab].closingLines.map((line, i) => (
+                      <div
+                        key={i}
+                        className="bg-purple-900/30 rounded-xl p-3 border border-purple-700/50 flex items-center justify-between gap-2"
+                      >
+                        <p className="text-purple-200 text-xs italic leading-relaxed">
+                          「{line}」
+                        </p>
+                        <button
+                          onClick={() => copyToClipboard(line, `panel-close-${i}`)}
+                          className="p-1.5 text-slate-500 hover:text-purple-400 hover:bg-slate-600 rounded transition-all shrink-0"
+                          title="複製金句"
+                        >
+                          {copiedIndex === `panel-close-${i}` ? (
+                            <Check size={14} className="text-emerald-400" />
+                          ) : (
+                            <Copy size={14} />
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 小提示 */}
+                <div className="text-center text-[10px] text-slate-500 pt-4 border-t border-slate-700">
+                  💡 點擊複製按鈕可直接複製話術
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
