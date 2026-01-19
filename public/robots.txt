@@ -4,13 +4,16 @@
 User-agent: *
 Allow: /
 Allow: /calculator
+Allow: /register
+Allow: /blog
 
 # 禁止索引私密頁面
 Disallow: /admin/
 Disallow: /signup-secret
 Disallow: /liff/
-Disallow: /login
 Disallow: /api/
+Disallow: /dashboard
+Disallow: /app
 
 # 禁止索引資源檔案
 Disallow: /*.json$
@@ -18,3 +21,6 @@ Disallow: /*.js.map$
 
 # Sitemap 位置
 Sitemap: https://ultra-advisor.tw/sitemap.xml
+
+# 爬蟲延遲（避免過度負載）
+Crawl-delay: 1

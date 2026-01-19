@@ -11,7 +11,7 @@
     <!-- SEO Meta Tags -->
     <title>Ultra Advisor - 台灣最強財務顧問提案工具 | 18種專業數據視覺化</title>
     <meta name="description" content="Ultra Advisor 提供 18 種數據視覺化工具，幫助財務顧問快速產出專業提案。房貸試算、退休規劃、稅務傳承一站完成。免費試用 7 天！">
-    <meta name="keywords" content="財務顧問,理財規劃,房貸計算機,退休規劃,稅務傳承,保險規劃,資產配置,Ultra Advisor,財務工具">
+    <meta name="keywords" content="財務顧問,理財規劃,房貸計算機,房貸試算,退休規劃,退休金計算,稅務傳承,遺產稅試算,贈與稅計算,保險規劃,資產配置,Ultra Advisor,財務工具,本息均攤,本金均攤,房貸利率比較,壽險顧問工具,理專工具,IFA工具,財務顧問軟體,提案工具">
     <meta name="author" content="Ultra Advisor">
     <link rel="canonical" href="https://ultra-advisor.tw/">
 
@@ -37,6 +37,15 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="apple-touch-icon" href="/logo.png">
     <link rel="manifest" href="/manifest.json">
+
+    <!-- 效能優化：預連接關鍵資源 -->
+    <link rel="preconnect" href="https://lh3.googleusercontent.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link rel="dns-prefetch" href="https://www.google.com">
+
+    <!-- 預載入關鍵圖片 -->
+    <link rel="preload" href="/logo.png" as="image" type="image/png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Ultra Advisor">
@@ -113,6 +122,70 @@
         "通脹貼現分析",
         "年度還款明細表",
         "視覺化圖表"
+      ]
+    }
+    </script>
+
+    <!-- FAQ 結構化資料 - 提升搜尋結果顯示 -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Ultra Advisor 免費試用需要綁定信用卡嗎？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "不需要！註冊後即可免費試用 7 天完整功能，不需要提供任何付款資訊。試用期結束後，系統會自動轉為免費版，不會自動扣款。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Ultra Advisor 的資料安全嗎？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "我們使用 Google Firebase 雲端服務，所有資料皆經過加密傳輸與儲存，符合金融等級的資安標準。您的客戶資料只有您自己可以存取。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "傲創計算機是免費的嗎？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "是的！傲創計算機是完全免費的公開工具，不需要註冊就可以使用。這是我們提供給所有財務顧問的免費資源。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Ultra Advisor 可以在多個裝置上使用嗎？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "可以！同一帳號最多可在 2 個裝置上同時登入使用，資料會自動同步。手機、平板、電腦都能使用。"
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- BreadcrumbList 結構化資料 -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "首頁",
+          "item": "https://ultra-advisor.tw/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "免費計算機",
+          "item": "https://ultra-advisor.tw/calculator"
+        }
       ]
     }
     </script>

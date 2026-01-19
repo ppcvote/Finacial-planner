@@ -118,9 +118,33 @@ export default function RegisterPage({ onSuccess, onBack, onLogin }: RegisterPag
     points: number;
   } | null>(null);
 
-  // SEO: 更新頁面標題
+  // SEO: 更新頁面標題和 Meta
   useEffect(() => {
-    document.title = '免費註冊 | Ultra Advisor - 財務顧問的秘密武器';
+    const seoConfig = {
+      title: '免費註冊 | Ultra Advisor - 財務顧問的秘密武器',
+      description: '免費試用 Ultra Advisor 7 天！18 種專業理財工具：房貸計算機、退休規劃、稅務傳承、資產配置。無需信用卡，立即開始。',
+      url: 'https://ultra-advisor.tw/register'
+    };
+
+    // 更新頁面標題
+    document.title = seoConfig.title;
+
+    // 更新 meta description
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) metaDescription.setAttribute('content', seoConfig.description);
+
+    // 更新 Open Graph
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    const ogDescription = document.querySelector('meta[property="og:description"]');
+    const ogUrl = document.querySelector('meta[property="og:url"]');
+    if (ogTitle) ogTitle.setAttribute('content', seoConfig.title);
+    if (ogDescription) ogDescription.setAttribute('content', seoConfig.description);
+    if (ogUrl) ogUrl.setAttribute('content', seoConfig.url);
+
+    // 更新 canonical
+    const canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical) canonical.setAttribute('href', seoConfig.url);
+
     return () => {
       document.title = 'Ultra Advisor - 台灣最強財務顧問提案工具 | 18種專業數據視覺化';
     };

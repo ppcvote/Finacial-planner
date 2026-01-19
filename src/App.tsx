@@ -56,6 +56,9 @@ import LiffRegister from './pages/LiffRegister';
 // 🆕 公開註冊頁面
 import RegisterPage from './pages/RegisterPage';
 
+// 🆕 部落格頁面（SEO 內容行銷）
+import BlogPage from './pages/BlogPage';
+
 const generateSessionId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
 
 const PrintStyles = () => (
@@ -131,6 +134,7 @@ export default function App() {
   const [isCalculatorRoute, setIsCalculatorRoute] = useState(false); // 🆕 傲創計算機路由
   const [isLiffRegisterRoute, setIsLiffRegisterRoute] = useState(false); // 🆕 LIFF 註冊路由
   const [isRegisterRoute, setIsRegisterRoute] = useState(false); // 🆕 公開註冊路由
+  const [isBlogRoute, setIsBlogRoute] = useState(false); // 🆕 部落格路由
   const [clientLoading, setClientLoading] = useState(false); 
   const [currentClient, setCurrentClient] = useState<any>(null);
   // 🆕 activeTab 持久化：重新整理後保持在原工具介面
@@ -330,7 +334,8 @@ export default function App() {
       setIsCalculatorRoute(path === '/calculator');
       setIsLiffRegisterRoute(path === '/liff/register');
       setIsRegisterRoute(path === '/register'); // 🆕 公開註冊
-      if (path === '/') { setIsSecretSignupRoute(false); setIsLoginRoute(false); setIsCalculatorRoute(false); setIsLiffRegisterRoute(false); setIsRegisterRoute(false); }
+      setIsBlogRoute(path === '/blog'); // 🆕 部落格
+      if (path === '/') { setIsSecretSignupRoute(false); setIsLoginRoute(false); setIsCalculatorRoute(false); setIsLiffRegisterRoute(false); setIsRegisterRoute(false); setIsBlogRoute(false); }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -343,6 +348,7 @@ export default function App() {
     else if (path === '/calculator') setIsCalculatorRoute(true);
     else if (path === '/liff/register') setIsLiffRegisterRoute(true);
     else if (path === '/register') setIsRegisterRoute(true); // 🆕 公開註冊
+    else if (path === '/blog') setIsBlogRoute(true); // 🆕 部落格
     const timer = setTimeout(() => { setMinSplashTimePassed(true); }, 3000); 
     return () => clearTimeout(timer);
   }, []);
@@ -478,6 +484,23 @@ export default function App() {
           setIsRegisterRoute(false);
           setIsLoginRoute(true);
           window.history.pushState({}, '', '/login');
+        }}
+      />
+    );
+  }
+
+  // 🆕 部落格頁面（不需登入，跳過 SplashScreen）
+  if (isBlogRoute) {
+    return (
+      <BlogPage
+        onBack={() => {
+          setIsBlogRoute(false);
+          window.history.pushState({}, '', '/');
+        }}
+        onLogin={() => {
+          setIsBlogRoute(false);
+          setIsRegisterRoute(true);
+          window.history.pushState({}, '', '/register');
         }}
       />
     );

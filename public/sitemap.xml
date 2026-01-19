@@ -3,16 +3,132 @@
   <!-- 首頁 - 最高優先級 -->
   <url>
     <loc>https://ultra-advisor.tw/</loc>
-    <lastmod>2026-01-16</lastmod>
+    <lastmod>2026-01-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
 
-  <!-- 房貸計算機 - 高價值公開工具 -->
+  <!-- 傲創計算機 - 高價值免費公開工具（SEO 主力頁面） -->
   <url>
     <loc>https://ultra-advisor.tw/calculator</loc>
+    <lastmod>2026-01-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+  </url>
+
+  <!-- 部落格首頁 - 內容行銷頁面（SEO 重點） -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog</loc>
+    <lastmod>2026-01-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- ==================== 部落格文章 ==================== -->
+
+  <!-- 文章 1: 房貸還款方式比較（精選） -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/mortgage-principal-vs-equal-payment</loc>
+    <lastmod>2026-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- 文章 2: 退休規劃入門（精選） -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/retirement-planning-basics</loc>
+    <lastmod>2026-01-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- 文章 3: 遺產稅指南 -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/estate-tax-planning-2026</loc>
+    <lastmod>2026-01-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 文章 4: 複利的力量 -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/compound-interest-power</loc>
+    <lastmod>2025-12-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 文章 5: 房貸計算機教學 -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/how-to-use-mortgage-calculator</loc>
+    <lastmod>2025-12-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 文章 6: 贈與稅免稅額 -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/gift-tax-annual-exemption</loc>
+    <lastmod>2025-12-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 文章 7: 財務顧問數據視覺化成交技巧（精選） -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/financial-advisor-data-visualization-sales</loc>
+    <lastmod>2026-01-18</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- 文章 8: 壽險顧問保障缺口分析 -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/insurance-advisor-coverage-gap-analysis</loc>
+    <lastmod>2026-01-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 文章 9: 理專高資產客戶開發 -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/wealth-manager-high-net-worth-clients</loc>
     <lastmod>2026-01-16</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 文章 10: 財務顧問數位轉型 -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/financial-advisor-digital-transformation-2026</loc>
+    <lastmod>2026-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 文章 11: 客戶經營財務健檢 -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/financial-health-check-client-trust</loc>
+    <lastmod>2026-01-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- ==================== 其他頁面 ==================== -->
+
+  <!-- 註冊頁面 -->
+  <url>
+    <loc>https://ultra-advisor.tw/register</loc>
+    <lastmod>2026-01-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- 登入頁面 -->
+  <url>
+    <loc>https://ultra-advisor.tw/login</loc>
+    <lastmod>2026-01-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
 </urlset>
