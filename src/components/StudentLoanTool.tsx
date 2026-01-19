@@ -1,13 +1,13 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  GraduationCap, 
-  Clock, 
-  PauseCircle, 
-  Calculator, 
-  Wallet, 
-  TrendingUp, 
-  ShieldCheck, 
-  Target, 
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import {
+  GraduationCap,
+  Clock,
+  PauseCircle,
+  Calculator,
+  Wallet,
+  TrendingUp,
+  ShieldCheck,
+  Target,
   CheckCircle2,
   RefreshCw,
   Landmark,
@@ -17,8 +17,13 @@ import {
   AlertTriangle,
   Zap,
   ArrowRightLeft,
-  PiggyBank // 新增 PiggyBank icon
+  PiggyBank,
+  X,
+  Crown,
+  Lock,
+  Sparkles
 } from 'lucide-react';
+import { useMembership } from '../hooks/useMembership';
 import { ResponsiveContainer, ComposedChart, Area, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ReferenceArea } from 'recharts';
 
 // --- 輔助函式 ---
@@ -39,7 +44,60 @@ const formatXAxisTick = (value: any) => {
 };
 
 // --- 主組件 ---
-export const StudentLoanTool = ({ data, setData }: any) => {
+export const StudentLoanTool = ({ data, setData, userId }: any) => {
+  // 會員權限判斷
+  const { tier } = useMembership(userId || null);
+  const isPaidMember = tier === 'founder' || tier === 'paid';
+
+  // --- 隱藏小抄狀態 ---
+  const [showCheatSheet, setShowCheatSheet] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
+  const clickTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // --- 首次進入提示狀態 ---
+  const [showTripleClickHint, setShowTripleClickHint] = useState(false);
+  const HINT_STORAGE_KEY = 'ua_student_loan_cheatsheet_hint_seen';
+
+  // 三連點觸發函式
+  const handleSecretClick = () => {
+    setClickCount(prev => prev + 1);
+    if (clickTimer.current) clearTimeout(clickTimer.current);
+    clickTimer.current = setTimeout(() => setClickCount(0), 800);
+    if (clickCount >= 2) {
+      setShowCheatSheet(true);
+      setClickCount(0);
+    }
+  };
+
+  // ESC 鍵關閉
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowCheatSheet(false);
+        setShowTripleClickHint(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // 首次進入頁面顯示提示
+  useEffect(() => {
+    const hasSeenHint = localStorage.getItem(HINT_STORAGE_KEY);
+    if (!hasSeenHint) {
+      const timer = setTimeout(() => {
+        setShowTripleClickHint(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // 關閉提示並記錄已看過
+  const dismissHint = () => {
+    setShowTripleClickHint(false);
+    localStorage.setItem(HINT_STORAGE_KEY, 'true');
+  };
+
   // 1. 資料處理與預設值
   const safeData = {
     loanAmount: Number(data?.loanAmount) || 40,
@@ -188,8 +246,18 @@ export const StudentLoanTool = ({ data, setData }: any) => {
     }
   };
 
-  const [tempLoanAmount, setTempLoanAmount] = useState(loanAmount);
-  
+  const [tempLoanAmount, setTempLoanAmount] = useState<string | number>(loanAmount);
+  const [tempSemesters, setTempSemesters] = useState<string | number>(semesters);
+  const [tempInvestReturnRate, setTempInvestReturnRate] = useState<string | number>(investReturnRate);
+  const [tempGracePeriod, setTempGracePeriod] = useState<string | number>(gracePeriod);
+  const [tempInterestOnlyPeriod, setTempInterestOnlyPeriod] = useState<string | number>(interestOnlyPeriod);
+
+  // 同步外部資料變化
+  React.useEffect(() => { setTempSemesters(semesters); }, [semesters]);
+  React.useEffect(() => { setTempInvestReturnRate(investReturnRate); }, [investReturnRate]);
+  React.useEffect(() => { setTempGracePeriod(gracePeriod); }, [gracePeriod]);
+  React.useEffect(() => { setTempInterestOnlyPeriod(interestOnlyPeriod); }, [interestOnlyPeriod]);
+
   const handleLoanAmountInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value === '' ? '' : Number(e.target.value);
     setTempLoanAmount(value as number);
@@ -200,7 +268,44 @@ export const StudentLoanTool = ({ data, setData }: any) => {
     finalValue = Math.max(10, Math.min(300, finalValue));
     finalValue = Math.round(finalValue);
     setData({ ...safeData, loanAmount: finalValue });
-    setTempLoanAmount(finalValue); 
+    setTempLoanAmount(finalValue);
+  };
+
+  const finalizeSemesters = () => {
+    let val = Number(tempSemesters) || 8;
+    val = Math.max(1, Math.min(20, Math.round(val)));
+    setTempSemesters(val);
+    setData({ ...safeData, semesters: val });
+  };
+
+  const finalizeInvestReturnRate = () => {
+    let val = Number(tempInvestReturnRate) || 6;
+    val = Math.max(3, Math.min(10, val));
+    val = Math.round(val * 10) / 10; // 保留一位小數
+    setTempInvestReturnRate(val);
+    setData({ ...safeData, investReturnRate: val });
+  };
+
+  const finalizeGracePeriod = () => {
+    let val = Number(tempGracePeriod) || 1;
+    const maxGrace = isQualified ? 12 : 1;
+    val = Math.max(0, Math.min(maxGrace, Math.round(val)));
+    setTempGracePeriod(val);
+    setData({ ...safeData, gracePeriod: val });
+  };
+
+  const finalizeInterestOnlyPeriod = () => {
+    let val = Number(tempInterestOnlyPeriod) || 0;
+    val = Math.max(0, Math.min(12, Math.round(val)));
+    setTempInterestOnlyPeriod(val);
+    setData({ ...safeData, interestOnlyPeriod: val });
+  };
+
+  const handleKeyDown = (finalizer: () => void) => (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      finalizer();
+      e.currentTarget.blur();
+    }
   };
 
   // 圖表分區顏色與定義
@@ -220,19 +325,43 @@ export const StudentLoanTool = ({ data, setData }: any) => {
           <GraduationCap size={180} />
         </div>
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase backdrop-blur-sm">
               Financial Strategy
             </span>
-            <span className="bg-green-400/20 text-green-100 px-3 py-1 rounded-full text-xs font-bold tracking-wider backdrop-blur-sm border border-green-400/30">
-              2025 新制對應
-            </span>
+            {/* 🔥 這個標籤是秘密觸發點 + 首次提示 */}
+            <div className="relative">
+              <span
+                onClick={handleSecretClick}
+                className="bg-green-400/20 text-green-100 px-3 py-1 rounded-full text-xs font-bold tracking-wider backdrop-blur-sm border border-green-400/30 cursor-default select-none"
+              >
+                2025 新制對應
+              </span>
+              {/* 首次進入提示氣泡 - 顯示在右側 */}
+              {showTripleClickHint && (
+                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 animate-pulse">
+                  <div className="relative bg-slate-900 text-white px-4 py-2 rounded-lg shadow-xl whitespace-nowrap">
+                    <div className="absolute top-1/2 -left-2 -translate-y-1/2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-transparent border-r-slate-900" />
+                    <p className="text-sm font-bold flex items-center gap-2">
+                      <span className="text-yellow-400">💡</span>
+                      點三下可開啟業務小抄
+                    </p>
+                    <button
+                      onClick={dismissHint}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center text-xs"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold mb-2 tracking-tight flex items-center gap-3">
             學貸活化專案
           </h1>
           <p className="text-blue-100 text-lg opacity-90 max-w-2xl">
-            將學貸視為低利融資，利用「緩繳本息」與「只繳息期」新規，創造資產與負債的正向利差。
+            將學貸視為低利融資，利用「緩繳本息」與「只繳息期」新規，創造資產與負債的正向收益差額。
           </p>
         </div>
       </div>
@@ -253,8 +382,9 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                  <div className="flex justify-between items-center mb-2">
                    <label className="text-sm font-medium text-slate-600">學貸總額 (萬)</label>
                    <div className="flex items-center">
-                     <input 
+                     <input
                        type="number" min={10} max={300} step={1}
+                       inputMode="numeric"
                        value={tempLoanAmount}
                        onChange={handleLoanAmountInput}
                        onBlur={finalizeLoanAmount}
@@ -274,11 +404,22 @@ export const StudentLoanTool = ({ data, setData }: any) => {
 
                {/* 2. 貸款學期數 */}
                <div>
-                 <div className="flex justify-between mb-2">
-                   <label className="text-sm font-medium text-slate-600 flex itemscenter gap-1">
+                 <div className="flex justify-between items-center mb-2">
+                   <label className="text-sm font-medium text-slate-600 flex items-center gap-1">
                      <Clock size={14}/> 貸款學期數
                    </label>
-                   <span className="font-mono font-bold text-teal-600 text-lg">{semesters} 學期</span>
+                   <div className="flex items-center gap-0.5">
+                     <input
+                       type="number" min={1} max={20} step={1}
+                       inputMode="numeric"
+                       value={tempSemesters}
+                       onChange={(e) => setTempSemesters(e.target.value === '' ? '' : e.target.value)}
+                       onBlur={finalizeSemesters}
+                       onKeyDown={handleKeyDown(finalizeSemesters)}
+                       className="w-12 text-right bg-transparent border-b-2 border-transparent hover:border-teal-300 focus:border-teal-500 focus:outline-none font-mono font-bold text-teal-600 text-lg transition-colors"
+                     />
+                     <span className="text-sm text-slate-400">學期</span>
+                   </div>
                  </div>
                  <input
                    type="range" min={1} max={20} step={1}
@@ -290,11 +431,20 @@ export const StudentLoanTool = ({ data, setData }: any) => {
 
                {/* 3. 預期年化報酬率 */}
                <div>
-                 <div className="flex justify-between mb-2">
-                   <label className="text-sm font-medium text-slate-600">預期年化報酬率 (%)</label>
-                   <span className="font-mono font-bold text-emerald-600 text-lg">
-                     {investReturnRate.toFixed(1)}
-                   </span>
+                 <div className="flex justify-between items-center mb-2">
+                   <label className="text-sm font-medium text-slate-600">預期年化報酬率</label>
+                   <div className="flex items-center gap-0.5">
+                     <input
+                       type="number" min={3} max={10} step={0.5}
+                       inputMode="decimal"
+                       value={tempInvestReturnRate}
+                       onChange={(e) => setTempInvestReturnRate(e.target.value === '' ? '' : e.target.value)}
+                       onBlur={finalizeInvestReturnRate}
+                       onKeyDown={handleKeyDown(finalizeInvestReturnRate)}
+                       className="w-12 text-right bg-transparent border-b-2 border-transparent hover:border-emerald-300 focus:border-emerald-500 focus:outline-none font-mono font-bold text-emerald-600 text-lg transition-colors"
+                     />
+                     <span className="text-emerald-400">%</span>
+                   </div>
                  </div>
                  <input
                    type="range" min={3} max={10} step={0.5}
@@ -339,14 +489,25 @@ export const StudentLoanTool = ({ data, setData }: any) => {
 
                     {/* 寬限期 */}
                     <div>
-                        <div className="flex justify-between text-xs text-slate-500 mb-1">
+                        <div className="flex justify-between items-center text-xs text-slate-500 mb-1">
                             <span>寬限期 (緩繳本息)</span>
-                            <span className="font-bold text-cyan-700">{gracePeriod} 年</span>
+                            <div className="flex items-center gap-0.5">
+                              <input
+                                type="number" min={0} max={isQualified ? 12 : 1} step={1}
+                                inputMode="numeric"
+                                value={tempGracePeriod}
+                                onChange={(e) => setTempGracePeriod(e.target.value === '' ? '' : e.target.value)}
+                                onBlur={finalizeGracePeriod}
+                                onKeyDown={handleKeyDown(finalizeGracePeriod)}
+                                className="w-10 text-right bg-transparent border-b border-transparent hover:border-cyan-300 focus:border-cyan-500 focus:outline-none font-bold text-cyan-700 transition-colors"
+                              />
+                              <span className="text-cyan-600">年</span>
+                            </div>
                         </div>
-                        <input 
-                            type="range" min={0} max={isQualified ? 12 : 1} step={1} 
-                            value={gracePeriod} 
-                            onChange={(e) => updateField('gracePeriod', Number(e.target.value))} 
+                        <input
+                            type="range" min={0} max={isQualified ? 12 : 1} step={1}
+                            value={gracePeriod}
+                            onChange={(e) => updateField('gracePeriod', Number(e.target.value))}
                             className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer ${isQualified ? 'bg-cyan-200 accent-cyan-600' : 'bg-slate-200 accent-slate-400'}`}
                         />
                         <p className="text-[10px] text-slate-400 mt-1">
@@ -356,15 +517,26 @@ export const StudentLoanTool = ({ data, setData }: any) => {
 
                     {/* 只繳息期 */}
                     <div>
-                        <div className="flex justify-between text-xs text-slate-500 mb-1">
+                        <div className="flex justify-between items-center text-xs text-slate-500 mb-1">
                             <span>只繳息期</span>
-                            <span className="font-bold text-orange-700">{interestOnlyPeriod} 年</span>
+                            <div className="flex items-center gap-0.5">
+                              <input
+                                type="number" min={0} max={12} step={1}
+                                inputMode="numeric"
+                                value={tempInterestOnlyPeriod}
+                                onChange={(e) => setTempInterestOnlyPeriod(e.target.value === '' ? '' : e.target.value)}
+                                onBlur={finalizeInterestOnlyPeriod}
+                                onKeyDown={handleKeyDown(finalizeInterestOnlyPeriod)}
+                                className="w-10 text-right bg-transparent border-b border-transparent hover:border-orange-300 focus:border-orange-500 focus:outline-none font-bold text-orange-700 transition-colors"
+                              />
+                              <span className="text-orange-600">年</span>
+                            </div>
                         </div>
-                        <input 
-                            type="range" min={0} max={12} step={1} 
-                            value={interestOnlyPeriod} 
-                            onChange={(e) => updateField('interestOnlyPeriod', Number(e.target.value))} 
-                            className="w-full h-1.5 bg-orange-200 rounded-lg appearance-none cursor-pointer accent-orange-500" 
+                        <input
+                            type="range" min={0} max={12} step={1}
+                            value={interestOnlyPeriod}
+                            onChange={(e) => updateField('interestOnlyPeriod', Number(e.target.value))}
+                            className="w-full h-1.5 bg-orange-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
                         />
                         <p className="text-[10px] text-slate-400 mt-1">新制最長可申請 12 年</p>
                     </div>
@@ -494,7 +666,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                  </div>
                  <div className="flex items-center gap-2 mb-3">
                      <CheckCircle2 size={18} className="text-emerald-600"/>
-                     <span className="text-sm font-bold text-emerald-900">學費套利成效</span>
+                     <span className="text-sm font-bold text-emerald-900">學費活化成效</span>
                  </div>
                  
                  <div className="space-y-3">
@@ -586,7 +758,7 @@ export const StudentLoanTool = ({ data, setData }: any) => {
            </div>
            <div className="grid grid-cols-1 gap-3">
               {[
-                { title: "低成本融資", desc: "學貸利率極低，使您有機會利用利差創造正向收益，解決學費資金壓力。" },
+                { title: "低成本融資", desc: "學貸利率極低，使您有機會利用收益差額創造正向收益，解決學費資金壓力。" },
                 { title: "資產先行", desc: "在同儕還在為學費煩惱時，您已經啟動了投資複利，贏在人生的起跑點。" },
                 { title: "緊急預備金", desc: "不急著繳掉學費，手邊保留大量現金，應付求學或剛畢業時的突發狀況。" },
                 { title: "理財紀律", desc: "將學費轉化為定期投資/還款的紀律，培養受用一生的富人思維。" }
@@ -600,8 +772,186 @@ export const StudentLoanTool = ({ data, setData }: any) => {
                 </div>
               ))}
            </div>
+
+           {/* 進階功能入口 - 基金戰情室 */}
+           <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-sm border border-slate-700 p-4 text-white mt-4">
+             <h4 className="font-bold mb-3 text-sm flex items-center gap-1">
+               <Landmark size={14} className="text-amber-400"/> 投資標的研究
+             </h4>
+             <p className="text-[11px] text-slate-300 mb-3">
+               深入分析穩健配息基金、ETF 等標的，找出適合學貸活化的投資組合
+             </p>
+             <button
+               className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500
+                          hover:from-amber-600 hover:to-orange-600 rounded-lg font-bold
+                          text-sm flex items-center justify-center gap-2 transition-all shadow-lg"
+               onClick={() => alert('此功能僅限付費會員使用，敬請期待！')}
+             >
+               <Sparkles size={16} />
+               進入基金戰情室
+               <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded text-[10px]">PRO</span>
+             </button>
+             <p className="text-[10px] text-slate-500 mt-2 text-center">
+               付費會員專屬功能
+             </p>
+           </div>
         </div>
       </div>
+
+      {/* ============================================================ */}
+      {/* 隱藏小抄面板 */}
+      {/* ============================================================ */}
+      {showCheatSheet && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* 背景遮罩 */}
+          <div
+            className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+            onClick={() => setShowCheatSheet(false)}
+          />
+
+          {/* 側邊面板 */}
+          <div className="relative w-full max-w-md bg-slate-900 text-white shadow-2xl overflow-y-auto">
+            {/* 標題列 */}
+            <div className="sticky top-0 bg-slate-900 border-b border-slate-700 p-4 flex justify-between items-center z-10">
+              <div>
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  業務小抄
+                  {isPaidMember && <Crown size={16} className="text-amber-400" />}
+                </h3>
+                <p className="text-xs text-slate-400">按 ESC 關閉</p>
+              </div>
+              <button onClick={() => setShowCheatSheet(false)} className="p-2 hover:bg-slate-700 rounded-lg">
+                <X size={20}/>
+              </button>
+            </div>
+
+            {/* 內容區域 - 根據會員等級顯示 */}
+            <div className="relative">
+              {/* 非付費會員：模糊遮罩 */}
+              {!isPaidMember && (
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-md">
+                  <div className="text-center p-8">
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                      <Lock size={40} className="text-white" />
+                    </div>
+                    <h4 className="text-xl font-bold text-white mb-2">會員專屬功能</h4>
+                    <p className="text-slate-400 text-sm mb-4">
+                      業務小抄是付費會員專屬功能<br/>
+                      升級後即可解鎖完整話術庫
+                    </p>
+                    <div className="space-y-2">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg text-white font-bold text-sm">
+                        <Crown size={16} />
+                        升級成為付費會員
+                      </div>
+                      <p className="text-[10px] text-slate-500">
+                        解鎖所有工具與進階功能
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 小抄內容（非付費會員會模糊） */}
+              <div className={`p-4 space-y-6 text-sm ${!isPaidMember ? 'blur-sm pointer-events-none select-none' : ''}`}>
+
+                {/* ========== 1. 當前數據 ========== */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-slate-800 p-2 rounded">
+                    <span className="text-slate-500">學貸總額</span>
+                    <p className="font-bold text-blue-400">{loanAmount} 萬</p>
+                  </div>
+                  <div className="bg-slate-800 p-2 rounded">
+                    <span className="text-slate-500">學貸利率</span>
+                    <p className="font-bold text-slate-400">{loanRate}%</p>
+                  </div>
+                  <div className="bg-slate-800 p-2 rounded">
+                    <span className="text-slate-500">預期報酬率</span>
+                    <p className="font-bold text-emerald-400">{investReturnRate}%</p>
+                  </div>
+                  <div className="bg-slate-800 p-2 rounded">
+                    <span className="text-slate-500">收益差額</span>
+                    <p className="font-bold text-emerald-400">+{(investReturnRate - loanRate).toFixed(2)}%</p>
+                  </div>
+                  <div className="bg-slate-800 p-2 rounded">
+                    <span className="text-slate-500">現金流防禦率</span>
+                    <p className={`font-bold ${coverageRatio >= 100 ? 'text-green-400' : 'text-amber-400'}`}>
+                      {coverageRatio >= 999 ? '∞' : Math.round(coverageRatio)}%
+                    </p>
+                  </div>
+                  <div className="bg-slate-800 p-2 rounded">
+                    <span className="text-slate-500">期滿淨資產</span>
+                    <p className="font-bold text-yellow-400">+{currentFinalAsset} 萬</p>
+                  </div>
+                </div>
+
+                {/* ========== 2. 開場話術 ========== */}
+                <div>
+                  <h4 className="font-bold text-emerald-400 mb-2">🎬 開場</h4>
+                  <div className="bg-slate-800 p-3 rounded text-xs space-y-2">
+                    <p className="text-slate-300">「你有想過，<b className="text-white">學貸</b>其實是人生中利率最低的貸款之一嗎？」</p>
+                    <p className="text-slate-300">「大部分人急著把學貸繳掉，但聰明人會把它變成<b className="text-white">人生的第一筆投資本金</b>。」</p>
+                  </div>
+                </div>
+
+                {/* ========== 3. 核心賣點 ========== */}
+                <div>
+                  <h4 className="font-bold text-amber-400 mb-2">💡 核心賣點</h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="bg-slate-800 p-2 rounded">
+                      <p className="text-emerald-300 font-bold">收益差額</p>
+                      <p className="text-slate-400">「學貸只要 {loanRate}%，投資預期 {investReturnRate}%，中間差 {(investReturnRate - loanRate).toFixed(1)}% 就是你的獲利空間」</p>
+                    </div>
+                    <div className="bg-slate-800 p-2 rounded">
+                      <p className="text-blue-300 font-bold">時間複利</p>
+                      <p className="text-slate-400">「越早開始投資，複利效果越驚人。同樣的錢，晚 5 年開始差距可達數十萬」</p>
+                    </div>
+                    <div className="bg-slate-800 p-2 rounded">
+                      <p className="text-purple-300 font-bold">2025 新制紅利</p>
+                      <p className="text-slate-400">「新制緩繳最長 12 年、只繳息最長 12 年，等於有超過 20 年的複利時間」</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ========== 4. 異議處理 ========== */}
+                <div>
+                  <h4 className="font-bold text-rose-400 mb-2">🛡️ 異議處理</h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="bg-slate-800 p-2 rounded">
+                      <p className="text-rose-300 font-bold">「借錢投資不好吧？」</p>
+                      <p className="text-slate-400">→ 「這不是額外借錢，而是把原本要付的學費『延後支付』，用時間差創造價值」</p>
+                    </div>
+                    <div className="bg-slate-800 p-2 rounded">
+                      <p className="text-rose-300 font-bold">「投資會賠錢怎麼辦？」</p>
+                      <p className="text-slate-400">→ 「選擇穩健的配息基金，長期年化報酬通常在 5-7%，遠高於學貸 {loanRate}%」</p>
+                    </div>
+                    <div className="bg-slate-800 p-2 rounded">
+                      <p className="text-rose-300 font-bold">「我想早點還清沒有負債」</p>
+                      <p className="text-slate-400">→ 「心情上理解，但數學上不划算。{(investReturnRate - loanRate).toFixed(1)}% 的收益差額，{totalDuration} 年後可多累積 {currentFinalAsset} 萬」</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ========== 5. 收尾金句 ========== */}
+                <div>
+                  <h4 className="font-bold text-purple-400 mb-2">✨ 收尾金句</h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="bg-purple-900/30 p-2 rounded border border-purple-700 text-center italic">
+                      「把負債變資產，這才是富人思維」
+                    </div>
+                    <div className="bg-purple-900/30 p-2 rounded border border-purple-700 text-center italic">
+                      「同樣是還學貸，聰明人會順便存下人生第一桶金」
+                    </div>
+                    <div className="bg-purple-900/30 p-2 rounded border border-purple-700 text-center italic">
+                      「現在開始，{totalDuration} 年後你會感謝今天的自己」
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
