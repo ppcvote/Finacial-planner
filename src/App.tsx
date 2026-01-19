@@ -115,16 +115,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, disabled = false, locked 
 );
 
 export default function App() {
-  // 🆕 網域重導向：非正式網域自動跳轉到 ultra-advisor.tw
-  useEffect(() => {
-    const hostname = window.location.hostname;
-    const allowedHosts = ['ultra-advisor.tw', 'www.ultra-advisor.tw', 'localhost', '127.0.0.1'];
-    if (!allowedHosts.includes(hostname)) {
-      // 保留原本的路徑和查詢參數
-      const newUrl = `https://ultra-advisor.tw${window.location.pathname}${window.location.search}${window.location.hash}`;
-      window.location.replace(newUrl);
-    }
-  }, []);
+  // 網域重導向已移除 - 避免與 CDN 快取衝突造成無限循環
 
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
