@@ -30,6 +30,18 @@ import { article as article13 } from './articles/13-financial-advisor-objection-
 import { article as article14 } from './articles/14-estate-tax-vs-gift-tax-comparison';
 import { article as article15 } from './articles/15-tax-season-2026-advisor-tips';
 import { article as article16 } from './articles/16-financial-advisor-income-survey-2026';
+// 文章 17-21：2026 金融從業人員工具庫
+import { article as article17 } from './articles/17-credit-card-installment-2026';
+import { article as article18 } from './articles/18-labor-insurance-pension-2026';
+import { article as article19 } from './articles/19-estate-gift-tax-quick-reference-2026';
+import { article as article20 } from './articles/20-property-tax-self-use-residence-2026';
+import { article as article21 } from './articles/21-bank-deposit-rates-comparison-2026';
+// 文章 22-26：2026 金融從業人員工具庫（續）
+import { article as article22 } from './articles/22-nhi-supplementary-premium-2026';
+import { article as article23 } from './articles/23-savings-insurance-vs-deposit-2026';
+import { article as article24 } from './articles/24-mortgage-refinance-cost-2026';
+import { article as article25 } from './articles/25-income-tax-brackets-2026';
+import { article as article26 } from './articles/26-high-dividend-etf-calendar-2026';
 
 // ============ 匯出文章陣列 ============
 export const blogArticles: BlogArticle[] = [
@@ -49,6 +61,16 @@ export const blogArticles: BlogArticle[] = [
   article14,
   article15,
   article16,
+  article17,
+  article18,
+  article19,
+  article20,
+  article21,
+  article22,
+  article23,
+  article24,
+  article25,
+  article26,
 ];
 
 // ============ 匯出輔助函數 ============
