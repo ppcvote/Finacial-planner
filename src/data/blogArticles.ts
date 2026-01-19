@@ -1380,7 +1380,7 @@ export const blogArticles: BlogArticle[] = [
     featured: true,
     metaTitle: '財務顧問成交秘訣：數據視覺化讓客戶秒懂【實戰技巧】',
     metaDescription: '頂尖財務顧問的成交秘訣：用數據視覺化取代口頭說明。實戰案例教學，讓複雜理財概念變成一看就懂的圖表，提升成交率 40%。',
-    content: \`
+    content: `
       <article class="prose prose-invert max-w-none">
         <p class="lead text-xl text-slate-300 mb-8">
           「我跟客戶講了 30 分鐘退休規劃，他還是聽不懂...」<br/>
@@ -1552,7 +1552,7 @@ export const blogArticles: BlogArticle[] = [
           本文為財務顧問專業分享，不構成任何投資建議。
         </p>
       </article>
-    \`
+    `
   },
 
   // ========================================
@@ -1571,7 +1571,7 @@ export const blogArticles: BlogArticle[] = [
     featured: false,
     metaTitle: '壽險顧問保障缺口分析完整教學：5 步驟讓客戶看到真正需求',
     metaDescription: '專業壽險顧問的需求分析技巧。5 步驟完成保障缺口分析，用數據取代話術，讓「我保險夠了」變成「原來我還需要這個」。',
-    content: \`
+    content: `
       <article class="prose prose-invert max-w-none">
         <p class="lead text-xl text-slate-300 mb-8">
           「我保險買很多了，不需要了。」<br/>
@@ -1813,7 +1813,7 @@ export const blogArticles: BlogArticle[] = [
           本文為保險從業人員專業分享，不構成任何保險購買建議。
         </p>
       </article>
-    \`
+    `
   },
 
   // ========================================
@@ -1832,7 +1832,7 @@ export const blogArticles: BlogArticle[] = [
     featured: false,
     metaTitle: '理專開發高資產客戶秘訣：用退休規劃建立信任【實戰指南】',
     metaDescription: '高資產客戶最在意什麼？不是報酬率，是「安心」。學會用專業退休規劃工具切入，讓大戶主動找你談資產配置。',
-    content: \`
+    content: `
       <article class="prose prose-invert max-w-none">
         <p class="lead text-xl text-slate-300 mb-8">
           「高資產客戶都被其他理專搶光了...」<br/>
@@ -2009,7 +2009,7 @@ export const blogArticles: BlogArticle[] = [
           本文為銀行理專專業分享，不構成任何投資建議。
         </p>
       </article>
-    \`
+    `
   },
 
   // ========================================
@@ -2028,7 +2028,7 @@ export const blogArticles: BlogArticle[] = [
     featured: false,
     metaTitle: '2026財務顧問必備數位工具：數位轉型完整指南',
     metaDescription: 'AI時代財務顧問如何不被淘汰？盤點2026年顧問必備的5大數位工具，從客戶管理到提案簡報，全面提升競爭力。',
-    content: \`
+    content: `
       <article class="prose prose-invert max-w-none">
         <p class="lead text-xl text-slate-300 mb-8">
           「AI 會取代財務顧問嗎？」這是 2026 年最常被問到的問題。<br/><br/>
@@ -2246,7 +2246,7 @@ export const blogArticles: BlogArticle[] = [
           本文為財務顧問數位轉型分享，工具選擇請依個人需求評估。
         </p>
       </article>
-    \`
+    `
   },
 
   // ========================================
@@ -2265,7 +2265,7 @@ export const blogArticles: BlogArticle[] = [
     featured: false,
     metaTitle: '財務健檢建立客戶信任：讓一次成交變終身客戶的秘訣',
     metaDescription: '頂尖財務顧問的客戶經營秘訣：用定期財務健檢服務，創造持續價值，讓客戶主動找你、主動轉介紹。',
-    content: \`
+    content: `
       <article class="prose prose-invert max-w-none">
         <p class="lead text-xl text-slate-300 mb-8">
           「成交後就沒下文了...」<br/>
@@ -2478,7 +2478,7 @@ export const blogArticles: BlogArticle[] = [
           本文為財務顧問客戶經營分享，不構成任何投資建議。
         </p>
       </article>
-    \`
+    `
   }
 ];
 
