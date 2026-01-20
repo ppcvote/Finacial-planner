@@ -5,3 +5,4 @@ dist/
 .tmp.driveupload/
 .tmp.drivedownload/
 admin/src/scripts/serviceAccountKey.json
+.vercel

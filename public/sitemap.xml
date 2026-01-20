@@ -1,242 +1,224 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- 首頁 - 最高優先級 -->
   <url>
     <loc>https://ultra-advisor.tw/</loc>
-    <lastmod>2026-01-19</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
+    <priority>1</priority>
   </url>
 
-  <!-- 傲創計算機 - 高價值免費公開工具（SEO 主力頁面） -->
   <url>
     <loc>https://ultra-advisor.tw/calculator</loc>
-    <lastmod>2026-01-19</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
   </url>
 
-  <!-- 部落格首頁 - 內容行銷頁面（SEO 重點） -->
   <url>
     <loc>https://ultra-advisor.tw/blog</loc>
-    <lastmod>2026-01-19</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
 
+  <url>
+    <loc>https://ultra-advisor.tw/register</loc>
+    <lastmod>2026-01-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://ultra-advisor.tw/login</loc>
+    <lastmod>2026-01-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
   <!-- ==================== 部落格文章 ==================== -->
 
-  <!-- 文章 1: 房貸還款方式比較（精選） -->
   <url>
     <loc>https://ultra-advisor.tw/blog/mortgage-principal-vs-equal-payment</loc>
-    <lastmod>2026-01-15</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
 
-  <!-- 文章 2: 退休規劃入門（精選） -->
   <url>
     <loc>https://ultra-advisor.tw/blog/retirement-planning-basics</loc>
-    <lastmod>2026-01-10</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
 
-  <!-- 文章 3: 遺產稅指南 -->
   <url>
     <loc>https://ultra-advisor.tw/blog/estate-tax-planning-2026</loc>
-    <lastmod>2026-01-05</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- 文章 4: 複利的力量 -->
   <url>
     <loc>https://ultra-advisor.tw/blog/compound-interest-power</loc>
-    <lastmod>2025-12-28</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- 文章 5: 房貸計算機教學 -->
   <url>
     <loc>https://ultra-advisor.tw/blog/how-to-use-mortgage-calculator</loc>
-    <lastmod>2025-12-20</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- 文章 6: 贈與稅免稅額 -->
   <url>
     <loc>https://ultra-advisor.tw/blog/gift-tax-annual-exemption</loc>
-    <lastmod>2025-12-15</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- 文章 7: 財務顧問數據視覺化成交技巧（精選） -->
   <url>
     <loc>https://ultra-advisor.tw/blog/financial-advisor-data-visualization-sales</loc>
-    <lastmod>2026-01-18</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
 
-  <!-- 文章 8: 壽險顧問保障缺口分析 -->
   <url>
     <loc>https://ultra-advisor.tw/blog/insurance-advisor-coverage-gap-analysis</loc>
-    <lastmod>2026-01-17</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- 文章 9: 理專高資產客戶開發 -->
   <url>
     <loc>https://ultra-advisor.tw/blog/wealth-manager-high-net-worth-clients</loc>
-    <lastmod>2026-01-16</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- 文章 10: 財務顧問數位轉型 -->
   <url>
     <loc>https://ultra-advisor.tw/blog/financial-advisor-digital-transformation-2026</loc>
-    <lastmod>2026-01-15</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- 文章 11: 客戶經營財務健檢 -->
   <url>
     <loc>https://ultra-advisor.tw/blog/financial-health-check-client-trust</loc>
-    <lastmod>2026-01-12</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- 文章 12: 2026銀行房貸利率比較表（精選） -->
   <url>
     <loc>https://ultra-advisor.tw/blog/bank-mortgage-rates-comparison-2026</loc>
-    <lastmod>2026-01-19</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
 
-  <!-- 文章 13: 財務顧問話術（精選） -->
   <url>
     <loc>https://ultra-advisor.tw/blog/financial-advisor-objection-handling-scripts</loc>
-    <lastmod>2026-01-18</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
 
-  <!-- 文章 14: 遺產稅vs贈與稅比較 -->
   <url>
     <loc>https://ultra-advisor.tw/blog/estate-tax-vs-gift-tax-comparison</loc>
-    <lastmod>2026-01-17</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- 文章 15: 2026報稅季節稅技巧 -->
   <url>
     <loc>https://ultra-advisor.tw/blog/tax-season-2026-advisor-tips</loc>
-    <lastmod>2026-01-16</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- 文章 16: 財務顧問收入調查（精選） -->
   <url>
     <loc>https://ultra-advisor.tw/blog/financial-advisor-income-survey-2026</loc>
-    <lastmod>2026-01-15</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
 
-  <!-- ==================== 2026 金融從業人員工具庫 ==================== -->
-
-  <!-- 文章 17: 2026 信用卡分期零利率比較（精選） -->
   <url>
     <loc>https://ultra-advisor.tw/blog/credit-card-installment-2026</loc>
-    <lastmod>2026-01-19</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
 
-  <!-- 文章 18: 2026 勞保勞退新制攻略（精選） -->
   <url>
     <loc>https://ultra-advisor.tw/blog/labor-insurance-pension-2026</loc>
-    <lastmod>2026-01-19</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
 
-  <!-- 文章 19: 2026 遺贈稅免稅額速查表（精選） -->
   <url>
     <loc>https://ultra-advisor.tw/blog/estate-gift-tax-quick-reference-2026</loc>
-    <lastmod>2026-01-19</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
 
-  <!-- 文章 20: 2026 房屋稅地價稅自用住宅攻略 -->
   <url>
     <loc>https://ultra-advisor.tw/blog/property-tax-self-use-residence-2026</loc>
-    <lastmod>2026-01-19</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- 文章 21: 2026 台幣定存利率銀行比較 -->
   <url>
     <loc>https://ultra-advisor.tw/blog/bank-deposit-rates-comparison-2026</loc>
-    <lastmod>2026-01-19</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- 文章 22: 2026 健保補充保費完整攻略（精選） -->
   <url>
     <loc>https://ultra-advisor.tw/blog/nhi-supplementary-premium-2026</loc>
-    <lastmod>2026-01-19</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
 
-  <!-- 文章 23: 2026 儲蓄險 vs 定存比較（精選） -->
   <url>
     <loc>https://ultra-advisor.tw/blog/savings-insurance-vs-deposit-2026</loc>
-    <lastmod>2026-01-19</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
 
-  <!-- 文章 24: 2026 房貸轉貸成本試算 -->
   <url>
     <loc>https://ultra-advisor.tw/blog/mortgage-refinance-cost-2026</loc>
-    <lastmod>2026-01-19</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- 文章 25: 2026 所得稅級距扣除額速查表（精選） -->
   <url>
     <loc>https://ultra-advisor.tw/blog/income-tax-brackets-2026</loc>
-    <lastmod>2026-01-19</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
 
-  <!-- 文章 26: 2026 台股高股息 ETF 配息月曆（精選） -->
   <url>
     <loc>https://ultra-advisor.tw/blog/high-dividend-etf-calendar-2026</loc>
-    <lastmod>2026-01-19</lastmod>
+    <lastmod>2026-01-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
 
-  <!-- 文章 27: 數位存款概念比較（精選） -->
   <url>
     <loc>https://ultra-advisor.tw/blog/digital-deposit-vs-insurance-value-2026</loc>
     <lastmod>2026-01-20</lastmod>
@@ -244,7 +226,6 @@
     <priority>0.85</priority>
   </url>
 
-  <!-- 文章 28: 以房養老專業規劃（精選） -->
   <url>
     <loc>https://ultra-advisor.tw/blog/reverse-mortgage-vs-professional-planning-2026</loc>
     <lastmod>2026-01-20</lastmod>
@@ -252,21 +233,4 @@
     <priority>0.85</priority>
   </url>
 
-  <!-- ==================== 其他頁面 ==================== -->
-
-  <!-- 註冊頁面 -->
-  <url>
-    <loc>https://ultra-advisor.tw/register</loc>
-    <lastmod>2026-01-19</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <!-- 登入頁面 -->
-  <url>
-    <loc>https://ultra-advisor.tw/login</loc>
-    <lastmod>2026-01-19</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
 </urlset>

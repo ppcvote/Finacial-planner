@@ -77,11 +77,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { slug } = req.query;
   const slugStr = Array.isArray(slug) ? slug[0] : slug || '';
 
-  // Debug log
-  console.log('[BlogAPI] UA:', userAgent);
-  console.log('[BlogAPI] isCrawler:', isCrawler(userAgent));
-  console.log('[BlogAPI] slug:', slugStr);
-
   const article = articleMetadata[slugStr];
   const finalArticle = article || {
     title: 'Ultra Advisor 知識庫',
