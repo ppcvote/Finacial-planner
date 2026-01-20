@@ -136,45 +136,43 @@ const BetaCountdown = () => {
 // ==========================================
 const OptimizedHeroSection = ({ onFreeTrial, onWatchDemo, hasVideo }) => {
   return (
-    <section className="relative min-h-screen bg-[#050b14] 
+    <section className="relative min-h-screen bg-[#050b14]
                         bg-[linear-gradient(rgba(77,163,255,0.05)_1px,transparent_1px),
                            linear-gradient(90deg,rgba(77,163,255,0.05)_1px,transparent_1px)]
                         bg-[length:40px_40px] flex items-center justify-center px-4 py-20">
-      
+
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-[120px]" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px]" />
       </div>
 
       <div className="relative z-10 max-w-5xl mx-auto text-center space-y-10">
-        
+
         <div className="flex justify-center animate-fade-in">
           <BetaCountdown />
         </div>
 
         <div className="space-y-6 animate-fade-in" style={{animationDelay: '0.2s'}}>
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white 
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white
                          leading-tight tracking-tighter">
-            讓每個顧問都有
-            <br />
-            <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-blue-500 
+            讓數據
+            <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-blue-500
                            bg-clip-text text-transparent">
-              AI 軍師
+              替你說話
             </span>
-            的超級武器
           </h1>
-          
+
           <p className="text-xl md:text-2xl text-blue-300 font-bold tracking-wide">
-            3 分鐘成交，不再土法煉鋼
+            專業圖表，讓財務規劃一目了然
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-4 max-w-3xl mx-auto animate-fade-in" 
+        <div className="grid md:grid-cols-3 gap-4 max-w-3xl mx-auto animate-fade-in"
              style={{animationDelay: '0.4s'}}>
           {[
-            { icon: Target, text: "平均每月多成交 3 單", color: "blue" },
+            { icon: BarChart3, text: "18 種專業視覺化工具", color: "blue" },
             { icon: Clock, text: "節省 15 小時試算時間", color: "amber" },
-            { icon: TrendingUp, text: "客戶滿意度 +40%", color: "emerald" }
+            { icon: FileBarChart, text: "2,000+ 份報表產出", color: "emerald" }
           ].map((item, i) => (
             <div key={i} className="bg-slate-900/50 border border-slate-700/50 
                                    rounded-2xl p-4 backdrop-blur-sm">
@@ -496,104 +494,104 @@ const ProductShowcase = () => {
   const categories = {
     wealth: {
       title: "創富工具",
-      subtitle: "利用槓桿與套利，實現資產階級躍遷",
+      subtitle: "資產累積視覺化，看見財富成長軌跡",
       color: "blue",
       icon: Rocket,
       tools: [
         {
-          name: "學貸活化系統",
-          desc: "將低利學貸轉化為投資資本，創造套利空間",
-          features: ["IRR 反推計算", "利差分析", "風險評估"],
+          name: "學貸活化試算",
+          desc: "評估學貸與投資的長期效益比較",
+          features: ["IRR 計算", "收益比較圖表", "風險評估"],
           screenshot: "https://placehold.co/800x500/1e293b/64748b?text=學貸活化系統+截圖"
         },
         {
-          name: "房產轉增貸工具",
-          desc: "活化不動產死錢，重新配置高報酬標的",
-          features: ["房貸試算", "增貸空間分析", "現金流規劃"],
+          name: "房產財務分析",
+          desc: "房貸還款與資產配置的視覺化分析",
+          features: ["房貸試算", "現金流圖表", "還款計畫"],
           screenshot: "https://placehold.co/800x500/1e293b/64748b?text=房產增貸+截圖"
         },
         {
           name: "百萬禮物計畫",
-          desc: "利用稅法空間，合法移轉資產給下一代",
-          features: ["贈與稅試算", "分年規劃", "稅務優化"],
+          desc: "子女教育基金與資產規劃試算",
+          features: ["贈與稅試算", "分年規劃圖表", "稅務試算"],
           screenshot: "https://placehold.co/800x500/1e293b/64748b?text=百萬禮物+截圖"
         }
       ]
     },
     defense: {
       title: "守富工具",
-      subtitle: "建立現金流防禦，確保資產穩健成長",
+      subtitle: "風險缺口圖表化，守護家庭財務安全",
       color: "emerald",
       icon: ShieldCheck,
       tools: [
         {
-          name: "大小水庫母子系統",
-          desc: "雙層防護機制，確保緊急預備金與長期儲蓄",
-          features: ["緊急預備金試算", "定期定額規劃", "風險缺口分析"],
+          name: "大小水庫系統",
+          desc: "緊急預備金與長期儲蓄的雙層規劃",
+          features: ["預備金試算", "定期定額圖表", "缺口分析"],
           screenshot: "https://placehold.co/800x500/1e293b/64748b?text=大小水庫+截圖"
         },
         {
           name: "五年換車計畫",
-          desc: "資產配置與生活夢想的平衡點",
-          features: ["購車預算規劃", "頭期款累積", "貸款試算"],
+          desc: "購車預算與儲蓄目標的視覺化規劃",
+          features: ["預算規劃", "儲蓄進度圖", "貸款試算"],
           screenshot: "https://placehold.co/800x500/1e293b/64748b?text=換車計畫+截圖"
         },
         {
-          name: "長照尊嚴準備金",
-          desc: "精算未來醫療成本，守護晚年尊嚴",
-          features: ["不健康餘命試算", "醫療費用估算", "保障缺口分析"],
+          name: "長照準備金試算",
+          desc: "未來醫療支出與保障缺口分析",
+          features: ["餘命試算", "費用估算圖表", "缺口分析"],
           screenshot: "https://placehold.co/800x500/1e293b/64748b?text=長照準備+截圖"
         }
       ]
     },
     legacy: {
       title: "傳富工具",
-      subtitle: "稅務優化與傳承規劃，財富完美落地",
+      subtitle: "稅務試算透明化，傳承規劃有依據",
       color: "purple",
       icon: Landmark,
       tools: [
         {
-          name: "稅務傳承系統",
-          desc: "遺產稅 & 贈與稅精算，最佳化傳承策略",
-          features: ["遺產稅試算", "贈與稅規劃", "節稅策略建議"],
+          name: "稅務傳承試算",
+          desc: "遺產稅與贈與稅的完整試算圖表",
+          features: ["遺產稅試算", "贈與稅圖表", "節稅方案比較"],
           screenshot: "https://placehold.co/800x500/1e293b/64748b?text=稅務傳承+截圖"
         },
         {
-          name: "流動性缺口測試",
-          desc: "確保遺產稅繳納不會侵蝕家族資產",
-          features: ["現金流分析", "資產變現評估", "保險配置建議"],
+          name: "流動性缺口分析",
+          desc: "資產變現能力與稅務負擔評估",
+          features: ["現金流圖表", "資產分析", "規劃建議"],
           screenshot: "https://placehold.co/800x500/1e293b/64748b?text=流動性測試+截圖"
         },
         {
-          name: "勞退破產倒數",
-          desc: "退休金替代率試算，提前規劃第二人生",
-          features: ["替代率計算", "退休缺口分析", "自提建議"],
+          name: "退休金缺口試算",
+          desc: "退休金替代率與缺口視覺化分析",
+          features: ["替代率圖表", "缺口分析", "規劃建議"],
           screenshot: "https://placehold.co/800x500/1e293b/64748b?text=勞退試算+截圖"
         }
       ]
     },
     warroom: {
-      title: "戰情室數據",
-      subtitle: "即時市場數據與歷史回測",
+      title: "市場數據",
+      subtitle: "即時數據圖表化，決策有所本",
       color: "red",
       icon: Activity,
       tools: [
         {
           name: "基金時光機",
-          desc: "歷史績效回測，驗證投資策略",
-          features: ["定期定額回測", "單筆投資模擬", "績效比較"],
+          desc: "歷史績效回測與投資模擬",
+          features: ["定期定額回測", "績效圖表", "比較分析"],
           screenshot: "https://placehold.co/800x500/1e293b/64748b?text=基金時光機+截圖"
         },
         {
           name: "市場數據儀表板",
-          desc: "2026 最新經濟數據即時追蹤",
-          features: ["癌症時鐘", "醫療通膨", "勞保倒數"],
+          desc: "2026 最新經濟數據即時圖表",
+          features: ["健康數據", "通膨指標", "退休金數據"],
           screenshot: "https://placehold.co/800x500/1e293b/64748b?text=市場數據+截圖"
         },
         {
-          name: "通膨碎鈔機",
-          desc: "視覺化呈現購買力流失速度",
-          features: ["實質購買力", "通膨率計算", "資產保值建議"],
+          name: "通膨影響試算",
+          desc: "購買力變化的視覺化呈現",
+          features: ["購買力圖表", "通膨試算", "資產評估"],
           screenshot: "https://placehold.co/800x500/1e293b/64748b?text=通膨試算+截圖"
         }
       ]
@@ -735,43 +733,43 @@ const RealSocialProof = () => {
   return (
     <section className="py-32 bg-slate-950">
       <div className="max-w-7xl mx-auto px-6">
-        
+
         <div className="text-center mb-20">
-          <span className="px-4 py-1.5 bg-purple-500/10 border border-purple-500/20 
-                         text-purple-400 text-xs font-black uppercase tracking-[0.4em] 
+          <span className="px-4 py-1.5 bg-purple-500/10 border border-purple-500/20
+                         text-purple-400 text-xs font-black uppercase tracking-[0.4em]
                          rounded-full">
-            Beta Tester Exclusive
+            Early Access
           </span>
           <h2 className="text-4xl md:text-6xl font-black text-white mt-8 tracking-tight">
-            加入 2026 創始會員行列
+            專業顧問的視覺化夥伴
           </h2>
           <p className="text-slate-400 text-lg mt-6 max-w-2xl mx-auto">
-            目前 <strong className="text-blue-400">20 位頂尖財務顧問</strong> 正在內測階段，
-            他們平均管理 <strong className="text-amber-400">50+ 客戶檔案</strong>，
-            每月使用系統完成 <strong className="text-emerald-400">100+ 次試算</strong>。
+            目前已有 <strong className="text-blue-400">20+ 位專業顧問</strong> 使用 Ultra Advisor，
+            累計產出 <strong className="text-amber-400">2,000+ 份</strong> 視覺化報表，
+            平均每月節省 <strong className="text-emerald-400">15 小時</strong> 試算時間。
           </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 mb-20">
           {[
-            { 
-              label: "內測顧問", 
-              value: "20+", 
-              desc: "來自壽險、銀行、理專", 
+            {
+              label: "使用顧問",
+              value: "20+",
+              desc: "專業財務規劃師",
               icon: Users,
               color: "blue"
             },
-            { 
-              label: "累計試算", 
-              value: "2,000+", 
-              desc: "涵蓋創富/守富/傳富", 
+            {
+              label: "報表產出",
+              value: "2,000+",
+              desc: "視覺化分析報表",
               icon: BarChart3,
               color: "amber"
             },
-            { 
-              label: "平均節省", 
-              value: "15 hrs", 
-              desc: "每月試算準備時間", 
+            {
+              label: "平均節省",
+              value: "15 hrs",
+              desc: "每月試算準備時間",
               icon: Clock,
               color: "emerald"
             }
@@ -800,17 +798,17 @@ const RealSocialProof = () => {
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-8">
               <Crown className="text-amber-400" size={32} />
-              <h3 className="text-3xl font-black text-white">創始會員專屬權益</h3>
+              <h3 className="text-3xl font-black text-white">早期使用者專屬權益</h3>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
               {[
                 { icon: Award, text: "永久享有早鳥價格鎖定（未來漲價不影響）" },
-                { icon: Sparkles, text: "優先體驗所有新功能（AI 升級第一批）" },
+                { icon: Sparkles, text: "優先體驗所有新功能與圖表工具" },
                 { icon: Users, text: "專屬 VIP 社群（直接與開發團隊對話）" },
-                { icon: Star, text: "終身技術支援（1 對 1 顧問式服務）" },
-                { icon: Target, text: "功能需求優先處理（你的建議直接影響產品）" },
-                { icon: Crown, text: "創始會員徽章（系統內永久顯示）" }
+                { icon: Star, text: "終身技術支援（1 對 1 服務）" },
+                { icon: Target, text: "功能需求優先處理（您的建議直接影響產品）" },
+                { icon: Crown, text: "早期使用者徽章（系統內永久顯示）" }
               ].map((benefit, i) => (
                 <div key={i} className="flex items-start gap-4 bg-slate-900/30 
                                        border border-slate-800/50 rounded-2xl p-5">
@@ -859,7 +857,7 @@ const EarlyUserFeedback = ({ onFreeTrial }) => {
           <p className="text-slate-400 text-lg mt-6 max-w-2xl mx-auto">
             Ultra Advisor 目前處於早期階段，我們正在招募首批測試用戶，
             <br />
-            一起打造台灣最好用的財務顧問工具
+            一起打造台灣最專業的財務視覺化工具
           </p>
         </div>
 
@@ -869,7 +867,7 @@ const EarlyUserFeedback = ({ onFreeTrial }) => {
             {
               icon: Rocket,
               title: "搶先體驗",
-              description: "比別人更早掌握新一代顧問工具，建立競爭優勢",
+              description: "比別人更早使用專業視覺化工具，提升服務品質",
               color: "blue"
             },
             {
@@ -880,7 +878,7 @@ const EarlyUserFeedback = ({ onFreeTrial }) => {
             },
             {
               icon: Crown,
-              title: "創始會員特權",
+              title: "早期使用者特權",
               description: "早期支持者享有永久價格鎖定與專屬權益",
               color: "amber"
             }
@@ -924,7 +922,7 @@ const EarlyUserFeedback = ({ onFreeTrial }) => {
         {/* CTA */}
         <div className="text-center">
           <p className="text-slate-400 text-lg mb-6">
-            我們承諾：持續迭代、認真聽取回饋、打造真正有用的工具
+            我們承諾：持續迭代、認真聽取回饋、打造真正專業的視覺化工具
           </p>
           <button
             onClick={onFreeTrial}
@@ -934,11 +932,11 @@ const EarlyUserFeedback = ({ onFreeTrial }) => {
                      hover:shadow-[0_0_60px_rgba(59,130,246,0.6)]
                      transition-all hover:-translate-y-1 inline-flex items-center gap-3">
             <Sparkles size={24} />
-            免費加入早期測試
+            免費體驗視覺化工具
             <ArrowRight size={20} />
           </button>
           <p className="text-slate-600 text-sm mt-4">
-            目前已有 20+ 位顧問正在使用
+            目前已有 20+ 位專業顧問正在使用
           </p>
         </div>
 
@@ -1043,10 +1041,10 @@ const PricingSection = ({ onSelectPlan }) => {
               
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 mb-8">
                 <p className="text-amber-300 font-black text-lg text-center">
-                  💰 談一件月存 2,000 的傭金
+                  📊 每天不到 20 元
                   <br />
                   <span className="text-sm text-amber-400/80">
-                    就能回本整年費用！
+                    讓每份報表都專業呈現
                   </span>
                 </p>
               </div>
@@ -1580,25 +1578,25 @@ export function LandingPage({ onStart, onSignup, onHome }) {
         <section className="py-32 bg-gradient-to-b from-slate-950 to-blue-950/20">
           <div className="max-w-4xl mx-auto text-center px-6">
             <h2 className="text-4xl md:text-6xl font-black text-white mb-8 leading-tight">
-              準備好升級你的
+              準備好讓數據
               <br />
               <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                顧問武器庫
+                替你說話
               </span>
               了嗎？
             </h2>
             <p className="text-slate-400 text-xl mb-12">
-              加入 20+ 位菁英顧問行列，開始你的 7 天免費試用
+              加入 20+ 位專業顧問，開始製作視覺化報表
             </p>
-            <button 
+            <button
               onClick={handleFreeTrial}
-              className="px-12 py-6 bg-gradient-to-r from-blue-600 to-blue-500 
-                       text-white rounded-2xl font-black text-xl 
+              className="px-12 py-6 bg-gradient-to-r from-blue-600 to-blue-500
+                       text-white rounded-2xl font-black text-xl
                        shadow-[0_0_50px_rgba(59,130,246,0.5)]
-                       hover:shadow-[0_0_80px_rgba(59,130,246,0.7)] 
+                       hover:shadow-[0_0_80px_rgba(59,130,246,0.7)]
                        transition-all hover:-translate-y-2 inline-flex items-center gap-3">
               <Sparkles size={28} />
-              立即獲取 Ultra888 金鑰
+              免費體驗視覺化工具
               <ArrowRight size={24} />
             </button>
             <p className="text-slate-500 text-sm mt-6">
@@ -1630,8 +1628,8 @@ export function LandingPage({ onStart, onSignup, onHome }) {
                 </span>
               </div>
               <p className="text-slate-500 text-sm leading-relaxed mb-6">
-                台灣最強財務顧問提案工具<br />
-                讓數據為你說話，讓 AI 當你的軍師
+                專業財務視覺化解決方案<br />
+                讓複雜數據變成一目了然的圖表
               </p>
               <div className="flex gap-3">
                 <a href={LINE_OFFICIAL_ACCOUNT} target="_blank" rel="noopener noreferrer"
@@ -1767,7 +1765,7 @@ export function LandingPage({ onStart, onSignup, onHome }) {
         <div className="border-t border-white/5">
           <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-slate-600 text-xs">
-              © 2026 UltraAdvisor. All rights reserved. 台灣最強財務顧問提案工具
+              © 2026 UltraAdvisor. All rights reserved. 專業財務視覺化解決方案
             </p>
             <div className="flex items-center gap-6 text-xs">
               <button className="text-slate-600 hover:text-slate-400 transition-colors">隱私權政策</button>
