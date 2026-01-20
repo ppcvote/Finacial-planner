@@ -4,6 +4,17 @@
   "framework": "vite",
   "installCommand": "npm install",
   "rewrites": [
+    {
+      "source": "/blog/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|LinkedInBot|Twitterbot|Slackbot|LINE|WhatsApp|Telegram|Discordbot|Pinterest|TelegramBot).*"
+        }
+      ],
+      "destination": "https://us-central1-grbt-f87fa.cloudfunctions.net/blogSeo/blog/:slug"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
