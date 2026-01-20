@@ -41,50 +41,81 @@ const categoryOgImages: Record<string, string> = {
   sales: 'og-sales.png',
 };
 
-// 爬蟲 User-Agent 檢測
-const crawlerUserAgents = [
+// 爬蟲 User-Agent 檢測（只檢測真正的爬蟲，不包含用戶瀏覽器）
+// LINE 內建瀏覽器不是爬蟲，它的 UA 包含 "Line/" 但也包含 "Safari" 或 "Chrome"
+const crawlerPatterns = [
   'facebookexternalhit',
   'Facebot',
   'LinkedInBot',
   'Twitterbot',
-  'Slackbot',
-  'LINE',
-  'WhatsApp',
-  'Telegram',
-  'Discordbot',
-  'Pinterest',
+  'Slackbot-LinkExpanding',
+  'WhatsApp/',  // WhatsApp 爬蟲（注意斜線，避免誤判）
   'TelegramBot',
+  'Discordbot',
+  'Pinterestbot',
+  'Googlebot',
+  'bingbot',
 ];
 
 function isCrawler(userAgent: string): boolean {
-  return crawlerUserAgents.some(bot => userAgent.toLowerCase().includes(bot.toLowerCase()));
-}
+  const ua = userAgent.toLowerCase();
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
-  const userAgent = req.headers['user-agent'] || '';
-  const { slug } = req.query;
+  // 如果包含真實瀏覽器引擎（Safari/Chrome/Firefox），而且不是已知爬蟲，就不是爬蟲
+  const hasBrowserEngine = ua.includes('safari') || ua.includes('chrome') || ua.includes('firefox');
+  const isKnownBot = crawlerPatterns.some(pattern => ua.includes(pattern.toLowerCase()));
 
-  // 只處理爬蟲請求
-  if (!isCrawler(userAgent)) {
-    // 一般用戶直接導向首頁讓 SPA 處理
-    res.redirect(302, `/blog/${slug}`);
-    return;
+  if (hasBrowserEngine && !isKnownBot) {
+    return false; // 真實瀏覽器，不是爬蟲
   }
 
-  const slugStr = Array.isArray(slug) ? slug[0] : slug;
-  const article = articleMetadata[slugStr || ''];
+  return isKnownBot;
+}
 
-  // 找不到文章時的預設值
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const userAgent = req.headers['user-agent'] || '';
+  const { slug } = req.query;
+  const slugStr = Array.isArray(slug) ? slug[0] : slug || '';
+
+  const article = articleMetadata[slugStr];
   const finalArticle = article || {
     title: 'Ultra Advisor 知識庫',
     category: 'tools',
     description: '專業財務顧問工具與理財知識，幫助您做出更好的財務決策。',
   };
-
   const ogImage = categoryOgImages[finalArticle.category] || 'og-image.png';
   const fullUrl = `https://ultra-advisor.tw/blog/${slugStr}`;
 
-  const html = `<!DOCTYPE html>
+  // 一般用戶（包括 LINE 內建瀏覽器）：fetch index.html 並返回
+  if (!isCrawler(userAgent)) {
+    try {
+      // 從 Vercel 靜態檔案取得 index.html
+      const indexHtmlResponse = await fetch('https://ultra-advisor.tw/index.html');
+      let indexHtml = await indexHtmlResponse.text();
+
+      // 注入 __BLOG_ROUTE__ flag，讓 main.tsx 知道要渲染 BlogPage
+      indexHtml = indexHtml.replace(
+        '<script>',
+        '<script>window.__BLOG_ROUTE__ = true;</script><script>'
+      );
+
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.status(200).send(indexHtml);
+    } catch (error) {
+      // 如果 fetch 失敗，返回簡單的重導向頁面
+      const fallbackHtml = `<!DOCTYPE html>
+<html><head>
+<meta http-equiv="refresh" content="0;url=/index.html#/blog/${slugStr}">
+<script>window.location.href = '/index.html';</script>
+</head><body>正在載入...</body></html>`;
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.status(200).send(fallbackHtml);
+    }
+    return;
+  }
+
+  // 爬蟲：返回帶有完整 OG meta 的靜態 HTML
+  const crawlerHtml = `<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
@@ -121,5 +152,5 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=3600');
-  res.status(200).send(html);
+  res.status(200).send(crawlerHtml);
 }
