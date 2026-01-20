@@ -44,6 +44,8 @@ import { article as article25 } from './articles/25-income-tax-brackets-2026';
 import { article as article26 } from './articles/26-high-dividend-etf-calendar-2026';
 // 文章 27：數位存款
 import { article as article27 } from './articles/27-digital-deposit-vs-insurance-value-2026';
+// 文章 28：以房養老
+import { article as article28 } from './articles/28-reverse-mortgage-vs-professional-planning-2026';
 
 // ============ 匯出文章陣列 ============
 export const blogArticles: BlogArticle[] = [
@@ -74,6 +76,7 @@ export const blogArticles: BlogArticle[] = [
   article25,
   article26,
   article27,
+  article28,
 ];
 
 // ============ 匯出輔助函數 ============
