@@ -236,6 +236,22 @@
     <priority>0.85</priority>
   </url>
 
+  <!-- 文章 27: 數位存款概念比較（精選） -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/digital-deposit-vs-insurance-value-2026</loc>
+    <lastmod>2026-01-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- 文章 28: 以房養老專業規劃（精選） -->
+  <url>
+    <loc>https://ultra-advisor.tw/blog/reverse-mortgage-vs-professional-planning-2026</loc>
+    <lastmod>2026-01-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
   <!-- ==================== 其他頁面 ==================== -->
 
   <!-- 註冊頁面 -->
