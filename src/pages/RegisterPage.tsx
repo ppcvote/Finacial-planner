@@ -146,7 +146,7 @@ export default function RegisterPage({ onSuccess, onBack, onLogin }: RegisterPag
     if (canonical) canonical.setAttribute('href', seoConfig.url);
 
     return () => {
-      document.title = 'Ultra Advisor - 台灣最強財務顧問提案工具 | 18種專業數據視覺化';
+      document.title = 'Ultra Advisor - 台灣最強財務視覺化解決方案 | 18種專業數據視覺化';
     };
   }, []);
 

@@ -83,7 +83,7 @@ const PublicCalculator: React.FC<PublicCalculatorProps> = ({ onBack, onLogin, us
 
     // 清理：離開頁面時恢復預設
     return () => {
-      document.title = 'Ultra Advisor - 台灣最強財務顧問提案工具 | 18種專業數據視覺化';
+      document.title = 'Ultra Advisor - 台灣最強財務視覺化解決方案 | 18種專業數據視覺化';
     };
   }, [activeTab]);
 
