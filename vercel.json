@@ -1,5 +1,5 @@
 {
-    "buildCommand": "rm -rf node_modules && npm install && npm run build",
+  "buildCommand": "rm -rf node_modules && npm install && npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
   "installCommand": "npm install",
@@ -10,7 +10,7 @@
   },
   "rewrites": [
     { "source": "/blog/:slug", "destination": "/api/blog/:slug" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/:path((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
