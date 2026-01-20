@@ -196,18 +196,13 @@
     <!-- 🆕 Blog 路由早期檢測（繞過 JS bundle 快取問題）-->
     <script>
       (function() {
-        // www 重導向
-        if (window.location.hostname === 'www.ultra-advisor.tw') {
-          window.location.replace('https://ultra-advisor.tw' + window.location.pathname + window.location.search + window.location.hash);
-          return;
-        }
         // 標記 blog 路由，讓 React 知道
         if (window.location.pathname.startsWith('/blog')) {
           window.__BLOG_ROUTE__ = true;
         }
       })();
     </script>
-    <script type="module" crossorigin src="/assets/index-DyVK03GR.js"></script>
+    <script type="module" crossorigin src="/assets/index-BmHtlJXE.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-v9X4cy57.css">
   </head>
   <body>
