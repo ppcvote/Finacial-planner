@@ -399,6 +399,15 @@ export const article: BlogArticle = {
         你想要成為留下來的那一群嗎？
         答案在你手中。
       </p>
+
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/mindset-financial-advisor-2026" class="text-blue-400 hover:underline">心態，決定你在這行能走多遠</a></li>
+          <li>→ <a href="/blog/note-taking-financial-advisor-2026" class="text-blue-400 hover:underline">為什麼頂尖顧問都在做筆記？</a></li>
+          <li>→ <a href="/blog/social-media-marketing-financial-advisor-2026" class="text-blue-400 hover:underline">為什麼財務顧問一定要經營社群媒體？</a></li>
+        </ul>
+      </div>
     </article>
   `
 };

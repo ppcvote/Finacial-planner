@@ -258,6 +258,15 @@ export const article: BlogArticle = {
         你選擇用什麼心態面對這份工作，<br/>
         就決定了你能在這條路上走多遠。
       </p>
+
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/financial-advisor-survival-2026" class="text-blue-400 hover:underline">2026 年財務顧問如何不被淘汰？</a></li>
+          <li>→ <a href="/blog/note-taking-financial-advisor-2026" class="text-blue-400 hover:underline">為什麼頂尖顧問都在做筆記？</a></li>
+          <li>→ <a href="/blog/cash-flow-rich-poor-2026" class="text-blue-400 hover:underline">窮人、中產、富人的現金流差在哪？</a></li>
+        </ul>
+      </div>
     </article>
   `
 };

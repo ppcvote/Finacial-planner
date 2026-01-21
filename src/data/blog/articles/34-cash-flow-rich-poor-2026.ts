@@ -277,6 +277,15 @@ export const article: BlogArticle = {
       <p>
         你的錢，正在往哪裡流？
       </p>
+
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/retirement-planning-basics" class="text-blue-400 hover:underline">退休規劃入門：如何計算退休金缺口</a></li>
+          <li>→ <a href="/blog/compound-interest-power" class="text-blue-400 hover:underline">複利的威力：讓時間成為你的朋友</a></li>
+          <li>→ <a href="/blog/high-dividend-etf-calendar-2026" class="text-blue-400 hover:underline">2026 台股高股息 ETF 配息月曆</a></li>
+        </ul>
+      </div>
     </article>
   `
 };
