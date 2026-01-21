@@ -330,7 +330,7 @@ const BlogPage: React.FC<BlogPageProps> = ({ onBack, onLogin }) => {
     }
 
     return () => {
-      document.title = 'Ultra Advisor - 台灣最強財務視覺化解決方案 | 18種專業數據視覺化';
+      document.title = 'Ultra Advisor - 專業財務視覺化解決方案';
       // 清理動態注入的 schema
       const articleSchema = document.getElementById('article-schema');
       const breadcrumbSchema = document.getElementById('article-breadcrumb-schema');

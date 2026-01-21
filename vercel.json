@@ -9,6 +9,7 @@
     }
   },
   "rewrites": [
+    { "source": "/calculator", "destination": "/api/calculator" },
     { "source": "/blog/:slug", "destination": "/api/blog/:slug" },
     { "source": "/:path((?!api/|.*\\.(png|jpg|jpeg|gif|svg|ico|webp|css|js|woff|woff2|ttf|eot|json|xml|txt|webmanifest)$).*)", "destination": "/index.html" }
   ],
