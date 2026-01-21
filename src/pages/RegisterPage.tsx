@@ -238,7 +238,9 @@ export default function RegisterPage({ onSuccess, onBack, onLogin }: RegisterPag
         setStep('success');
       } else {
         // 處理特定錯誤
-        if (result.error?.includes('Email')) {
+        if (result.error?.includes('已經註冊') || result.error?.includes('已註冊')) {
+          setErrors({ email: '此 Email 已註冊，請直接登入或使用其他 Email' });
+        } else if (result.error?.includes('Email')) {
           setErrors({ email: result.error });
         } else if (result.error?.includes('頻繁') || result.error?.includes('分鐘')) {
           // Rate limit 錯誤
@@ -247,9 +249,16 @@ export default function RegisterPage({ onSuccess, onBack, onLogin }: RegisterPag
           setErrors({ form: result.error || '註冊失敗，請稍後再試' });
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('註冊失敗:', error);
-      setErrors({ form: '網路連線異常，請稍後再試' });
+      // 提供更詳細的錯誤訊息
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        setErrors({ form: '無法連線到伺服器，請檢查網路連線後重試' });
+      } else if (error instanceof Error) {
+        setErrors({ form: `註冊發生錯誤：${error.message}` });
+      } else {
+        setErrors({ form: '網路連線異常，請稍後再試' });
+      }
     } finally {
       setIsSubmitting(false);
     }
