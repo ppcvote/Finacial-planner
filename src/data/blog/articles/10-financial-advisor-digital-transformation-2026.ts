@@ -225,8 +225,16 @@ export const article: BlogArticle = {
           好消息是，轉型從來不嫌晚。從今天開始，選一個工具，學會它，用起來。
           半年後，你會感謝現在的自己。
         </p>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/how-to-use-mortgage-calculator" class="text-blue-400 hover:underline">傲創計算機使用教學：3 分鐘算出最佳房貸方案</a></li>
+          <li>→ <a href="/blog/financial-advisor-data-visualization-sales" class="text-blue-400 hover:underline">業績提升秘訣：財務顧問如何善用數據視覺化</a></li>
+          <li>→ <a href="/blog/social-media-marketing-financial-advisor-2026" class="text-blue-400 hover:underline">為什麼財務顧問一定要經營社群媒體？2026 數位行銷實戰指南</a></li>
+        </ul>
+      </div>
 
-        <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
           最後更新：2026 年 1 月 14 日<br/>
           本文為財務顧問數位轉型分享，工具選擇請依個人需求評估。
         </p>

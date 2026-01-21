@@ -401,8 +401,16 @@ export const article: BlogArticle = {
         <li><a href="https://www.money101.com.tw/blog/台幣-定存-定儲-利率" target="_blank" rel="noopener">Money101 - 2026 台幣定存利率比較</a></li>
         <li><a href="https://rate.bot.com.tw/twd?Lang=zh-TW" target="_blank" rel="noopener">臺灣銀行 - 新臺幣存放款牌告利率</a></li>
       </ul>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/savings-insurance-vs-deposit-2026" class="text-blue-400 hover:underline">2026 儲蓄險 vs 定存完整比較｜IRR 怎麼看？哪個划算？</a></li>
+          <li>→ <a href="/blog/compound-interest-power" class="text-blue-400 hover:underline">複利的力量：為什麼早 10 年開始投資差這麼多？</a></li>
+          <li>→ <a href="/blog/digital-deposit-vs-insurance-value-2026" class="text-blue-400 hover:underline">數位存款是什麼？銀行現金 vs 保單價值 vs 投資帳戶｜完整比較</a></li>
+        </ul>
+      </div>
 
-      <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
         最後更新：2026 年 1 月 19 日<br/>
         本文利率資訊僅供參考，實際利率以各銀行官網公告為準，且可能隨時調整。
       </p>

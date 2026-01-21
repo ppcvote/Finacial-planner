@@ -320,8 +320,16 @@ export const article: BlogArticle = {
         <li><a href="https://www.money101.com.tw/blog/房貸-轉貸-轉增貸-利率" target="_blank" rel="noopener">Money101 - 房貸轉貸利率比較</a></li>
         <li><a href="https://mrjoewang.com/mortgage-transfer/" target="_blank" rel="noopener">喬王投資筆記 - 房貸轉貸評估指南</a></li>
       </ul>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/bank-mortgage-rates-comparison-2026" class="text-blue-400 hover:underline">2026 各銀行房貸利率比較表｜首購、青安、轉貸利率總整理</a></li>
+          <li>→ <a href="/blog/mortgage-principal-vs-equal-payment" class="text-blue-400 hover:underline">本金均攤 vs 本息均攤：房貸還款方式完整比較【2026 最新】</a></li>
+          <li>→ <a href="/blog/how-to-use-mortgage-calculator" class="text-blue-400 hover:underline">傲創計算機使用教學：3 分鐘算出最佳房貸方案</a></li>
+        </ul>
+      </div>
 
-      <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
         最後更新：2026 年 1 月 19 日<br/>
         本文資訊僅供參考，實際費用與利率以各銀行公告為準。
       </p>

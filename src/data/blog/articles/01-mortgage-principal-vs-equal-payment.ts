@@ -189,6 +189,15 @@ export const article: BlogArticle = {
         再根據自己的收入和規劃做決定。
       </p>
 
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/bank-mortgage-rates-comparison-2026" class="text-blue-400 hover:underline">2026 各銀行房貸利率比較表</a></li>
+          <li>→ <a href="/blog/mortgage-refinance-cost-2026" class="text-blue-400 hover:underline">2026 房貸轉貸成本試算</a></li>
+          <li>→ <a href="/blog/how-to-use-mortgage-calculator" class="text-blue-400 hover:underline">如何使用房貸計算機做專業提案</a></li>
+        </ul>
+      </div>
+
       <p class="text-slate-500 text-sm mt-12">
         最後更新：2026 年 1 月 15 日<br/>
         本文為房貸知識分享，實際利率與條件請以銀行公告為準。

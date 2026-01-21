@@ -262,8 +262,16 @@ export const article: BlogArticle = {
         <p>
           <strong>這篇文章對你有幫助嗎？歡迎分享給同業朋友一起討論！</strong>
         </p>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/career-change-finance-insurance-salary-2026" class="text-blue-400 hover:underline">年後轉職潮來了！如何挑選行業？金融保險業薪資到底有多高？</a></li>
+          <li>→ <a href="/blog/financial-advisor-digital-transformation-2026" class="text-blue-400 hover:underline">2026 財務顧問數位轉型指南｜善用工具提升效率</a></li>
+          <li>→ <a href="/blog/wealth-manager-high-net-worth-clients" class="text-blue-400 hover:underline">理財專員如何經營高資產客戶？進階服務策略</a></li>
+        </ul>
+      </div>
 
-        <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
           最後更新：2026 年 1 月 15 日<br/>
           本文資料來自 2025 年 Q4 調查，收入數據因個人條件與市場環境而異。
         </p>

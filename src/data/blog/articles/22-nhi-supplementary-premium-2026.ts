@@ -309,8 +309,16 @@ export const article: BlogArticle = {
         <li><a href="https://cpacorey.com/nhi-supplemental-premium-annual-settlement-for-stock-investors/" target="_blank" rel="noopener">蔡佳峻會計師 - 補充保費年度結算制新變革</a></li>
         <li><a href="https://www.cw.com.tw/article/5138195" target="_blank" rel="noopener">天下雜誌 - 二代健保補充保費改革說明</a></li>
       </ul>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/income-tax-brackets-2026" class="text-blue-400 hover:underline">2026 所得稅級距與扣除額速查表｜免稅額、報稅門檻一次看</a></li>
+          <li>→ <a href="/blog/high-dividend-etf-calendar-2026" class="text-blue-400 hover:underline">2026 台股高股息 ETF 配息月曆｜0056、00878、00919 完整比較</a></li>
+          <li>→ <a href="/blog/tax-season-2026-advisor-tips" class="text-blue-400 hover:underline">2026 報稅季顧問商機：如何幫客戶省稅又創造價值</a></li>
+        </ul>
+      </div>
 
-      <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
         最後更新：2026 年 1 月 19 日<br/>
         本文資訊僅供參考，實際規定以衛福部健保署公告為準。
       </p>

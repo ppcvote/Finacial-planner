@@ -227,8 +227,16 @@ export const article: BlogArticle = {
       <p>
         最好的投資時機是 10 年前，其次是現在。別再等了，今天就開始您的投資之旅！
       </p>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/retirement-planning-basics" class="text-blue-400 hover:underline">退休規劃入門：從勞保勞退開始算起【2026 完整指南】</a></li>
+          <li>→ <a href="/blog/savings-insurance-vs-deposit-2026" class="text-blue-400 hover:underline">2026 儲蓄險 vs 定存完整比較｜IRR 怎麼看？哪個划算？</a></li>
+          <li>→ <a href="/blog/high-dividend-etf-calendar-2026" class="text-blue-400 hover:underline">2026 台股高股息 ETF 配息月曆｜0056、00878、00919 完整比較</a></li>
+        </ul>
+      </div>
 
-      <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
         最後更新：2025 年 12 月 28 日<br/>
         本文計算以年化報酬率 7% 為例，實際投資報酬可能因市場波動而異。投資有風險，請審慎評估。
       </p>

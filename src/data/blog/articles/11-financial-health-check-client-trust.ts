@@ -220,8 +220,16 @@ export const article: BlogArticle = {
           從今天開始，把「財務健檢」納入你的服務標準，
           你會發現，客戶經營變得更輕鬆、更有意義。
         </p>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/insurance-advisor-coverage-gap-analysis" class="text-blue-400 hover:underline">保險業務必學：如何用缺口分析讓客戶主動加保</a></li>
+          <li>→ <a href="/blog/financial-advisor-objection-handling-scripts" class="text-blue-400 hover:underline">財務顧問異議處理話術｜十大常見拒絕的回應方式</a></li>
+          <li>→ <a href="/blog/wealth-manager-high-net-worth-clients" class="text-blue-400 hover:underline">理財專員如何經營高資產客戶？進階服務策略</a></li>
+        </ul>
+      </div>
 
-        <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
           最後更新：2026 年 1 月 12 日<br/>
           本文為財務顧問客戶經營分享，不構成任何投資建議。
         </p>

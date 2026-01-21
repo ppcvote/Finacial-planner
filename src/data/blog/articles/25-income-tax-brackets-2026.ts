@@ -360,8 +360,16 @@ export const article: BlogArticle = {
         <li><a href="https://www.businessweekly.com.tw/business/blog/3019532" target="_blank" rel="noopener">商周 - 2026 報稅新制懶人包</a></li>
         <li><a href="https://www.etax.nat.gov.tw/etwmain/etw158w/15" target="_blank" rel="noopener">財政部稅務入口網 - 綜合所得稅試算</a></li>
       </ul>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/tax-season-2026-advisor-tips" class="text-blue-400 hover:underline">2026 報稅季顧問商機：如何幫客戶省稅又創造價值</a></li>
+          <li>→ <a href="/blog/nhi-supplementary-premium-2026" class="text-blue-400 hover:underline">2026 健保補充保費完整攻略｜費率、門檻、節省方法一次看</a></li>
+          <li>→ <a href="/blog/estate-gift-tax-quick-reference-2026" class="text-blue-400 hover:underline">2026 遺贈稅速算表｜贈與、遺產稅率級距與免稅額</a></li>
+        </ul>
+      </div>
 
-      <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
         最後更新：2026 年 1 月 19 日<br/>
         本文資訊僅供參考，實際稅務規定以財政部公告為準。
       </p>

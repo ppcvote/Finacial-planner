@@ -172,8 +172,16 @@ export const article: BlogArticle = {
           免費試用 7 天完整版 →
         </a>
       </p>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/mortgage-principal-vs-equal-payment" class="text-blue-400 hover:underline">本金均攤 vs 本息均攤：房貸還款方式完整比較【2026 最新】</a></li>
+          <li>→ <a href="/blog/bank-mortgage-rates-comparison-2026" class="text-blue-400 hover:underline">2026 各銀行房貸利率比較表｜首購、青安、轉貸利率總整理</a></li>
+          <li>→ <a href="/blog/mortgage-refinance-cost-2026" class="text-blue-400 hover:underline">2026 房貸轉貸成本試算｜利差多少才划算？完整費用分析</a></li>
+        </ul>
+      </div>
 
-      <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
         最後更新：2025 年 12 月 20 日<br/>
         如有任何使用問題，歡迎透過 LINE 官方帳號聯繫我們。
       </p>

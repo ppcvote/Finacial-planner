@@ -210,8 +210,16 @@ export const article: BlogArticle = {
         <p>
           <strong>歡迎收藏這篇文章，報稅季隨時參考！</strong>
         </p>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/income-tax-brackets-2026" class="text-blue-400 hover:underline">2026 所得稅級距與扣除額速查表｜免稅額、報稅門檻一次看</a></li>
+          <li>→ <a href="/blog/nhi-supplementary-premium-2026" class="text-blue-400 hover:underline">2026 健保補充保費完整攻略｜費率、門檻、節省方法一次看</a></li>
+          <li>→ <a href="/blog/property-tax-self-use-residence-2026" class="text-blue-400 hover:underline">2026 房屋稅自用住宅優惠｜稅率、條件、申請一次看</a></li>
+        </ul>
+      </div>
 
-        <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
           最後更新：2026 年 1 月 16 日<br/>
           本文為稅務規劃參考，實際申報請依國稅局規定辦理。
         </p>

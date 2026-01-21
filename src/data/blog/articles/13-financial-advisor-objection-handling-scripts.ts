@@ -205,8 +205,16 @@ export const article: BlogArticle = {
         <p>
           <strong>歡迎收藏這份話術，下次遇到客戶異議時拿出來參考！</strong>
         </p>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/financial-health-check-client-trust" class="text-blue-400 hover:underline">用「財務健檢」打開話題：建立客戶信任的第一步</a></li>
+          <li>→ <a href="/blog/insurance-advisor-coverage-gap-analysis" class="text-blue-400 hover:underline">保險業務必學：如何用缺口分析讓客戶主動加保</a></li>
+          <li>→ <a href="/blog/financial-advisor-income-survey-2026" class="text-blue-400 hover:underline">2026 財務顧問收入調查｜頂尖顧問年薪破 500 萬的秘訣</a></li>
+        </ul>
+      </div>
 
-        <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
           最後更新：2026 年 1 月 18 日<br/>
           本文為財務顧問銷售技巧分享，請依實際情況靈活運用。
         </p>

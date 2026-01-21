@@ -280,8 +280,16 @@ export const article: BlogArticle = {
         <li><a href="https://www.pwc.tw/zh/topics/trends/ifrs-17-key-issues.html" target="_blank" rel="noopener">PwC - IFRS 17 對台灣保險業的影響</a></li>
         <li><a href="https://www.ey.com/zh_tw/insights/insurance/how-will-ifrs-17-impact-insurers-asset-management" target="_blank" rel="noopener">EY - 壽險業接軌 IFRS 17 後的資產負債管理</a></li>
       </ul>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/bank-deposit-rates-comparison-2026" class="text-blue-400 hover:underline">2026 台幣定存利率銀行比較表｜41 家銀行完整整理</a></li>
+          <li>→ <a href="/blog/compound-interest-power" class="text-blue-400 hover:underline">複利的力量：為什麼早 10 年開始投資差這麼多？</a></li>
+          <li>→ <a href="/blog/digital-deposit-vs-insurance-value-2026" class="text-blue-400 hover:underline">數位存款是什麼？銀行現金 vs 保單價值 vs 投資帳戶｜完整比較</a></li>
+        </ul>
+      </div>
 
-      <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
         最後更新：2026 年 1 月 19 日<br/>
         本文資訊僅供參考，實際保單條款以各保險公司公告為準。
       </p>

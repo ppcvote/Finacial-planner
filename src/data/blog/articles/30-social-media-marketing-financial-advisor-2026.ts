@@ -396,6 +396,15 @@ export const article: BlogArticle = {
         社群經營不難，難的是持續。
         希望這篇文章能幫助你跨出第一步，在數位時代建立屬於自己的專業品牌！
       </p>
+    
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/financial-advisor-digital-transformation-2026" class="text-blue-400 hover:underline">2026 財務顧問數位轉型指南｜善用工具提升效率</a></li>
+          <li>→ <a href="/blog/financial-advisor-income-survey-2026" class="text-blue-400 hover:underline">2026 財務顧問收入調查｜頂尖顧問年薪破 500 萬的秘訣</a></li>
+          <li>→ <a href="/blog/career-change-finance-insurance-salary-2026" class="text-blue-400 hover:underline">年後轉職潮來了！如何挑選行業？金融保險業薪資到底有多高？</a></li>
+        </ul>
+      </div>
     </article>
   `
 };

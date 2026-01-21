@@ -184,8 +184,16 @@ export const article: BlogArticle = {
         <p>
           記住：高資產客戶不缺投資機會，他們缺的是一個<strong>值得信任的顧問</strong>。
         </p>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/estate-tax-planning-2026" class="text-blue-400 hover:underline">2026 遺產稅免稅額與節稅策略完整指南</a></li>
+          <li>→ <a href="/blog/financial-advisor-income-survey-2026" class="text-blue-400 hover:underline">2026 財務顧問收入調查｜頂尖顧問年薪破 500 萬的秘訣</a></li>
+          <li>→ <a href="/blog/financial-health-check-client-trust" class="text-blue-400 hover:underline">用「財務健檢」打開話題：建立客戶信任的第一步</a></li>
+        </ul>
+      </div>
 
-        <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
           最後更新：2026 年 1 月 16 日<br/>
           本文為銀行理專專業分享，不構成任何投資建議。
         </p>

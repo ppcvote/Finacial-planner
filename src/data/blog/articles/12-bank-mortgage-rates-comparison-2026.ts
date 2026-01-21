@@ -312,8 +312,16 @@ export const article: BlogArticle = {
         <p>
           <strong>財務顧問們，歡迎收藏並分享這份比較表給有需要的客戶！</strong>
         </p>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/mortgage-principal-vs-equal-payment" class="text-blue-400 hover:underline">本金均攤 vs 本息均攤：房貸還款方式完整比較【2026 最新】</a></li>
+          <li>→ <a href="/blog/mortgage-refinance-cost-2026" class="text-blue-400 hover:underline">2026 房貸轉貸成本試算｜利差多少才划算？完整費用分析</a></li>
+          <li>→ <a href="/blog/how-to-use-mortgage-calculator" class="text-blue-400 hover:underline">傲創計算機使用教學：3 分鐘算出最佳房貸方案</a></li>
+        </ul>
+      </div>
 
-        <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
           最後更新：2026 年 1 月 19 日<br/>
           本文資料僅供參考，實際利率請以各銀行公告為準。
         </p>

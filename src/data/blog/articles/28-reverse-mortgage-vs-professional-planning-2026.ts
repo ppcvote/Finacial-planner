@@ -394,6 +394,15 @@ export const article: BlogArticle = {
           系統會幫你試算不同方案的長期影響，讓你做出最明智的決定。
         </p>
       </div>
+    
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/retirement-planning-basics" class="text-blue-400 hover:underline">退休規劃入門：從勞保勞退開始算起【2026 完整指南】</a></li>
+          <li>→ <a href="/blog/labor-insurance-pension-2026" class="text-blue-400 hover:underline">2026 勞保勞退給付速算｜一次搞懂你能領多少</a></li>
+          <li>→ <a href="/blog/estate-tax-planning-2026" class="text-blue-400 hover:underline">2026 遺產稅免稅額與節稅策略完整指南</a></li>
+        </ul>
+      </div>
     </article>
   `,
 };

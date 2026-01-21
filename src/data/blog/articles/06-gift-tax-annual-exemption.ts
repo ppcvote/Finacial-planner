@@ -217,8 +217,16 @@ export const article: BlogArticle = {
         如果您的資產規模較大或情況較複雜，強烈建議諮詢專業的稅務顧問或會計師，
         制定個人化的傳承方案。
       </p>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/estate-tax-planning-2026" class="text-blue-400 hover:underline">2026 遺產稅免稅額與節稅策略完整指南</a></li>
+          <li>→ <a href="/blog/estate-tax-vs-gift-tax-comparison" class="text-blue-400 hover:underline">遺產稅 vs 贈與稅差在哪？一張表完整比較【2026】</a></li>
+          <li>→ <a href="/blog/estate-gift-tax-quick-reference-2026" class="text-blue-400 hover:underline">2026 遺贈稅速算表｜贈與、遺產稅率級距與免稅額</a></li>
+        </ul>
+      </div>
 
-      <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
         最後更新：2025 年 12 月 15 日<br/>
         本文數據以財政部 2026 年公告為準。稅務規劃請諮詢專業人士。
       </p>

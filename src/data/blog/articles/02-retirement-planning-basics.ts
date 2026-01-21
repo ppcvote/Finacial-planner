@@ -229,6 +229,15 @@ export const article: BlogArticle = {
           了解自己的缺口有多大，再制定具體的儲蓄和投資計畫。
         </p>
 
+        <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+          <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+          <ul class="text-slate-300 mb-0 space-y-2">
+            <li>→ <a href="/blog/labor-insurance-pension-2026" class="text-blue-400 hover:underline">2026 勞保勞退給付速算</a></li>
+            <li>→ <a href="/blog/compound-interest-power" class="text-blue-400 hover:underline">複利的威力：讓時間成為你的朋友</a></li>
+            <li>→ <a href="/blog/cash-flow-rich-poor-2026" class="text-blue-400 hover:underline">窮人、中產、富人的現金流差在哪？</a></li>
+          </ul>
+        </div>
+
         <p class="text-slate-500 text-sm mt-12">
           最後更新：2026 年 1 月 10 日<br/>
           本文資訊以勞動部 2026 年公布數據為準。實際給付金額請以勞保局核定為準。

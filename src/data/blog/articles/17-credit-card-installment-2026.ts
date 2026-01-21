@@ -204,8 +204,16 @@ export const article: BlogArticle = {
         <li><a href="https://www.dbs.com.tw/personal-zh/cards/offers/installment/default.html" target="_blank" rel="noopener">星展銀行 - 信用卡分期優惠</a></li>
         <li>各銀行官方網站（2026 年 1 月查詢）</li>
       </ul>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/compound-interest-power" class="text-blue-400 hover:underline">複利的力量：為什麼早 10 年開始投資差這麼多？</a></li>
+          <li>→ <a href="/blog/savings-insurance-vs-deposit-2026" class="text-blue-400 hover:underline">2026 儲蓄險 vs 定存完整比較｜IRR 怎麼看？哪個划算？</a></li>
+          <li>→ <a href="/blog/bank-deposit-rates-comparison-2026" class="text-blue-400 hover:underline">2026 台幣定存利率銀行比較表｜41 家銀行完整整理</a></li>
+        </ul>
+      </div>
 
-      <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
         最後更新：2026 年 1 月 19 日<br/>
         本文資訊僅供參考，實際優惠以各銀行官網公告為準，優惠內容可能隨時變動。
       </p>

@@ -344,6 +344,15 @@ export const article: BlogArticle = {
         最後，不管你選擇哪個行業，都祝福你在新的一年找到適合自己的舞台，
         發揮所長、實現理想！
       </p>
+    
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/financial-advisor-income-survey-2026" class="text-blue-400 hover:underline">2026 財務顧問收入調查｜頂尖顧問年薪破 500 萬的秘訣</a></li>
+          <li>→ <a href="/blog/financial-advisor-digital-transformation-2026" class="text-blue-400 hover:underline">2026 財務顧問數位轉型指南｜善用工具提升效率</a></li>
+          <li>→ <a href="/blog/social-media-marketing-financial-advisor-2026" class="text-blue-400 hover:underline">為什麼財務顧問一定要經營社群媒體？2026 數位行銷實戰指南</a></li>
+        </ul>
+      </div>
     </article>
   `
 };

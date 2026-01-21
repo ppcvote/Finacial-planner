@@ -358,6 +358,15 @@ export const article: BlogArticle = {
           系統會幫你算出最佳配置比例，讓每一分錢都發揮最大效益。
         </p>
       </div>
+    
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/bank-deposit-rates-comparison-2026" class="text-blue-400 hover:underline">2026 台幣定存利率銀行比較表｜41 家銀行完整整理</a></li>
+          <li>→ <a href="/blog/savings-insurance-vs-deposit-2026" class="text-blue-400 hover:underline">2026 儲蓄險 vs 定存完整比較｜IRR 怎麼看？哪個划算？</a></li>
+          <li>→ <a href="/blog/compound-interest-power" class="text-blue-400 hover:underline">複利的力量：為什麼早 10 年開始投資差這麼多？</a></li>
+        </ul>
+      </div>
     </article>
   `,
 };

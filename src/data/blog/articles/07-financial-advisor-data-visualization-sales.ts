@@ -179,8 +179,16 @@ export const article: BlogArticle = {
           數據視覺化不是花俏的技巧，而是<strong>尊重客戶時間</strong>的專業表現。
           從今天開始，讓數字為你說話。
         </p>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/financial-advisor-digital-transformation-2026" class="text-blue-400 hover:underline">2026 財務顧問數位轉型指南｜善用工具提升效率</a></li>
+          <li>→ <a href="/blog/insurance-advisor-coverage-gap-analysis" class="text-blue-400 hover:underline">保險業務必學：如何用缺口分析讓客戶主動加保</a></li>
+          <li>→ <a href="/blog/financial-health-check-client-trust" class="text-blue-400 hover:underline">用「財務健檢」打開話題：建立客戶信任的第一步</a></li>
+        </ul>
+      </div>
 
-        <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
           最後更新：2026 年 1 月 18 日<br/>
           本文為財務顧問專業分享，不構成任何投資建議。
         </p>

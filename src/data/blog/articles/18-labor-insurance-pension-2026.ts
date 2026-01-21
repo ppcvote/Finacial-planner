@@ -306,8 +306,16 @@ export const article: BlogArticle = {
         <li><a href="https://femashr.com/blog/minimum-wage" target="_blank" rel="noopener">Femas HR - 2026 基本工資調漲懶人包</a></li>
         <li><a href="https://www.bli.gov.tw/0012942.html" target="_blank" rel="noopener">勞保局 - 個人專戶查詢及試算</a></li>
       </ul>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/retirement-planning-basics" class="text-blue-400 hover:underline">退休規劃入門：從勞保勞退開始算起【2026 完整指南】</a></li>
+          <li>→ <a href="/blog/reverse-mortgage-vs-professional-planning-2026" class="text-blue-400 hover:underline">以房養老該去銀行辦嗎？為什麼專業規劃比直接貸款更重要</a></li>
+          <li>→ <a href="/blog/compound-interest-power" class="text-blue-400 hover:underline">複利的力量：為什麼早 10 年開始投資差這麼多？</a></li>
+        </ul>
+      </div>
 
-      <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
         最後更新：2026 年 1 月 19 日<br/>
         本文資訊僅供參考，實際權益請以勞動部、勞保局官方公告為準。
       </p>

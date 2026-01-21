@@ -166,10 +166,19 @@ const firebaseConfig = {
 ### 文章資料結構
 ```
 src/data/blog/
-├── articles/           # 文章檔案（01-*.ts ~ 26-*.ts）
+├── articles/           # 文章檔案（01-*.ts ~ 32-*.ts）
 ├── index.ts           # 匯出所有文章
 └── types.ts           # BlogArticle 型別定義
 ```
+
+### 新增文章流程
+新增文章只需修改 3 個檔案：
+1. **建立文章檔案**：`src/data/blog/articles/{id}-{slug}.ts`
+2. **更新 index.ts**：`src/data/blog/index.ts` 加入 import 和 export
+3. **更新 API 路由**：`api/blog/[slug].ts` 加入文章 metadata
+4. **更新 Cloud Function**：`functions/index.js` 加入文章 metadata（Firebase SEO 用）
+
+然後 commit、push、`npx vercel --prod --yes` 部署即可。
 
 ### 文章分類與 OG 圖片
 | 分類 ID | 分類名稱 | OG 圖片 |
@@ -190,6 +199,29 @@ src/data/blog/
 - **避免業務感**：文章是給業務的「工具書」，但分享給客戶時不能有推銷感
 - **禁止使用的詞彙**：「業務話術建議」、「金融從業人員必備」、「幫助客戶」
 - **建議替代詞**：「實際省錢試算」、「小提醒」、「幫你」
+
+### 文章風格（參考 4THINK）
+- **開頭直接點破痛點**：不廢話，馬上抓住讀者
+- **用故事或情境帶入**：讓抽象概念變具體
+- **重點用粗體標註**：方便快速掃讀
+- **善用「一句話總結」**：每個段落都有核心金句
+- **結尾給行動建議**：看完知道下一步該做什麼
+- **精煉、少廢話**：每句話都有存在的理由
+
+### 內部連結（SEO 優化）
+每篇文章結尾加入「延伸閱讀」區塊，連結到 2-3 篇相關文章：
+```html
+<div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+  <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+  <ul class="text-slate-300 mb-0 space-y-2">
+    <li>→ <a href="/blog/[slug]" class="text-blue-400 hover:underline">[文章標題]</a></li>
+  </ul>
+</div>
+```
+連結原則：
+- 同分類文章優先
+- 主題相關的跨分類文章
+- 避免連結到自己
 
 ## 🎨 品牌規範
 

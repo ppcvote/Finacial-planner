@@ -334,8 +334,16 @@ export const article: BlogArticle = {
         <li><a href="https://www.businesstoday.com.tw/article/category/183022/post/202510040005/" target="_blank" rel="noopener">今周刊 - 2026 贈與稅免稅額攻略</a></li>
         <li><a href="https://www.housefeel.com.tw/article/贈與稅-贈與稅免稅額-贈與稅對象-贈與稅計算/" target="_blank" rel="noopener">房感 - 2026 贈與稅完整說明</a></li>
       </ul>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/estate-tax-planning-2026" class="text-blue-400 hover:underline">2026 遺產稅免稅額與節稅策略完整指南</a></li>
+          <li>→ <a href="/blog/gift-tax-annual-exemption" class="text-blue-400 hover:underline">贈與稅免稅額：每年 244 萬的聰明運用方式【2026】</a></li>
+          <li>→ <a href="/blog/estate-tax-vs-gift-tax-comparison" class="text-blue-400 hover:underline">遺產稅 vs 贈與稅差在哪？一張表完整比較【2026】</a></li>
+        </ul>
+      </div>
 
-      <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
         最後更新：2026 年 1 月 19 日<br/>
         本文資訊僅供參考，實際稅務規劃請諮詢專業會計師或稅務顧問。
       </p>

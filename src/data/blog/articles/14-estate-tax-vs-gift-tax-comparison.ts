@@ -256,8 +256,16 @@ export const article: BlogArticle = {
         <p>
           <strong>這張比較表可以收藏，也歡迎分享給需要的朋友！</strong>
         </p>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/estate-tax-planning-2026" class="text-blue-400 hover:underline">2026 遺產稅免稅額與節稅策略完整指南</a></li>
+          <li>→ <a href="/blog/gift-tax-annual-exemption" class="text-blue-400 hover:underline">贈與稅免稅額：每年 244 萬的聰明運用方式【2026】</a></li>
+          <li>→ <a href="/blog/estate-gift-tax-quick-reference-2026" class="text-blue-400 hover:underline">2026 遺贈稅速算表｜贈與、遺產稅率級距與免稅額</a></li>
+        </ul>
+      </div>
 
-        <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
           最後更新：2026 年 1 月 17 日<br/>
           本文為稅務規劃參考，實際稅負請諮詢專業會計師或稅務顧問。
         </p>

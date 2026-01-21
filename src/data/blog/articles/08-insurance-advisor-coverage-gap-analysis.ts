@@ -249,8 +249,16 @@ export const article: BlogArticle = {
       <p>
         記住：<strong>數據會說話</strong>。讓數據替你開口，成交自然水到渠成。
       </p>
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📚 延伸閱讀</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>→ <a href="/blog/financial-advisor-data-visualization-sales" class="text-blue-400 hover:underline">業績提升秘訣：財務顧問如何善用數據視覺化</a></li>
+          <li>→ <a href="/blog/financial-advisor-objection-handling-scripts" class="text-blue-400 hover:underline">財務顧問異議處理話術｜十大常見拒絕的回應方式</a></li>
+          <li>→ <a href="/blog/financial-health-check-client-trust" class="text-blue-400 hover:underline">用「財務健檢」打開話題：建立客戶信任的第一步</a></li>
+        </ul>
+      </div>
 
-      <p class="text-slate-500 text-sm mt-12">
+<p class="text-slate-500 text-sm mt-12">
         最後更新：2026 年 1 月 17 日<br/>
         本文為保險從業人員專業分享，不構成任何保險購買建議。
       </p>
