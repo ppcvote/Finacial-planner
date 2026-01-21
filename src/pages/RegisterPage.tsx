@@ -251,9 +251,14 @@ export default function RegisterPage({ onSuccess, onBack, onLogin }: RegisterPag
       }
     } catch (error: unknown) {
       console.error('註冊失敗:', error);
+      console.error('錯誤類型:', typeof error);
+      console.error('錯誤詳情:', JSON.stringify(error, Object.getOwnPropertyNames(error as object)));
+
       // 提供更詳細的錯誤訊息
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        setErrors({ form: '無法連線到伺服器，請檢查網路連線後重試' });
+        setErrors({ form: '無法連線到伺服器，請檢查網路連線或關閉廣告阻擋器後重試' });
+      } else if (error instanceof TypeError && error.message.includes('NetworkError')) {
+        setErrors({ form: '網路請求被阻擋，請關閉廣告阻擋器或 VPN 後重試' });
       } else if (error instanceof Error) {
         setErrors({ form: `註冊發生錯誤：${error.message}` });
       } else {
