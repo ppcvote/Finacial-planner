@@ -8,6 +8,20 @@
       "runtime": "@vercel/node@5.5.24"
     }
   },
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "financial-planner-lake.vercel.app" }],
+      "destination": "https://ultra-advisor.tw/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "(?!ultra-advisor\\.tw).*\\.vercel\\.app" }],
+      "destination": "https://ultra-advisor.tw/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     { "source": "/calculator", "destination": "/api/calculator" },
     { "source": "/blog/:slug", "destination": "/api/blog/:slug" },
