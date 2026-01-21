@@ -8,14 +8,6 @@
       "runtime": "@vercel/node@5.5.24"
     }
   },
-  "redirects": [
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "www.ultra-advisor.tw" }],
-      "destination": "https://ultra-advisor.tw/:path*",
-      "permanent": true
-    }
-  ],
   "rewrites": [
     { "source": "/calculator", "destination": "/api/calculator" },
     { "source": "/blog/:slug", "destination": "/api/blog/:slug" },
