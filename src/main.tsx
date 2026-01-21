@@ -4,9 +4,10 @@ import './index.css'
 import App from './App.tsx'
 import BlogPage from './pages/BlogPage'
 
-// 🔄 Vercel 網域重導向到正式網域
-// 解決 .vercel.app 網域上 reCAPTCHA 無法運作的問題
-if (window.location.hostname.includes('.vercel.app')) {
+// 🔄 網域重導向到正式網域
+// 1. www.ultra-advisor.tw → ultra-advisor.tw（SEO 統一網址）
+// 2. .vercel.app → ultra-advisor.tw（解決 reCAPTCHA 問題）
+if (window.location.hostname === 'www.ultra-advisor.tw' || window.location.hostname.includes('.vercel.app')) {
   const newUrl = `https://ultra-advisor.tw${window.location.pathname}${window.location.search}${window.location.hash}`;
   window.location.replace(newUrl);
 }
