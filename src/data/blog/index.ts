@@ -52,6 +52,8 @@ import { article as article29 } from './articles/29-career-change-finance-insura
 import { article as article30 } from './articles/30-social-media-marketing-financial-advisor-2026';
 // 文章 31：財務顧問生存指南
 import { article as article31 } from './articles/31-financial-advisor-survival-2026';
+// 文章 32：心態
+import { article as article32 } from './articles/32-mindset-financial-advisor-2026';
 
 // ============ 匯出文章陣列 ============
 export const blogArticles: BlogArticle[] = [
@@ -86,6 +88,7 @@ export const blogArticles: BlogArticle[] = [
   article29,
   article30,
   article31,
+  article32,
 ];
 
 // ============ 匯出輔助函數 ============
