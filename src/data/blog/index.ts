@@ -48,6 +48,8 @@ import { article as article27 } from './articles/27-digital-deposit-vs-insurance
 import { article as article28 } from './articles/28-reverse-mortgage-vs-professional-planning-2026';
 // 文章 29：年後轉職
 import { article as article29 } from './articles/29-career-change-finance-insurance-salary-2026';
+// 文章 30：社群媒體經營
+import { article as article30 } from './articles/30-social-media-marketing-financial-advisor-2026';
 
 // ============ 匯出文章陣列 ============
 export const blogArticles: BlogArticle[] = [
@@ -80,6 +82,7 @@ export const blogArticles: BlogArticle[] = [
   article27,
   article28,
   article29,
+  article30,
 ];
 
 // ============ 匯出輔助函數 ============
