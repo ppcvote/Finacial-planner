@@ -193,9 +193,17 @@
     <!-- 🔒 reCAPTCHA v3 - 防止機器人註冊 -->
     <script src="https://www.google.com/recaptcha/api.js?render=6LdpoU4sAAAAAKu2HkuSIfBSPF7w2Ukoqk8QX2z-" async defer></script>
 
-    <!-- 🆕 Blog 路由早期檢測（繞過 JS bundle 快取問題）-->
+    <!-- 🔄 網域重導向（必須在 React 載入前執行，避免無限循環）-->
     <script>
       (function() {
+        // 1. www.ultra-advisor.tw → ultra-advisor.tw（SEO 統一網址）
+        // 2. .vercel.app → ultra-advisor.tw（解決 reCAPTCHA 問題）
+        var host = window.location.hostname;
+        if (host === 'www.ultra-advisor.tw' || host.indexOf('.vercel.app') !== -1) {
+          window.location.replace('https://ultra-advisor.tw' + window.location.pathname + window.location.search + window.location.hash);
+          return; // 阻止後續腳本執行
+        }
+
         // 標記 blog 路由，讓 React 知道
         if (window.location.pathname.startsWith('/blog')) {
           window.__BLOG_ROUTE__ = true;
