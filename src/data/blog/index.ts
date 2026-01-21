@@ -46,6 +46,8 @@ import { article as article26 } from './articles/26-high-dividend-etf-calendar-2
 import { article as article27 } from './articles/27-digital-deposit-vs-insurance-value-2026';
 // 文章 28：以房養老
 import { article as article28 } from './articles/28-reverse-mortgage-vs-professional-planning-2026';
+// 文章 29：年後轉職
+import { article as article29 } from './articles/29-career-change-finance-insurance-salary-2026';
 
 // ============ 匯出文章陣列 ============
 export const blogArticles: BlogArticle[] = [
@@ -77,6 +79,7 @@ export const blogArticles: BlogArticle[] = [
   article26,
   article27,
   article28,
+  article29,
 ];
 
 // ============ 匯出輔助函數 ============
