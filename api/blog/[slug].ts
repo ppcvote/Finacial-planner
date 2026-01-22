@@ -36,6 +36,7 @@ const articleMetadata: Record<string, { title: string; category: string; descrip
   'mindset-financial-advisor-2026': { title: '心態，決定你在這行能走多遠', category: 'sales', description: '技巧可以學，話術可以練，但心態不對，一切都是白搭。為什麼有人做三個月就陣亡，有人卻能做十年以上？' },
   'note-taking-financial-advisor-2026': { title: '為什麼頂尖顧問都在做筆記？', category: 'sales', description: '聽了很多課、看了很多書，但為什麼還是覺得沒進步？因為你只有「學」，沒有「習」。筆記，就是把學變成習的關鍵。' },
   'cash-flow-rich-poor-2026': { title: '窮人、中產、富人的現金流差在哪？一張圖看懂', category: 'investment', description: '同樣在工作賺錢，為什麼有人越來越窮、有人原地踏步、有人越來越有錢？差別不在收入多少，而在錢流向哪裡。' },
+  'esbi-cashflow-quadrant-2026': { title: '你在哪個象限？ESBI 現金流象限決定你的財務命運', category: 'investment', description: '富爸爸的 ESBI 現金流象限：僱員、自雇者、企業主、投資者。了解四種收入來源的差異，找到通往財務自由的路徑。' },
 };
 
 // 分類對應的 OG 圖片

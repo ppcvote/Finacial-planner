@@ -18,7 +18,10 @@
       "Bash(npx vercel --prod)",
       "Bash(curl -s \"https://us-central1-grbt-f87fa.cloudfunctions.net/debugUserData?key=ultra2026init&email=t1st@t1st.com\")",
       "Bash(curl:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(cmd.exe /c \"dir /s C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Temp 2>nul\")",
+      "Bash(cmd.exe /c \"dir /s C:\\\\Users\\\\User\\\\.nuget 2>nul\")",
+      "Bash(git -C c:/Users/User/financial-planner commit -m \"$\\(cat <<''EOF''\nfeat: 新增文章 32 - 心態，決定你在這行能走多遠\n\n4THINK 風格：精煉、金句、好掃讀\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

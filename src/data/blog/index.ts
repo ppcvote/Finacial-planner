@@ -58,6 +58,8 @@ import { article as article32 } from './articles/32-mindset-financial-advisor-20
 import { article as article33 } from './articles/33-note-taking-financial-advisor-2026';
 // 文章 34：現金流
 import { article as article34 } from './articles/34-cash-flow-rich-poor-2026';
+// 文章 35：ESBI 現金流象限
+import { article as article35 } from './articles/35-esbi-cashflow-quadrant-2026';
 
 // ============ 匯出文章陣列 ============
 export const blogArticles: BlogArticle[] = [
@@ -95,6 +97,7 @@ export const blogArticles: BlogArticle[] = [
   article32,
   article33,
   article34,
+  article35,
 ];
 
 // ============ 匯出輔助函數 ============

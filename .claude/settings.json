@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx vercel:*)"
+      "Bash(npx vercel:*)",
+      "Bash(cmd.exe /c \"dir /s C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\npm-cache 2>nul\")"
     ]
   }
 }
