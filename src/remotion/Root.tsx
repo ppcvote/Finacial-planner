@@ -19,11 +19,11 @@ const RemotionRoot: React.FC = () => {
         height={1080}
       />
 
-      {/* Ultra Advisor 第一人稱視角宣傳片 - 25秒 */}
+      {/* Ultra Advisor 第一人稱視角宣傳片 - 22秒 (v5 加快節奏) */}
       <Composition
         id="FirstPersonDemo"
         component={UltraAdvisorFirstPersonDemo}
-        durationInFrames={1500} // 25秒 @ 60fps
+        durationInFrames={1320} // 22秒 @ 60fps
         fps={60}
         width={1920}
         height={1080}

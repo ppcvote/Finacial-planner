@@ -64,6 +64,8 @@ import { article as article35 } from './articles/35-esbi-cashflow-quadrant-2026'
 import { article as article36 } from './articles/36-client-procrastination-cost-2026';
 // 文章 37：綜所稅＋最低稅負制
 import { article as article37 } from './articles/37-income-tax-amt-guide-2026';
+// 文章 38：安聯全球收益成長基金暫停申購
+import { article as article38 } from './articles/38-allianz-global-income-growth-suspended-2026';
 
 // ============ 匯出文章陣列 ============
 export const blogArticles: BlogArticle[] = [
@@ -104,6 +106,7 @@ export const blogArticles: BlogArticle[] = [
   article35,
   article36,
   article37,
+  article38,
 ];
 
 // ============ 匯出輔助函數 ============

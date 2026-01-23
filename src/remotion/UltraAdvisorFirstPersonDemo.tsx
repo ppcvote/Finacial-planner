@@ -8,20 +8,17 @@ import {
 } from 'remotion';
 
 // ============================================
-// Ultra Advisor 第一人稱視角宣傳片 v4
+// Ultra Advisor 第一人稱視角宣傳片 v8.1
 //
 // 【一鏡到底設計】
-// - 沒有黑屏轉場
-// - 鏡頭持續移動（縮放、平移）
-// - 元素滑入滑出，不用淡入淡出
-// - 整體像一個連續的攝影機運動
+// 流程：市場戰情室 → 放大調整 → 房產+大小水庫試算 → 按鈕出報表 → A4報表
+// 修復：移除 CSS transition，優化鏡頭運動曲線
 // ============================================
 
 // ============================================
 // 基礎視覺效果
 // ============================================
 
-// 細膩網格背景（固定）
 const SubtleGrid: React.FC<{ color?: string; opacity?: number }> = ({
   color = '#4DA3FF',
   opacity = 0.04,
@@ -33,7 +30,7 @@ const SubtleGrid: React.FC<{ color?: string; opacity?: number }> = ({
     <div
       style={{
         position: 'absolute',
-        inset: -200,
+        inset: -500,
         backgroundImage: `
           linear-gradient(${color} 1px, transparent 1px),
           linear-gradient(90deg, ${color} 1px, transparent 1px)
@@ -46,7 +43,6 @@ const SubtleGrid: React.FC<{ color?: string; opacity?: number }> = ({
   );
 };
 
-// 浮動光暈
 const FloatingGlow: React.FC<{
   color: string;
   size?: number;
@@ -73,7 +69,6 @@ const FloatingGlow: React.FC<{
   );
 };
 
-// Logo 元件
 const Logo: React.FC<{ scale?: number }> = ({ scale = 1 }) => {
   const frame = useCurrentFrame();
   const glowPulse = 1 + Math.sin(frame * 0.06) * 0.1;
@@ -103,246 +98,111 @@ const Logo: React.FC<{ scale?: number }> = ({ scale = 1 }) => {
             <stop offset="100%" stopColor="#8A5CFF" stopOpacity="0" />
           </linearGradient>
         </defs>
-
-        <path
-          d="M 90,40 C 90,160 130,220 242,380"
-          fill="none"
-          stroke="url(#logoBlue)"
-          strokeWidth="14"
-          strokeLinecap="round"
-          style={{ filter: 'drop-shadow(0 0 10px #4DA3FF)' }}
-        />
-        <path
-          d="M 230,40 C 230,160 190,220 78,380"
-          fill="none"
-          stroke="url(#logoRed)"
-          strokeWidth="14"
-          strokeLinecap="round"
-          style={{ filter: 'drop-shadow(0 0 10px #FF3A3A)' }}
-        />
-        <path
-          d="M 91.5,314 L 228.5,314"
-          fill="none"
-          stroke="url(#logoPurple)"
-          strokeWidth="10"
-          strokeLinecap="round"
-          style={{ filter: 'drop-shadow(0 0 12px #CE4DFF)' }}
-        />
+        <path d="M 90,40 C 90,160 130,220 242,380" fill="none" stroke="url(#logoBlue)" strokeWidth="14" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 10px #4DA3FF)' }} />
+        <path d="M 230,40 C 230,160 190,220 78,380" fill="none" stroke="url(#logoRed)" strokeWidth="14" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 10px #FF3A3A)' }} />
+        <path d="M 91.5,314 L 228.5,314" fill="none" stroke="url(#logoPurple)" strokeWidth="10" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 12px #CE4DFF)' }} />
       </svg>
     </div>
   );
 };
 
 // ============================================
-// 主影片組件 - 一鏡到底
+// 主影片組件
 // ============================================
 export const UltraAdvisorFirstPersonDemo: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps, width, height } = useVideoConfig();
+  const { width, height } = useVideoConfig();
 
   // ============================================
-  // 時間軸定義（以 frame 為單位，60fps）
+  // 時間軸（22秒 = 1320 frames @ 60fps）
   // ============================================
-  // 0-240 (0-4s): 開場 Logo
-  // 240-540 (4-9s): 推進到戰情室
-  // 540-840 (9-14s): 平移到計算器
-  // 840-1080 (14-18s): 報表生成
-  // 1080-1320 (18-22s): 拉遠展示賣點
-  // 1320-1500 (22-25s): 結尾
+  // 0-150: 開場 Logo（中心）
+  // 150-420: 進入市場戰情室（放大）+ 調整配置
+  // 420-550: 過渡動畫
+  // 550-900: 金融房產＋大小水庫試算
+  // 900-1100: 按按鈕生成報表 + 報表展示
+  // 1100-1320: 結尾
 
   // ============================================
-  // 鏡頭運動 - 一鏡到底的核心
+  // 鏡頭運動 - 一鏡到底核心（優化版）
+  // 使用更平滑的時間點和緩動
   // ============================================
-
-  // 鏡頭縮放（較小的縮放，避免太近）
   const cameraZoom = interpolate(
     frame,
-    [0,    180,  240,  400,  540,  700,  840,  1000, 1080, 1200, 1320, 1500],
-    [1,    1,    1.2,  1.4,  1.4,  1.3,  1.3,  1.1,  1.1,  1,    1,    1.05],
+    [0, 150, 420, 550, 900, 1100, 1200, 1320],
+    [1, 1.2, 1.4, 1.3, 1.3, 1.15, 1, 1.05],
     { extrapolateRight: 'clamp', easing: Easing.inOut(Easing.cubic) }
   );
 
-  // 鏡頭 X 位置（大範圍平移，各區域分開）
   const cameraX = interpolate(
     frame,
-    [0,    240,  400,  540,  700,  840,  1000, 1080, 1320, 1500],
-    [0,    0,    -800, -800, 800,  800,  0,    0,    0,    0],
+    [0, 150, 420, 550, 900, 1100, 1200, 1320],
+    [0, 200, 200, -400, -400, 0, 0, 0],
     { extrapolateRight: 'clamp', easing: Easing.inOut(Easing.cubic) }
   );
 
-  // 鏡頭 Y 位置（大範圍移動）
   const cameraY = interpolate(
     frame,
-    [0,    240,  400,  540,  700,  840,  1000, 1080, 1320, 1500],
-    [0,    0,    -400, -600, -600, -400, 200,  200,  0,    0],
+    [0, 150, 420, 550, 900, 1100, 1200, 1320],
+    [0, 250, 250, 50, 50, 400, 0, 0],
     { extrapolateRight: 'clamp', easing: Easing.inOut(Easing.cubic) }
   );
 
   // ============================================
-  // 各元素的出現時機（使用滑入而非淡入）
+  // 各區域位置定義（相對於畫布中心）
   // ============================================
-
-  // Logo 相關
-  const logoScale = interpolate(frame, [30, 80], [0.5, 1], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.back(1.5))
-  });
-  const logoOpacity = interpolate(frame, [30, 60], [0, 1], { extrapolateRight: 'clamp' });
-
-  // 品牌文字
-  const brandTextY = interpolate(frame, [80, 130], [60, 0], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)
-  });
-  const brandTextOpacity = interpolate(frame, [80, 110], [0, 1], { extrapolateRight: 'clamp' });
-
-  // Slogan
-  const sloganY = interpolate(frame, [110, 160], [40, 0], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)
-  });
-  const sloganOpacity = interpolate(frame, [110, 140], [0, 1], { extrapolateRight: 'clamp' });
-
-  // 功能標籤
-  const getTagProgress = (index: number) => {
-    const start = 150 + index * 15;
-    return {
-      y: interpolate(frame, [start, start + 30], [30, 0], {
-        extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)
-      }),
-      opacity: interpolate(frame, [start, start + 20], [0, 1], { extrapolateRight: 'clamp' }),
-    };
+  const regions = {
+    intro: { x: 0, y: 0 },
+    dashboard: { x: 200, y: 250 },
+    calculators: { x: -400, y: 50 },
+    report: { x: 0, y: 400 },
+    outro: { x: 0, y: 0 },
   };
 
   // ============================================
-  // 戰情室元素 (frame 240-540)
+  // 元素可見性（增加緩衝區）
   // ============================================
-  const dashboardTitleX = interpolate(frame, [260, 320], [-300, 0], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)
-  });
-  const dashboardTitleOpacity = interpolate(frame, [260, 300], [0, 1], { extrapolateRight: 'clamp' });
+  const showIntro = frame < 220;
+  const showDashboard = frame >= 100 && frame < 620;
+  const showCalculators = frame >= 480 && frame < 1020;
+  const showReport = frame >= 860 && frame < 1250;
+  const showOutro = frame >= 1150;
 
-  // 工具卡片進場
-  const getToolCardProgress = (index: number) => {
-    const start = 300 + index * 40;
-    const scale = interpolate(frame, [start, start + 50], [0.7, 1], {
-      extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.back(1.2))
-    });
-    const opacity = interpolate(frame, [start, start + 30], [0, 1], { extrapolateRight: 'clamp' });
-    const y = interpolate(frame, [start, start + 50], [40, 0], {
-      extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)
-    });
-    return { scale, opacity, y };
-  };
+  // ============================================
+  // 動畫進度
+  // ============================================
+  const introFadeOut = interpolate(frame, [150, 200], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
 
-  const tools = [
-    { icon: '🛡️', name: '黃金保險箱', color: '#fbbf24' },
-    { icon: '🏠', name: '金融房產', color: '#3b82f6' },
-    { icon: '🎓', name: '學貸活化', color: '#8b5cf6' },
-    { icon: '☂️', name: '退休缺口', color: '#10b981' },
+  // 戰情室工具列表
+  const dashboardTools = [
+    { icon: '📈', name: '通膨指數', value: '3.2%', color: '#ef4444' },
+    { icon: '💰', name: '利率水準', value: '2.2%', color: '#3b82f6' },
+    { icon: '📊', name: '市場波動', value: '中等', color: '#f59e0b' },
+    { icon: '🏠', name: '房價指數', value: '+8.5%', color: '#10b981' },
   ];
 
-  // ============================================
-  // 計算器元素 (frame 540-840)
-  // ============================================
-  const calcTitleX = interpolate(frame, [560, 620], [300, 0], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)
-  });
-  const calcTitleOpacity = interpolate(frame, [560, 600], [0, 1], { extrapolateRight: 'clamp' });
+  // 計算器數值動畫（延長動畫時間讓滑桿更流暢）
+  const calcProgress = interpolate(frame, [620, 850], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
 
-  // 滑桿動畫
-  const loanAmount = interpolate(frame, [600, 700], [500, 1000], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)
-  });
-  const rate = interpolate(frame, [650, 750], [1.5, 2.2], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)
-  });
-  const years = interpolate(frame, [700, 800], [20, 30], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)
-  });
-
-  // 計算結果
-  const monthlyPayment = Math.round(
-    (loanAmount * 10000 * (rate / 100 / 12) * Math.pow(1 + rate / 100 / 12, years * 12)) /
-      (Math.pow(1 + rate / 100 / 12, years * 12) - 1)
-  );
+  // 金融房產試算
+  const loanAmount = interpolate(calcProgress, [0, 1], [500, 1000]);
+  const rate = interpolate(calcProgress, [0, 1], [1.5, 2.2]);
+  const years = interpolate(calcProgress, [0, 1], [20, 30]);
+  const monthlyPayment = Math.round((loanAmount * 10000 * (rate / 100 / 12) * Math.pow(1 + rate / 100 / 12, years * 12)) / (Math.pow(1 + rate / 100 / 12, years * 12) - 1));
   const totalInterest = Math.round(monthlyPayment * years * 12 - loanAmount * 10000);
 
-  // 圖表進度
-  const chartProgress = interpolate(frame, [680, 820], [0, 1], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)
-  });
+  // 大小水庫試算
+  const monthlyIncome = interpolate(calcProgress, [0, 1], [80000, 150000]);
+  const bigReservoir = Math.round(monthlyIncome * 6);
+  const smallReservoir = Math.round(monthlyIncome * 0.3);
 
-  // ============================================
-  // 報表元素 (frame 840-1080)
-  // ============================================
-  const reportButtonScale = interpolate(frame, [860, 900], [0.8, 1], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.back(1.5))
-  });
-  const reportButtonOpacity = interpolate(frame, [860, 890], [0, 1], { extrapolateRight: 'clamp' });
+  // 水庫水位動畫（使用 interpolate 而非 CSS transition）
+  const waterLevel = interpolate(frame, [620, 850], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.quad) });
 
+  // 報表進度
+  const reportProgress = interpolate(frame, [920, 1000], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const isGenerating = frame >= 920 && frame < 1000;
-  const loadProgress = interpolate(frame, [920, 1000], [0, 1], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.inOut(Easing.cubic)
-  });
   const isComplete = frame >= 1000;
-
-  const reportScale = interpolate(frame, [1010, 1060], [0.85, 1], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.back(1.1))
-  });
-  const reportOpacity = interpolate(frame, [1010, 1040], [0, 1], { extrapolateRight: 'clamp' });
-  const reportY = interpolate(frame, [1010, 1060], [50, 0], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)
-  });
-
-  // ============================================
-  // 賣點元素 (frame 1080-1320)
-  // ============================================
-  const getValuePointProgress = (index: number) => {
-    const start = 1100 + index * 50;
-    const x = interpolate(frame, [start, start + 60], [index === 0 ? -200 : index === 2 ? 200 : 0, 0], {
-      extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)
-    });
-    const y = interpolate(frame, [start, start + 60], [80, 0], {
-      extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)
-    });
-    const opacity = interpolate(frame, [start, start + 40], [0, 1], { extrapolateRight: 'clamp' });
-    const scale = interpolate(frame, [start, start + 60], [0.9, 1], {
-      extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)
-    });
-    return { x, y, opacity, scale };
-  };
-
-  const valuePoints = [
-    { icon: '🧮', title: '傲創計算機', subtitle: '免費財務工具', color: '#3b82f6' },
-    { icon: '📚', title: '免費知識庫', subtitle: '獲客渠道', color: '#8b5cf6' },
-    { icon: '🎓', title: '教育訓練素材', subtitle: '一站式服務', color: '#10b981' },
-  ];
-
-  // ============================================
-  // 結尾元素 (frame 1320-1500)
-  // ============================================
-  const outroLogoScale = interpolate(frame, [1340, 1400], [0.8, 1], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.back(1.2))
-  });
-  const outroLogoOpacity = interpolate(frame, [1340, 1380], [0, 1], { extrapolateRight: 'clamp' });
-
-  const outroBrandY = interpolate(frame, [1380, 1430], [40, 0], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)
-  });
-  const outroBrandOpacity = interpolate(frame, [1380, 1410], [0, 1], { extrapolateRight: 'clamp' });
-
-  const outroUrlOpacity = interpolate(frame, [1430, 1470], [0, 1], { extrapolateRight: 'clamp' });
-
-  // ============================================
-  // 元素可見性（基於時間軸）
-  // ============================================
-  const showIntro = frame < 400;
-  const showDashboard = frame >= 240 && frame < 700;
-  const showCalculator = frame >= 520 && frame < 1000;
-  const showReport = frame >= 840 && frame < 1200;
-  const showValuePoints = frame >= 1080 && frame < 1400;
-  const showOutro = frame >= 1300;
-
-  // 開場元素淡出（當鏡頭推進時）
-  const introFadeOut = interpolate(frame, [200, 300], [1, 0], { extrapolateRight: 'clamp' });
 
   // ============================================
   // 渲染
@@ -361,23 +221,23 @@ export const UltraAdvisorFirstPersonDemo: React.FC = () => {
           position: 'absolute',
           width: '100%',
           height: '100%',
-          transform: `scale(${cameraZoom}) translate(${cameraX / cameraZoom}px, ${cameraY / cameraZoom}px)`,
+          transform: `scale(${cameraZoom}) translate(${-cameraX / cameraZoom}px, ${-cameraY / cameraZoom}px)`,
           transformOrigin: 'center center',
         }}
       >
         {/* 背景層 */}
         <SubtleGrid color="#4DA3FF" opacity={0.03} />
-        <FloatingGlow color="#4DA3FF" size={1000} x={width * 0.3} y={height * 0.4} />
-        <FloatingGlow color="#8b5cf6" size={800} x={width * 0.7} y={height * 0.6} />
-        <FloatingGlow color="#3b82f6" size={700} x={width * 0.5} y={height * 0.3} />
+        <FloatingGlow color="#4DA3FF" size={1200} x={width * 0.3} y={height * 0.3} />
+        <FloatingGlow color="#8b5cf6" size={1000} x={width * 0.7} y={height * 0.7} />
+        <FloatingGlow color="#10b981" size={800} x={width * 0.2} y={height * 0.8} />
 
         {/* ==================== 開場區域 ==================== */}
         {showIntro && (
           <div
             style={{
               position: 'absolute',
-              left: '50%',
-              top: '50%',
+              left: width / 2 + regions.intro.x,
+              top: height / 2 + regions.intro.y,
               transform: 'translate(-50%, -50%)',
               display: 'flex',
               flexDirection: 'column',
@@ -385,312 +245,175 @@ export const UltraAdvisorFirstPersonDemo: React.FC = () => {
               opacity: introFadeOut,
             }}
           >
-            {/* Logo */}
-            <div style={{ transform: `scale(${logoScale})`, opacity: logoOpacity }}>
+            <div style={{ transform: `scale(${interpolate(frame, [20, 70], [0.5, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.back(1.5)) })})`, opacity: interpolate(frame, [20, 50], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) }}>
               <Logo scale={1} />
             </div>
-
-            {/* 品牌名稱 */}
-            <div
-              style={{
-                marginTop: 30,
-                fontSize: 52,
-                fontWeight: 900,
-                color: '#ffffff',
-                letterSpacing: 10,
-                transform: `translateY(${brandTextY}px)`,
-                opacity: brandTextOpacity,
-                textShadow: '0 0 30px #4DA3FF50',
-              }}
-            >
+            <div style={{ marginTop: 30, fontSize: 48, fontWeight: 900, color: '#ffffff', letterSpacing: 10, textShadow: '0 0 30px #4DA3FF50', opacity: interpolate(frame, [50, 90], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }), transform: `translateY(${interpolate(frame, [50, 100], [40, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)` }}>
               ULTRA ADVISOR
             </div>
-
-            {/* Slogan */}
-            <div
-              style={{
-                marginTop: 12,
-                fontSize: 18,
-                fontWeight: 600,
-                color: '#4DA3FF',
-                letterSpacing: 3,
-                transform: `translateY(${sloganY}px)`,
-                opacity: sloganOpacity,
-              }}
-            >
+            <div style={{ marginTop: 12, fontSize: 16, fontWeight: 600, color: '#4DA3FF', letterSpacing: 3, opacity: interpolate(frame, [80, 120], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) }}>
               AI 財務視覺化平台
-            </div>
-
-            {/* 功能標籤 */}
-            <div style={{ display: 'flex', gap: 14, marginTop: 40 }}>
-              {['⚡ 3秒出圖', '🛠️ 18種工具', '📊 專業報表'].map((tag, i) => {
-                const { y, opacity } = getTagProgress(i);
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      padding: '10px 20px',
-                      background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-                      border: '1px solid #334155',
-                      borderRadius: 25,
-                      color: '#94a3b8',
-                      fontSize: 13,
-                      fontWeight: 600,
-                      transform: `translateY(${y}px)`,
-                      opacity,
-                    }}
-                  >
-                    {tag}
-                  </div>
-                );
-              })}
             </div>
           </div>
         )}
 
-        {/* ==================== 戰情室區域 ==================== */}
+        {/* ==================== 市場戰情室 ==================== */}
         {showDashboard && (
           <div
             style={{
               position: 'absolute',
-              left: width * 0.5 + 600,
-              top: height * 0.5 + 350,
+              left: width / 2 + regions.dashboard.x,
+              top: height / 2 + regions.dashboard.y,
               transform: 'translate(-50%, -50%)',
-              width: 800,
+              width: 750,
+              opacity: interpolate(frame, [100, 160, 550, 620], [0, 1, 1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
             }}
           >
-            {/* 標題 */}
-            <div
-              style={{
-                fontSize: 36,
-                fontWeight: 900,
-                color: '#ffffff',
-                marginBottom: 30,
-                transform: `translateX(${dashboardTitleX}px)`,
-                opacity: dashboardTitleOpacity,
-              }}
-            >
-              📊 自由組合戰情室
+            <div style={{ fontSize: 36, fontWeight: 900, color: '#ffffff', marginBottom: 8, textShadow: '0 0 25px #4DA3FF40', transform: `translateX(${interpolate(frame, [140, 200], [-100, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px)` }}>
+              📊 市場戰情室
+            </div>
+            <div style={{ fontSize: 14, color: '#64748b', marginBottom: 30, opacity: interpolate(frame, [160, 210], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) }}>
+              即時監控市場動態，智能調整投資策略
             </div>
 
-            {/* 2x2 網格 */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-              {tools.map((tool, i) => {
-                const { scale, opacity, y } = getToolCardProgress(i);
+            {/* 即時數據面板 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 25 }}>
+              {dashboardTools.map((tool, i) => {
+                const delay = i * 30;
+                const itemOpacity = interpolate(frame, [200 + delay, 260 + delay], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+                const itemScale = interpolate(frame, [200 + delay, 280 + delay], [0.7, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.back(1.2)) });
+
+                // 配置動畫 - 使用 interpolate 而非 Math.sin（更可預測）
+                const updateProgress = interpolate(frame, [320 + i * 40, 380 + i * 40], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+                const isUpdating = updateProgress > 0 && updateProgress < 1;
+                const glowIntensity = interpolate(updateProgress, [0, 0.5, 1], [0, 1, 0]);
+
                 return (
-                  <div
-                    key={i}
-                    style={{
-                      height: 160,
-                      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                      borderRadius: 20,
-                      border: `2px solid ${tool.color}60`,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transform: `scale(${scale}) translateY(${y}px)`,
-                      opacity,
-                      boxShadow: `0 20px 50px ${tool.color}20`,
-                    }}
-                  >
-                    <div style={{ fontSize: 36, marginBottom: 12 }}>{tool.icon}</div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: '#ffffff' }}>{tool.name}</div>
-                    <div
-                      style={{
-                        marginTop: 10,
-                        padding: '5px 14px',
-                        background: tool.color,
-                        borderRadius: 15,
-                        color: '#ffffff',
-                        fontSize: 11,
-                        fontWeight: 700,
-                      }}
-                    >
-                      ✓ 已載入
-                    </div>
+                  <div key={i} style={{ height: 110, background: 'linear-gradient(135deg, #0f172a, #1e293b)', borderRadius: 14, border: `2px solid ${tool.color}50`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', transform: `scale(${itemScale})`, opacity: itemOpacity, boxShadow: `0 12px 35px ${tool.color}15, 0 0 ${30 * glowIntensity}px ${tool.color}60`, position: 'relative' }}>
+                    <div style={{ fontSize: 26, marginBottom: 6 }}>{tool.icon}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>{tool.name}</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: tool.color, fontFamily: 'monospace' }}>{tool.value}</div>
+                    {isUpdating && <div style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: '50%', background: '#10b981', opacity: glowIntensity }} />}
                   </div>
                 );
               })}
             </div>
+
+            {/* 操作提示 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '12px 24px', background: 'linear-gradient(135deg, #10b98120, #10b98110)', border: '1px solid #10b98150', borderRadius: 12, opacity: interpolate(frame, [300, 340, 480, 520], [0, 1, 1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) }}>
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981', opacity: interpolate(frame % 60, [0, 30, 60], [1, 0.4, 1]) }} />
+              <span style={{ color: '#10b981', fontSize: 13, fontWeight: 700 }}>系統正在同步最新市場數據...</span>
+            </div>
+
+            {/* 配置完成提示 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 15, opacity: interpolate(frame, [460, 500, 540, 580], [0, 1, 1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) }}>
+              <span style={{ color: '#10b981', fontSize: 20 }}>✓</span>
+              <span style={{ color: '#ffffff', fontSize: 14, fontWeight: 700 }}>數據同步完成，進入試算模組</span>
+            </div>
           </div>
         )}
 
-        {/* ==================== 計算器區域 ==================== */}
-        {showCalculator && (
+        {/* ==================== 金融房產 + 大小水庫試算區 ==================== */}
+        {showCalculators && (
           <div
             style={{
               position: 'absolute',
-              left: width * 0.5 - 600,
-              top: height * 0.5 + 500,
+              left: width / 2 + regions.calculators.x,
+              top: height / 2 + regions.calculators.y,
               transform: 'translate(-50%, -50%)',
               display: 'flex',
               gap: 40,
+              opacity: interpolate(frame, [480, 560, 940, 1020], [0, 1, 1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
             }}
           >
-            {/* 左側：輸入 */}
-            <div style={{ width: 350 }}>
-              <div
-                style={{
-                  fontSize: 30,
-                  fontWeight: 900,
-                  color: '#ffffff',
-                  marginBottom: 30,
-                  transform: `translateX(${calcTitleX}px)`,
-                  opacity: calcTitleOpacity,
-                }}
-              >
-                🏠 金融房產專案
+            {/* 左側：金融房產試算 */}
+            <div style={{ width: 420 }}>
+              <div style={{ fontSize: 28, fontWeight: 900, color: '#ffffff', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, transform: `translateX(${interpolate(frame, [520, 600], [-80, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px)` }}>
+                <span style={{ fontSize: 32 }}>🏠</span>
+                <span>金融房產專案</span>
               </div>
 
-              {/* 滑桿 */}
+              {/* 輸入控制 */}
               {[
                 { label: '貸款金額', value: `${Math.round(loanAmount)} 萬`, progress: (loanAmount - 500) / 500, color: '#3b82f6' },
                 { label: '年利率', value: `${rate.toFixed(1)} %`, progress: (rate - 1.5) / 0.7, color: '#10b981' },
                 { label: '貸款年期', value: `${Math.round(years)} 年`, progress: (years - 20) / 10, color: '#f59e0b' },
               ].map((item, i) => {
-                const itemOpacity = interpolate(frame, [580 + i * 30, 610 + i * 30], [0, 1], { extrapolateRight: 'clamp' });
+                const itemOpacity = interpolate(frame, [560 + i * 35, 620 + i * 35], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+                const isSliding = calcProgress > 0 && calcProgress < 1;
                 return (
-                  <div key={i} style={{ marginBottom: 28, opacity: itemOpacity }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                      <span style={{ color: '#64748b', fontSize: 14, fontWeight: 600 }}>{item.label}</span>
-                      <span style={{ color: item.color, fontSize: 24, fontWeight: 900, fontFamily: 'monospace' }}>
-                        {item.value}
-                      </span>
+                  <div key={i} style={{ marginBottom: 18, opacity: itemOpacity }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span style={{ color: '#64748b', fontSize: 12, fontWeight: 600 }}>{item.label}</span>
+                      <span style={{ color: item.color, fontSize: 22, fontWeight: 900, fontFamily: 'monospace', textShadow: isSliding ? `0 0 10px ${item.color}60` : 'none' }}>{item.value}</span>
                     </div>
-                    <div style={{ height: 8, background: '#1e293b', borderRadius: 4, overflow: 'hidden' }}>
-                      <div
-                        style={{
-                          height: '100%',
-                          width: `${Math.max(0, item.progress) * 100}%`,
-                          background: `linear-gradient(90deg, ${item.color}80, ${item.color})`,
-                          borderRadius: 4,
-                          boxShadow: `0 0 15px ${item.color}60`,
-                        }}
-                      />
+                    <div style={{ height: 6, background: '#1e293b', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.max(0, item.progress) * 100}%`, background: `linear-gradient(90deg, ${item.color}80, ${item.color})`, borderRadius: 3, boxShadow: `0 0 12px ${item.color}60` }} />
                     </div>
                   </div>
                 );
               })}
+
+              {/* 結果卡片 */}
+              <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
+                <div style={{ flex: 1, background: 'linear-gradient(135deg, #3b82f6, #2563eb)', borderRadius: 14, padding: 16, boxShadow: '0 15px 40px #3b82f650', opacity: interpolate(frame, [680, 730], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }), transform: `translateY(${interpolate(frame, [680, 750], [20, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px)` }}>
+                  <div style={{ color: '#ffffff80', fontSize: 11, marginBottom: 4 }}>每月還款</div>
+                  <div style={{ color: '#ffffff', fontSize: 24, fontWeight: 900, fontFamily: 'monospace' }}>${monthlyPayment.toLocaleString()}</div>
+                </div>
+                <div style={{ flex: 1, background: 'linear-gradient(135deg, #ef4444, #dc2626)', borderRadius: 14, padding: 16, boxShadow: '0 15px 40px #ef444450', opacity: interpolate(frame, [710, 760], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }), transform: `translateY(${interpolate(frame, [710, 780], [20, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px)` }}>
+                  <div style={{ color: '#ffffff80', fontSize: 11, marginBottom: 4 }}>累計利息</div>
+                  <div style={{ color: '#ffffff', fontSize: 24, fontWeight: 900, fontFamily: 'monospace' }}>${totalInterest.toLocaleString()}</div>
+                </div>
+              </div>
             </div>
 
-            {/* 右側：結果 */}
-            <div style={{ width: 500 }}>
-              {/* 結果卡片 */}
+            {/* 右側：大小水庫專案 */}
+            <div style={{ width: 380 }}>
+              <div style={{ fontSize: 28, fontWeight: 900, color: '#ffffff', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, transform: `translateX(${interpolate(frame, [560, 640], [80, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px)` }}>
+                <span style={{ fontSize: 32 }}>💧</span>
+                <span>大小水庫專案</span>
+              </div>
+
+              {/* 月收入輸入 */}
+              <div style={{ marginBottom: 22, opacity: interpolate(frame, [600, 660], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ color: '#64748b', fontSize: 12, fontWeight: 600 }}>每月收入</span>
+                  <span style={{ color: '#4DA3FF', fontSize: 22, fontWeight: 900, fontFamily: 'monospace' }}>${Math.round(monthlyIncome).toLocaleString()}</span>
+                </div>
+                <div style={{ height: 6, background: '#1e293b', borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${((monthlyIncome - 80000) / 70000) * 100}%`, background: 'linear-gradient(90deg, #4DA3FF80, #4DA3FF)', borderRadius: 3, boxShadow: '0 0 12px #4DA3FF60' }} />
+                </div>
+              </div>
+
+              {/* 水庫視覺化 */}
               <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
-                <div
-                  style={{
-                    flex: 1,
-                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                    borderRadius: 20,
-                    padding: 24,
-                    boxShadow: '0 20px 50px #3b82f640',
-                    opacity: interpolate(frame, [620, 660], [0, 1], { extrapolateRight: 'clamp' }),
-                    transform: `translateY(${interpolate(frame, [620, 680], [30, 0], { extrapolateRight: 'clamp' })}px)`,
-                  }}
-                >
-                  <div style={{ color: '#ffffff80', fontSize: 13, marginBottom: 6 }}>每月還款</div>
-                  <div style={{ color: '#ffffff', fontSize: 32, fontWeight: 900, fontFamily: 'monospace' }}>
-                    ${monthlyPayment.toLocaleString()}
+                {/* 大水庫 */}
+                <div style={{ flex: 1, background: 'linear-gradient(135deg, #0f172a, #1e293b)', borderRadius: 14, padding: 16, border: '2px solid #3b82f650', opacity: interpolate(frame, [680, 740], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }), transform: `scale(${interpolate(frame, [680, 760], [0.8, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.back(1.2)) })})` }}>
+                  <div style={{ fontSize: 28, textAlign: 'center', marginBottom: 8 }}>🏔️</div>
+                  <div style={{ color: '#94a3b8', fontSize: 10, textAlign: 'center', marginBottom: 6 }}>大水庫（6個月緊急備用）</div>
+                  <div style={{ color: '#3b82f6', fontSize: 20, fontWeight: 900, textAlign: 'center', fontFamily: 'monospace' }}>${bigReservoir.toLocaleString()}</div>
+                  <div style={{ marginTop: 10, height: 60, background: '#0f172a', borderRadius: 8, overflow: 'hidden', position: 'relative' }}>
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${waterLevel * 80}%`, background: 'linear-gradient(180deg, #3b82f6, #1d4ed8)' }} />
+                    <div style={{ position: 'absolute', bottom: `${waterLevel * 80}%`, left: 0, right: 0, height: 4, background: 'linear-gradient(90deg, transparent, #60a5fa80, transparent)' }} />
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    flex: 1,
-                    background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                    borderRadius: 20,
-                    padding: 24,
-                    boxShadow: '0 20px 50px #ef444440',
-                    opacity: interpolate(frame, [650, 690], [0, 1], { extrapolateRight: 'clamp' }),
-                    transform: `translateY(${interpolate(frame, [650, 710], [30, 0], { extrapolateRight: 'clamp' })}px)`,
-                  }}
-                >
-                  <div style={{ color: '#ffffff80', fontSize: 13, marginBottom: 6 }}>累計利息</div>
-                  <div style={{ color: '#ffffff', fontSize: 32, fontWeight: 900, fontFamily: 'monospace' }}>
-                    ${totalInterest.toLocaleString()}
+                {/* 小水庫 */}
+                <div style={{ flex: 1, background: 'linear-gradient(135deg, #0f172a, #1e293b)', borderRadius: 14, padding: 16, border: '2px solid #10b98150', opacity: interpolate(frame, [720, 780], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }), transform: `scale(${interpolate(frame, [720, 800], [0.8, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.back(1.2)) })})` }}>
+                  <div style={{ fontSize: 28, textAlign: 'center', marginBottom: 8 }}>🌊</div>
+                  <div style={{ color: '#94a3b8', fontSize: 10, textAlign: 'center', marginBottom: 6 }}>小水庫（彈性支出）</div>
+                  <div style={{ color: '#10b981', fontSize: 20, fontWeight: 900, textAlign: 'center', fontFamily: 'monospace' }}>${smallReservoir.toLocaleString()}</div>
+                  <div style={{ marginTop: 10, height: 60, background: '#0f172a', borderRadius: 8, overflow: 'hidden', position: 'relative' }}>
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${waterLevel * 60}%`, background: 'linear-gradient(180deg, #10b981, #059669)' }} />
+                    <div style={{ position: 'absolute', bottom: `${waterLevel * 60}%`, left: 0, right: 0, height: 4, background: 'linear-gradient(90deg, transparent, #34d39980, transparent)' }} />
                   </div>
                 </div>
               </div>
 
-              {/* 圖表 */}
-              <div
-                style={{
-                  background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                  borderRadius: 20,
-                  padding: 24,
-                  border: '1px solid #334155',
-                  opacity: interpolate(frame, [680, 720], [0, 1], { extrapolateRight: 'clamp' }),
-                }}
-              >
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#ffffff', marginBottom: 16 }}>
-                  📈 30年財富增長曲線
-                </div>
-
-                <svg width="100%" height="140" viewBox="0 0 450 140" preserveAspectRatio="none">
-                  {/* 網格 */}
-                  {[0, 1, 2, 3].map((i) => (
-                    <line key={i} x1="0" y1={i * 45 + 10} x2="450" y2={i * 45 + 10} stroke="#334155" strokeWidth="1" />
-                  ))}
-
-                  {/* 累積支出（紅） */}
-                  <path
-                    d={`M 0,130 ${Array.from({ length: 31 }, (_, i) => {
-                      const x = i * 15;
-                      const y = 130 - (i / 30) * 70 * chartProgress;
-                      return `L ${x},${y}`;
-                    }).join(' ')}`}
-                    fill="none"
-                    stroke="#ef4444"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    style={{ filter: 'drop-shadow(0 0 6px #ef444480)' }}
-                  />
-
-                  {/* 投資增值（藍） */}
-                  <path
-                    d={`M 0,130 ${Array.from({ length: 31 }, (_, i) => {
-                      const x = i * 15;
-                      const growth = Math.pow(1.06, i);
-                      const y = 130 - Math.min((growth - 1) * 25 * chartProgress, 110);
-                      return `L ${x},${y}`;
-                    }).join(' ')}`}
-                    fill="none"
-                    stroke="#3b82f6"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    style={{ filter: 'drop-shadow(0 0 6px #3b82f680)' }}
-                  />
-
-                  {/* 淨資產（綠） */}
-                  <path
-                    d={`M 0,130 ${Array.from({ length: 31 }, (_, i) => {
-                      const x = i * 15;
-                      const growth = Math.pow(1.06, i);
-                      const y = 130 - Math.min((growth - 1) * 32 * chartProgress, 120);
-                      return `L ${x},${y}`;
-                    }).join(' ')}`}
-                    fill="none"
-                    stroke="#10b981"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    style={{ filter: 'drop-shadow(0 0 8px #10b98180)' }}
-                  />
-                </svg>
-
-                {/* 圖例 */}
-                <div style={{ display: 'flex', gap: 24, marginTop: 14, justifyContent: 'center' }}>
-                  {[
-                    { color: '#ef4444', label: '累積支出' },
-                    { color: '#3b82f6', label: '投資增值' },
-                    { color: '#10b981', label: '淨資產' },
-                  ].map((item, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 12, height: 12, borderRadius: 3, background: item.color }} />
-                      <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{item.label}</span>
-                    </div>
-                  ))}
-                </div>
+              {/* 試算完成提示 */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '10px 20px', background: 'linear-gradient(135deg, #10b98120, #10b98110)', border: '1px solid #10b98150', borderRadius: 10, opacity: interpolate(frame, [860, 900, 940, 980], [0, 1, 1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) }}>
+                <span style={{ color: '#10b981', fontSize: 16 }}>✓</span>
+                <span style={{ color: '#ffffff', fontSize: 12, fontWeight: 700 }}>試算完成，可生成報表</span>
               </div>
             </div>
           </div>
@@ -701,334 +424,165 @@ export const UltraAdvisorFirstPersonDemo: React.FC = () => {
           <div
             style={{
               position: 'absolute',
-              left: width * 0.5,
-              top: height * 0.5 - 200,
+              left: width / 2 + regions.report.x,
+              top: height / 2 + regions.report.y,
               transform: 'translate(-50%, -50%)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
+              textAlign: 'center',
+              opacity: interpolate(frame, [860, 920, 1180, 1250], [0, 1, 1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
             }}
           >
-            {/* 標題 */}
-            <div
-              style={{
-                fontSize: 40,
-                fontWeight: 900,
-                color: '#ffffff',
-                marginBottom: 10,
-                textShadow: '0 0 30px #10b98150',
-                opacity: interpolate(frame, [860, 900], [0, 1], { extrapolateRight: 'clamp' }),
-                transform: `translateY(${interpolate(frame, [860, 920], [30, 0], { extrapolateRight: 'clamp' })}px)`,
-              }}
-            >
-              一鍵生成專業報表
-            </div>
+            {/* 按鈕與進度 */}
+            {!isComplete && (
+              <>
+                <div style={{ fontSize: 32, fontWeight: 900, color: '#ffffff', marginBottom: 10, textShadow: '0 0 25px #10b98150', transform: `translateY(${interpolate(frame, [880, 940], [20, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px)` }}>
+                  一鍵生成專業報表
+                </div>
+                <div style={{ fontSize: 13, color: '#64748b', marginBottom: 25, opacity: interpolate(frame, [900, 940], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) }}>
+                  整合所有試算結果，3 秒出圖
+                </div>
 
-            <div
-              style={{
-                fontSize: 16,
-                color: '#64748b',
-                marginBottom: 35,
-                opacity: interpolate(frame, [880, 920], [0, 1], { extrapolateRight: 'clamp' }),
-              }}
-            >
-              3 秒出圖，讓數據替你說話
-            </div>
+                {/* 生成按鈕 */}
+                <div style={{ display: 'inline-flex', padding: '16px 40px', background: isGenerating ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #3b82f6, #2563eb)', borderRadius: 14, fontSize: 16, fontWeight: 800, color: '#ffffff', boxShadow: isGenerating ? '0 0 50px #f59e0b50' : '0 0 35px #3b82f650', alignItems: 'center', gap: 12, transform: `scale(${interpolate(frame, [910, 950], [0.9, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.back(1.2)) })})` }}>
+                  {isGenerating ? (
+                    <>
+                      <div style={{ width: 18, height: 18, borderRadius: '50%', border: '3px solid transparent', borderTopColor: '#ffffff', transform: `rotate(${frame * 8}deg)` }} />
+                      生成中...
+                    </>
+                  ) : (
+                    <>📊 生成策略報表</>
+                  )}
+                </div>
 
-            {/* 按鈕 */}
-            <div
-              style={{
-                padding: '18px 45px',
-                background: isComplete
-                  ? 'linear-gradient(135deg, #10b981, #059669)'
-                  : 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                borderRadius: 14,
-                fontSize: 18,
-                fontWeight: 800,
-                color: '#ffffff',
-                boxShadow: isComplete ? '0 0 50px #10b98150' : '0 0 35px #3b82f640',
-                transform: `scale(${reportButtonScale})`,
-                opacity: reportButtonOpacity,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-              }}
-            >
-              {isGenerating ? (
-                <>
-                  <div
-                    style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: '50%',
-                      border: '3px solid transparent',
-                      borderTopColor: '#ffffff',
-                      animation: 'spin 0.6s linear infinite',
-                    }}
-                  />
-                  生成中...
-                </>
-              ) : isComplete ? (
-                <>✓ 報表已生成</>
-              ) : (
-                <>📊 生成策略報表</>
-              )}
-            </div>
-
-            {/* 進度條 */}
-            {isGenerating && (
-              <div
-                style={{
-                  width: 280,
-                  height: 5,
-                  background: '#1e293b',
-                  borderRadius: 3,
-                  marginTop: 20,
-                  overflow: 'hidden',
-                }}
-              >
-                <div
-                  style={{
-                    height: '100%',
-                    width: `${loadProgress * 100}%`,
-                    background: 'linear-gradient(90deg, #3b82f6, #10b981)',
-                    borderRadius: 3,
-                    boxShadow: '0 0 15px #10b98160',
-                  }}
-                />
-              </div>
+                {/* 進度條 */}
+                {isGenerating && (
+                  <div style={{ width: 280, height: 6, background: '#1e293b', borderRadius: 3, marginTop: 20, overflow: 'hidden', marginLeft: 'auto', marginRight: 'auto' }}>
+                    <div style={{ height: '100%', width: `${reportProgress * 100}%`, background: 'linear-gradient(90deg, #3b82f6, #10b981)', borderRadius: 3, boxShadow: '0 0 12px #10b98160' }} />
+                  </div>
+                )}
+              </>
             )}
 
-            {/* 報表預覽 */}
+            {/* A4 報表 */}
             {isComplete && (
-              <div
-                style={{
-                  marginTop: 30,
-                  width: 700,
-                  background: '#ffffff',
-                  borderRadius: 20,
-                  padding: 30,
-                  boxShadow: '0 40px 100px rgba(0,0,0,0.5)',
-                  transform: `scale(${reportScale}) translateY(${reportY}px)`,
-                  opacity: reportOpacity,
-                }}
-              >
+              <div style={{ marginTop: 0, width: 450, height: 620, background: '#ffffff', borderRadius: 6, boxShadow: '0 30px 80px rgba(0,0,0,0.7)', overflow: 'hidden', display: 'flex', flexDirection: 'column', marginLeft: 'auto', marginRight: 'auto', opacity: interpolate(frame, [1010, 1060], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }), transform: `scale(${interpolate(frame, [1010, 1080], [0.85, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.back(1.1)) })})` }}>
                 {/* 報表頭 */}
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 24,
-                    paddingBottom: 20,
-                    borderBottom: '2px solid #f1f5f9',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 20, fontWeight: 900, color: '#0f172a' }}>財務規劃策略報表</div>
-                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 6 }}>
-                      客戶：王小明 ｜ 顧問：專業財務顧問
+                <div style={{ background: 'linear-gradient(135deg, #0f172a, #1e293b)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 28, height: 28, background: 'linear-gradient(135deg, #4DA3FF, #2E6BFF)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ color: '#fff', fontSize: 14, fontWeight: 900 }}>U</span>
+                    </div>
+                    <div>
+                      <div style={{ color: '#ffffff', fontSize: 11, fontWeight: 800, letterSpacing: 2 }}>ULTRA ADVISOR</div>
+                      <div style={{ color: '#4DA3FF', fontSize: 7, letterSpacing: 0.5 }}>AI 財務視覺化平台</div>
                     </div>
                   </div>
-                  <div
-                    style={{
-                      padding: '8px 18px',
-                      background: '#3b82f608',
-                      borderRadius: 10,
-                      border: '1px solid #3b82f620',
-                    }}
-                  >
-                    <span style={{ color: '#3b82f6', fontSize: 12, fontWeight: 800, letterSpacing: 1 }}>
-                      ULTRA ADVISOR
-                    </span>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ color: '#ffffff', fontSize: 13, fontWeight: 900 }}>綜合財務規劃報表</div>
+                    <div style={{ color: '#64748b', fontSize: 7 }}>Comprehensive Financial Report</div>
                   </div>
+                </div>
+
+                {/* 客戶資訊 */}
+                <div style={{ background: '#f8fafc', padding: '10px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', fontSize: 8 }}>
+                  <div style={{ display: 'flex', gap: 20 }}>
+                    <div><span style={{ color: '#64748b' }}>客戶姓名：</span><span style={{ color: '#0f172a', fontWeight: 700 }}>王小明</span></div>
+                    <div><span style={{ color: '#64748b' }}>報表日期：</span><span style={{ color: '#0f172a', fontWeight: 700 }}>2024/01/15</span></div>
+                  </div>
+                  <div><span style={{ color: '#64748b' }}>顧問：</span><span style={{ color: '#0f172a', fontWeight: 700 }}>專業財務顧問</span></div>
                 </div>
 
                 {/* 報表內容 */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-                  {/* 左：數據 */}
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 16 }}>
-                      📊 財務摘要
+                <div style={{ flex: 1, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {/* 房產試算摘要 */}
+                  <div style={{ background: '#0f172a', borderRadius: 8, padding: 12 }}>
+                    <div style={{ color: '#ffffff', fontSize: 9, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ color: '#3b82f6' }}>🏠</span> 金融房產專案試算
                     </div>
-                    {[
-                      { label: '貸款金額', value: '1,000 萬', color: '#3b82f6' },
-                      { label: '年利率', value: '2.2%', color: '#10b981' },
-                      { label: '貸款年期', value: '30 年', color: '#f59e0b' },
-                      { label: '每月還款', value: '38,428 元', color: '#8b5cf6' },
-                    ].map((item, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          padding: '10px 0',
-                          borderBottom: '1px solid #f1f5f9',
-                        }}
-                      >
-                        <span style={{ color: '#64748b', fontSize: 13 }}>{item.label}</span>
-                        <span style={{ color: item.color, fontSize: 14, fontWeight: 800 }}>{item.value}</span>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                      {[
+                        { label: '貸款金額', value: '1,000 萬', color: '#3b82f6' },
+                        { label: '年利率', value: '2.2%', color: '#10b981' },
+                        { label: '貸款年期', value: '30 年', color: '#f59e0b' },
+                      ].map((item, i) => (
+                        <div key={i} style={{ textAlign: 'center' }}>
+                          <div style={{ color: '#64748b', fontSize: 7 }}>{item.label}</div>
+                          <div style={{ color: item.color, fontSize: 14, fontWeight: 900 }}>{item.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
+                      <div style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)', borderRadius: 6, padding: 10 }}>
+                        <div style={{ color: '#ffffff80', fontSize: 7 }}>每月還款</div>
+                        <div style={{ color: '#ffffff', fontSize: 16, fontWeight: 900, fontFamily: 'monospace' }}>$38,428</div>
                       </div>
-                    ))}
+                      <div style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', borderRadius: 6, padding: 10 }}>
+                        <div style={{ color: '#ffffff80', fontSize: 7 }}>累計利息</div>
+                        <div style={{ color: '#ffffff', fontSize: 16, fontWeight: 900, fontFamily: 'monospace' }}>$3,834,080</div>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* 右：迷你圖 */}
-                  <div style={{ background: '#f8fafc', borderRadius: 14, padding: 20 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 16 }}>
-                      📈 30年淨資產成長
+                  {/* 大小水庫摘要 */}
+                  <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: 12 }}>
+                    <div style={{ color: '#0369a1', fontSize: 9, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>💧</span> 大小水庫專案配置
                     </div>
-                    <svg width="100%" height="80" viewBox="0 0 240 80">
-                      <path
-                        d={`M 0,70 ${Array.from({ length: 31 }, (_, i) => {
-                          const x = i * 8;
-                          const y = 70 - Math.pow(1.06, i) * 10;
-                          return `L ${x},${Math.max(y, 5)}`;
-                        }).join(' ')}`}
-                        fill="none"
-                        stroke="#10b981"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                      />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#64748b', fontSize: 7 }}>每月收入</div>
+                        <div style={{ color: '#4DA3FF', fontSize: 14, fontWeight: 900 }}>$150,000</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#64748b', fontSize: 7 }}>大水庫（6個月）</div>
+                        <div style={{ color: '#3b82f6', fontSize: 14, fontWeight: 900 }}>$900,000</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ color: '#64748b', fontSize: 7 }}>小水庫（彈性）</div>
+                        <div style={{ color: '#10b981', fontSize: 14, fontWeight: 900 }}>$45,000</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 財富增長預測圖 */}
+                  <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, flex: 1 }}>
+                    <div style={{ color: '#0f172a', fontSize: 9, fontWeight: 700, marginBottom: 8 }}>📈 30年財富增長預測</div>
+                    <svg width="100%" height="90" viewBox="0 0 400 90" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="areaGrad2" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+                          <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+                      {[0, 1, 2, 3].map((i) => <line key={i} x1="0" y1={i * 27 + 5} x2="400" y2={i * 27 + 5} stroke="#f1f5f9" strokeWidth="1" />)}
+                      <path d={`M 0,85 ${Array.from({ length: 31 }, (_, i) => `L ${i * 13.3},${85 - (i / 30) * 45}`).join(' ')} L 400,85 Z`} fill="#ef444420" />
+                      <path d={`M 0,85 ${Array.from({ length: 31 }, (_, i) => `L ${i * 13.3},${85 - (i / 30) * 45}`).join(' ')}`} fill="none" stroke="#ef4444" strokeWidth="1.5" />
+                      <path d={`M 0,85 ${Array.from({ length: 31 }, (_, i) => `L ${i * 13.3},${85 - Math.min(Math.pow(1.06, i) - 1, 4.5) * 18}`).join(' ')} L 400,85 Z`} fill="url(#areaGrad2)" />
+                      <path d={`M 0,85 ${Array.from({ length: 31 }, (_, i) => `L ${i * 13.3},${85 - Math.min(Math.pow(1.06, i) - 1, 4.5) * 18}`).join(' ')}`} fill="none" stroke="#10b981" strokeWidth="2" />
                     </svg>
-                    <div style={{ textAlign: 'center', marginTop: 12 }}>
-                      <span style={{ fontSize: 26, fontWeight: 900, color: '#10b981' }}>+5,743 萬</span>
-                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>30年預估淨增長</div>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 18, marginTop: 6 }}>
+                      {[{ color: '#ef4444', label: '累積支出' }, { color: '#10b981', label: '淨資產增長' }].map((item, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: 2, background: item.color }} />
+                          <span style={{ fontSize: 6, color: '#64748b' }}>{item.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 策略建議 */}
+                  <div style={{ background: '#10b98110', border: '1px solid #10b98130', borderRadius: 6, padding: 10 }}>
+                    <div style={{ color: '#10b981', fontSize: 8, fontWeight: 700, marginBottom: 4 }}>✓ 綜合策略建議</div>
+                    <div style={{ color: '#0f172a', fontSize: 7, lineHeight: 1.5 }}>
+                      建議維持大水庫 90 萬作為緊急備用金，每月結餘扣除房貸後投入年化 6% 投資，30年後預估淨資產增長 <strong style={{ color: '#10b981' }}>+5,743 萬</strong>。
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
 
-        {/* ==================== 賣點區域 ==================== */}
-        {showValuePoints && (
-          <div
-            style={{
-              position: 'absolute',
-              left: width * 0.5,
-              top: height * 0.5 + 50,
-              transform: 'translate(-50%, -50%)',
-              textAlign: 'center',
-            }}
-          >
-            {/* 標題 */}
-            <div
-              style={{
-                fontSize: 38,
-                fontWeight: 900,
-                color: '#ffffff',
-                marginBottom: 10,
-                textShadow: '0 0 30px #4DA3FF50',
-                opacity: interpolate(frame, [1090, 1130], [0, 1], { extrapolateRight: 'clamp' }),
-                transform: `translateY(${interpolate(frame, [1090, 1140], [30, 0], { extrapolateRight: 'clamp' })}px)`,
-              }}
-            >
-              一個平台・三大價值
-            </div>
-
-            <div
-              style={{
-                fontSize: 16,
-                color: '#64748b',
-                marginBottom: 50,
-                opacity: interpolate(frame, [1110, 1150], [0, 1], { extrapolateRight: 'clamp' }),
-              }}
-            >
-              購買軟體服務，即獲得完整獲客與教育方案
-            </div>
-
-            {/* 三個賣點 */}
-            <div style={{ display: 'flex', gap: 30 }}>
-              {valuePoints.map((point, i) => {
-                const { x, y, opacity, scale } = getValuePointProgress(i);
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      width: 280,
-                      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                      borderRadius: 20,
-                      border: `1px solid ${point.color}40`,
-                      padding: 28,
-                      opacity,
-                      transform: `translate(${x}px, ${y}px) scale(${scale})`,
-                      boxShadow: `0 25px 60px ${point.color}15`,
-                      position: 'relative',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {/* 頂部發光線 */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: '20%',
-                        right: '20%',
-                        height: 2,
-                        background: `linear-gradient(90deg, transparent, ${point.color}60, transparent)`,
-                      }}
-                    />
-
-                    <div
-                      style={{
-                        width: 64,
-                        height: 64,
-                        borderRadius: 16,
-                        background: `${point.color}20`,
-                        border: `1px solid ${point.color}40`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 32,
-                        margin: '0 auto 18px',
-                      }}
-                    >
-                      {point.icon}
-                    </div>
-
-                    <div style={{ fontSize: 20, fontWeight: 900, color: '#ffffff', marginBottom: 8 }}>
-                      {point.title}
-                    </div>
-
-                    <div
-                      style={{
-                        display: 'inline-block',
-                        padding: '5px 12px',
-                        background: `${point.color}25`,
-                        borderRadius: 15,
-                        color: point.color,
-                        fontSize: 11,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {point.subtitle}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* 創辦會員提示 */}
-            {frame > 1240 && (
-              <div
-                style={{
-                  marginTop: 45,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '14px 30px',
-                  background: 'linear-gradient(135deg, #fbbf2420, #f5920020)',
-                  border: '1px solid #fbbf2450',
-                  borderRadius: 35,
-                  opacity: interpolate(frame, [1240, 1280], [0, 1], { extrapolateRight: 'clamp' }),
-                  transform: `translateY(${interpolate(frame, [1240, 1290], [20, 0], { extrapolateRight: 'clamp' })}px)`,
-                }}
-              >
-                <span style={{ fontSize: 18 }}>👑</span>
-                <span style={{ color: '#fbbf24', fontSize: 16, fontWeight: 800 }}>
-                  創辦會員限定優惠中
-                </span>
+                {/* 報表底 */}
+                <div style={{ background: '#f8fafc', padding: '8px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', fontSize: 6, color: '#94a3b8' }}>
+                  <div>此報表由 ULTRA ADVISOR AI 自動生成</div>
+                  <div>ultra-advisor.tw</div>
+                </div>
               </div>
             )}
           </div>
@@ -1039,72 +593,30 @@ export const UltraAdvisorFirstPersonDemo: React.FC = () => {
           <div
             style={{
               position: 'absolute',
-              left: width * 0.5,
-              top: height * 0.5 + 30,
+              left: width / 2 + regions.outro.x,
+              top: height / 2 + regions.outro.y,
               transform: 'translate(-50%, -50%)',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
+              opacity: interpolate(frame, [1150, 1200], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
             }}
           >
-            {/* Logo */}
-            <div style={{ transform: `scale(${outroLogoScale})`, opacity: outroLogoOpacity }}>
+            <div style={{ transform: `scale(${interpolate(frame, [1200, 1260], [0.8, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.back(1.2)) })})` }}>
               <Logo scale={1.1} />
             </div>
-
-            {/* 品牌名 */}
-            <div
-              style={{
-                marginTop: 35,
-                fontSize: 56,
-                fontWeight: 900,
-                color: '#ffffff',
-                letterSpacing: 12,
-                textShadow: '0 0 40px #4DA3FF60',
-                transform: `translateY(${outroBrandY}px)`,
-                opacity: outroBrandOpacity,
-              }}
-            >
+            <div style={{ marginTop: 30, fontSize: 48, fontWeight: 900, color: '#ffffff', letterSpacing: 12, textShadow: '0 0 35px #4DA3FF60', opacity: interpolate(frame, [1230, 1280], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }), transform: `translateY(${interpolate(frame, [1230, 1290], [25, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px)` }}>
               ULTRA ADVISOR
             </div>
-
-            {/* Slogan */}
-            <div
-              style={{
-                marginTop: 16,
-                fontSize: 20,
-                fontWeight: 600,
-                color: '#4DA3FF',
-                letterSpacing: 4,
-                opacity: outroBrandOpacity,
-              }}
-            >
+            <div style={{ marginTop: 12, fontSize: 16, fontWeight: 600, color: '#4DA3FF', letterSpacing: 4, opacity: interpolate(frame, [1260, 1300], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) }}>
               讓數據替你說話
             </div>
-
-            {/* 網址 */}
-            <div
-              style={{
-                marginTop: 45,
-                fontSize: 16,
-                color: '#64748b',
-                letterSpacing: 3,
-                opacity: outroUrlOpacity,
-              }}
-            >
+            <div style={{ marginTop: 35, fontSize: 13, color: '#64748b', letterSpacing: 3, opacity: interpolate(frame, [1285, 1318], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) }}>
               ultra-advisor.tw
             </div>
           </div>
         )}
       </div>
-
-      {/* CSS 動畫 */}
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </AbsoluteFill>
   );
 };
