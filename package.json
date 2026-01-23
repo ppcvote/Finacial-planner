@@ -3,6 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "overrides": {
+    "rollup": "npm:@rollup/wasm-node"
+  },
   "scripts": {
     "dev": "vite",
     "build": "node scripts/generate-sitemap.js && vite build",
