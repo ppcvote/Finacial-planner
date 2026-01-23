@@ -4,10 +4,10 @@ export const article: BlogArticle = {
   id: '38',
   slug: 'allianz-global-income-growth-suspended-2026',
   title: '安聯收益成長被買爆！暫停申購要緊嗎？',
-  excerpt: '安聯全球收益成長基金 2026 年 2 月 6 日起暫停新申購。別緊張，這是好事——代表這檔基金太熱門了！',
+  excerpt: '安聯全球收益成長基金 2026 年 2 月 6 日起暫停新申購。別緊張，這是法規要求——代表這檔基金太熱門了！',
   category: 'investment',
   tags: ['安聯', '基金', '境外基金', '暫停申購', '配息', '2026'],
-  readTime: 3,
+  readTime: 5,
   publishDate: '2026-01-23',
   author: 'Ultra Advisor 理財團隊',
   featured: true,
@@ -21,21 +21,58 @@ export const article: BlogArticle = {
         先別緊張——這不是壞消息，是好消息。
       </p>
 
+      <h2 id="announcement">官方公告</h2>
+
+      <p>
+        2026 年 1 月 16 日，安聯投信發布公告：
+      </p>
+
+      <div class="my-8 rounded-xl overflow-hidden border border-slate-700">
+        <img
+          src="/images/blog/allianz-announcement-2026.png"
+          alt="安聯全球收益成長基金暫停申購公告"
+          class="w-full"
+        />
+      </div>
+
       <h2 id="why">為什麼被暫停？</h2>
 
-      <div class="bg-emerald-900/30 border border-emerald-500/30 rounded-2xl p-6 my-8">
-        <p class="text-2xl text-center text-emerald-400 font-bold mb-4">
-          因為太熱門，被台灣人買爆了！
+      <p>
+        公告中提到：「為確保遵循<strong>金管證投字第 1030043688 號令</strong>對國內投資人投資金額占個別境外基金淨資產價值之比例上限」。
+      </p>
+
+      <p>
+        這是什麼意思？讓我翻譯成白話：
+      </p>
+
+      <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
+        <h4 class="text-white font-bold mb-4">📜 法規背景</h4>
+        <p class="text-slate-300 mb-4">
+          金管會在 2014 年發布的這條法令規定：
         </p>
-        <p class="text-slate-300 mb-0 text-center">
-          根據金管會規定，境外基金單一國家投資人占比不得超過 70%。<br/>
-          這檔基金的台灣投資人占比已達上限，所以必須暫停新申購。
-        </p>
+        <div class="bg-amber-900/30 border border-amber-500/30 rounded-xl p-4">
+          <p class="text-amber-400 font-bold mb-2">境外基金單一國家投資人占比上限：70%</p>
+          <p class="text-slate-300 mb-0 text-sm">
+            意思是：一檔境外基金，來自台灣的資金不能超過該基金總規模的 70%。<br/>
+            這是為了<strong>保護投資人</strong>，避免單一市場投資人過度集中，造成系統性風險。
+          </p>
+        </div>
       </div>
 
       <p>
-        簡單說：<strong>不是基金有問題，是太受歡迎。</strong>
+        安聯收益成長基金實在太受台灣人歡迎，<strong>台灣投資人的占比已經逼近或觸及 70% 上限</strong>。<br/>
+        依法必須暫停接受新申購，直到占比降下來。
       </p>
+
+      <div class="bg-emerald-900/30 border border-emerald-500/30 rounded-2xl p-6 my-8">
+        <p class="text-2xl text-center text-emerald-400 font-bold mb-4">
+          不是基金有問題，是太受歡迎！
+        </p>
+        <p class="text-slate-300 mb-0 text-center">
+          這是「法規限制」造成的暫停，不是經營問題。<br/>
+          反而證明這檔基金在台灣市場的超高人氣。
+        </p>
+      </div>
 
       <h2 id="why-popular">為什麼這麼熱門？</h2>
 
@@ -77,9 +114,23 @@ export const article: BlogArticle = {
       </div>
 
       <p>
-        唯一的限制是：<strong>不能再加碼</strong>。<br/>
-        定期定額不能調高金額、不能增加扣款日。<br/>
-        但原本的投資，一切照舊。
+        根據公告，唯一的限制是：
+      </p>
+
+      <div class="bg-red-900/30 border border-red-500/30 rounded-2xl p-6 my-8">
+        <h4 class="text-red-400 font-bold mb-3">❌ 不能做的事</h4>
+        <ul class="text-slate-300 mb-0 space-y-2">
+          <li>不能<strong>新申購</strong>（單筆）</li>
+          <li>不能<strong>轉入</strong>（從其他基金轉過來）</li>
+          <li>不能<strong>新增</strong>定期定額</li>
+          <li>不能<strong>提高</strong>定期定額扣款金額</li>
+          <li>不能<strong>增加</strong>扣款日期</li>
+          <li>不能<strong>恢復</strong>已停止的扣款</li>
+        </ul>
+      </div>
+
+      <p>
+        簡單說：<strong>原本有的繼續，但不能再加碼。</strong>
       </p>
 
       <h2 id="want-similar">想買類似的商品？</h2>
@@ -109,7 +160,8 @@ export const article: BlogArticle = {
       <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 my-8">
         <ul class="text-slate-300 mb-0 space-y-3">
           <li>📢 安聯收益成長基金 <strong>2/6 起暫停新申購</strong></li>
-          <li>🔥 原因：<strong>太熱門</strong>，台灣投資人占比達法規上限</li>
+          <li>📜 原因：依<strong>金管會法規</strong>，台灣投資人占比達 70% 上限</li>
+          <li>🔥 代表：<strong>太熱門</strong>，不是基金有問題</li>
           <li>✅ 已持有者：<strong>權益不受影響</strong>，繼續領配息</li>
           <li>💰 這檔基金：<strong>配息率 6-8%</strong>，多元收益策略</li>
           <li>👉 想找類似商品？<strong>找專業財務顧問諮詢</strong></li>
