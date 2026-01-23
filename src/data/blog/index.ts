@@ -60,6 +60,10 @@ import { article as article33 } from './articles/33-note-taking-financial-adviso
 import { article as article34 } from './articles/34-cash-flow-rich-poor-2026';
 // 文章 35：ESBI 現金流象限
 import { article as article35 } from './articles/35-esbi-cashflow-quadrant-2026';
+// 文章 36：客戶拖延的代價
+import { article as article36 } from './articles/36-client-procrastination-cost-2026';
+// 文章 37：綜所稅＋最低稅負制
+import { article as article37 } from './articles/37-income-tax-amt-guide-2026';
 
 // ============ 匯出文章陣列 ============
 export const blogArticles: BlogArticle[] = [
@@ -98,6 +102,8 @@ export const blogArticles: BlogArticle[] = [
   article33,
   article34,
   article35,
+  article36,
+  article37,
 ];
 
 // ============ 匯出輔助函數 ============

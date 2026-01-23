@@ -1,7 +1,7 @@
 {
   "name": "Ultra Advisor 戰情室",
   "short_name": "Ultra Advisor",
-  "description": "台灣最強財務顧問提案解決方案",
+  "description": "台灣最強財務視覺化解決方案",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
