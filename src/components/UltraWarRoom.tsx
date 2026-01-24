@@ -5,8 +5,11 @@ import {
   Users, Search, Plus, Trash2, LogOut, Settings, X,
   Clock, TriangleAlert, ShieldAlert, Activity, Edit3, Save, Loader2,
   Heart, RefreshCw, Download, Sparkles, Crown, BarChart3, Bell,
-  MessageSquarePlus, Send, Lightbulb, ChevronDown, BookOpen, Sun, Moon
+  MessageSquarePlus, Send, Lightbulb, ChevronDown, BookOpen, Sun, Moon,
+  Share2, Quote, Calendar
 } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { getTodayQuote, getTodayBackground, formatDateChinese } from '../data/dailyQuotes';
 import { useTheme } from '../context/ThemeContext';
 import { 
   getAuth, 
@@ -352,17 +355,165 @@ const ProfileCard = ({
 };
 
 // ==========================================
-// 📊 市場數據卡片
+// 📊 市場數據卡片（含每日金句）
 // ==========================================
-const MarketDataCard = () => {
+interface MarketDataCardProps {
+  userId?: string;
+}
+
+const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId }) => {
+  const [showStoryPreview, setShowStoryPreview] = useState(false);
+  const [totalShareDays, setTotalShareDays] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [todayShared, setTodayShared] = useState(false);
+  const storyRef = useRef<HTMLDivElement>(null);
+
+  const todayQuote = getTodayQuote();
+  const todayBg = getTodayBackground();
+  const todayDate = formatDateChinese();
+
+  // 載入使用者的累積分享天數
+  useEffect(() => {
+    if (!userId) return;
+
+    const loadShareData = async () => {
+      try {
+        const docRef = doc(db, 'users', userId, 'dailyStory', 'stats');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setTotalShareDays(data.totalShareDays || 0);
+          // 檢查今天是否已分享
+          const today = new Date().toISOString().split('T')[0];
+          if (data.lastShareDate === today) {
+            setTodayShared(true);
+          }
+        }
+      } catch (error) {
+        console.error('載入分享資料失敗:', error);
+      }
+    };
+
+    loadShareData();
+  }, [userId]);
+
+  // 記錄分享並更新累積天數
+  const recordShare = async () => {
+    if (!userId || todayShared) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const docRef = doc(db, 'users', userId, 'dailyStory', 'stats');
+      const docSnap = await getDoc(docRef);
+
+      let newTotal = 1;
+      let shareHistory: string[] = [];
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        // 如果今天還沒分享，累積天數 +1
+        if (data.lastShareDate !== today) {
+          newTotal = (data.totalShareDays || 0) + 1;
+          shareHistory = data.shareHistory || [];
+          shareHistory.push(today);
+        } else {
+          newTotal = data.totalShareDays || 1;
+          shareHistory = data.shareHistory || [];
+        }
+      } else {
+        shareHistory = [today];
+      }
+
+      await setDoc(docRef, {
+        totalShareDays: newTotal,
+        lastShareDate: today,
+        shareHistory: shareHistory.slice(-365), // 只保留最近 365 天
+        updatedAt: Timestamp.now()
+      });
+
+      setTotalShareDays(newTotal);
+      setTodayShared(true);
+    } catch (error) {
+      console.error('記錄分享失敗:', error);
+    }
+  };
+
+  // 生成並下載圖片
+  const handleDownload = async () => {
+    if (!storyRef.current) return;
+
+    setIsGenerating(true);
+    try {
+      const canvas = await html2canvas(storyRef.current, {
+        scale: 2,
+        backgroundColor: null,
+        useCORS: true,
+      });
+
+      const link = document.createElement('a');
+      link.download = `ultra-advisor-daily-${new Date().toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+
+      // 記錄分享
+      await recordShare();
+    } catch (error) {
+      console.error('生成圖片失敗:', error);
+      alert('生成圖片失敗，請稍後再試');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Web Share API 分享
+  const handleShare = async () => {
+    if (!storyRef.current) return;
+
+    setIsGenerating(true);
+    try {
+      const canvas = await html2canvas(storyRef.current, {
+        scale: 2,
+        backgroundColor: null,
+        useCORS: true,
+      });
+
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((b) => resolve(b!), 'image/png');
+      });
+
+      const file = new File([blob], 'daily-quote.png', { type: 'image/png' });
+
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: '每日金句',
+          text: `「${todayQuote.text}」— ${todayQuote.author || 'Ultra Advisor'}`,
+        });
+        // 記錄分享
+        await recordShare();
+      } else {
+        // 不支援 Web Share，改用下載
+        handleDownload();
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('分享失敗:', error);
+        // 改用下載
+        handleDownload();
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="dark:bg-slate-900/50 bg-white border dark:border-slate-800 border-slate-200 rounded-2xl p-6">
       <div className="flex items-center gap-2 mb-4">
         <Activity size={18} className="text-blue-400" />
-        <h3 className="text-sm font-black text-white uppercase tracking-wider">市場快訊</h3>
+        <h3 className="text-sm font-black dark:text-white text-slate-900 uppercase tracking-wider">市場快訊</h3>
         <span className="ml-auto text-[10px] text-slate-500">2026 即時數據</span>
       </div>
-      
+
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-red-900/20 border border-red-500/20 rounded-xl p-3 text-center">
           <Heart size={16} className="text-red-400 mx-auto mb-1" />
@@ -393,6 +544,179 @@ const MarketDataCard = () => {
           <div className="text-[10px] text-slate-500 font-bold uppercase">實質通膨</div>
         </div>
       </div>
+
+      {/* ===== 每日金句區塊 ===== */}
+      <div className="mt-4 pt-4 border-t dark:border-slate-800 border-slate-200">
+        <div className="flex items-center gap-2 mb-3">
+          <Quote size={16} className="text-purple-400" />
+          <span className="text-xs font-bold dark:text-white text-slate-900">每日金句</span>
+          {totalShareDays > 0 && (
+            <span className="ml-auto text-[10px] text-purple-400 font-bold">
+              累積分享 {totalShareDays} 天
+            </span>
+          )}
+        </div>
+
+        {/* 金句預覽卡片 */}
+        <div
+          className={`relative rounded-xl p-4 bg-gradient-to-br ${todayBg.gradient}
+                     border border-white/10 cursor-pointer hover:scale-[1.02] transition-transform`}
+          onClick={() => setShowStoryPreview(true)}
+        >
+          <div className="text-center">
+            <Quote size={20} className="text-white/30 mx-auto mb-2" />
+            <p className="text-white font-bold text-sm leading-relaxed mb-2">
+              「{todayQuote.text}」
+            </p>
+            {todayQuote.author && (
+              <p className="text-white/60 text-xs">— {todayQuote.author}</p>
+            )}
+          </div>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
+            <div className="flex items-center gap-1 text-white/50 text-[10px]">
+              <Calendar size={10} />
+              {todayDate}
+            </div>
+            <div className="text-white/50 text-[10px]">
+              點擊預覽 & 分享
+            </div>
+          </div>
+        </div>
+
+        {/* 快速分享按鈕 */}
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={handleDownload}
+            disabled={isGenerating}
+            className="flex-1 flex items-center justify-center gap-2 py-2 px-3
+                     bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold
+                     rounded-lg transition-all disabled:opacity-50"
+          >
+            {isGenerating ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Download size={14} />
+            )}
+            下載圖片
+          </button>
+          <button
+            onClick={handleShare}
+            disabled={isGenerating}
+            className="flex-1 flex items-center justify-center gap-2 py-2 px-3
+                     bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold
+                     rounded-lg transition-all disabled:opacity-50"
+          >
+            {isGenerating ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Share2 size={14} />
+            )}
+            分享社群
+          </button>
+        </div>
+      </div>
+
+      {/* ===== 限時動態預覽彈窗 ===== */}
+      {showStoryPreview && (
+        <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4">
+          <div className="relative max-w-sm w-full">
+            {/* 關閉按鈕 */}
+            <button
+              onClick={() => setShowStoryPreview(false)}
+              className="absolute -top-12 right-0 text-white/70 hover:text-white transition-colors"
+            >
+              <X size={28} />
+            </button>
+
+            {/* 限時動態預覽（這個會被截圖） */}
+            <div
+              ref={storyRef}
+              className={`aspect-[9/16] rounded-3xl overflow-hidden bg-gradient-to-br ${todayBg.gradient}
+                         flex flex-col items-center justify-center p-8 relative`}
+            >
+              {/* 裝飾元素 */}
+              <div className="absolute inset-0 opacity-10">
+                <div className="absolute top-10 left-10 w-32 h-32 bg-white rounded-full blur-3xl" />
+                <div className="absolute bottom-20 right-10 w-40 h-40 bg-white rounded-full blur-3xl" />
+              </div>
+
+              {/* Logo */}
+              <div className="absolute top-6 left-6 flex items-center gap-2">
+                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                  <Sparkles size={16} className="text-white" />
+                </div>
+                <span className="text-white/80 text-xs font-bold">Ultra Advisor</span>
+              </div>
+
+              {/* 累積天數徽章 */}
+              {totalShareDays > 0 && (
+                <div className="absolute top-6 right-6 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                  <span className="text-white text-xs font-bold">Day {totalShareDays + (todayShared ? 0 : 1)}</span>
+                </div>
+              )}
+
+              {/* 金句內容 */}
+              <div className="relative z-10 text-center max-w-[280px]">
+                <Quote size={40} className="text-white/20 mx-auto mb-4" />
+                <p className="text-white font-black text-xl leading-relaxed mb-4">
+                  「{todayQuote.text}」
+                </p>
+                {todayQuote.author && (
+                  <p className="text-white/70 text-sm font-medium">— {todayQuote.author}</p>
+                )}
+              </div>
+
+              {/* 底部資訊 */}
+              <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between">
+                <div className="flex items-center gap-1 text-white/50 text-xs">
+                  <Calendar size={12} />
+                  {todayDate}
+                </div>
+                <div className="text-white/50 text-xs">
+                  ultra-advisor.tw
+                </div>
+              </div>
+            </div>
+
+            {/* 分享按鈕 */}
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={handleDownload}
+                disabled={isGenerating}
+                className="flex-1 flex items-center justify-center gap-2 py-3
+                         bg-white text-slate-900 font-bold rounded-xl
+                         hover:bg-slate-100 transition-all disabled:opacity-50"
+              >
+                {isGenerating ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Download size={18} />
+                )}
+                下載圖片
+              </button>
+              <button
+                onClick={handleShare}
+                disabled={isGenerating}
+                className="flex-1 flex items-center justify-center gap-2 py-3
+                         bg-purple-600 text-white font-bold rounded-xl
+                         hover:bg-purple-500 transition-all disabled:opacity-50"
+              >
+                {isGenerating ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Share2 size={18} />
+                )}
+                分享社群
+              </button>
+            </div>
+
+            {/* 提示文字 */}
+            <p className="text-center text-white/50 text-xs mt-3">
+              下載後可分享到 LINE、IG、FB 限時動態
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -2152,7 +2476,7 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
           </div>
 
           {/* Market Data */}
-          <MarketDataCard />
+          <MarketDataCard userId={user?.uid} />
 
           {/* Quick Calculator */}
           <QuickCalculator />
