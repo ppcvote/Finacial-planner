@@ -3721,4 +3721,53 @@ exports.blogSeo = functions.https.onRequest(async (req, res) => {
   res.send(html);
 });
 
+// ==========================================
+// 🖼️ 圖片代理 API（繞過 CORS 限制）
+// 用於限時動態功能載入 Firebase Storage 頭貼
+// ==========================================
+exports.imageProxy = functions.https.onRequest(async (req, res) => {
+  // CORS 設定
+  const origin = req.headers.origin;
+  if (ALLOWED_ORIGINS.includes(origin) || origin?.includes('localhost')) {
+    res.set('Access-Control-Allow-Origin', origin);
+  }
+  res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+
+  const imageUrl = req.query.url;
+
+  if (!imageUrl) {
+    res.status(400).send('Missing url parameter');
+    return;
+  }
+
+  // 只允許 Firebase Storage 的圖片
+  if (!imageUrl.includes('firebasestorage.googleapis.com') &&
+      !imageUrl.includes('googleusercontent.com')) {
+    res.status(403).send('Only Firebase Storage images are allowed');
+    return;
+  }
+
+  try {
+    const response = await axios.get(imageUrl, {
+      responseType: 'arraybuffer',
+      timeout: 10000,
+    });
+
+    // 設定正確的 Content-Type
+    const contentType = response.headers['content-type'] || 'image/jpeg';
+    res.set('Content-Type', contentType);
+    res.set('Cache-Control', 'public, max-age=86400'); // 快取 1 天
+    res.send(Buffer.from(response.data));
+  } catch (error) {
+    console.error('Image proxy error:', error.message);
+    res.status(500).send('Failed to fetch image');
+  }
+});
+
 console.log('Ultra Advisor Cloud Functions loaded');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Calculator, Lock, User, Camera, Mail, Phone, MessageCircle, Instagram,
   Home, TrendingUp, Coins, Check, AlertCircle, Eye, EyeOff, Info, Zap,
@@ -6,10 +6,13 @@ import {
   Clock, TriangleAlert, ShieldAlert, Activity, Edit3, Save, Loader2,
   Heart, RefreshCw, Download, Sparkles, Crown, BarChart3, Bell,
   MessageSquarePlus, Send, Lightbulb, ChevronDown, BookOpen, Sun, Moon,
-  Share2, Quote, Calendar
+  Share2, Quote, Calendar, Layout, Type, ImageIcon, ExternalLink
 } from 'lucide-react';
+import {
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart
+} from 'recharts';
 import html2canvas from 'html2canvas';
-import { getTodayQuote, getTodayBackground, formatDateChinese } from '../data/dailyQuotes';
+import { getTodayQuote, getTodayBackground, formatDateChinese, getRandomQuote, getRandomBackground, DailyQuote, getTodayIGQuote, getRandomIGQuote, IGStyleQuote } from '../data/dailyQuotes';
 import { useTheme } from '../context/ThemeContext';
 import { 
   getAuth, 
@@ -45,6 +48,9 @@ import ReferralEngineModal from './ReferralEngineModal';
 // 🆕 任務看板
 import MissionCard from './MissionCard';
 import PWAInstallModal from './PWAInstallModal';
+
+// 🆕 知識庫文章
+import { blogArticles } from '../data/blog/index';
 
 // ==========================================
 // 🎨 市場快訊跑馬燈（含傲創計算機入口）
@@ -154,6 +160,7 @@ interface ProfileData {
   phone: string;
   lineId: string;
   instagram: string;
+  lineQrCode?: string; // LINE QR Code 圖片 URL
 }
 
 // ==========================================
@@ -357,20 +364,236 @@ const ProfileCard = ({
 // ==========================================
 // 📊 市場數據卡片（含每日金句）
 // ==========================================
-interface MarketDataCardProps {
-  userId?: string;
+
+// 字體風格配置
+type FontStyle = 'default' | 'handwriting' | 'headline' | 'elegant';
+const FONT_STYLES: Record<FontStyle, { name: string; className: string }> = {
+  default: { name: '預設', className: 'font-sans' },
+  handwriting: { name: '手寫', className: 'font-serif italic' },
+  headline: { name: '粗黑', className: 'font-black tracking-tight' },
+  elegant: { name: '優雅', className: 'font-light tracking-wide' }
+};
+
+// 排版風格類型
+type LayoutStyle = 'center' | 'left';
+
+// 自訂背景介面
+interface CustomBackground {
+  id: string;
+  dataUrl: string;
+  uploadedAt: number;
 }
 
-const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId }) => {
+interface MarketDataCardProps {
+  userId?: string;
+  userDisplayName?: string;
+  userPhotoURL?: string;
+  userLineQrCode?: string; // 會員自訂的 LINE QR Code
+}
+
+const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName, userPhotoURL, userLineQrCode }) => {
   const [showStoryPreview, setShowStoryPreview] = useState(false);
   const [totalShareDays, setTotalShareDays] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [todayShared, setTodayShared] = useState(false);
+  const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
+  const [avatarLoadError, setAvatarLoadError] = useState(false);
+  // 隨機文案/背景 state
+  const [customQuote, setCustomQuote] = useState<DailyQuote | null>(null);
+  const [customBg, setCustomBg] = useState<ReturnType<typeof getTodayBackground> | null>(null);
   const storyRef = useRef<HTMLDivElement>(null);
+
+  // ========== 進階設定狀態 ==========
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  // 排版風格
+  const [layoutStyle, setLayoutStyle] = useState<LayoutStyle>('center');
+  // 文案編輯
+  const [useCustomText, setUseCustomText] = useState(false);
+  const [customText, setCustomText] = useState('');
+  // IG 風格專用文案
+  const [customIGQuote, setCustomIGQuote] = useState<IGStyleQuote | null>(null);
+  const [useCustomIGText, setUseCustomIGText] = useState(false);
+  const [customIGTitle, setCustomIGTitle] = useState('');
+  const [customIGLines, setCustomIGLines] = useState('');
+  // 字體選擇
+  const [fontStyle, setFontStyle] = useState<FontStyle>('default');
+  // 自訂背景
+  const [customBackgrounds, setCustomBackgrounds] = useState<CustomBackground[]>([]);
+  const [selectedCustomBgIndex, setSelectedCustomBgIndex] = useState<number | null>(null);
+  const [isUploadingBg, setIsUploadingBg] = useState(false);
+  const bgInputRef = useRef<HTMLInputElement>(null);
 
   const todayQuote = getTodayQuote();
   const todayBg = getTodayBackground();
   const todayDate = formatDateChinese();
+  const todayIGQuote = getTodayIGQuote();
+
+  // 實際顯示的金句和背景（優先使用自訂，否則用今日預設）
+  const displayQuote = customQuote || todayQuote;
+
+  // IG 風格文案（優先：自訂 > 隨機 > 今日預設）
+  const displayIGQuote = useMemo((): IGStyleQuote => {
+    if (useCustomIGText && customIGTitle.trim()) {
+      return {
+        title: customIGTitle,
+        lines: customIGLines.split('\n').filter(line => line.trim())
+      };
+    }
+    return customIGQuote || todayIGQuote;
+  }, [useCustomIGText, customIGTitle, customIGLines, customIGQuote, todayIGQuote]);
+
+  // 優先：自訂背景 > 隨機背景 > 今日預設
+  const displayBg = useMemo(() => {
+    if (selectedCustomBgIndex !== null && customBackgrounds[selectedCustomBgIndex]) {
+      return {
+        id: customBackgrounds[selectedCustomBgIndex].id,
+        imageUrl: customBackgrounds[selectedCustomBgIndex].dataUrl,
+        fallbackGradient: 'from-slate-900 via-slate-800 to-zinc-900'
+      };
+    }
+    return customBg || todayBg;
+  }, [selectedCustomBgIndex, customBackgrounds, customBg, todayBg]);
+
+  // 實際顯示的文案（自訂文案 > 金句庫）- 置中排版用
+  const displayQuoteText = useCustomText && customText.trim()
+    ? customText
+    : displayQuote.text;
+
+  // 隨機切換文案和背景
+  const handleShuffle = () => {
+    if (layoutStyle === 'left') {
+      // IG 風格：切換 IG 專用文案
+      setCustomIGQuote(getRandomIGQuote());
+    } else {
+      // 置中風格：切換一般金句
+      setCustomQuote(getRandomQuote());
+    }
+    setCustomBg(getRandomBackground());
+  };
+
+  // 重置為今日預設
+  const handleResetToToday = () => {
+    setCustomQuote(null);
+    setCustomBg(null);
+    setCustomIGQuote(null);
+    setSelectedCustomBgIndex(null);
+  };
+
+  // ========== 背景上傳處理 ==========
+  const handleBgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const remainingSlots = 7 - customBackgrounds.length;
+    if (remainingSlots <= 0) {
+      alert('最多只能上傳 7 張自訂背景');
+      return;
+    }
+
+    setIsUploadingBg(true);
+    const filesToUpload = Array.from(files).slice(0, remainingSlots);
+    const newBackgrounds: CustomBackground[] = [];
+
+    for (const file of filesToUpload) {
+      if (!file.type.startsWith('image/')) continue;
+      if (file.size > 5 * 1024 * 1024) {
+        alert(`${file.name} 超過 5MB 限制`);
+        continue;
+      }
+
+      // 轉 base64（供 html2canvas 截圖）
+      const dataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+
+      newBackgrounds.push({
+        id: `custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        dataUrl,
+        uploadedAt: Date.now()
+      });
+    }
+
+    setCustomBackgrounds(prev => [...prev, ...newBackgrounds]);
+    setIsUploadingBg(false);
+    e.target.value = '';
+  };
+
+  // 刪除自訂背景
+  const handleDeleteBg = (index: number) => {
+    setCustomBackgrounds(prev => prev.filter((_, i) => i !== index));
+    if (selectedCustomBgIndex === index) {
+      setSelectedCustomBgIndex(null);
+    } else if (selectedCustomBgIndex !== null && selectedCustomBgIndex > index) {
+      setSelectedCustomBgIndex(prev => prev! - 1);
+    }
+  };
+
+  // 圖片代理 API URL（Cloud Functions）
+  const IMAGE_PROXY_URL = 'https://us-central1-grbt-f87fa.cloudfunctions.net/imageProxy';
+
+  // 檢查是否為有效的圖片 URL（Firebase Storage 或其他圖片來源）
+  const isValidImageUrl = (url: string | undefined): boolean => {
+    if (!url) return false;
+    return (
+      url.startsWith('https://') ||
+      url.startsWith('http://')
+    ) && (
+      url.includes('firebasestorage.googleapis.com') ||
+      url.includes('googleusercontent.com') ||
+      url.includes('storage.googleapis.com') ||
+      /\.(jpg|jpeg|png|gif|webp)/i.test(url)
+    );
+  };
+
+  // 載入頭貼並轉成 base64（透過代理 API 繞過 CORS）
+  useEffect(() => {
+    if (!isValidImageUrl(userPhotoURL)) {
+      console.log('[MarketDataCard] 無效的頭貼 URL，跳過載入');
+      setAvatarBase64(null);
+      setAvatarLoadError(true);
+      return;
+    }
+
+    setAvatarLoadError(false);
+    console.log('[MarketDataCard] 開始載入頭貼（透過代理）');
+
+    const loadAvatarAsBase64 = async () => {
+      try {
+        // 透過 Cloud Functions 代理取得圖片（繞過 CORS）
+        const proxyUrl = `${IMAGE_PROXY_URL}?url=${encodeURIComponent(userPhotoURL!)}`;
+        const response = await fetch(proxyUrl);
+
+        if (!response.ok) {
+          throw new Error(`代理回應錯誤: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const reader = new FileReader();
+
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          setAvatarBase64(base64);
+          console.log('[MarketDataCard] 頭貼 base64 轉換成功（透過代理）');
+        };
+
+        reader.onerror = () => {
+          console.error('[MarketDataCard] FileReader 錯誤');
+          setAvatarBase64(null);
+          setAvatarLoadError(true);
+        };
+
+        reader.readAsDataURL(blob);
+      } catch (error) {
+        console.error('[MarketDataCard] 載入頭貼失敗:', error);
+        setAvatarBase64(null);
+        setAvatarLoadError(true);
+      }
+    };
+
+    loadAvatarAsBase64();
+  }, [userPhotoURL]);
 
   // 載入使用者的累積分享天數
   useEffect(() => {
@@ -448,6 +671,7 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId }) => {
         scale: 2,
         backgroundColor: null,
         useCORS: true,
+        allowTaint: true,
       });
 
       const link = document.createElement('a');
@@ -475,6 +699,7 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId }) => {
         scale: 2,
         backgroundColor: null,
         useCORS: true,
+        allowTaint: true,
       });
 
       const blob = await new Promise<Blob>((resolve) => {
@@ -487,7 +712,7 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId }) => {
         await navigator.share({
           files: [file],
           title: '每日金句',
-          text: `「${todayQuote.text}」— ${todayQuote.author || 'Ultra Advisor'}`,
+          text: `「${displayQuoteText}」— Ultra Advisor`,
         });
         // 記錄分享
         await recordShare();
@@ -559,20 +784,25 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId }) => {
 
         {/* 金句預覽卡片 */}
         <div
-          className={`relative rounded-xl p-4 bg-gradient-to-br ${todayBg.gradient}
-                     border border-white/10 cursor-pointer hover:scale-[1.02] transition-transform`}
+          className="relative rounded-xl p-4 overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform border border-white/10"
           onClick={() => setShowStoryPreview(true)}
         >
-          <div className="text-center">
+          {/* 風景背景（灰階） */}
+          <div
+            className="absolute inset-0 bg-cover bg-center grayscale"
+            style={{ backgroundImage: `url(${displayBg.imageUrl})` }}
+          />
+          {/* 暗化遮罩 */}
+          <div className="absolute inset-0 bg-black/60" />
+
+          {/* 內容 */}
+          <div className="relative z-10 text-center">
             <Quote size={20} className="text-white/30 mx-auto mb-2" />
-            <p className="text-white font-bold text-sm leading-relaxed mb-2">
-              「{todayQuote.text}」
+            <p className={`text-white font-bold text-sm leading-relaxed mb-2 line-clamp-3 ${FONT_STYLES[fontStyle].className}`}>
+              {displayQuoteText}
             </p>
-            {todayQuote.author && (
-              <p className="text-white/60 text-xs">— {todayQuote.author}</p>
-            )}
           </div>
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
+          <div className="relative z-10 flex items-center justify-between mt-3 pt-3 border-t border-white/20">
             <div className="flex items-center gap-1 text-white/50 text-[10px]">
               <Calendar size={10} />
               {todayDate}
@@ -585,6 +815,28 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId }) => {
 
         {/* 快速分享按鈕 */}
         <div className="flex gap-2 mt-3">
+          {/* 隨機換一組按鈕 */}
+          <button
+            onClick={handleShuffle}
+            className="flex items-center justify-center gap-1 py-2 px-3
+                     bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold
+                     rounded-lg transition-all"
+            title="隨機換一組文案和背景"
+          >
+            <RefreshCw size={14} />
+          </button>
+          {/* 如果有自訂，顯示重置按鈕 */}
+          {(customQuote || customBg) && (
+            <button
+              onClick={handleResetToToday}
+              className="flex items-center justify-center gap-1 py-2 px-2
+                       bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold
+                       rounded-lg transition-all"
+              title="重置為今日預設"
+            >
+              <Calendar size={14} />
+            </button>
+          )}
           <button
             onClick={handleDownload}
             disabled={isGenerating}
@@ -619,69 +871,207 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId }) => {
       {/* ===== 限時動態預覽彈窗 ===== */}
       {showStoryPreview && (
         <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4">
+          {/* 關閉按鈕 - 固定在畫面右上角 */}
+          <button
+            onClick={() => setShowStoryPreview(false)}
+            className="absolute top-4 right-4 z-[110] w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full
+                       flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+          >
+            <X size={24} />
+          </button>
+
           <div className="relative max-w-sm w-full">
-            {/* 關閉按鈕 */}
-            <button
-              onClick={() => setShowStoryPreview(false)}
-              className="absolute -top-12 right-0 text-white/70 hover:text-white transition-colors"
-            >
-              <X size={28} />
-            </button>
 
             {/* 限時動態預覽（這個會被截圖） */}
             <div
               ref={storyRef}
-              className={`aspect-[9/16] rounded-3xl overflow-hidden bg-gradient-to-br ${todayBg.gradient}
+              className={`aspect-[9/16] rounded-3xl overflow-hidden bg-gradient-to-br ${displayBg.fallbackGradient}
                          flex flex-col items-center justify-center p-8 relative`}
             >
-              {/* 裝飾元素 */}
-              <div className="absolute inset-0 opacity-10">
-                <div className="absolute top-10 left-10 w-32 h-32 bg-white rounded-full blur-3xl" />
-                <div className="absolute bottom-20 right-10 w-40 h-40 bg-white rounded-full blur-3xl" />
-              </div>
+              {/* 風景背景（灰階） */}
+              <div
+                className="absolute inset-0 bg-cover bg-center grayscale"
+                style={{ backgroundImage: `url(${displayBg.imageUrl})` }}
+              />
+              {/* 暗化遮罩 */}
+              <div className="absolute inset-0 bg-black/50" />
 
-              {/* 淺淺的 Logo 浮水印（置中偏上） */}
-              <div className="absolute top-12 left-0 right-0 flex justify-center">
-                <div className="flex items-center gap-2 opacity-20">
-                  <div className="w-10 h-10 bg-white/30 rounded-xl flex items-center justify-center">
-                    <Sparkles size={20} className="text-white" />
+              {/* ========== 置中排版 ========== */}
+              {layoutStyle === 'center' && (
+                <>
+                  {/* 淺淺的 Logo 浮水印（置中偏上） */}
+                  <div className="absolute top-12 left-0 right-0 flex justify-center z-10">
+                    <div className="flex items-center gap-2 opacity-30">
+                      <img
+                        src="/logo.png"
+                        alt="Ultra Advisor"
+                        className="w-10 h-10 object-contain"
+                      />
+                      <span className="text-white text-sm font-black tracking-wide">Ultra Advisor</span>
+                    </div>
                   </div>
-                  <span className="text-white text-sm font-black tracking-wide">Ultra Advisor</span>
-                </div>
-              </div>
 
-              {/* 累積天數徽章（永遠顯示） */}
-              <div className="absolute top-6 right-6 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
-                <span className="text-white text-xs font-bold">
-                  Day {totalShareDays + (todayShared ? 0 : 1)}
-                </span>
-              </div>
+                  {/* 累積天數徽章 */}
+                  <div className="absolute top-6 right-6 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full z-10">
+                    <span className="text-white text-xs font-bold">
+                      Day {totalShareDays + (todayShared ? 0 : 1)}
+                    </span>
+                  </div>
 
-              {/* 金句內容 */}
-              <div className="relative z-10 text-center max-w-[280px]">
-                <Quote size={40} className="text-white/20 mx-auto mb-4" />
-                <p className="text-white font-black text-xl leading-relaxed mb-4">
-                  「{todayQuote.text}」
-                </p>
-                {todayQuote.author && (
-                  <p className="text-white/70 text-sm font-medium">— {todayQuote.author}</p>
-                )}
-              </div>
+                  {/* 金句內容 - 置中 */}
+                  <div className="relative z-10 text-center max-w-[280px] px-4">
+                    <Quote size={36} className="text-white/30 mx-auto mb-4" />
+                    <p className={`text-white font-black text-lg leading-relaxed drop-shadow-lg ${FONT_STYLES[fontStyle].className}`}>
+                      {displayQuoteText}
+                    </p>
+                  </div>
 
-              {/* 底部資訊 */}
-              <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between">
-                <div className="flex items-center gap-1 text-white/50 text-xs">
-                  <Calendar size={12} />
-                  {todayDate}
-                </div>
-                <div className="text-white/50 text-xs">
-                  ultra-advisor.tw
-                </div>
-              </div>
+                  {/* 底部資訊 - 顧問資訊 + QR Code */}
+                  <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between z-10">
+                    {/* 左側：顧問頭貼 + 名字 + 日期 */}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-blue-500 flex-shrink-0">
+                        {avatarBase64 ? (
+                          <img
+                            src={avatarBase64}
+                            alt={userDisplayName || '顧問'}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : isValidImageUrl(userPhotoURL) && !avatarLoadError ? (
+                          <img
+                            src={userPhotoURL}
+                            alt={userDisplayName || '顧問'}
+                            className="w-full h-full object-cover"
+                            crossOrigin="anonymous"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="text-white font-bold text-lg">
+                              {(userDisplayName || '顧')[0]}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-white font-bold text-sm">
+                          {userDisplayName || '財務顧問'}
+                        </span>
+                        <span className="text-white/50 text-[10px] flex items-center gap-1">
+                          <Calendar size={10} />
+                          {todayDate}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 右側：QR Code */}
+                    <div className="flex flex-col items-center">
+                      <div className="bg-white/80 backdrop-blur-sm p-1 rounded-lg">
+                        <img
+                          src={userLineQrCode || `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://ultra-advisor.tw&bgcolor=ffffff&color=000000&margin=0`}
+                          alt="QR Code"
+                          className="w-11 h-11 rounded"
+                          crossOrigin="anonymous"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* ========== IG 風格左對齊排版 ========== */}
+              {layoutStyle === 'left' && (
+                <>
+                  {/* 右側直排品牌文字 */}
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10">
+                    <div
+                      className="text-white/25 text-[10px] font-black tracking-[0.2em]"
+                      style={{ writingMode: 'vertical-rl' }}
+                    >
+                      ULTRA ADVISOR
+                    </div>
+                  </div>
+
+                  {/* 累積天數徽章 */}
+                  <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full z-10">
+                    <span className="text-white text-[10px] font-bold">
+                      Day {totalShareDays + (todayShared ? 0 : 1)}
+                    </span>
+                  </div>
+
+                  {/* 左側內容區 */}
+                  <div className="relative z-10 flex flex-col h-full justify-center pr-10 pl-4 py-16">
+                    {/* 黃色大標題 */}
+                    <h2 className={`text-amber-400 font-black text-xl leading-tight mb-5 drop-shadow-lg ${FONT_STYLES[fontStyle].className}`}>
+                      「{displayIGQuote.title}」
+                    </h2>
+
+                    {/* 白色內文（左側白線裝飾） */}
+                    <div className="border-l-2 border-white/40 pl-4 space-y-2">
+                      {displayIGQuote.lines.map((line, i) => (
+                        <p key={i} className={`text-white text-sm leading-relaxed drop-shadow-md ${FONT_STYLES[fontStyle].className}`}>
+                          {line}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 左下角網址 */}
+                  <div className="absolute bottom-5 left-4 z-10">
+                    <span className="text-white/50 text-[10px] font-medium">
+                      ultra-advisor.tw
+                    </span>
+                  </div>
+
+                  {/* 右下角 QR Code */}
+                  <div className="absolute bottom-5 right-4 z-10">
+                    <div className="bg-white/80 backdrop-blur-sm p-1 rounded-lg">
+                      <img
+                        src={userLineQrCode || `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://ultra-advisor.tw&bgcolor=ffffff&color=000000&margin=0`}
+                        alt="QR Code"
+                        className="w-10 h-10 rounded"
+                        crossOrigin="anonymous"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* 隨機切換 & 進階設定按鈕 */}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={handleShuffle}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5
+                         bg-amber-500 text-white font-bold rounded-xl
+                         hover:bg-amber-400 transition-all"
+              >
+                <RefreshCw size={16} />
+                隨機換一組
+              </button>
+              <button
+                onClick={() => setShowAdvancedSettings(true)}
+                className="flex items-center justify-center gap-2 py-2.5 px-4
+                         bg-slate-700 text-white font-bold rounded-xl
+                         hover:bg-slate-600 transition-all"
+              >
+                <Settings size={16} />
+                進階設定
+              </button>
+              {(customQuote || customBg || selectedCustomBgIndex !== null) && (
+                <button
+                  onClick={handleResetToToday}
+                  className="flex items-center justify-center gap-2 py-2.5 px-3
+                           bg-slate-800 text-white font-bold rounded-xl
+                           hover:bg-slate-700 transition-all"
+                  title="重置為今日預設"
+                >
+                  <Calendar size={16} />
+                </button>
+              )}
             </div>
 
             {/* 分享按鈕 */}
-            <div className="flex gap-3 mt-4">
+            <div className="flex gap-3 mt-3">
               <button
                 onClick={handleDownload}
                 disabled={isGenerating}
@@ -716,6 +1106,270 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId }) => {
             <p className="text-center text-white/50 text-xs mt-3">
               下載後可分享到 LINE、IG、FB 限時動態
             </p>
+
+            {/* ========== 進階設定底部抽屜 ========== */}
+            {showAdvancedSettings && (
+              <div className="fixed inset-0 z-[120] flex items-end justify-center">
+                {/* 背景遮罩 */}
+                <div
+                  className="absolute inset-0 bg-black/60"
+                  onClick={() => setShowAdvancedSettings(false)}
+                />
+                {/* 設定面板 */}
+                <div className="relative w-full max-w-md bg-slate-900 border-t border-slate-700
+                                rounded-t-3xl p-6 max-h-[75vh] overflow-y-auto animate-slide-up">
+                  <div className="flex justify-between items-center mb-6">
+                    <h4 className="text-white font-bold text-lg flex items-center gap-2">
+                      <Settings size={18} /> 進階設定
+                    </h4>
+                    <button
+                      onClick={() => setShowAdvancedSettings(false)}
+                      className="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center"
+                    >
+                      <X size={18} className="text-slate-400" />
+                    </button>
+                  </div>
+
+                  {/* 排版風格 */}
+                  <div className="mb-6">
+                    <label className="text-slate-400 text-xs font-bold mb-3 flex items-center gap-2">
+                      <Layout size={14} /> 排版風格
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setLayoutStyle('center')}
+                        className={`py-3 rounded-xl text-sm font-bold transition-all
+                                   ${layoutStyle === 'center'
+                                     ? 'bg-purple-600 text-white'
+                                     : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                      >
+                        置中排版
+                      </button>
+                      <button
+                        onClick={() => setLayoutStyle('left')}
+                        className={`py-3 rounded-xl text-sm font-bold transition-all
+                                   ${layoutStyle === 'left'
+                                     ? 'bg-purple-600 text-white'
+                                     : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                      >
+                        IG 風格
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 文案設定 - 根據排版風格顯示不同編輯區 */}
+                  <div className="mb-6">
+                    <label className="text-slate-400 text-xs font-bold mb-3 flex items-center gap-2">
+                      <Type size={14} /> 文案設定
+                    </label>
+
+                    {/* 置中排版：單一文案框 */}
+                    {layoutStyle === 'center' && (
+                      <>
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          <button
+                            onClick={() => setUseCustomText(false)}
+                            className={`py-2.5 rounded-xl text-xs font-bold transition-all
+                                       ${!useCustomText
+                                         ? 'bg-purple-600 text-white'
+                                         : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                          >
+                            使用金句庫
+                          </button>
+                          <button
+                            onClick={() => setUseCustomText(true)}
+                            className={`py-2.5 rounded-xl text-xs font-bold transition-all
+                                       ${useCustomText
+                                         ? 'bg-purple-600 text-white'
+                                         : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                          >
+                            自訂文案
+                          </button>
+                        </div>
+                        {useCustomText && (
+                          <textarea
+                            value={customText}
+                            onChange={(e) => setCustomText(e.target.value)}
+                            placeholder="輸入你的金句..."
+                            className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3
+                                       text-white text-sm resize-none h-24 focus:outline-none focus:border-purple-500"
+                            maxLength={120}
+                          />
+                        )}
+                      </>
+                    )}
+
+                    {/* IG 風格：標題 + 分段內文 */}
+                    {layoutStyle === 'left' && (
+                      <>
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          <button
+                            onClick={() => setUseCustomIGText(false)}
+                            className={`py-2.5 rounded-xl text-xs font-bold transition-all
+                                       ${!useCustomIGText
+                                         ? 'bg-purple-600 text-white'
+                                         : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                          >
+                            使用文案庫
+                          </button>
+                          <button
+                            onClick={() => setUseCustomIGText(true)}
+                            className={`py-2.5 rounded-xl text-xs font-bold transition-all
+                                       ${useCustomIGText
+                                         ? 'bg-purple-600 text-white'
+                                         : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                          >
+                            自訂文案
+                          </button>
+                        </div>
+                        {useCustomIGText && (
+                          <div className="space-y-3">
+                            <div>
+                              <label className="text-slate-500 text-[10px] mb-1 block">黃色標題</label>
+                              <input
+                                type="text"
+                                value={customIGTitle}
+                                onChange={(e) => setCustomIGTitle(e.target.value)}
+                                placeholder="例：你的人生，其實一直在用最低標準過日子"
+                                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3
+                                           text-amber-400 text-sm focus:outline-none focus:border-purple-500"
+                                maxLength={40}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-slate-500 text-[10px] mb-1 block">白色內文（每行一段）</label>
+                              <textarea
+                                value={customIGLines}
+                                onChange={(e) => setCustomIGLines(e.target.value)}
+                                placeholder={"你有沒有發現\n你的人生\n好像一直都在「剛剛好就好」\n不求更好\n只求不要出事"}
+                                className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3
+                                           text-white text-sm resize-none h-28 focus:outline-none focus:border-purple-500"
+                              />
+                            </div>
+                          </div>
+                        )}
+                        {!useCustomIGText && (
+                          <div className="bg-slate-800/50 rounded-xl p-3 text-xs text-slate-400">
+                            <div className="text-amber-400 font-bold mb-1">「{displayIGQuote.title}」</div>
+                            {displayIGQuote.lines.slice(0, 3).map((line, i) => (
+                              <div key={i} className="text-slate-300">{line}</div>
+                            ))}
+                            {displayIGQuote.lines.length > 3 && <div className="text-slate-500">...</div>}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {/* 字體選擇 */}
+                  <div className="mb-6">
+                    <label className="text-slate-400 text-xs font-bold mb-3 flex items-center gap-2">
+                      <Type size={14} /> 字體風格
+                    </label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {(Object.entries(FONT_STYLES) as [FontStyle, typeof FONT_STYLES[FontStyle]][]).map(([key, style]) => (
+                        <button
+                          key={key}
+                          onClick={() => setFontStyle(key)}
+                          className={`py-2.5 rounded-xl text-xs font-bold transition-all
+                                     ${fontStyle === key
+                                       ? 'bg-purple-600 text-white'
+                                       : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}
+                                     ${style.className}`}
+                        >
+                          {style.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 自訂背景 */}
+                  <div>
+                    <label className="text-slate-400 text-xs font-bold mb-3 flex items-center gap-2">
+                      <ImageIcon size={14} /> 自訂背景 ({customBackgrounds.length}/7)
+                    </label>
+
+                    {/* 上傳按鈕 */}
+                    <button
+                      onClick={() => bgInputRef.current?.click()}
+                      disabled={customBackgrounds.length >= 7 || isUploadingBg}
+                      className="w-full border-2 border-dashed border-slate-600 rounded-xl p-4
+                                 text-slate-400 hover:border-purple-500 hover:text-purple-400
+                                 transition-all mb-3 disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isUploadingBg ? (
+                        <Loader2 className="animate-spin" size={18} />
+                      ) : (
+                        <Plus size={18} />
+                      )}
+                      上傳照片（最多 7 張）
+                    </button>
+                    <input
+                      ref={bgInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleBgUpload}
+                      className="hidden"
+                    />
+
+                    {/* 背景預覽格 */}
+                    {customBackgrounds.length > 0 && (
+                      <div className="grid grid-cols-4 gap-2 mb-3">
+                        {customBackgrounds.map((bg, index) => (
+                          <div
+                            key={bg.id}
+                            className={`relative aspect-[9/16] rounded-lg overflow-hidden cursor-pointer
+                                       border-2 transition-all ${selectedCustomBgIndex === index
+                                         ? 'border-purple-500 scale-105'
+                                         : 'border-transparent hover:border-slate-500'}`}
+                            onClick={() => setSelectedCustomBgIndex(index)}
+                          >
+                            <img
+                              src={bg.dataUrl}
+                              className="w-full h-full object-cover grayscale"
+                              alt={`背景 ${index + 1}`}
+                            />
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteBg(index); }}
+                              className="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full
+                                         flex items-center justify-center hover:bg-red-400"
+                            >
+                              <Trash2 size={10} className="text-white" />
+                            </button>
+                            {selectedCustomBgIndex === index && (
+                              <div className="absolute inset-0 bg-purple-500/30 flex items-center justify-center">
+                                <Check size={16} className="text-white" />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 使用預設背景按鈕 */}
+                    {selectedCustomBgIndex !== null && (
+                      <button
+                        onClick={() => setSelectedCustomBgIndex(null)}
+                        className="w-full py-2.5 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold
+                                   hover:bg-slate-700 transition-all"
+                      >
+                        改用預設背景庫
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 完成按鈕 */}
+                  <button
+                    onClick={() => setShowAdvancedSettings(false)}
+                    className="w-full mt-6 py-3 bg-purple-600 text-white font-bold rounded-xl
+                               hover:bg-purple-500 transition-all"
+                  >
+                    完成設定
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -724,265 +1378,1333 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId }) => {
 };
 
 // ==========================================
-// 🧮 快速試算工具
+// 🧮 傲創計算機（簡化版）
 // ==========================================
+type CalcMode = 'mortgage' | 'credit' | 'smart' | 'irr';
+
 const QuickCalculator = () => {
-  const [mode, setMode] = useState<'loan' | 'savings' | 'irr'>('loan');
-  
-  // 貸款計算
-  const [loanAmount, setLoanAmount] = useState(10000000);
-  const [loanRate, setLoanRate] = useState(2.2);
-  const [loanYears, setLoanYears] = useState(30);
-  
-  // 複利計算
-  const [initialCapital, setInitialCapital] = useState(1000000);
-  const [monthlyInvest, setMonthlyInvest] = useState(10000);
-  const [expectedRate, setExpectedRate] = useState(6);
-  const [investYears, setInvestYears] = useState(20);
-  
-  // IRR 計算
+  const [mode, setMode] = useState<CalcMode>('mortgage');
+
+  // ========== 房貸試算 ==========
+  const [mortgageAmount, setMortgageAmount] = useState(10000000);
+  const [mortgageRate, setMortgageRate] = useState(2.2);
+  const [mortgageYears, setMortgageYears] = useState(30);
+  const [mortgageMethod, setMortgageMethod] = useState<'equal_payment' | 'interest_only'>('equal_payment');
+  // 房貸圖表投資對比設定
+  const [mortgageInvestRate, setMortgageInvestRate] = useState<number | null>(null); // null = 不顯示
+  const [mortgageInvestMode, setMortgageInvestMode] = useState<'compound' | 'dividend'>('compound'); // 複利 or 配息
+  const [showMortgageInvestSettings, setShowMortgageInvestSettings] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+
+  // ========== 智能計算機歷史紀錄 ==========
+  const [calcHistory, setCalcHistory] = useState<{ expression: string; result: string }[]>([]);
+
+  // ========== 信貸試算 ==========
+  const [creditAmount, setCreditAmount] = useState(500000);
+  const [creditRate, setCreditRate] = useState(5.5);
+  const [creditYears, setCreditYears] = useState(5);
+  // 信貸圖表投資對比設定
+  const [creditInvestRate, setCreditInvestRate] = useState<number | null>(null); // null = 不顯示
+  const [creditInvestMode, setCreditInvestMode] = useState<'compound' | 'dividend'>('compound');
+  const [showCreditInvestSettings, setShowCreditInvestSettings] = useState(false);
+  const [showCreditScheduleModal, setShowCreditScheduleModal] = useState(false);
+
+  // ========== 智能計算機 ==========
+  const [calcDisplay, setCalcDisplay] = useState('0');
+  const [calcExpression, setCalcExpression] = useState('');
+  const [calcLastResult, setCalcLastResult] = useState<number | null>(null);
+
+  // ========== IRR 計算 ==========
   const [totalPremium, setTotalPremium] = useState(1000000);
   const [maturityValue, setMaturityValue] = useState(1350000);
   const [irrYears, setIrrYears] = useState(10);
 
-  const getLoanResult = () => {
-    const i = loanRate / 100 / 12;
-    const n = loanYears * 12;
-    if (i === 0) return { monthly: loanAmount / n, totalInterest: 0 };
-    const m = (loanAmount * i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
-    return { monthly: Math.round(m), totalInterest: Math.round(m * n - loanAmount) };
+  // 房貸計算 - 本息均攤
+  const getMortgageEqualPayment = () => {
+    const i = mortgageRate / 100 / 12;
+    const n = mortgageYears * 12;
+    if (i === 0) return { monthly: mortgageAmount / n, totalInterest: 0, totalPayment: mortgageAmount };
+    const m = (mortgageAmount * i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
+    const totalPayment = m * n;
+    return {
+      monthly: Math.round(m),
+      totalInterest: Math.round(totalPayment - mortgageAmount),
+      totalPayment: Math.round(totalPayment)
+    };
   };
 
-  const getSavingsResult = () => {
-    const r = expectedRate / 100 / 12;
-    const n = investYears * 12;
-    const fvInitial = initialCapital * Math.pow(1 + r, n);
-    const fvMonthly = r === 0 ? monthlyInvest * n : monthlyInvest * ((Math.pow(1 + r, n) - 1) / r);
-    const total = fvInitial + fvMonthly;
-    return { total: Math.round(total), profit: Math.round(total - initialCapital - monthlyInvest * n) };
+  // 房貸計算 - 理財型房貸（只繳息，到期還本）
+  const getMortgageInterestOnly = () => {
+    const i = mortgageRate / 100 / 12;
+    const n = mortgageYears * 12;
+    // 每月只繳利息
+    const monthlyInterest = mortgageAmount * i;
+    // 總利息
+    const totalInterest = monthlyInterest * n;
+    return {
+      monthly: Math.round(monthlyInterest),
+      totalInterest: Math.round(totalInterest),
+      totalPayment: Math.round(mortgageAmount + totalInterest),
+      principalDue: mortgageAmount // 到期須還本金
+    };
   };
 
+  // 信貸計算（本息均攤）
+  const getCreditResult = () => {
+    const i = creditRate / 100 / 12;
+    const n = creditYears * 12;
+    if (i === 0) return { monthly: creditAmount / n, totalInterest: 0, totalPayment: creditAmount, apr: 0 };
+    const m = (creditAmount * i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
+    const totalPayment = m * n;
+    // 計算實質年利率 APR（考慮複利）
+    const apr = Math.pow(1 + i, 12) - 1;
+    return {
+      monthly: Math.round(m),
+      totalInterest: Math.round(totalPayment - creditAmount),
+      totalPayment: Math.round(totalPayment),
+      apr: (apr * 100).toFixed(2)
+    };
+  };
+
+  // IRR 計算
   const getIrrResult = () => {
     if (totalPremium <= 0 || maturityValue <= 0 || irrYears <= 0) return "0.00";
     return ((Math.pow(maturityValue / totalPremium, 1 / irrYears) - 1) * 100).toFixed(2);
   };
 
+  // ========== 智能計算機邏輯 ==========
+  const handleCalcNumber = (num: string) => {
+    setCalcDisplay(prev => {
+      if (prev === '0' || calcLastResult !== null) {
+        setCalcLastResult(null);
+        return num;
+      }
+      return prev + num;
+    });
+  };
+
+  const handleCalcOperator = (op: string) => {
+    setCalcExpression(prev => {
+      const newExpr = prev + calcDisplay + ' ' + op + ' ';
+      setCalcDisplay('0');
+      return newExpr;
+    });
+    setCalcLastResult(null);
+  };
+
+  const handleCalcEquals = () => {
+    try {
+      const fullExpr = calcExpression + calcDisplay;
+      // 安全計算
+      const sanitized = fullExpr.replace(/[^0-9+\-*/.() ]/g, '').replace(/\s+/g, '');
+      const result = new Function(`return (${sanitized})`)();
+      const resultStr = String(Math.round(result * 100) / 100);
+      // 加入歷史紀錄（最多保留 10 筆）
+      setCalcHistory(prev => {
+        const newHistory = [{ expression: fullExpr, result: resultStr }, ...prev];
+        return newHistory.slice(0, 10);
+      });
+      setCalcDisplay(resultStr);
+      setCalcExpression('');
+      setCalcLastResult(result);
+    } catch {
+      setCalcDisplay('Error');
+    }
+  };
+
+  const handleCalcClear = () => {
+    setCalcDisplay('0');
+    setCalcExpression('');
+    setCalcLastResult(null);
+  };
+
+  const handleCalcPercent = () => {
+    const current = parseFloat(calcDisplay);
+    if (!isNaN(current)) {
+      setCalcDisplay(String(current / 100));
+    }
+  };
+
+  const formatMoney = (val: number) => val.toLocaleString('zh-TW');
+
   return (
     <div className="dark:bg-slate-900/50 bg-white border dark:border-slate-800 border-slate-200 rounded-2xl p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Calculator size={18} className="text-amber-400" />
-        <h3 className="text-sm font-black text-white uppercase tracking-wider">快速試算</h3>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Calculator size={18} className="text-amber-400" />
+          <h3 className="text-sm font-black dark:text-white text-slate-900 uppercase tracking-wider">傲創計算機</h3>
+        </div>
+        <a
+          href="/calculator"
+          onClick={() => {
+            // 儲存當前計算數據到 localStorage，讓完整版可以讀取
+            localStorage.setItem('ua_calculator_data', JSON.stringify({
+              mode,
+              mortgage: { amount: mortgageAmount, rate: mortgageRate, years: mortgageYears, method: mortgageMethod },
+              credit: { amount: creditAmount, rate: creditRate, years: creditYears },
+              irr: { totalPremium, maturityValue, years: irrYears }
+            }));
+          }}
+          className="text-[10px] text-blue-400 hover:text-blue-300 font-bold"
+        >
+          完整版 →
+        </a>
       </div>
 
-      {/* Mode Tabs */}
-      <div className="flex bg-slate-950 p-1 rounded-xl mb-4">
+      {/* Mode Tabs - 兩排 */}
+      <div className="grid grid-cols-4 gap-1 bg-slate-950 p-1 rounded-xl mb-4">
         {[
-          { id: 'loan' as const, label: '貸款月付', icon: Home },
-          { id: 'savings' as const, label: '複利增值', icon: TrendingUp },
-          { id: 'irr' as const, label: 'IRR 年化', icon: Coins },
+          { id: 'mortgage' as CalcMode, label: '房貸', icon: Home },
+          { id: 'credit' as CalcMode, label: '信貸', icon: Coins },
+          { id: 'smart' as CalcMode, label: '計算機', icon: Calculator },
+          { id: 'irr' as CalcMode, label: 'IRR', icon: TrendingUp },
         ].map(m => (
           <button
             key={m.id}
             onClick={() => setMode(m.id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg 
-                       text-xs font-bold transition-all ${
-              mode === m.id 
-                ? 'bg-amber-600 text-white' 
+            className={`flex items-center justify-center gap-1 py-2 rounded-lg
+                       text-[11px] font-bold transition-all ${
+              mode === m.id
+                ? 'bg-amber-600 text-white'
                 : 'text-slate-500 hover:text-slate-300'
             }`}
           >
-            <m.icon size={14} />
-            {m.label}
+            <m.icon size={12} />
+            <span className="hidden sm:inline">{m.label}</span>
           </button>
         ))}
       </div>
 
-      {/* Calculator Content */}
-      <div className="space-y-4">
-        {mode === 'loan' && (
-          <>
-            <div>
-              <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">
-                貸款金額
-              </label>
+      {/* ========== 房貸試算 ========== */}
+      {mode === 'mortgage' && (
+        <div className="space-y-3">
+          {/* 還款方式切換 */}
+          <div className="flex bg-slate-800 p-0.5 rounded-lg">
+            <button
+              onClick={() => setMortgageMethod('equal_payment')}
+              className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${
+                mortgageMethod === 'equal_payment'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              本息均攤
+            </button>
+            <button
+              onClick={() => setMortgageMethod('interest_only')}
+              className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${
+                mortgageMethod === 'interest_only'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              理財型房貸
+            </button>
+          </div>
+
+          <div>
+            <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">貸款金額</label>
+            <div className="relative">
               <input
                 type="number"
-                inputMode="decimal"
-                value={loanAmount}
-                onChange={e => setLoanAmount(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
-                         text-white font-bold text-sm focus:border-amber-500 outline-none"
+                inputMode="numeric"
+                min={1}
+                max={100000}
+                step={1}
+                value={Math.round(mortgageAmount / 10000)}
+                onChange={e => {
+                  const val = Math.round(Number(e.target.value));
+                  setMortgageAmount(Math.min(Math.max(val, 0), 100000) * 10000);
+                }}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 pr-10
+                         text-white font-bold text-sm focus:border-blue-500 outline-none"
               />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">萬</span>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">
-                  年利率 %
-                </label>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.1"
-                  value={loanRate}
-                  onChange={e => setLoanRate(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
-                           text-white font-bold text-sm outline-none focus:border-amber-500"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">
-                  年期
-                </label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={loanYears}
-                  onChange={e => setLoanYears(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
-                           text-white font-bold text-sm outline-none focus:border-amber-500"
-                />
-              </div>
+            {/* 常用金額按鈕 */}
+            <div className="flex gap-1 mt-1.5">
+              {[500, 1000, 2000].map(val => (
+                <button
+                  key={val}
+                  onClick={() => setMortgageAmount(val * 10000)}
+                  className={`flex-1 py-1 text-[10px] font-bold rounded-lg transition-all ${
+                    mortgageAmount === val * 10000
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  {val}萬
+                </button>
+              ))}
             </div>
-            <div className="bg-blue-900/20 border border-blue-500/20 rounded-xl p-4 text-center">
-              <div className="text-slate-400 text-xs mb-1">預估月付金</div>
-              <div className="text-3xl font-black text-blue-400">
-                {getLoanResult().monthly.toLocaleString()}
-                <span className="text-sm ml-1">TWD</span>
-              </div>
-              <div className="text-slate-500 text-xs mt-2">
-                累積利息：{getLoanResult().totalInterest.toLocaleString()}
-              </div>
-            </div>
-          </>
-        )}
-
-        {mode === 'savings' && (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">
-                  單筆本金
-                </label>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={initialCapital}
-                  onChange={e => setInitialCapital(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
-                           text-white font-bold text-sm outline-none focus:border-amber-500"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">
-                  每月投入
-                </label>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={monthlyInvest}
-                  onChange={e => setMonthlyInvest(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
-                           text-white font-bold text-sm outline-none focus:border-amber-500"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">
-                  年報酬 %
-                </label>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.1"
-                  value={expectedRate}
-                  onChange={e => setExpectedRate(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
-                           text-white font-bold text-sm outline-none focus:border-amber-500"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">
-                  年期
-                </label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={investYears}
-                  onChange={e => setInvestYears(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
-                           text-white font-bold text-sm outline-none focus:border-amber-500"
-                />
-              </div>
-            </div>
-            <div className="bg-emerald-900/20 border border-emerald-500/20 rounded-xl p-4 text-center">
-              <div className="text-slate-400 text-xs mb-1">滿期總額</div>
-              <div className="text-3xl font-black text-emerald-400">
-                {getSavingsResult().total.toLocaleString()}
-                <span className="text-sm ml-1">TWD</span>
-              </div>
-              <div className="text-emerald-400 text-xs mt-2">
-                淨回報：+{getSavingsResult().profit.toLocaleString()}
-              </div>
-            </div>
-          </>
-        )}
-
-        {mode === 'irr' && (
-          <>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">
-                累積保費
-              </label>
+              <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">年利率</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.1"
+                  min={0.1}
+                  max={30}
+                  value={mortgageRate}
+                  onChange={e => {
+                    const val = Number(e.target.value);
+                    setMortgageRate(Math.min(Math.max(val, 0), 30));
+                  }}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 pr-8
+                           text-white font-bold text-sm outline-none focus:border-blue-500"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">%</span>
+              </div>
+              {/* 常用利率按鈕 */}
+              <div className="flex gap-1 mt-1.5">
+                {[2.5, 3.0, 3.5].map(val => (
+                  <button
+                    key={val}
+                    onClick={() => setMortgageRate(val)}
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-lg transition-all ${
+                      mortgageRate === val
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                    }`}
+                  >
+                    {val}%
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">年期</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  step={1}
+                  min={1}
+                  max={40}
+                  value={Math.round(mortgageYears)}
+                  onChange={e => {
+                    const val = Math.round(Number(e.target.value));
+                    setMortgageYears(Math.min(Math.max(val, 1), 40));
+                  }}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 pr-8
+                           text-white font-bold text-sm outline-none focus:border-blue-500"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">年</span>
+              </div>
+              {/* 常用年期按鈕 */}
+              <div className="flex gap-1 mt-1.5">
+                {[20, 25, 30].map(val => (
+                  <button
+                    key={val}
+                    onClick={() => setMortgageYears(val)}
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-lg transition-all ${
+                      mortgageYears === val
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                    }`}
+                  >
+                    {val}年
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 結果顯示 */}
+          {mortgageMethod === 'equal_payment' ? (
+            <div
+              onClick={() => setShowScheduleModal(true)}
+              className="bg-blue-900/20 border border-blue-500/20 rounded-xl p-4 text-center cursor-pointer hover:bg-blue-900/30 transition-all"
+            >
+              <div className="text-slate-400 text-[10px] mb-1">每月固定月付金 <span className="text-blue-400">(點擊查看明細)</span></div>
+              <div className="text-3xl font-black text-blue-400">
+                {formatMoney(getMortgageEqualPayment().monthly)}
+                <span className="text-xs ml-1">元</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-blue-500/20">
+                <div>
+                  <div className="text-[10px] text-slate-500">總利息</div>
+                  <div className="text-sm font-bold text-slate-300">{formatMoney(getMortgageEqualPayment().totalInterest)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-500">總還款</div>
+                  <div className="text-sm font-bold text-slate-300">{formatMoney(getMortgageEqualPayment().totalPayment)}</div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              onClick={() => setShowScheduleModal(true)}
+              className="bg-purple-900/20 border border-purple-500/20 rounded-xl p-4 text-center cursor-pointer hover:bg-purple-900/30 transition-all"
+            >
+              <div className="text-slate-400 text-[10px] mb-1">每月繳息（本金到期歸還）<span className="text-purple-400">(點擊查看明細)</span></div>
+              <div className="text-2xl font-black text-purple-400">
+                {formatMoney(getMortgageInterestOnly().monthly)}
+                <span className="text-xs ml-1">元</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-purple-500/20">
+                <div>
+                  <div className="text-[10px] text-slate-500">到期還本</div>
+                  <div className="text-xs font-bold text-amber-400">{formatMoney(getMortgageInterestOnly().principalDue)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-500">總利息</div>
+                  <div className="text-xs font-bold text-slate-300">{formatMoney(getMortgageInterestOnly().totalInterest)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-500">總還款</div>
+                  <div className="text-xs font-bold text-slate-300">{formatMoney(getMortgageInterestOnly().totalPayment)}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========== 信貸試算 ========== */}
+      {mode === 'credit' && (
+        <div className="space-y-3">
+          <div>
+            <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">貸款金額</label>
+            <div className="relative">
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={1000}
+                step={1}
+                value={Math.round(creditAmount / 10000)}
+                onChange={e => {
+                  const val = Math.round(Number(e.target.value));
+                  setCreditAmount(Math.min(Math.max(val, 0), 1000) * 10000);
+                }}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 pr-10
+                         text-white font-bold text-sm focus:border-emerald-500 outline-none"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">萬</span>
+            </div>
+            {/* 常用金額按鈕 */}
+            <div className="flex gap-1 mt-1.5">
+              {[30, 50, 100].map(val => (
+                <button
+                  key={val}
+                  onClick={() => setCreditAmount(val * 10000)}
+                  className={`flex-1 py-1 text-[10px] font-bold rounded-lg transition-all ${
+                    creditAmount === val * 10000
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  {val}萬
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">年利率</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.1"
+                  min={0.1}
+                  max={30}
+                  value={creditRate}
+                  onChange={e => {
+                    const val = Number(e.target.value);
+                    setCreditRate(Math.min(Math.max(val, 0), 30));
+                  }}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 pr-8
+                           text-white font-bold text-sm outline-none focus:border-emerald-500"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">%</span>
+              </div>
+              {/* 常用利率按鈕 */}
+              <div className="flex gap-1 mt-1.5">
+                {[3, 6, 9, 12].map(val => (
+                  <button
+                    key={val}
+                    onClick={() => setCreditRate(val)}
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-lg transition-all ${
+                      creditRate === val
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                    }`}
+                  >
+                    {val}%
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">年期</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  step={1}
+                  min={1}
+                  max={20}
+                  value={Math.round(creditYears)}
+                  onChange={e => {
+                    const val = Math.round(Number(e.target.value));
+                    setCreditYears(Math.min(Math.max(val, 1), 20));
+                  }}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 pr-8
+                           text-white font-bold text-sm outline-none focus:border-emerald-500"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">年</span>
+              </div>
+              {/* 常用年期按鈕 */}
+              <div className="flex gap-1 mt-1.5">
+                {[7, 10, 15].map(val => (
+                  <button
+                    key={val}
+                    onClick={() => setCreditYears(val)}
+                    className={`flex-1 py-1 text-[10px] font-bold rounded-lg transition-all ${
+                      creditYears === val
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                    }`}
+                  >
+                    {val}年
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div
+            className="bg-emerald-900/20 border border-emerald-500/20 rounded-xl p-4 text-center cursor-pointer hover:bg-emerald-900/30 transition-colors"
+            onClick={() => setShowCreditScheduleModal(true)}
+            title="點擊查看還款明細"
+          >
+            <div className="text-slate-400 text-[10px] mb-1">每月還款金額 <span className="text-emerald-500">(點擊查看明細)</span></div>
+            <div className="text-3xl font-black text-emerald-400">
+              {formatMoney(getCreditResult().monthly)}
+              <span className="text-xs ml-1">元</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-emerald-500/20">
+              <div>
+                <div className="text-[10px] text-slate-500">總利息</div>
+                <div className="text-xs font-bold text-slate-300">{formatMoney(getCreditResult().totalInterest)}</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-slate-500">總還款</div>
+                <div className="text-xs font-bold text-slate-300">{formatMoney(getCreditResult().totalPayment)}</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-slate-500">實質年利率</div>
+                <div className="text-xs font-bold text-amber-400">{getCreditResult().apr}%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========== 智能計算機 ========== */}
+      {mode === 'smart' && (
+        <div className="space-y-3">
+          {/* 顯示區 */}
+          <div className="bg-slate-950 border border-slate-700 rounded-xl p-3">
+            {calcExpression && (
+              <div className="text-slate-500 text-xs text-right mb-1 truncate">{calcExpression}</div>
+            )}
+            <div className="text-right text-2xl font-mono font-bold text-white truncate">
+              {parseFloat(calcDisplay).toLocaleString('zh-TW', { maximumFractionDigits: 4 })}
+            </div>
+          </div>
+
+          {/* 按鈕區 */}
+          <div className="grid grid-cols-4 gap-1.5">
+            {/* 第一排 */}
+            <button onClick={handleCalcClear} className="bg-red-600/80 hover:bg-red-500 text-white font-bold py-3 rounded-lg text-sm">C</button>
+            <button onClick={handleCalcPercent} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg text-sm">%</button>
+            <button onClick={() => setCalcDisplay(prev => prev.slice(0, -1) || '0')} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg text-sm">⌫</button>
+            <button onClick={() => handleCalcOperator('/')} className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg text-sm">÷</button>
+
+            {/* 第二排 */}
+            <button onClick={() => handleCalcNumber('7')} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg">7</button>
+            <button onClick={() => handleCalcNumber('8')} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg">8</button>
+            <button onClick={() => handleCalcNumber('9')} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg">9</button>
+            <button onClick={() => handleCalcOperator('*')} className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg text-sm">×</button>
+
+            {/* 第三排 */}
+            <button onClick={() => handleCalcNumber('4')} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg">4</button>
+            <button onClick={() => handleCalcNumber('5')} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg">5</button>
+            <button onClick={() => handleCalcNumber('6')} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg">6</button>
+            <button onClick={() => handleCalcOperator('-')} className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg text-lg">−</button>
+
+            {/* 第四排 */}
+            <button onClick={() => handleCalcNumber('1')} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg">1</button>
+            <button onClick={() => handleCalcNumber('2')} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg">2</button>
+            <button onClick={() => handleCalcNumber('3')} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg">3</button>
+            <button onClick={() => handleCalcOperator('+')} className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg text-lg">+</button>
+
+            {/* 第五排 */}
+            <button onClick={() => handleCalcNumber('00')} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg text-sm">00</button>
+            <button onClick={() => handleCalcNumber('0')} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg">0</button>
+            <button onClick={() => setCalcDisplay(prev => prev.includes('.') ? prev : prev + '.')} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg">.</button>
+            <button onClick={handleCalcEquals} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg">=</button>
+          </div>
+
+          {/* 歷史紀錄 - 顯示最近一筆，hover 展開完整 */}
+          {calcHistory.length > 0 && (
+            <div className="group relative mt-1">
+              {/* 最近一筆 + 查看全部 */}
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <div
+                  onClick={() => {
+                    setCalcExpression(calcHistory[0].expression + ' =');
+                    setCalcDisplay(calcHistory[0].result);
+                  }}
+                  className="flex-1 truncate cursor-pointer hover:text-slate-300 transition-colors"
+                  title="點擊繼續編輯"
+                >
+                  上次：{calcHistory[0].expression} = <span className="text-blue-400 font-bold">{parseFloat(calcHistory[0].result).toLocaleString()}</span>
+                </div>
+                <span className="text-slate-600 ml-2 cursor-pointer hover:text-slate-400">
+                  ({calcHistory.length}筆) ▼
+                </span>
+              </div>
+              {/* Hover 展開完整歷史 */}
+              <div className="absolute bottom-full left-0 right-0 mb-1 bg-slate-900 border border-slate-700 rounded-lg p-2
+                            opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 shadow-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-slate-400 font-bold">歷史紀錄</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setCalcHistory([]); }}
+                    className="text-[10px] text-slate-600 hover:text-red-400 px-2 py-0.5 rounded hover:bg-slate-800"
+                  >
+                    清除全部
+                  </button>
+                </div>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {calcHistory.map((item, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        setCalcExpression(item.expression + ' =');
+                        setCalcDisplay(item.result);
+                      }}
+                      className="flex justify-between items-center py-1.5 px-2 bg-slate-800/50 rounded
+                               hover:bg-slate-700 cursor-pointer text-xs"
+                    >
+                      <span className="text-slate-400 truncate flex-1 mr-2">{item.expression}</span>
+                      <span className="text-blue-400 font-bold">= {parseFloat(item.result).toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========== IRR 年化 ========== */}
+      {mode === 'irr' && (
+        <div className="space-y-3">
+          <div>
+            <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">累積投入金額</label>
+            <div className="relative">
               <input
                 type="number"
                 inputMode="decimal"
-                value={totalPremium}
-                onChange={e => setTotalPremium(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
+                value={totalPremium / 10000}
+                onChange={e => setTotalPremium(Number(e.target.value) * 10000)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 pr-10
                          text-white font-bold text-sm outline-none focus:border-amber-500"
               />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">萬</span>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">
-                  滿期領回
-                </label>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">滿期領回</label>
+              <div className="relative">
                 <input
                   type="number"
                   inputMode="decimal"
-                  value={maturityValue}
-                  onChange={e => setMaturityValue(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
+                  value={maturityValue / 10000}
+                  onChange={e => setMaturityValue(Number(e.target.value) * 10000)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 pr-10
                            text-white font-bold text-sm outline-none focus:border-amber-500"
                 />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">萬</span>
               </div>
-              <div>
-                <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">
-                  年期
-                </label>
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">年期</label>
+              <div className="relative">
                 <input
                   type="number"
                   inputMode="numeric"
                   value={irrYears}
                   onChange={e => setIrrYears(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 px-3 pr-8
                            text-white font-bold text-sm outline-none focus:border-amber-500"
                 />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">年</span>
               </div>
             </div>
-            <div className="bg-amber-900/20 border border-amber-500/20 rounded-xl p-4 text-center">
-              <div className="text-slate-400 text-xs mb-1 uppercase tracking-wider">
-                實質年化報酬率
+          </div>
+          <div className="bg-amber-900/20 border border-amber-500/20 rounded-xl p-4 text-center">
+            <div className="text-slate-400 text-[10px] mb-1 uppercase tracking-wider">實質年化報酬率</div>
+            <div className="text-4xl font-black text-amber-400">
+              {getIrrResult()}
+              <span className="text-lg ml-1">%</span>
+            </div>
+            <div className="text-slate-500 text-[10px] mt-2">
+              淨回報：{formatMoney(maturityValue - totalPremium)} 元
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========== 還款明細 Modal ========== */}
+      {showScheduleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowScheduleModal(false)}>
+          <div
+            className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <h3 className="text-white font-bold">
+                {mortgageMethod === 'equal_payment' ? '本息均攤還款明細' : '理財型房貸還款明細'}
+              </h3>
+              <button onClick={() => setShowScheduleModal(false)} className="text-slate-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {/* 摘要資訊 */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div className="bg-slate-800 rounded-xl p-3 text-center">
+                  <div className="text-[10px] text-slate-500">貸款金額</div>
+                  <div className="text-sm font-bold text-white">{formatMoney(mortgageAmount)}</div>
+                </div>
+                <div className="bg-slate-800 rounded-xl p-3 text-center">
+                  <div className="text-[10px] text-slate-500">年利率</div>
+                  <div className="text-sm font-bold text-white">{mortgageRate}%</div>
+                </div>
+                <div className="bg-slate-800 rounded-xl p-3 text-center">
+                  <div className="text-[10px] text-slate-500">年期</div>
+                  <div className="text-sm font-bold text-white">{mortgageYears} 年</div>
+                </div>
+                <div className="bg-slate-800 rounded-xl p-3 text-center">
+                  <div className="text-[10px] text-slate-500">總期數</div>
+                  <div className="text-sm font-bold text-white">{mortgageYears * 12} 期</div>
+                </div>
               </div>
-              <div className="text-4xl font-black text-amber-400">
-                {getIrrResult()}
-                <span className="text-lg ml-1">%</span>
+
+              {/* 還款趨勢圖 + 投資對比 */}
+              <div className="bg-slate-950 rounded-xl p-4 mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs text-slate-400 font-bold">還款趨勢圖（按年顯示）</div>
+                  <button
+                    onClick={() => setShowMortgageInvestSettings(!showMortgageInvestSettings)}
+                    className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                  >
+                    <Settings size={12} />
+                    投資對比設定
+                  </button>
+                </div>
+                {/* 進階設定面板 */}
+                {showMortgageInvestSettings && (
+                  <div className="bg-slate-800/50 rounded-lg p-3 mb-3 border border-slate-700">
+                    <div className="flex flex-wrap gap-4 items-center">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-400">投資報酬率</span>
+                        <select
+                          className="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-xs text-white"
+                          value={mortgageInvestRate ?? ''}
+                          onChange={e => setMortgageInvestRate(e.target.value ? Number(e.target.value) : null)}
+                        >
+                          <option value="">不顯示</option>
+                          <option value="4">4%</option>
+                          <option value="5">5%</option>
+                          <option value="6">6%</option>
+                          <option value="7">7%</option>
+                          <option value="8">8%</option>
+                          <option value="10">10%</option>
+                        </select>
+                      </div>
+                      {mortgageInvestRate && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-400">投資方式</span>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => setMortgageInvestMode('compound')}
+                              className={`px-2 py-1 text-[10px] rounded ${mortgageInvestMode === 'compound' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-400'}`}
+                            >
+                              複利滾存
+                            </button>
+                            <button
+                              onClick={() => setMortgageInvestMode('dividend')}
+                              className={`px-2 py-1 text-[10px] rounded ${mortgageInvestMode === 'dividend' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-400'}`}
+                            >
+                              每年配息
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {mortgageInvestRate && (
+                      <p className="text-[10px] text-slate-500 mt-2">
+                        {mortgageInvestMode === 'compound'
+                          ? '複利滾存：本金 + 獲利全部再投資，不領出'
+                          : '每年配息：本金不動，每年領取固定配息'}
+                      </p>
+                    )}
+                  </div>
+                )}
+                <div className="h-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={(() => {
+                        const chartData: { year: string; 貸款餘額: number; 累計本金: number; 累計利息: number; 投資價值?: number; 累計配息?: number }[] = [];
+                        const i = mortgageRate / 100 / 12;
+                        const n = mortgageYears * 12;
+                        let balance = mortgageAmount;
+                        let cumulativePrincipal = 0;
+                        let cumulativeInterest = 0;
+                        // 投資對比
+                        const investRate = mortgageInvestRate ? mortgageInvestRate / 100 : 0;
+                        let investValue = mortgageAmount;
+                        let cumulativeDividend = 0;
+
+                        if (mortgageMethod === 'equal_payment') {
+                          const monthlyPayment = i === 0 ? mortgageAmount / n : (mortgageAmount * i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
+                          for (let year = 1; year <= mortgageYears; year++) {
+                            for (let m = 1; m <= 12; m++) {
+                              const interest = balance * i;
+                              const principal = monthlyPayment - interest;
+                              balance = Math.max(0, balance - principal);
+                              cumulativePrincipal += principal;
+                              cumulativeInterest += interest;
+                            }
+                            // 投資計算
+                            if (mortgageInvestMode === 'compound') {
+                              investValue = mortgageAmount * Math.pow(1 + investRate, year);
+                            } else {
+                              cumulativeDividend += mortgageAmount * investRate;
+                            }
+                            const dataPoint: { year: string; 貸款餘額: number; 累計本金: number; 累計利息: number; 投資價值?: number; 累計配息?: number } = {
+                              year: `${year}年`,
+                              貸款餘額: Math.round(balance / 10000),
+                              累計本金: Math.round(cumulativePrincipal / 10000),
+                              累計利息: Math.round(cumulativeInterest / 10000),
+                            };
+                            if (mortgageInvestRate) {
+                              if (mortgageInvestMode === 'compound') {
+                                dataPoint.投資價值 = Math.round(investValue / 10000);
+                              } else {
+                                dataPoint.累計配息 = Math.round(cumulativeDividend / 10000);
+                              }
+                            }
+                            chartData.push(dataPoint);
+                          }
+                        } else {
+                          // 理財型：只還利息，本金到期一次還
+                          const monthlyInterest = mortgageAmount * i;
+                          for (let year = 1; year <= mortgageYears; year++) {
+                            cumulativeInterest += monthlyInterest * 12;
+                            if (mortgageInvestMode === 'compound') {
+                              investValue = mortgageAmount * Math.pow(1 + investRate, year);
+                            } else {
+                              cumulativeDividend += mortgageAmount * investRate;
+                            }
+                            const dataPoint: { year: string; 貸款餘額: number; 累計本金: number; 累計利息: number; 投資價值?: number; 累計配息?: number } = {
+                              year: `${year}年`,
+                              貸款餘額: Math.round(mortgageAmount / 10000),
+                              累計本金: 0, // 理財型不還本金
+                              累計利息: Math.round(cumulativeInterest / 10000),
+                            };
+                            if (mortgageInvestRate) {
+                              if (mortgageInvestMode === 'compound') {
+                                dataPoint.投資價值 = Math.round(investValue / 10000);
+                              } else {
+                                dataPoint.累計配息 = Math.round(cumulativeDividend / 10000);
+                              }
+                            }
+                            chartData.push(dataPoint);
+                          }
+                          // 最後一年還清本金
+                          chartData[chartData.length - 1].貸款餘額 = 0;
+                          chartData[chartData.length - 1].累計本金 = Math.round(mortgageAmount / 10000);
+                        }
+                        return chartData;
+                      })()}
+                      margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="year" tick={{ fill: '#94a3b8', fontSize: 10 }} tickLine={false} axisLine={{ stroke: '#475569' }} />
+                      <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} tickLine={false} axisLine={{ stroke: '#475569' }} tickFormatter={(v) => `${v}萬`} width={50} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px', fontSize: '11px' }}
+                        labelStyle={{ color: '#f8fafc' }}
+                        formatter={(value: number) => [`${value.toLocaleString()} 萬`, '']}
+                      />
+                      <Legend wrapperStyle={{ fontSize: '10px' }} />
+                      <Area type="monotone" dataKey="貸款餘額" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} strokeWidth={2} name="貸款餘額" />
+                      <Area type="monotone" dataKey="累計本金" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} name="累計本金" />
+                      <Area type="monotone" dataKey="累計利息" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.2} strokeWidth={2} name="累計利息" />
+                      {mortgageInvestRate && mortgageInvestMode === 'compound' && (
+                        <Area type="monotone" dataKey="投資價值" stroke="#a855f7" fill="#a855f7" fillOpacity={0.2} strokeWidth={2} name="投資價值" />
+                      )}
+                      {mortgageInvestRate && mortgageInvestMode === 'dividend' && (
+                        <Area type="monotone" dataKey="累計配息" stroke="#c084fc" fill="#c084fc" fillOpacity={0.2} strokeWidth={2} name="累計配息" />
+                      )}
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                {mortgageInvestRate && (
+                  <div className="text-[10px] text-slate-500 mt-2">
+                    {mortgageInvestMode === 'compound'
+                      ? `* 紫色線：假設將 ${formatMoney(mortgageAmount)} 元投資於年化 ${mortgageInvestRate}% 的標的，複利滾存的價值`
+                      : `* 淡紫線：假設將 ${formatMoney(mortgageAmount)} 元投資於年化 ${mortgageInvestRate}% 配息的標的，累計領取的配息`}
+                  </div>
+                )}
+              </div>
+
+              {/* 還款明細表格 */}
+              <div className="bg-slate-950 rounded-xl overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-slate-800">
+                    <tr>
+                      <th className="py-2 px-3 text-left text-slate-400 font-bold">期數</th>
+                      <th className="py-2 px-3 text-right text-slate-400 font-bold">月付金</th>
+                      <th className="py-2 px-3 text-right text-slate-400 font-bold">本金</th>
+                      <th className="py-2 px-3 text-right text-slate-400 font-bold">利息</th>
+                      <th className="py-2 px-3 text-right text-slate-400 font-bold">餘額</th>
+                      {mortgageInvestRate && mortgageInvestMode === 'dividend' && (
+                        <th className="py-2 px-3 text-right text-purple-400 font-bold">累計配息</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const scheduleRows = [];
+                      const i = mortgageRate / 100 / 12;
+                      const n = mortgageYears * 12;
+                      let balance = mortgageAmount;
+                      const showDividend = mortgageInvestRate && mortgageInvestMode === 'dividend';
+                      const monthlyDividend = showDividend ? (mortgageAmount * (mortgageInvestRate / 100)) / 12 : 0;
+                      const colSpan = showDividend ? 6 : 5;
+
+                      if (mortgageMethod === 'equal_payment') {
+                        // 本息均攤
+                        const monthlyPayment = i === 0
+                          ? mortgageAmount / n
+                          : (mortgageAmount * i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
+
+                        // 只顯示前12期 + 最後一期
+                        const displayPeriods = n <= 24 ? n : 12;
+                        for (let period = 1; period <= displayPeriods; period++) {
+                          const interest = balance * i;
+                          const principal = monthlyPayment - interest;
+                          balance = Math.max(0, balance - principal);
+                          const cumulativeDividend = monthlyDividend * period;
+                          scheduleRows.push(
+                            <tr key={period} className="border-b border-slate-800">
+                              <td className="py-2 px-3 text-slate-300">{period}</td>
+                              <td className="py-2 px-3 text-right text-white font-bold">{formatMoney(Math.round(monthlyPayment))}</td>
+                              <td className="py-2 px-3 text-right text-blue-400">{formatMoney(Math.round(principal))}</td>
+                              <td className="py-2 px-3 text-right text-amber-400">{formatMoney(Math.round(interest))}</td>
+                              <td className="py-2 px-3 text-right text-slate-400">{formatMoney(Math.round(balance))}</td>
+                              {showDividend && (
+                                <td className="py-2 px-3 text-right text-purple-400">{formatMoney(Math.round(cumulativeDividend))}</td>
+                              )}
+                            </tr>
+                          );
+                        }
+                        if (n > 24) {
+                          scheduleRows.push(
+                            <tr key="ellipsis" className="border-b border-slate-800">
+                              <td colSpan={colSpan} className="py-2 px-3 text-center text-slate-500">... 中間省略 ...</td>
+                            </tr>
+                          );
+                          // 計算最後一期
+                          let lastBalance = mortgageAmount;
+                          for (let p = 1; p < n; p++) {
+                            const int = lastBalance * i;
+                            lastBalance = lastBalance - (monthlyPayment - int);
+                          }
+                          const lastInterest = lastBalance * i;
+                          const totalDividend = monthlyDividend * n;
+                          scheduleRows.push(
+                            <tr key={n} className="border-b border-slate-800 bg-slate-800/50">
+                              <td className="py-2 px-3 text-slate-300">{n}</td>
+                              <td className="py-2 px-3 text-right text-white font-bold">{formatMoney(Math.round(monthlyPayment))}</td>
+                              <td className="py-2 px-3 text-right text-blue-400">{formatMoney(Math.round(lastBalance))}</td>
+                              <td className="py-2 px-3 text-right text-amber-400">{formatMoney(Math.round(lastInterest))}</td>
+                              <td className="py-2 px-3 text-right text-green-400 font-bold">0</td>
+                              {showDividend && (
+                                <td className="py-2 px-3 text-right text-purple-400 font-bold">{formatMoney(Math.round(totalDividend))}</td>
+                              )}
+                            </tr>
+                          );
+                        }
+                      } else {
+                        // 理財型房貸（只繳息）
+                        const monthlyInterest = mortgageAmount * i;
+                        const displayPeriods = Math.min(12, n);
+                        for (let period = 1; period <= displayPeriods; period++) {
+                          const cumulativeDividend = monthlyDividend * period;
+                          scheduleRows.push(
+                            <tr key={period} className="border-b border-slate-800">
+                              <td className="py-2 px-3 text-slate-300">{period}</td>
+                              <td className="py-2 px-3 text-right text-white font-bold">{formatMoney(Math.round(monthlyInterest))}</td>
+                              <td className="py-2 px-3 text-right text-slate-500">0</td>
+                              <td className="py-2 px-3 text-right text-amber-400">{formatMoney(Math.round(monthlyInterest))}</td>
+                              <td className="py-2 px-3 text-right text-slate-400">{formatMoney(mortgageAmount)}</td>
+                              {showDividend && (
+                                <td className="py-2 px-3 text-right text-purple-400">{formatMoney(Math.round(cumulativeDividend))}</td>
+                              )}
+                            </tr>
+                          );
+                        }
+                        if (n > 12) {
+                          scheduleRows.push(
+                            <tr key="ellipsis" className="border-b border-slate-800">
+                              <td colSpan={colSpan} className="py-2 px-3 text-center text-slate-500">... 每期皆相同 ...</td>
+                            </tr>
+                          );
+                        }
+                        // 最後一期（到期還本）
+                        const totalDividend = monthlyDividend * n;
+                        scheduleRows.push(
+                          <tr key="final" className="border-b border-slate-800 bg-purple-900/30">
+                            <td className="py-2 px-3 text-slate-300">{n} (到期)</td>
+                            <td className="py-2 px-3 text-right text-white font-bold">{formatMoney(Math.round(mortgageAmount + monthlyInterest))}</td>
+                            <td className="py-2 px-3 text-right text-purple-400 font-bold">{formatMoney(mortgageAmount)}</td>
+                            <td className="py-2 px-3 text-right text-amber-400">{formatMoney(Math.round(monthlyInterest))}</td>
+                            <td className="py-2 px-3 text-right text-green-400 font-bold">0</td>
+                            {showDividend && (
+                              <td className="py-2 px-3 text-right text-purple-400 font-bold">{formatMoney(Math.round(totalDividend))}</td>
+                            )}
+                          </tr>
+                        );
+                      }
+                      return scheduleRows;
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* 總計 */}
+              <div className="mt-4 p-4 bg-slate-800 rounded-xl">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-[10px] text-slate-500 mb-1">總還款金額</div>
+                    <div className="text-xl font-black text-white">
+                      {formatMoney(mortgageMethod === 'equal_payment'
+                        ? getMortgageEqualPayment().totalPayment
+                        : getMortgageInterestOnly().totalPayment
+                      )} 元
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-500 mb-1">總利息支出</div>
+                    <div className="text-xl font-black text-amber-400">
+                      {formatMoney(mortgageMethod === 'equal_payment'
+                        ? getMortgageEqualPayment().totalInterest
+                        : getMortgageInterestOnly().totalInterest
+                      )} 元
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========== 信貸還款明細 Modal ========== */}
+      {showCreditScheduleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowCreditScheduleModal(false)}>
+          <div
+            className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <h3 className="text-white font-bold">信貸還款明細</h3>
+              <button onClick={() => setShowCreditScheduleModal(false)} className="text-slate-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {/* 摘要資訊 */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div className="bg-slate-800 rounded-xl p-3 text-center">
+                  <div className="text-[10px] text-slate-500">貸款金額</div>
+                  <div className="text-sm font-bold text-white">{formatMoney(creditAmount)}</div>
+                </div>
+                <div className="bg-slate-800 rounded-xl p-3 text-center">
+                  <div className="text-[10px] text-slate-500">年利率</div>
+                  <div className="text-sm font-bold text-white">{creditRate}%</div>
+                </div>
+                <div className="bg-slate-800 rounded-xl p-3 text-center">
+                  <div className="text-[10px] text-slate-500">年期</div>
+                  <div className="text-sm font-bold text-white">{creditYears} 年</div>
+                </div>
+                <div className="bg-slate-800 rounded-xl p-3 text-center">
+                  <div className="text-[10px] text-slate-500">總期數</div>
+                  <div className="text-sm font-bold text-white">{creditYears * 12} 期</div>
+                </div>
+              </div>
+
+              {/* 還款趨勢圖 + 投資對比 */}
+              <div className="bg-slate-950 rounded-xl p-4 mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs text-slate-400 font-bold">還款趨勢圖（按年顯示）</div>
+                  <button
+                    onClick={() => setShowCreditInvestSettings(!showCreditInvestSettings)}
+                    className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                  >
+                    <Settings size={12} />
+                    投資對比設定
+                  </button>
+                </div>
+                {/* 進階設定面板 */}
+                {showCreditInvestSettings && (
+                  <div className="bg-slate-800/50 rounded-lg p-3 mb-3 border border-slate-700">
+                    <div className="flex flex-wrap gap-4 items-center">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-400">投資報酬率</span>
+                        <select
+                          className="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-xs text-white"
+                          value={creditInvestRate ?? ''}
+                          onChange={e => setCreditInvestRate(e.target.value ? Number(e.target.value) : null)}
+                        >
+                          <option value="">不顯示</option>
+                          <option value="4">4%</option>
+                          <option value="5">5%</option>
+                          <option value="6">6%</option>
+                          <option value="7">7%</option>
+                          <option value="8">8%</option>
+                          <option value="10">10%</option>
+                        </select>
+                      </div>
+                      {creditInvestRate && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-400">投資方式</span>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => setCreditInvestMode('compound')}
+                              className={`px-2 py-1 text-[10px] rounded ${creditInvestMode === 'compound' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-400'}`}
+                            >
+                              複利滾存
+                            </button>
+                            <button
+                              onClick={() => setCreditInvestMode('dividend')}
+                              className={`px-2 py-1 text-[10px] rounded ${creditInvestMode === 'dividend' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-400'}`}
+                            >
+                              每年配息
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {creditInvestRate && (
+                      <p className="text-[10px] text-slate-500 mt-2">
+                        {creditInvestMode === 'compound'
+                          ? '複利滾存：本金 + 獲利全部再投資，不領出'
+                          : '每年配息：本金不動，每年領取固定配息'}
+                      </p>
+                    )}
+                  </div>
+                )}
+                <div className="h-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={(() => {
+                        const chartData: { year: string; 貸款餘額: number; 累計本金: number; 累計利息: number; 投資價值?: number; 累計配息?: number }[] = [];
+                        const i = creditRate / 100 / 12;
+                        const n = creditYears * 12;
+                        let balance = creditAmount;
+                        let cumulativePrincipal = 0;
+                        let cumulativeInterest = 0;
+                        const monthlyPayment = i === 0 ? creditAmount / n : (creditAmount * i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
+                        const investRate = creditInvestRate ? creditInvestRate / 100 : 0;
+                        let investValue = creditAmount;
+                        let cumulativeDividend = 0;
+
+                        for (let year = 1; year <= creditYears; year++) {
+                          for (let m = 1; m <= 12; m++) {
+                            const interest = balance * i;
+                            const principal = monthlyPayment - interest;
+                            balance = Math.max(0, balance - principal);
+                            cumulativePrincipal += principal;
+                            cumulativeInterest += interest;
+                          }
+                          if (creditInvestMode === 'compound') {
+                            investValue = creditAmount * Math.pow(1 + investRate, year);
+                          } else {
+                            cumulativeDividend += creditAmount * investRate;
+                          }
+                          const dataPoint: { year: string; 貸款餘額: number; 累計本金: number; 累計利息: number; 投資價值?: number; 累計配息?: number } = {
+                            year: `${year}年`,
+                            貸款餘額: Math.round(balance / 10000),
+                            累計本金: Math.round(cumulativePrincipal / 10000),
+                            累計利息: Math.round(cumulativeInterest / 10000),
+                          };
+                          if (creditInvestRate) {
+                            if (creditInvestMode === 'compound') {
+                              dataPoint.投資價值 = Math.round(investValue / 10000);
+                            } else {
+                              dataPoint.累計配息 = Math.round(cumulativeDividend / 10000);
+                            }
+                          }
+                          chartData.push(dataPoint);
+                        }
+                        return chartData;
+                      })()}
+                      margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="year" tick={{ fill: '#94a3b8', fontSize: 10 }} tickLine={false} axisLine={{ stroke: '#475569' }} />
+                      <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} tickLine={false} axisLine={{ stroke: '#475569' }} tickFormatter={(v) => `${v}萬`} width={50} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px', fontSize: '11px' }}
+                        labelStyle={{ color: '#f8fafc' }}
+                        formatter={(value: number) => [`${value.toLocaleString()} 萬`, '']}
+                      />
+                      <Legend wrapperStyle={{ fontSize: '10px' }} />
+                      <Area type="monotone" dataKey="貸款餘額" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} strokeWidth={2} />
+                      <Area type="monotone" dataKey="累計本金" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} />
+                      <Area type="monotone" dataKey="累計利息" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.2} strokeWidth={2} />
+                      {creditInvestRate && creditInvestMode === 'compound' && (
+                        <Area type="monotone" dataKey="投資價值" stroke="#a855f7" fill="#a855f7" fillOpacity={0.2} strokeWidth={2} />
+                      )}
+                      {creditInvestRate && creditInvestMode === 'dividend' && (
+                        <Area type="monotone" dataKey="累計配息" stroke="#c084fc" fill="#c084fc" fillOpacity={0.2} strokeWidth={2} />
+                      )}
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                {creditInvestRate && (
+                  <p className="text-[10px] text-slate-500 mt-2">
+                    {creditInvestMode === 'compound'
+                      ? `* 紫色線：假設將 ${formatMoney(creditAmount)} 元投資於年化 ${creditInvestRate}% 的標的，複利滾存的價值`
+                      : `* 淡紫線：假設將 ${formatMoney(creditAmount)} 元投資於年化 ${creditInvestRate}% 配息的標的，累計領取的配息`}
+                  </p>
+                )}
+              </div>
+
+              {/* 還款明細表格 */}
+              <div className="bg-slate-950 rounded-xl overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-slate-800">
+                    <tr>
+                      <th className="py-2 px-3 text-left text-slate-400 font-bold">期數</th>
+                      <th className="py-2 px-3 text-right text-slate-400 font-bold">月付金</th>
+                      <th className="py-2 px-3 text-right text-slate-400 font-bold">本金</th>
+                      <th className="py-2 px-3 text-right text-slate-400 font-bold">利息</th>
+                      <th className="py-2 px-3 text-right text-slate-400 font-bold">餘額</th>
+                      {creditInvestRate && creditInvestMode === 'dividend' && (
+                        <th className="py-2 px-3 text-right text-purple-400 font-bold">累計配息</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const scheduleRows = [];
+                      const i = creditRate / 100 / 12;
+                      const n = creditYears * 12;
+                      let balance = creditAmount;
+                      const showDividend = creditInvestRate && creditInvestMode === 'dividend';
+                      const monthlyDividend = showDividend ? (creditAmount * (creditInvestRate / 100)) / 12 : 0;
+                      const colSpan = showDividend ? 6 : 5;
+
+                      const monthlyPayment = i === 0
+                        ? creditAmount / n
+                        : (creditAmount * i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
+
+                      // 只顯示前12期 + 最後一期
+                      const displayPeriods = n <= 24 ? n : 12;
+                      for (let period = 1; period <= displayPeriods; period++) {
+                        const interest = balance * i;
+                        const principal = monthlyPayment - interest;
+                        balance = Math.max(0, balance - principal);
+                        const cumulativeDividend = monthlyDividend * period;
+                        scheduleRows.push(
+                          <tr key={period} className="border-b border-slate-800">
+                            <td className="py-2 px-3 text-slate-300">{period}</td>
+                            <td className="py-2 px-3 text-right text-white font-bold">{formatMoney(Math.round(monthlyPayment))}</td>
+                            <td className="py-2 px-3 text-right text-emerald-400">{formatMoney(Math.round(principal))}</td>
+                            <td className="py-2 px-3 text-right text-amber-400">{formatMoney(Math.round(interest))}</td>
+                            <td className="py-2 px-3 text-right text-slate-400">{formatMoney(Math.round(balance))}</td>
+                            {showDividend && (
+                              <td className="py-2 px-3 text-right text-purple-400">{formatMoney(Math.round(cumulativeDividend))}</td>
+                            )}
+                          </tr>
+                        );
+                      }
+                      if (n > 24) {
+                        scheduleRows.push(
+                          <tr key="ellipsis" className="border-b border-slate-800">
+                            <td colSpan={colSpan} className="py-2 px-3 text-center text-slate-500">... 中間省略 ...</td>
+                          </tr>
+                        );
+                        // 計算最後一期
+                        let lastBalance = creditAmount;
+                        for (let p = 1; p < n; p++) {
+                          const int = lastBalance * i;
+                          lastBalance = lastBalance - (monthlyPayment - int);
+                        }
+                        const lastInterest = lastBalance * i;
+                        const totalDividend = monthlyDividend * n;
+                        scheduleRows.push(
+                          <tr key={n} className="border-b border-slate-800 bg-slate-800/50">
+                            <td className="py-2 px-3 text-slate-300">{n}</td>
+                            <td className="py-2 px-3 text-right text-white font-bold">{formatMoney(Math.round(monthlyPayment))}</td>
+                            <td className="py-2 px-3 text-right text-emerald-400">{formatMoney(Math.round(lastBalance))}</td>
+                            <td className="py-2 px-3 text-right text-amber-400">{formatMoney(Math.round(lastInterest))}</td>
+                            <td className="py-2 px-3 text-right text-green-400 font-bold">0</td>
+                            {showDividend && (
+                              <td className="py-2 px-3 text-right text-purple-400 font-bold">{formatMoney(Math.round(totalDividend))}</td>
+                            )}
+                          </tr>
+                        );
+                      }
+                      return scheduleRows;
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* 總計 */}
+              <div className="mt-4 p-4 bg-slate-800 rounded-xl">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <div className="text-[10px] text-slate-500 mb-1">總還款金額</div>
+                    <div className="text-lg font-black text-white">
+                      {formatMoney(getCreditResult().totalPayment)} 元
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-500 mb-1">總利息支出</div>
+                    <div className="text-lg font-black text-amber-400">
+                      {formatMoney(getCreditResult().totalInterest)} 元
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-500 mb-1">實質年利率</div>
+                    <div className="text-lg font-black text-emerald-400">
+                      {getCreditResult().apr}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1196,7 +2918,9 @@ const EditProfileModal = ({
   const [formData, setFormData] = useState<ProfileData>(profileData);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingQr, setUploadingQr] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const qrInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setFormData(profileData);
@@ -1217,6 +2941,25 @@ const EditProfileModal = ({
       alert('上傳失敗，請稍後再試');
     } finally {
       setUploading(false);
+    }
+  };
+
+  // LINE QR Code 上傳
+  const handleQrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploadingQr(true);
+    try {
+      const storageRef = ref(storage, `qrcodes/${user.uid}/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+      setFormData(prev => ({ ...prev, lineQrCode: downloadURL }));
+    } catch (error) {
+      console.error('QR Code upload failed:', error);
+      alert('上傳失敗，請稍後再試');
+    } finally {
+      setUploadingQr(false);
     }
   };
 
@@ -1361,9 +3104,68 @@ const EditProfileModal = ({
                   value={formData.instagram}
                   onChange={e => setFormData(prev => ({ ...prev, instagram: e.target.value }))}
                   placeholder="@your_instagram"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4
                            text-white focus:border-pink-500 outline-none transition-all"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* LINE QR Code 上傳區 */}
+          <div className="p-4 bg-slate-800/50 border border-slate-700 rounded-xl">
+            <label className="text-sm text-slate-400 font-bold mb-3 flex items-center gap-2">
+              <MessageCircle size={14} className="text-emerald-400" />
+              LINE QR Code（用於限動分享）
+            </label>
+            <div className="flex items-center gap-4">
+              {/* QR Code 預覽 */}
+              <div className="w-20 h-20 rounded-xl bg-slate-900 border border-slate-600 overflow-hidden flex items-center justify-center">
+                {formData.lineQrCode ? (
+                  <img
+                    src={formData.lineQrCode}
+                    alt="LINE QR Code"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="text-center p-2">
+                    <MessageCircle size={24} className="text-slate-600 mx-auto mb-1" />
+                    <span className="text-[10px] text-slate-500">未設定</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 上傳按鈕 */}
+              <div className="flex-1">
+                <input
+                  ref={qrInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleQrUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => qrInputRef.current?.click()}
+                  disabled={uploadingQr}
+                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500
+                           text-white text-sm font-bold rounded-lg transition-all
+                           disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {uploadingQr ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      上傳中...
+                    </>
+                  ) : (
+                    <>
+                      <Camera size={14} />
+                      {formData.lineQrCode ? '更換 QR Code' : '上傳 QR Code'}
+                    </>
+                  )}
+                </button>
+                <p className="text-[10px] text-slate-500 mt-2">
+                  上傳你的 LINE 加好友 QR Code，會顯示在限動圖卡上
+                </p>
               </div>
             </div>
           </div>
@@ -1982,6 +3784,7 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
     phone: '',
     lineId: '',
     instagram: '',
+    lineQrCode: '',
   });
 
   // Modal 狀態
@@ -2449,7 +4252,7 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
         {/* Top Row: Profile + Market Data + Calculator */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 items-start">
           {/* Profile Card + Mission Card */}
           <div className="space-y-4">
             <ProfileCard
@@ -2475,10 +4278,66 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
               }}
               onOpenPWAInstall={() => setShowPWAInstall(true)}
             />
+
+            {/* 🆕 知識庫快捷區塊 */}
+            <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-3 border border-slate-700/50">
+              {/* 最新文章 */}
+              {(() => {
+                const latestArticle = [...blogArticles].sort((a, b) => {
+                  const dateDiff = new Date(b.publishDate).getTime() - new Date(a.publishDate).getTime();
+                  if (dateDiff !== 0) return dateDiff;
+                  return parseInt(b.id) - parseInt(a.id); // 同日期時，id 大的優先
+                })[0];
+                return (
+                  <a
+                    href={`/blog/${latestArticle.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block mb-2 p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors group"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] text-emerald-400 font-bold">NEW</span>
+                      <span className="text-[10px] text-slate-500">{latestArticle.readTime} 分鐘</span>
+                    </div>
+                    <p className="text-xs text-slate-300 group-hover:text-white line-clamp-1 font-medium">
+                      {latestArticle.title}
+                    </p>
+                  </a>
+                );
+              })()}
+
+              {/* 按鈕列 */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const randomArticle = blogArticles[Math.floor(Math.random() * blogArticles.length)];
+                    window.open(`/blog/${randomArticle.slug}`, '_blank');
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors group"
+                >
+                  <RefreshCw size={12} className="text-purple-400" />
+                  <span className="text-[11px] text-purple-300 group-hover:text-purple-200">隨機</span>
+                </button>
+                <a
+                  href="/blog"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-slate-700/50 hover:bg-slate-600/50 rounded-lg transition-colors group"
+                >
+                  <BookOpen size={12} className="text-slate-400" />
+                  <span className="text-[11px] text-slate-400 group-hover:text-slate-300">知識庫</span>
+                </a>
+              </div>
+            </div>
           </div>
 
           {/* Market Data */}
-          <MarketDataCard userId={user?.uid} />
+          <MarketDataCard
+            userId={user?.uid}
+            userDisplayName={profileData.displayName || user?.displayName}
+            userPhotoURL={profileData.photoURL || user?.photoURL}
+            userLineQrCode={profileData.lineQrCode}
+          />
 
           {/* Quick Calculator */}
           <QuickCalculator />
