@@ -40,11 +40,14 @@ async function generateSitemap() {
     const slugMatch = content.match(/slug:\s*['"]([^'"]+)['"]/);
     // 解析 featured
     const featuredMatch = content.match(/featured:\s*(true|false)/);
+    // 解析 publishDate
+    const publishDateMatch = content.match(/publishDate:\s*['"]([^'"]+)['"]/);
 
     if (slugMatch) {
       articles.push({
         slug: slugMatch[1],
         featured: featuredMatch ? featuredMatch[1] === 'true' : false,
+        publishDate: publishDateMatch ? publishDateMatch[1] : TODAY,
       });
     }
   }
@@ -73,9 +76,11 @@ async function generateSitemap() {
   // 文章頁面
   for (const article of articles) {
     const priority = article.featured ? 0.85 : 0.8;
+    // 使用實際發布日期作為 lastmod
+    const lastmod = article.publishDate || TODAY;
     xml += `  <url>
     <loc>${SITE_URL}/blog/${article.slug}</loc>
-    <lastmod>${TODAY}</lastmod>
+    <lastmod>${lastmod}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>${priority}</priority>
   </url>
