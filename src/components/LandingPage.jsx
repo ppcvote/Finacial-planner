@@ -73,19 +73,32 @@ const AnnouncementBar = ({ data, onClose }) => {
 // ==========================================
 // 🎬 影片彈窗組件
 // ==========================================
-const VideoModal = ({ isOpen, onClose, videoData }) => {
-  if (!isOpen || !videoData) return null;
-  
+const VideoModal = ({ isOpen, onClose, videoData, videoType = 'dynamic' }) => {
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4">
       <button
         onClick={onClose}
-        className="absolute top-6 right-6 text-white hover:text-gray-300 transition-colors"
+        className="absolute top-6 right-6 text-white hover:text-gray-300 transition-colors z-10"
       >
         <X size={32} />
       </button>
       <div className="w-full max-w-5xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl">
-        {videoData.videoType === 'youtube' && videoData.videoUrl && (
+        {/* 🎬 SystemDemo - Remotion 影片 */}
+        {videoType === 'systemDemo' && (
+          <video
+            src="/videos/system-demo.mp4"
+            className="w-full h-full"
+            controls
+            autoPlay
+            playsInline
+          >
+            您的瀏覽器不支援影片播放
+          </video>
+        )}
+        {/* 🎬 動態內容 - YouTube */}
+        {videoType === 'dynamic' && videoData?.videoType === 'youtube' && videoData.videoUrl && (
           <iframe
             src={videoData.videoUrl}
             className="w-full h-full"
@@ -94,7 +107,8 @@ const VideoModal = ({ isOpen, onClose, videoData }) => {
             title="產品介紹影片"
           />
         )}
-        {videoData.videoType === 'html' && videoData.htmlVideoUrl && (
+        {/* 🎬 動態內容 - HTML 動畫 */}
+        {videoType === 'dynamic' && videoData?.videoType === 'html' && videoData.htmlVideoUrl && (
           <iframe
             src={videoData.htmlVideoUrl}
             className="w-full h-full"
@@ -347,22 +361,22 @@ const ProductScreenshotCarousel = () => {
     {
       title: "大小水庫母子系統",
       description: "雙層防護機制，確保緊急預備金與長期儲蓄",
-      image: "https://placehold.co/1200x700/1e293b/3b82f6?text=大小水庫系統+截圖"
+      image: "/screenshots/screenshot-reservoir.png"
     },
     {
       title: "稅務傳承規劃",
       description: "遺產稅 & 贈與稅精算，最佳化傳承策略",
-      image: "https://placehold.co/1200x700/1e293b/8b5cf6?text=稅務傳承+截圖"
+      image: "/screenshots/screenshot-tax.png"
     },
     {
       title: "傲創計算機",
       description: "四大功能合一的免費財務計算工具",
-      image: "https://placehold.co/1200x700/1e293b/10b981?text=傲創計算機+截圖"
+      image: "/screenshots/screenshot-calculator.png"
     },
     {
       title: "戰情室數據儀表板",
       description: "即時追蹤市場數據與經濟指標",
-      image: "https://placehold.co/1200x700/1e293b/ef4444?text=戰情室+截圖"
+      image: "/screenshots/screenshot-warroom.png"
     }
   ];
 
@@ -404,7 +418,7 @@ const ProductScreenshotCarousel = () => {
                 <img
                   src={shot.image}
                   alt={shot.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-auto object-cover object-top"
                   loading={i === 0 ? "eager" : "lazy"}
                   decoding="async"
                 />
@@ -476,10 +490,6 @@ const ProductScreenshotCarousel = () => {
           </div>
         </div>
 
-        {/* 提示文字 */}
-        <p className="text-center text-slate-600 text-sm mt-8">
-          💡 正式版截圖即將上線，敬請期待
-        </p>
       </div>
     </section>
   );
@@ -502,19 +512,19 @@ const ProductShowcase = () => {
           name: "學貸活化試算",
           desc: "評估學貸與投資的長期效益比較",
           features: ["IRR 計算", "收益比較圖表", "風險評估"],
-          screenshot: "https://placehold.co/800x500/1e293b/64748b?text=學貸活化系統+截圖"
+          screenshot: "/screenshots/screenshot-calculator.png"
         },
         {
           name: "房產財務分析",
           desc: "房貸還款與資產配置的視覺化分析",
           features: ["房貸試算", "現金流圖表", "還款計畫"],
-          screenshot: "https://placehold.co/800x500/1e293b/64748b?text=房產增貸+截圖"
+          screenshot: "/screenshots/screenshot-reservoir.png"
         },
         {
           name: "百萬禮物計畫",
           desc: "子女教育基金與資產規劃試算",
           features: ["贈與稅試算", "分年規劃圖表", "稅務試算"],
-          screenshot: "https://placehold.co/800x500/1e293b/64748b?text=百萬禮物+截圖"
+          screenshot: "/screenshots/screenshot-tax.png"
         }
       ]
     },
@@ -528,19 +538,19 @@ const ProductShowcase = () => {
           name: "大小水庫系統",
           desc: "緊急預備金與長期儲蓄的雙層規劃",
           features: ["預備金試算", "定期定額圖表", "缺口分析"],
-          screenshot: "https://placehold.co/800x500/1e293b/64748b?text=大小水庫+截圖"
+          screenshot: "/screenshots/screenshot-reservoir.png"
         },
         {
           name: "五年換車計畫",
           desc: "購車預算與儲蓄目標的視覺化規劃",
           features: ["預算規劃", "儲蓄進度圖", "貸款試算"],
-          screenshot: "https://placehold.co/800x500/1e293b/64748b?text=換車計畫+截圖"
+          screenshot: "/screenshots/screenshot-calculator.png"
         },
         {
           name: "長照準備金試算",
           desc: "未來醫療支出與保障缺口分析",
           features: ["餘命試算", "費用估算圖表", "缺口分析"],
-          screenshot: "https://placehold.co/800x500/1e293b/64748b?text=長照準備+截圖"
+          screenshot: "/screenshots/screenshot-warroom.png"
         }
       ]
     },
@@ -554,19 +564,19 @@ const ProductShowcase = () => {
           name: "稅務傳承試算",
           desc: "遺產稅與贈與稅的完整試算圖表",
           features: ["遺產稅試算", "贈與稅圖表", "節稅方案比較"],
-          screenshot: "https://placehold.co/800x500/1e293b/64748b?text=稅務傳承+截圖"
+          screenshot: "/screenshots/screenshot-tax.png"
         },
         {
           name: "流動性缺口分析",
           desc: "資產變現能力與稅務負擔評估",
           features: ["現金流圖表", "資產分析", "規劃建議"],
-          screenshot: "https://placehold.co/800x500/1e293b/64748b?text=流動性測試+截圖"
+          screenshot: "/screenshots/screenshot-reservoir.png"
         },
         {
           name: "退休金缺口試算",
           desc: "退休金替代率與缺口視覺化分析",
           features: ["替代率圖表", "缺口分析", "規劃建議"],
-          screenshot: "https://placehold.co/800x500/1e293b/64748b?text=勞退試算+截圖"
+          screenshot: "/screenshots/screenshot-warroom.png"
         }
       ]
     },
@@ -580,19 +590,19 @@ const ProductShowcase = () => {
           name: "基金時光機",
           desc: "歷史績效回測與投資模擬",
           features: ["定期定額回測", "績效圖表", "比較分析"],
-          screenshot: "https://placehold.co/800x500/1e293b/64748b?text=基金時光機+截圖"
+          screenshot: "/screenshots/screenshot-warroom.png"
         },
         {
           name: "市場數據儀表板",
           desc: "2026 最新經濟數據即時圖表",
           features: ["健康數據", "通膨指標", "退休金數據"],
-          screenshot: "https://placehold.co/800x500/1e293b/64748b?text=市場數據+截圖"
+          screenshot: "/screenshots/screenshot-warroom.png"
         },
         {
           name: "通膨影響試算",
           desc: "購買力變化的視覺化呈現",
           features: ["購買力圖表", "通膨試算", "資產評估"],
-          screenshot: "https://placehold.co/800x500/1e293b/64748b?text=通膨試算+截圖"
+          screenshot: "/screenshots/screenshot-calculator.png"
         }
       ]
     }
@@ -683,15 +693,10 @@ const ProductShowcase = () => {
                       <img
                         src={tool.screenshot}
                         alt={tool.name}
-                        className="w-full h-full object-cover opacity-60 hover:opacity-80 transition-opacity"
+                        className="w-full h-full object-contain bg-slate-950"
                         loading="lazy"
                         decoding="async"
                       />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-slate-600 font-black text-sm uppercase tracking-wider">
-                          產品截圖將在此顯示
-                        </div>
-                      </div>
                     </div>
                     
                     <div className="absolute -top-3 -right-3 px-4 py-2 bg-amber-500 text-slate-900 
@@ -1201,20 +1206,17 @@ export function LandingPage({ onStart, onSignup, onHome }) {
     window.location.reload();
   };
 
-  // ✅ 修改：檢查是否有影片可以播放
+  // ✅ 影片類型狀態
+  const [demoVideoType, setDemoVideoType] = useState('systemDemo');
+
+  // ✅ 修改：直接播放 SystemDemo 影片
   const handleWatchDemo = () => {
-    const videoData = dynamicContent.heroVideo;
-    if (videoData?.videoType !== 'none' && 
-        (videoData?.videoUrl || videoData?.htmlVideoUrl)) {
-      setShowVideoModal(true);
-    } else {
-      alert('Demo 影片功能開發中...\n\n建議：先拍攝一支 60 秒的產品展示影片');
-    }
+    setDemoVideoType('systemDemo');
+    setShowVideoModal(true);
   };
 
-  // ✅ 檢查是否有影片
-  const hasVideo = dynamicContent.heroVideo?.videoType !== 'none' && 
-                   (dynamicContent.heroVideo?.videoUrl || dynamicContent.heroVideo?.htmlVideoUrl);
+  // ✅ SystemDemo 影片總是可用
+  const hasVideo = true;
 
   const handleSelectPlan = (plan) => {
     if (plan === 'free') {
@@ -1781,6 +1783,7 @@ export function LandingPage({ onStart, onSignup, onHome }) {
         isOpen={showVideoModal}
         onClose={() => setShowVideoModal(false)}
         videoData={dynamicContent.heroVideo}
+        videoType={demoVideoType}
       />
 
       {/* ==================== LINE 浮動客服按鈕 ==================== */}

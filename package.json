@@ -15,7 +15,8 @@
     "remotion:render": "remotion render src/remotion/Root.tsx FinancialCalculator out/calculator.mp4",
     "remotion:render:vertical": "remotion render src/remotion/Root.tsx FinancialCalculatorVertical out/calculator-vertical.mp4",
     "remotion:render:brand": "remotion render src/remotion/Root.tsx BrandVideo out/brand-video.mp4",
-    "remotion:render:demo": "remotion render src/remotion/Root.tsx FirstPersonDemo out/first-person-demo.mp4"
+    "remotion:render:demo": "remotion render src/remotion/Root.tsx FirstPersonDemo out/first-person-demo.mp4",
+    "remotion:render:system": "remotion render src/remotion/Root.tsx SystemDemo out/system-demo.mp4"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.409",

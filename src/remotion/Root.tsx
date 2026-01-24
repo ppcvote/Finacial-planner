@@ -3,6 +3,7 @@ import { Composition, registerRoot } from 'remotion';
 import { FinancialCalculatorAnimation } from './FinancialCalculatorAnimation';
 import { UltraAdvisorBrandVideo } from './UltraAdvisorBrandVideo';
 import { UltraAdvisorFirstPersonDemo } from './UltraAdvisorFirstPersonDemo';
+import { UltraAdvisorSystemDemo } from './UltraAdvisorSystemDemo';
 
 const RemotionRoot: React.FC = () => {
   return (
@@ -24,6 +25,16 @@ const RemotionRoot: React.FC = () => {
         id="FirstPersonDemo"
         component={UltraAdvisorFirstPersonDemo}
         durationInFrames={1320} // 22秒 @ 60fps
+        fps={60}
+        width={1920}
+        height={1080}
+      />
+
+      {/* Ultra Advisor 60 秒系統示範影片 */}
+      <Composition
+        id="SystemDemo"
+        component={UltraAdvisorSystemDemo}
+        durationInFrames={3600} // 60秒 @ 60fps
         fps={60}
         width={1920}
         height={1080}
