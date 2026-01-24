@@ -365,13 +365,29 @@ const ProfileCard = ({
 // 📊 市場數據卡片（含每日金句）
 // ==========================================
 
-// 字體風格配置
+// 字體風格配置（使用 Google Fonts 中文字體）
 type FontStyle = 'default' | 'handwriting' | 'headline' | 'elegant';
-const FONT_STYLES: Record<FontStyle, { name: string; className: string }> = {
-  default: { name: '預設', className: 'font-sans' },
-  handwriting: { name: '手寫', className: 'font-serif italic' },
-  headline: { name: '粗黑', className: 'font-black tracking-tight' },
-  elegant: { name: '優雅', className: 'font-light tracking-wide' }
+const FONT_STYLES: Record<FontStyle, { name: string; fontFamily: string; className: string }> = {
+  default: {
+    name: '預設',
+    fontFamily: '"Noto Sans TC", sans-serif',
+    className: ''
+  },
+  handwriting: {
+    name: '手寫',
+    fontFamily: '"ZCOOL KuaiLe", cursive',
+    className: ''
+  },
+  headline: {
+    name: '粗黑',
+    fontFamily: '"Noto Sans TC", sans-serif',
+    className: 'font-black tracking-tight'
+  },
+  elegant: {
+    name: '優雅',
+    fontFamily: '"Noto Serif TC", serif',
+    className: 'font-light tracking-wide'
+  }
 };
 
 // 排版風格類型
@@ -798,7 +814,10 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
           {/* 內容 */}
           <div className="relative z-10 text-center">
             <Quote size={20} className="text-white/30 mx-auto mb-2" />
-            <p className={`text-white font-bold text-sm leading-relaxed mb-2 line-clamp-3 ${FONT_STYLES[fontStyle].className}`}>
+            <p
+              className={`text-white font-bold text-sm leading-relaxed mb-2 line-clamp-3 ${FONT_STYLES[fontStyle].className}`}
+              style={{ fontFamily: FONT_STYLES[fontStyle].fontFamily }}
+            >
               {displayQuoteText}
             </p>
           </div>
@@ -921,7 +940,10 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
                   {/* 金句內容 - 置中 */}
                   <div className="relative z-10 text-center max-w-[280px] px-4">
                     <Quote size={36} className="text-white/30 mx-auto mb-4" />
-                    <p className={`text-white font-black text-lg leading-relaxed drop-shadow-lg ${FONT_STYLES[fontStyle].className}`}>
+                    <p
+                      className={`text-white font-black text-lg leading-relaxed drop-shadow-lg ${FONT_STYLES[fontStyle].className}`}
+                      style={{ fontFamily: FONT_STYLES[fontStyle].fontFamily }}
+                    >
                       {displayQuoteText}
                     </p>
                   </div>
@@ -1001,14 +1023,21 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
                   {/* 左側內容區 */}
                   <div className="relative z-10 flex flex-col h-full justify-center pr-10 pl-4 py-16">
                     {/* 黃色大標題 */}
-                    <h2 className={`text-amber-400 font-black text-xl leading-tight mb-5 drop-shadow-lg ${FONT_STYLES[fontStyle].className}`}>
+                    <h2
+                      className={`text-amber-400 font-black text-xl leading-tight mb-5 drop-shadow-lg ${FONT_STYLES[fontStyle].className}`}
+                      style={{ fontFamily: FONT_STYLES[fontStyle].fontFamily }}
+                    >
                       「{displayIGQuote.title}」
                     </h2>
 
                     {/* 白色內文（左側白線裝飾） */}
                     <div className="border-l-2 border-white/40 pl-4 space-y-2">
                       {displayIGQuote.lines.map((line, i) => (
-                        <p key={i} className={`text-white text-sm leading-relaxed drop-shadow-md ${FONT_STYLES[fontStyle].className}`}>
+                        <p
+                          key={i}
+                          className={`text-white text-sm leading-relaxed drop-shadow-md ${FONT_STYLES[fontStyle].className}`}
+                          style={{ fontFamily: FONT_STYLES[fontStyle].fontFamily }}
+                        >
                           {line}
                         </p>
                       ))}
@@ -1276,6 +1305,7 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
                                        ? 'bg-purple-600 text-white'
                                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}
                                      ${style.className}`}
+                          style={{ fontFamily: style.fontFamily }}
                         >
                           {style.name}
                         </button>
