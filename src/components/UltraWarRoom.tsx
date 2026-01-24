@@ -640,20 +640,22 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId }) => {
                 <div className="absolute bottom-20 right-10 w-40 h-40 bg-white rounded-full blur-3xl" />
               </div>
 
-              {/* Logo */}
-              <div className="absolute top-6 left-6 flex items-center gap-2">
-                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                  <Sparkles size={16} className="text-white" />
+              {/* 淺淺的 Logo 浮水印（置中偏上） */}
+              <div className="absolute top-12 left-0 right-0 flex justify-center">
+                <div className="flex items-center gap-2 opacity-20">
+                  <div className="w-10 h-10 bg-white/30 rounded-xl flex items-center justify-center">
+                    <Sparkles size={20} className="text-white" />
+                  </div>
+                  <span className="text-white text-sm font-black tracking-wide">Ultra Advisor</span>
                 </div>
-                <span className="text-white/80 text-xs font-bold">Ultra Advisor</span>
               </div>
 
-              {/* 累積天數徽章 */}
-              {totalShareDays > 0 && (
-                <div className="absolute top-6 right-6 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
-                  <span className="text-white text-xs font-bold">Day {totalShareDays + (todayShared ? 0 : 1)}</span>
-                </div>
-              )}
+              {/* 累積天數徽章（永遠顯示） */}
+              <div className="absolute top-6 right-6 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                <span className="text-white text-xs font-bold">
+                  Day {totalShareDays + (todayShared ? 0 : 1)}
+                </span>
+              </div>
 
               {/* 金句內容 */}
               <div className="relative z-10 text-center max-w-[280px]">
