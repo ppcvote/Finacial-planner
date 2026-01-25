@@ -218,9 +218,21 @@ const MissionCard: React.FC<MissionCardProps> = ({
     );
   }
 
-  // 無任務狀態
+  // 無任務狀態 - 顯示佔位卡片
   if (!currentMission) {
-    return null;
+    return (
+      <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-slate-700/50 flex items-center justify-center">
+            <Gift className="w-5 h-5 text-slate-500" />
+          </div>
+          <div className="flex-1">
+            <p className="text-slate-400 font-medium">任務系統</p>
+            <p className="text-slate-500 text-sm">目前沒有可用任務</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const mission = currentMission;
