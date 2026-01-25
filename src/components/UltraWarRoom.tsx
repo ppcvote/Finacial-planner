@@ -50,8 +50,8 @@ import ReferralEngineModal from './ReferralEngineModal';
 // 🔔 推播通知
 import { usePushNotifications } from '../hooks/usePushNotifications';
 
-// 📴 離線同步
-import { useOfflineSync } from '../hooks/useOfflineSync';
+// 📴 離線同步（暫時停用以排查任務系統問題）
+// import { useOfflineSync } from '../hooks/useOfflineSync';
 
 // 🆕 任務看板
 import MissionCard from './MissionCard';
@@ -5024,8 +5024,8 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
   // 🔔 推播通知
   const pushNotifications = usePushNotifications(user?.uid || null);
 
-  // 📴 離線同步
-  const offlineSync = useOfflineSync();
+  // 📴 離線同步（暫時停用以排查任務系統問題）
+  // const offlineSync = useOfflineSync();
 
   // 客戶列表狀態
   const [clients, setClients] = useState<any[]>([]);
