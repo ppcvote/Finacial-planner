@@ -488,17 +488,18 @@ const ProfileCard = ({
 // 📊 市場數據卡片（含每日金句）
 // ==========================================
 
-// 字體風格配置（使用 Google Fonts 中文字體）
-type FontStyle = 'default' | 'handwriting' | 'headline' | 'elegant';
+// 文案字體風格配置（使用 Google Fonts 繁體中文字體）
+// 注意：所有字體都已在 index.html 中透過 Google Fonts 載入
+type FontStyle = 'default' | 'wenkai' | 'headline' | 'elegant';
 const FONT_STYLES: Record<FontStyle, { name: string; fontFamily: string; className: string }> = {
   default: {
     name: '預設',
     fontFamily: '"Noto Sans TC", sans-serif',
     className: ''
   },
-  handwriting: {
-    name: '手寫',
-    fontFamily: '"ZCOOL KuaiLe", cursive',
+  wenkai: {
+    name: '楷書',
+    fontFamily: '"LXGW WenKai Mono TC", cursive',
     className: ''
   },
   headline: {
@@ -507,14 +508,45 @@ const FONT_STYLES: Record<FontStyle, { name: string; fontFamily: string; classNa
     className: 'font-black tracking-tight'
   },
   elegant: {
-    name: '優雅',
+    name: '明體',
     fontFamily: '"Noto Serif TC", serif',
-    className: 'font-light tracking-wide'
+    className: ''
   }
 };
 
 // 排版風格類型
 type LayoutStyle = 'center' | 'left' | 'magazine' | 'card';
+
+// 顧問名字字體風格配置（繁體中文書法/手寫風格）
+// 注意：所有字體都已在 index.html 中透過 Google Fonts 載入
+type NameFontStyle = 'default' | 'serif' | 'wenkai' | 'xiaowei' | 'kuaile';
+const NAME_FONT_STYLES: Record<NameFontStyle, { name: string; fontFamily: string; preview: string }> = {
+  default: {
+    name: '預設',
+    fontFamily: '"Noto Sans TC", sans-serif',
+    preview: '王大明'
+  },
+  serif: {
+    name: '明體',
+    fontFamily: '"Noto Serif TC", serif',
+    preview: '王大明'
+  },
+  wenkai: {
+    name: '楷書',
+    fontFamily: '"LXGW WenKai Mono TC", cursive',
+    preview: '王大明'
+  },
+  xiaowei: {
+    name: '文藝',
+    fontFamily: '"ZCOOL XiaoWei", serif',
+    preview: '王大明'
+  },
+  kuaile: {
+    name: '可愛',
+    fontFamily: '"ZCOOL KuaiLe", cursive',
+    preview: '王大明'
+  }
+};
 
 // 自訂背景介面
 interface CustomBackground {
@@ -556,6 +588,8 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
   const [customIGLines, setCustomIGLines] = useState('');
   // 字體選擇
   const [fontStyle, setFontStyle] = useState<FontStyle>('default');
+  // 顧問名字字體
+  const [nameFontStyle, setNameFontStyle] = useState<NameFontStyle>('default');
   // 自訂背景
   const [customBackgrounds, setCustomBackgrounds] = useState<CustomBackground[]>([]);
   const [selectedCustomBgIndex, setSelectedCustomBgIndex] = useState<number | null>(null);
@@ -781,8 +815,16 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
     const canvas = signatureCanvasRef.current;
     if (!canvas) return;
 
+    // 阻止預設行為（防止觸控滾動導致反白）
+    e.preventDefault();
+    e.stopPropagation();
+
     isDrawingRef.current = true;
     const rect = canvas.getBoundingClientRect();
+
+    // 計算縮放比例（CSS 寬度 vs canvas 實際寬度）
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
 
     let clientX: number, clientY: number;
     if ('touches' in e) {
@@ -794,8 +836,8 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
     }
 
     lastPosRef.current = {
-      x: clientX - rect.left,
-      y: clientY - rect.top
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
     };
   }, []);
 
@@ -809,7 +851,15 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // 阻止預設行為（防止觸控滾動導致反白）
+    e.preventDefault();
+    e.stopPropagation();
+
     const rect = canvas.getBoundingClientRect();
+
+    // 計算縮放比例（CSS 寬度 vs canvas 實際寬度）
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
 
     let clientX: number, clientY: number;
     if ('touches' in e) {
@@ -821,8 +871,8 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
     }
 
     const currentPos = {
-      x: clientX - rect.left,
-      y: clientY - rect.top
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
     };
 
     ctx.beginPath();
@@ -838,7 +888,11 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
   }, []);
 
   // 結束簽名繪製
-  const endSignatureDrawing = useCallback(() => {
+  const endSignatureDrawing = useCallback((e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     isDrawingRef.current = false;
   }, []);
 
@@ -1101,10 +1155,41 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
         allowTaint: true,
       });
 
-      const link = document.createElement('a');
-      link.download = `ultra-advisor-daily-${new Date().toISOString().split('T')[0]}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      // 檢測是否為 iOS
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+      if (isIOS) {
+        // iOS: 開新視窗顯示圖片，讓用戶長按存到相簿
+        const dataUrl = canvas.toDataURL('image/png');
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+          newWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>每日金句</title>
+              <style>
+                body { margin: 0; padding: 20px; background: #0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+                img { max-width: 100%; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+                p { color: #94a3b8; font-family: system-ui; text-align: center; margin-top: 20px; font-size: 14px; }
+              </style>
+            </head>
+            <body>
+              <img src="${dataUrl}" alt="每日金句" />
+              <p>👆 長按圖片 → 「加入照片」存到相簿</p>
+            </body>
+            </html>
+          `);
+          newWindow.document.close();
+        }
+      } else {
+        // 其他平台：直接下載
+        const link = document.createElement('a');
+        link.download = `ultra-advisor-daily-${new Date().toISOString().split('T')[0]}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }
 
       // 記錄分享
       await recordShare();
@@ -1118,7 +1203,7 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
     }
   };
 
-  // Web Share API 分享
+  // Web Share API 分享（優化支援 IG 限時動態）
   const handleShare = async () => {
     if (!storyRef.current) return;
 
@@ -1142,19 +1227,68 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
         canvas.toBlob((b) => resolve(b!), 'image/png');
       });
 
-      const file = new File([blob], 'daily-quote.png', { type: 'image/png' });
+      // 使用時間戳確保每次都是新檔案
+      const timestamp = Date.now();
+      const file = new File([blob], `daily-quote-${timestamp}.png`, { type: 'image/png' });
 
-      if (navigator.share && navigator.canShare({ files: [file] })) {
+      // 檢查是否支援 Web Share API（含檔案分享）
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
           title: '每日金句',
-          text: `「${displayQuoteText}」— Ultra Advisor`,
+          text: `「${displayQuoteText}」— Ultra Advisor 💼`,
         });
         // 記錄分享
         await recordShare();
       } else {
-        // 不支援 Web Share，改用下載
-        handleDownload();
+        // 不支援 Web Share API，提供替代方案
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isAndroid = /Android/.test(navigator.userAgent);
+
+        if (isIOS || isAndroid) {
+          // 手機：開啟圖片頁面，引導用戶手動分享到 IG
+          const dataUrl = canvas.toDataURL('image/png');
+          const newWindow = window.open('', '_blank');
+          if (newWindow) {
+            newWindow.document.write(`
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>分享到 IG 限時動態</title>
+                <style>
+                  body { margin: 0; padding: 20px; background: #0f172a; display: flex; flex-direction: column; align-items: center; min-height: 100vh; font-family: system-ui; }
+                  img { max-width: 100%; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 20px; }
+                  .steps { color: #e2e8f0; text-align: left; padding: 20px; background: #1e293b; border-radius: 12px; max-width: 300px; }
+                  .steps h3 { color: #a855f7; margin-top: 0; }
+                  .steps ol { padding-left: 20px; line-height: 1.8; }
+                  .steps li { margin-bottom: 8px; }
+                  .highlight { color: #f59e0b; font-weight: bold; }
+                </style>
+              </head>
+              <body>
+                <img src="${dataUrl}" alt="每日金句" />
+                <div class="steps">
+                  <h3>📱 分享到 IG 限時動態</h3>
+                  <ol>
+                    <li><span class="highlight">長按圖片</span> → 儲存圖片</li>
+                    <li>開啟 <span class="highlight">Instagram</span></li>
+                    <li>點擊 <span class="highlight">+</span> → 限時動態</li>
+                    <li>從相簿選擇此圖片</li>
+                    <li>發布！🎉</li>
+                  </ol>
+                </div>
+              </body>
+              </html>
+            `);
+            newWindow.document.close();
+          }
+          // 記錄分享
+          await recordShare();
+        } else {
+          // 桌面：直接下載
+          handleDownload();
+        }
       }
     } catch (error: any) {
       if (error.name !== 'AbortError') {
@@ -1517,7 +1651,10 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
                         )}
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-white font-bold text-sm">
+                        <span
+                          className="text-white font-bold text-sm"
+                          style={{ fontFamily: NAME_FONT_STYLES[nameFontStyle].fontFamily }}
+                        >
                           {userDisplayName || '財務顧問'}
                         </span>
                         <span className="text-white/50 text-[10px] flex items-center gap-1">
@@ -1824,7 +1961,10 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
                         )}
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-white font-bold text-sm whitespace-nowrap">
+                        <span
+                          className="text-white font-bold text-sm whitespace-nowrap"
+                          style={{ fontFamily: NAME_FONT_STYLES[nameFontStyle].fontFamily }}
+                        >
                           {userDisplayName || '財務顧問'}
                         </span>
                         <span className="text-white/60 text-[10px] whitespace-nowrap">
@@ -1938,7 +2078,10 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
                             )}
                           </div>
                           <div className="flex flex-col">
-                            <span className="text-white font-bold text-xs">
+                            <span
+                              className="text-white font-bold text-xs"
+                              style={{ fontFamily: NAME_FONT_STYLES[nameFontStyle].fontFamily }}
+                            >
                               {userDisplayName || '財務顧問'}
                             </span>
                             <span className="text-white/50 text-[9px]">
@@ -2265,7 +2408,7 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
                   {/* 字體選擇 */}
                   <div className="mb-4">
                     <label className="text-slate-400 text-[10px] font-bold mb-2 flex items-center gap-1">
-                      <Type size={12} /> 字體風格
+                      <Type size={12} /> 金句字體
                     </label>
                     <div className="grid grid-cols-4 gap-1.5">
                       {(Object.entries(FONT_STYLES) as [FontStyle, typeof FONT_STYLES[FontStyle]][]).map(([key, style]) => (
@@ -2282,6 +2425,38 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
                           {style.name}
                         </button>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* 顧問名字字體 */}
+                  <div className="mb-4">
+                    <label className="text-slate-400 text-[10px] font-bold mb-2 flex items-center gap-1">
+                      <PenTool size={12} /> 顧問名字字體
+                    </label>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {(Object.entries(NAME_FONT_STYLES) as [NameFontStyle, typeof NAME_FONT_STYLES[NameFontStyle]][]).map(([key, style]) => (
+                        <button
+                          key={key}
+                          onClick={() => setNameFontStyle(key)}
+                          className={`py-2 rounded-lg text-sm transition-all
+                                     ${nameFontStyle === key
+                                       ? 'bg-purple-600 text-white ring-2 ring-purple-400'
+                                       : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                          style={{ fontFamily: style.fontFamily }}
+                        >
+                          {style.name}
+                        </button>
+                      ))}
+                    </div>
+                    {/* 預覽 */}
+                    <div className="mt-2 bg-slate-800/50 rounded-lg p-3 text-center">
+                      <span
+                        className="text-white text-lg"
+                        style={{ fontFamily: NAME_FONT_STYLES[nameFontStyle].fontFamily }}
+                      >
+                        {userDisplayName || '財務顧問'}
+                      </span>
+                      <p className="text-slate-500 text-[9px] mt-1">預覽效果</p>
                     </div>
                   </div>
 
@@ -2474,12 +2649,13 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
                   </div>
 
                   {/* 簽名畫布 */}
-                  <div className="bg-white rounded-xl overflow-hidden mb-4">
+                  <div className="bg-white rounded-xl overflow-hidden mb-4 select-none">
                     <canvas
                       ref={signatureCanvasRef}
                       width={300}
                       height={150}
-                      className="w-full touch-none cursor-crosshair"
+                      className="w-full touch-none cursor-crosshair select-none"
+                      style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
                       onMouseDown={startSignatureDrawing}
                       onMouseMove={drawSignature}
                       onMouseUp={endSignatureDrawing}
@@ -2487,6 +2663,7 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
                       onTouchStart={startSignatureDrawing}
                       onTouchMove={drawSignature}
                       onTouchEnd={endSignatureDrawing}
+                      onTouchCancel={endSignatureDrawing}
                     />
                   </div>
 
