@@ -5026,6 +5026,19 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
 
   // 📴 離線同步（暫時停用以排查任務系統問題）
   // const offlineSync = useOfflineSync();
+  const offlineSync = {
+    isOnline: true,
+    isInitialized: false,
+    syncStatus: 'idle' as const,
+    pendingSyncCount: 0,
+    cacheUserData: async () => {},
+    getCachedUser: async () => null,
+    cacheClientList: async () => {},
+    getCachedClientList: async () => [],
+    cacheNotificationList: async () => {},
+    getCachedNotificationList: async () => [],
+    syncPendingChanges: async () => {},
+  };
 
   // 客戶列表狀態
   const [clients, setClients] = useState<any[]>([]);
