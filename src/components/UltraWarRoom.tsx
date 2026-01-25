@@ -47,6 +47,9 @@ import { db, storage } from '../firebase';
 import { useMembership } from '../hooks/useMembership';
 import ReferralEngineModal from './ReferralEngineModal';
 
+// 🔔 推播通知
+import { usePushNotifications } from '../hooks/usePushNotifications';
+
 // 🆕 任務看板
 import MissionCard from './MissionCard';
 import PWAInstallModal from './PWAInstallModal';
@@ -652,7 +655,7 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
         setIsLocating(false);
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            setLocationError('請允許存取您的位置');
+            setLocationError('permission_denied');
             break;
           case error.POSITION_UNAVAILABLE:
             setLocationError('無法取得位置資訊');
@@ -1457,7 +1460,39 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
 
         {locationError && (
           <div className="text-center py-3">
-            <p className="text-[10px] text-slate-500 mb-2">{locationError}</p>
+            {locationError === 'permission_denied' ? (
+              <>
+                <p className="text-[10px] text-slate-500 mb-2">定位權限已被拒絕</p>
+                <p className="text-[9px] text-slate-600 mb-3">
+                  請點擊網址列左側的 🔒 圖示<br/>
+                  將「位置」權限改為「允許」
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 text-[10px] font-bold rounded-lg transition-colors"
+                >
+                  重新整理頁面
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-[10px] text-slate-500 mb-2">{locationError}</p>
+                <button
+                  onClick={requestLocation}
+                  className="px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 text-[10px] font-bold rounded-lg transition-colors"
+                >
+                  <MapPin size={10} className="inline mr-1" />
+                  重新定位
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* 尚未定位（初始狀態） */}
+        {!isLocating && !locationError && !userLocation && (
+          <div className="text-center py-3">
+            <p className="text-[10px] text-slate-500 mb-2">請允許存取您的位置</p>
             <button
               onClick={requestLocation}
               className="px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 text-[10px] font-bold rounded-lg transition-colors"
@@ -5097,6 +5132,9 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
   const [showReferralEngine, setShowReferralEngine] = useState(false);
   const [showPWAInstall, setShowPWAInstall] = useState(false);
 
+  // 🔔 推播通知
+  const pushNotifications = usePushNotifications(user?.uid || null);
+
   // 客戶列表狀態
   const [clients, setClients] = useState<any[]>([]);
   const [clientsLoading, setClientsLoading] = useState(true);
@@ -5540,6 +5578,47 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
                       >
                         {showAllNotifications ? `收起 ▲` : `查看全部 (${notifications.length} 則) ▼`}
                       </button>
+                    </div>
+                  )}
+
+                  {/* 🔔 推播通知開關 */}
+                  {pushNotifications.isSupported && pushNotifications.permission !== 'denied' && (
+                    <div className="p-3 border-t border-slate-700">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Bell size={14} className={pushNotifications.isSubscribed ? 'text-purple-400' : 'text-slate-500'} />
+                          <span className="text-xs text-slate-400">
+                            {pushNotifications.isSubscribed ? '推播已開啟' : '開啟推播通知'}
+                          </span>
+                        </div>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (pushNotifications.isSubscribed) {
+                              await pushNotifications.unsubscribe();
+                            } else {
+                              await pushNotifications.subscribe();
+                            }
+                          }}
+                          disabled={pushNotifications.isLoading}
+                          className={`px-3 py-1 text-xs rounded-lg transition-all ${
+                            pushNotifications.isSubscribed
+                              ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                              : 'bg-purple-600 text-white hover:bg-purple-500'
+                          }`}
+                        >
+                          {pushNotifications.isLoading ? (
+                            <Loader2 size={12} className="animate-spin" />
+                          ) : pushNotifications.isSubscribed ? (
+                            '關閉'
+                          ) : (
+                            '開啟'
+                          )}
+                        </button>
+                      </div>
+                      {pushNotifications.error && (
+                        <p className="text-red-400 text-[10px] mt-1">{pushNotifications.error}</p>
+                      )}
                     </div>
                   )}
                 </div>
