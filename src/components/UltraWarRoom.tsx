@@ -7,7 +7,8 @@ import {
   Clock, TriangleAlert, ShieldAlert, Activity, Edit3, Save, Loader2,
   Heart, RefreshCw, Download, Sparkles, Crown, BarChart3, Bell,
   MessageSquarePlus, Send, Lightbulb, ChevronDown, BookOpen, Sun, Moon,
-  Share2, Quote, Calendar, Layout, Type, ImageIcon, ExternalLink
+  Share2, Quote, Calendar, Layout, Type, ImageIcon, ExternalLink, PenTool, RotateCcw, Handshake,
+  MapPin, Coffee, Navigation, Wifi, ParkingCircle, Volume2
 } from 'lucide-react';
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart
@@ -52,6 +53,106 @@ import PWAInstallModal from './PWAInstallModal';
 
 // 🆕 知識庫文章
 import { blogArticles } from '../data/blog/index';
+
+// ==========================================
+// 🏪 Ultra Alliance 模擬合作夥伴資料
+// ==========================================
+interface Partner {
+  id: string;
+  name: string;
+  type: 'meeting_spot' | 'service_provider';
+  category: 'cafe' | 'restaurant' | 'business' | 'suit' | 'photo';
+  location: { lat: number; lng: number; address: string };
+  features: { quiet: boolean; parking: boolean; power: boolean };
+  offer: { title: string; description: string };
+  image: string;
+  rating: number;
+  isUltraPartner: boolean;
+}
+
+// 模擬合作夥伴資料（未來從 Firestore 讀取）
+const MOCK_PARTNERS: Partner[] = [
+  {
+    id: '1',
+    name: '路易莎咖啡 信義旗艦店',
+    type: 'meeting_spot',
+    category: 'cafe',
+    location: { lat: 25.0330, lng: 121.5654, address: '台北市信義區信義路五段7號' },
+    features: { quiet: true, parking: true, power: true },
+    offer: { title: 'Ultra 會員 9 折', description: '出示會員畫面即可' },
+    image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&h=300&fit=crop',
+    rating: 4.6,
+    isUltraPartner: true,
+  },
+  {
+    id: '2',
+    name: 'Cama Café 南港軟體園區店',
+    type: 'meeting_spot',
+    category: 'cafe',
+    location: { lat: 25.0596, lng: 121.6177, address: '台北市南港區三重路19-2號' },
+    features: { quiet: true, parking: false, power: true },
+    offer: { title: '第二杯半價', description: '限手沖系列' },
+    image: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=300&fit=crop',
+    rating: 4.5,
+    isUltraPartner: true,
+  },
+  {
+    id: '3',
+    name: 'COFFEE LAW 大安旗艦',
+    type: 'meeting_spot',
+    category: 'cafe',
+    location: { lat: 25.0264, lng: 121.5436, address: '台北市大安區敦化南路一段233巷28號' },
+    features: { quiet: true, parking: true, power: true },
+    offer: { title: 'Ultra 專屬包廂', description: '提前預約享免費使用' },
+    image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=300&fit=crop',
+    rating: 4.8,
+    isUltraPartner: true,
+  },
+  {
+    id: '4',
+    name: 'WeWork 信義區',
+    type: 'meeting_spot',
+    category: 'business',
+    location: { lat: 25.0330, lng: 121.5637, address: '台北市信義區松仁路100號' },
+    features: { quiet: true, parking: true, power: true },
+    offer: { title: '免費會議室 2 小時', description: 'Ultra 白金會員專屬' },
+    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&h=300&fit=crop',
+    rating: 4.7,
+    isUltraPartner: true,
+  },
+  {
+    id: '5',
+    name: '星巴克 101 門市',
+    type: 'meeting_spot',
+    category: 'cafe',
+    location: { lat: 25.0339, lng: 121.5645, address: '台北市信義區市府路45號' },
+    features: { quiet: false, parking: true, power: true },
+    offer: { title: 'Google 推薦', description: '評分 4.5 以上' },
+    image: 'https://images.unsplash.com/photo-1453614512568-c4024d13c247?w=400&h=300&fit=crop',
+    rating: 4.5,
+    isUltraPartner: false,
+  },
+];
+
+// 計算兩點間距離（Haversine 公式）
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371; // 地球半徑（公里）
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // 距離（公里）
+};
+
+// 格式化距離顯示
+const formatDistance = (km: number): string => {
+  if (km < 1) {
+    return `${Math.round(km * 1000)}m`;
+  }
+  return `${km.toFixed(1)}km`;
+};
 
 // ==========================================
 // 🎨 市場快訊跑馬燈（含傲創計算機入口）
@@ -126,6 +227,27 @@ const MarketTicker = () => {
       >
         <BookOpen size={14} />
         <span className="hidden sm:inline">知識庫</span>
+      </a>
+
+      {/* 預約1:1免費試算按鈕 */}
+      <a
+        href="/booking"
+        className="ml-2 flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600
+                 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold rounded-lg
+                 transition-all shrink-0 shadow-lg shadow-purple-500/20"
+      >
+        <Calendar size={14} />
+        <span className="hidden sm:inline">預約試算</span>
+      </a>
+
+      {/* 傲創聯盟按鈕 */}
+      <a
+        href="/alliance"
+        className="ml-2 flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30
+                 text-amber-300 text-xs font-bold rounded-lg transition-all shrink-0 border border-amber-500/30"
+      >
+        <Handshake size={14} />
+        <span className="hidden sm:inline">聯盟</span>
       </a>
 
       {/* 主題切換按鈕 */}
@@ -440,12 +562,88 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
   const [isUploadingBg, setIsUploadingBg] = useState(false);
   const bgInputRef = useRef<HTMLInputElement>(null);
 
+  // ========== 簽名功能狀態 ==========
+  const [showSignaturePad, setShowSignaturePad] = useState(false);
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const [signatureColor, setSignatureColor] = useState('#FFFFFF'); // 預設白色
+  const [signatureSize, setSignatureSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
+  const isDrawingRef = useRef(false);
+  const lastPosRef = useRef({ x: 0, y: 0 });
+
   // ========== 雜誌風格拖拉位置與尺寸狀態 ==========
   const [magazineTitlePos, setMagazineTitlePos] = useState({ x: 24, y: 80 });
   const [magazineTitleSize, setMagazineTitleSize] = useState({ width: 280, height: 'auto' as number | 'auto' });
   const [magazineContentPos, setMagazineContentPos] = useState({ x: 24, y: 180 });
   const [magazineContentSize, setMagazineContentSize] = useState({ width: 280, height: 'auto' as number | 'auto' });
   const [isEditingLayout, setIsEditingLayout] = useState(false); // 是否處於編輯模式
+
+  // ========== Ultra Alliance GPS 狀態 ==========
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [nearbyPartners, setNearbyPartners] = useState<(Partner & { distance: number })[]>([]);
+
+  // 取得使用者位置
+  const requestLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationError('您的瀏覽器不支援定位功能');
+      return;
+    }
+    setIsLocating(true);
+    setLocationError(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ lat: latitude, lng: longitude });
+        setIsLocating(false);
+
+        // 計算並排序附近夥伴
+        const partnersWithDistance = MOCK_PARTNERS.map(partner => ({
+          ...partner,
+          distance: calculateDistance(latitude, longitude, partner.location.lat, partner.location.lng)
+        }))
+        .filter(p => p.distance <= 3) // 3km 內
+        .sort((a, b) => {
+          // 優先顯示 Ultra Partner，然後按距離排序
+          if (a.isUltraPartner && !b.isUltraPartner) return -1;
+          if (!a.isUltraPartner && b.isUltraPartner) return 1;
+          return a.distance - b.distance;
+        })
+        .slice(0, 3); // 只取前 3 間
+
+        setNearbyPartners(partnersWithDistance);
+      },
+      (error) => {
+        setIsLocating(false);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setLocationError('請允許存取您的位置');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setLocationError('無法取得位置資訊');
+            break;
+          case error.TIMEOUT:
+            setLocationError('定位逾時，請重試');
+            break;
+          default:
+            setLocationError('定位失敗');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }, []);
+
+  // 初次載入時嘗試取得位置
+  useEffect(() => {
+    // 延遲請求，避免一開始就彈出權限視窗
+    const timer = setTimeout(() => {
+      if (!userLocation && !locationError) {
+        requestLocation();
+      }
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // ========== 雜誌風格 - 可拖拉元素位置 ==========
   const [magazineDayBadgePos, setMagazineDayBadgePos] = useState({ x: 270, y: 24 }); // Day 徽章（右上）
@@ -563,6 +761,194 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
       setSelectedCustomBgIndex(prev => prev! - 1);
     }
   };
+
+  // ========== 簽名功能處理 ==========
+  // 初始化簽名畫布
+  const initSignatureCanvas = useCallback(() => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // 設定畫布為白色背景
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }, []);
+
+  // 開始簽名
+  const startSignatureDrawing = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+
+    isDrawingRef.current = true;
+    const rect = canvas.getBoundingClientRect();
+
+    let clientX: number, clientY: number;
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    lastPosRef.current = {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    };
+  }, []);
+
+  // 繪製簽名
+  const drawSignature = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDrawingRef.current) return;
+
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+
+    let clientX: number, clientY: number;
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    const currentPos = {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    };
+
+    ctx.beginPath();
+    ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
+    ctx.lineTo(currentPos.x, currentPos.y);
+    ctx.strokeStyle = '#000000'; // 用黑色畫，之後再轉換
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    lastPosRef.current = currentPos;
+  }, []);
+
+  // 結束簽名繪製
+  const endSignatureDrawing = useCallback(() => {
+    isDrawingRef.current = false;
+  }, []);
+
+  // 清除簽名
+  const clearSignature = useCallback(() => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }, []);
+
+  // 儲存簽名（去除白色背景，轉為指定顏色）
+  const saveSignature = useCallback(() => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // 取得畫布資料
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+
+    // 解析目標顏色
+    const hexToRgb = (hex: string) => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : { r: 255, g: 255, b: 255 };
+    };
+    const targetColor = hexToRgb(signatureColor);
+
+    // 建立輸出畫布（去背景版本）
+    const outputCanvas = document.createElement('canvas');
+    outputCanvas.width = canvas.width;
+    outputCanvas.height = canvas.height;
+    const outputCtx = outputCanvas.getContext('2d');
+    if (!outputCtx) return;
+
+    const outputImageData = outputCtx.createImageData(canvas.width, canvas.height);
+    const outputData = outputImageData.data;
+
+    // 檢查是否有繪製內容
+    let hasContent = false;
+
+    // 遍歷每個像素：白色變透明，黑色變目標顏色
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      // 判斷是否為白色背景（允許一些誤差）
+      const isWhite = r > 240 && g > 240 && b > 240;
+
+      if (isWhite) {
+        // 白色變透明
+        outputData[i] = 0;
+        outputData[i + 1] = 0;
+        outputData[i + 2] = 0;
+        outputData[i + 3] = 0;
+      } else {
+        // 非白色（筆跡）變成目標顏色
+        hasContent = true;
+        // 根據原始像素的深淺程度計算透明度
+        const darkness = 255 - ((r + g + b) / 3);
+        outputData[i] = targetColor.r;
+        outputData[i + 1] = targetColor.g;
+        outputData[i + 2] = targetColor.b;
+        outputData[i + 3] = Math.min(255, darkness * 1.5); // 增強對比
+      }
+    }
+
+    if (!hasContent) {
+      alert('請先簽名');
+      return;
+    }
+
+    outputCtx.putImageData(outputImageData, 0, 0);
+    const dataUrl = outputCanvas.toDataURL('image/png');
+    setSignatureDataUrl(dataUrl);
+    setShowSignaturePad(false);
+  }, [signatureColor]);
+
+  // 刪除簽名
+  const deleteSignature = useCallback(() => {
+    setSignatureDataUrl(null);
+  }, []);
+
+  // 簽名尺寸對應的 CSS class
+  const getSignatureSizeClass = () => {
+    switch (signatureSize) {
+      case 'small': return 'h-6';
+      case 'large': return 'h-14';
+      default: return 'h-10';
+    }
+  };
+
+  // 當簽名畫布彈窗打開時，初始化畫布
+  useEffect(() => {
+    if (showSignaturePad) {
+      // 延遲一點確保 canvas 已經渲染
+      setTimeout(initSignatureCanvas, 50);
+    }
+  }, [showSignaturePad, initSignatureCanvas]);
 
   // 圖片代理 API URL（Cloud Functions）
   const IMAGE_PROXY_URL = 'https://us-central1-grbt-f87fa.cloudfunctions.net/imageProxy';
@@ -785,45 +1171,8 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
 
   return (
     <div className="dark:bg-slate-900/50 bg-white border dark:border-slate-800 border-slate-200 rounded-2xl p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Activity size={18} className="text-blue-400" />
-        <h3 className="text-sm font-black dark:text-white text-slate-900 uppercase tracking-wider">市場快訊</h3>
-        <span className="ml-auto text-[10px] text-slate-500">2026 即時數據</span>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-red-900/20 border border-red-500/20 rounded-xl p-3 text-center">
-          <Heart size={16} className="text-red-400 mx-auto mb-1" />
-          <div className="text-2xl font-black text-red-400">
-            3:48<span className="text-xs ml-1">分鐘</span>
-          </div>
-          <div className="text-[10px] text-slate-500 font-bold uppercase">癌症時鐘</div>
-        </div>
-        <div className="bg-amber-900/20 border border-amber-500/20 rounded-xl p-3 text-center">
-          <TrendingUp size={16} className="text-amber-400 mx-auto mb-1" />
-          <div className="text-2xl font-black text-amber-400">
-            15.8<span className="text-xs ml-1">%</span>
-          </div>
-          <div className="text-[10px] text-slate-500 font-bold uppercase">醫療通膨</div>
-        </div>
-        <div className="bg-orange-900/20 border border-orange-500/20 rounded-xl p-3 text-center">
-          <Clock size={16} className="text-orange-400 mx-auto mb-1" />
-          <div className="text-2xl font-black text-orange-400">
-            2031<span className="text-xs ml-1">年</span>
-          </div>
-          <div className="text-[10px] text-slate-500 font-bold uppercase">勞保倒數</div>
-        </div>
-        <div className="bg-emerald-900/20 border border-emerald-500/20 rounded-xl p-3 text-center">
-          <Activity size={16} className="text-emerald-400 mx-auto mb-1" />
-          <div className="text-2xl font-black text-emerald-400">
-            4.5<span className="text-xs ml-1">%</span>
-          </div>
-          <div className="text-[10px] text-slate-500 font-bold uppercase">實質通膨</div>
-        </div>
-      </div>
-
       {/* ===== 每日金句區塊 ===== */}
-      <div className="mt-4 pt-4 border-t dark:border-slate-800 border-slate-200">
+      <div className="mb-4">
         <div className="flex items-center gap-2 mb-3">
           <Quote size={16} className="text-purple-400" />
           <span className="text-xs font-bold dark:text-white text-slate-900">每日金句</span>
@@ -921,6 +1270,176 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
             分享社群
           </button>
         </div>
+      </div>
+
+      {/* ===== 市場快訊區塊（精簡版） ===== */}
+      <div className="mt-3 pt-3 border-t dark:border-slate-800 border-slate-200">
+        <div className="flex items-center gap-1.5 mb-2">
+          <Activity size={12} className="text-blue-400" />
+          <h3 className="text-[10px] font-bold dark:text-white text-slate-900 uppercase tracking-wider">市場快訊</h3>
+          <span className="ml-auto text-[9px] text-slate-500">2026</span>
+        </div>
+
+        <div className="grid grid-cols-4 gap-1.5">
+          <div className="bg-red-900/20 border border-red-500/20 rounded p-1.5 text-center">
+            <div className="text-sm font-black text-red-400">3:48</div>
+            <div className="text-[8px] text-slate-500 font-bold">癌症時鐘</div>
+          </div>
+          <div className="bg-amber-900/20 border border-amber-500/20 rounded p-1.5 text-center">
+            <div className="text-sm font-black text-amber-400">15.8%</div>
+            <div className="text-[8px] text-slate-500 font-bold">醫療通膨</div>
+          </div>
+          <div className="bg-orange-900/20 border border-orange-500/20 rounded p-1.5 text-center">
+            <div className="text-sm font-black text-orange-400">2031</div>
+            <div className="text-[8px] text-slate-500 font-bold">勞保倒數</div>
+          </div>
+          <div className="bg-emerald-900/20 border border-emerald-500/20 rounded p-1.5 text-center">
+            <div className="text-sm font-black text-emerald-400">4.5%</div>
+            <div className="text-[8px] text-slate-500 font-bold">實質通膨</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Ultra Alliance 戰術據點 ===== */}
+      <div className="mt-3 pt-3 border-t dark:border-slate-800 border-slate-200">
+        <div className="flex items-center gap-1.5 mb-2">
+          <Handshake size={12} className="text-purple-400" />
+          <h3 className="text-[10px] font-bold dark:text-white text-slate-900 uppercase tracking-wider">Ultra Alliance</h3>
+          <a
+            href="/alliance"
+            className="ml-auto text-[9px] text-purple-400 hover:text-purple-300 font-bold flex items-center gap-0.5"
+          >
+            更多 <Navigation size={8} />
+          </a>
+        </div>
+
+        {/* 定位狀態 */}
+        {isLocating && (
+          <div className="flex items-center justify-center gap-2 py-4 text-slate-400">
+            <Loader2 size={14} className="animate-spin" />
+            <span className="text-[10px]">定位中...</span>
+          </div>
+        )}
+
+        {locationError && (
+          <div className="text-center py-3">
+            <p className="text-[10px] text-slate-500 mb-2">{locationError}</p>
+            <button
+              onClick={requestLocation}
+              className="px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 text-[10px] font-bold rounded-lg transition-colors"
+            >
+              <MapPin size={10} className="inline mr-1" />
+              開啟定位
+            </button>
+          </div>
+        )}
+
+        {!isLocating && !locationError && nearbyPartners.length === 0 && userLocation && (
+          <div className="text-center py-4 text-slate-500 text-[10px]">
+            附近 3km 內沒有合作據點
+          </div>
+        )}
+
+        {/* 附近據點列表（最多 3 間） */}
+        {!isLocating && nearbyPartners.length > 0 && (
+          <div className="space-y-1.5">
+            {nearbyPartners.map((partner) => (
+              <div
+                key={partner.id}
+                className="flex items-center gap-2 p-2 rounded-lg dark:bg-slate-800/50 bg-slate-100
+                         border dark:border-slate-700/50 border-slate-200 hover:border-purple-500/30 transition-all group"
+              >
+                {/* 店家圖片 */}
+                <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-slate-700">
+                  <img
+                    src={partner.image}
+                    alt={partner.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/80?text=☕';
+                    }}
+                  />
+                </div>
+
+                {/* 店家資訊 */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-bold dark:text-white text-slate-800 truncate">
+                      {partner.name}
+                    </span>
+                    {partner.isUltraPartner && (
+                      <span className="px-1 py-0.5 bg-purple-500/20 text-purple-400 text-[7px] font-black rounded">
+                        ULTRA
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {/* 距離 */}
+                    <span className="text-[9px] text-emerald-400 font-bold">
+                      {formatDistance(partner.distance)}
+                    </span>
+                    {/* 特色標籤 */}
+                    {partner.features.quiet && (
+                      <span className="text-[8px] text-slate-400 flex items-center gap-0.5" title="適合談單">
+                        <Volume2 size={8} />
+                      </span>
+                    )}
+                    {partner.features.parking && (
+                      <span className="text-[8px] text-slate-400 flex items-center gap-0.5" title="好停車">
+                        <ParkingCircle size={8} />
+                      </span>
+                    )}
+                    {partner.features.power && (
+                      <span className="text-[8px] text-slate-400 flex items-center gap-0.5" title="有插座">
+                        <Wifi size={8} />
+                      </span>
+                    )}
+                    {/* 優惠 */}
+                    {partner.isUltraPartner && (
+                      <span className="text-[8px] text-amber-400 font-bold">
+                        {partner.offer.title}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 導航按鈕 */}
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${partner.location.lat},${partner.location.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg
+                           bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 transition-colors"
+                  title="開啟導航"
+                >
+                  <Navigation size={14} />
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 沒有定位時的預設顯示 */}
+        {!userLocation && !isLocating && !locationError && (
+          <div className="grid grid-cols-3 gap-1.5">
+            {MOCK_PARTNERS.filter(p => p.isUltraPartner).slice(0, 3).map((partner) => (
+              <div
+                key={partner.id}
+                className="p-1.5 rounded-lg dark:bg-slate-800/50 bg-slate-100 border dark:border-slate-700/50 border-slate-200 text-center"
+              >
+                <div className="w-full aspect-video rounded overflow-hidden mb-1 bg-slate-700">
+                  <img
+                    src={partner.image}
+                    alt={partner.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="text-[8px] font-bold dark:text-white text-slate-800 truncate">{partner.name.split(' ')[0]}</div>
+                <div className="text-[7px] text-amber-400 truncate">{partner.offer.title}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ===== 限時動態預覽彈窗 ===== */}
@@ -1033,6 +1552,17 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
                       </div>
                     </div>
                   </div>
+
+                  {/* 簽名（置中下方，品牌上方） */}
+                  {signatureDataUrl && (
+                    <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10">
+                      <img
+                        src={signatureDataUrl}
+                        alt="簽名"
+                        className={`${getSignatureSizeClass()} object-contain drop-shadow-lg`}
+                      />
+                    </div>
+                  )}
                 </>
               )}
 
@@ -1162,6 +1692,17 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
                       />
                     </div>
                   </div>
+
+                  {/* 簽名（品牌浮水印上方） */}
+                  {signatureDataUrl && (
+                    <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-10">
+                      <img
+                        src={signatureDataUrl}
+                        alt="簽名"
+                        className={`${getSignatureSizeClass()} object-contain drop-shadow-lg`}
+                      />
+                    </div>
+                  )}
                 </>
               )}
 
@@ -1319,6 +1860,17 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
                       />
                     </div>
                   </div>
+
+                  {/* 簽名（品牌浮水印上方） */}
+                  {signatureDataUrl && (
+                    <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-10">
+                      <img
+                        src={signatureDataUrl}
+                        alt="簽名"
+                        className={`${getSignatureSizeClass()} object-contain drop-shadow-lg`}
+                      />
+                    </div>
+                  )}
                 </>
               )}
 
@@ -1348,6 +1900,17 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
                       >
                         {displayQuoteText}
                       </p>
+
+                      {/* 簽名（卡片內） */}
+                      {signatureDataUrl && (
+                        <div className="flex justify-center mb-3">
+                          <img
+                            src={signatureDataUrl}
+                            alt="簽名"
+                            className={`${getSignatureSizeClass()} object-contain`}
+                          />
+                        </div>
+                      )}
 
                       {/* 分隔線 */}
                       <div className="w-full h-px bg-white/20 my-4" />
@@ -1798,6 +2361,84 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
                     )}
                   </div>
 
+                  {/* 手寫簽名 */}
+                  <div className="mt-4">
+                    <label className="text-slate-400 text-[10px] font-bold mb-2 flex items-center gap-1">
+                      <PenTool size={12} /> 手寫簽名
+                    </label>
+
+                    {/* 已有簽名：顯示預覽 */}
+                    {signatureDataUrl ? (
+                      <div className="space-y-2">
+                        <div className="bg-slate-800/50 rounded-lg p-3 flex items-center justify-center">
+                          <img
+                            src={signatureDataUrl}
+                            alt="簽名預覽"
+                            className={`${getSignatureSizeClass()} object-contain`}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => setShowSignaturePad(true)}
+                            className="py-2 rounded-lg text-[10px] font-bold bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all flex items-center justify-center gap-1"
+                          >
+                            <Edit3 size={12} /> 重新簽名
+                          </button>
+                          <button
+                            onClick={deleteSignature}
+                            className="py-2 rounded-lg text-[10px] font-bold bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-all flex items-center justify-center gap-1"
+                          >
+                            <Trash2 size={12} /> 刪除簽名
+                          </button>
+                        </div>
+                        {/* 簽名顏色選擇 */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-500 text-[9px]">簽名顏色：</span>
+                          {['#FFFFFF', '#FFD700', '#FF6B6B', '#4ECDC4', '#A855F7'].map((color) => (
+                            <button
+                              key={color}
+                              onClick={() => setSignatureColor(color)}
+                              className={`w-5 h-5 rounded-full border-2 transition-all ${
+                                signatureColor === color ? 'border-purple-500 scale-110' : 'border-transparent'
+                              }`}
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                        </div>
+                        {/* 簽名尺寸選擇 */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-500 text-[9px]">簽名大小：</span>
+                          <div className="grid grid-cols-3 gap-1 flex-1">
+                            {(['small', 'medium', 'large'] as const).map((size) => (
+                              <button
+                                key={size}
+                                onClick={() => setSignatureSize(size)}
+                                className={`py-1 rounded text-[9px] font-bold transition-all ${
+                                  signatureSize === size
+                                    ? 'bg-purple-600 text-white'
+                                    : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                                }`}
+                              >
+                                {size === 'small' ? '小' : size === 'medium' ? '中' : '大'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* 尚無簽名：顯示建立按鈕 */
+                      <button
+                        onClick={() => setShowSignaturePad(true)}
+                        className="w-full border border-dashed border-slate-600 rounded-lg p-3
+                                   text-slate-400 text-xs hover:border-purple-500 hover:text-purple-400
+                                   transition-all flex items-center justify-center gap-2"
+                      >
+                        <PenTool size={14} />
+                        點擊簽名
+                      </button>
+                    )}
+                  </div>
+
                   {/* 完成按鈕 */}
                   <button
                     onClick={() => setShowAdvancedSettings(false)}
@@ -1806,6 +2447,89 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
                   >
                     完成設定
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* ========== 簽名畫布彈窗 ========== */}
+            {showSignaturePad && (
+              <div className="fixed inset-0 z-[130] flex items-center justify-center">
+                {/* 背景遮罩 */}
+                <div
+                  className="absolute inset-0 bg-black/80"
+                  onClick={() => setShowSignaturePad(false)}
+                />
+                {/* 簽名面板 */}
+                <div className="relative w-[90%] max-w-sm bg-slate-900 border border-slate-700 rounded-2xl p-5">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-white font-bold text-base flex items-center gap-2">
+                      <PenTool size={16} /> 手寫簽名
+                    </h4>
+                    <button
+                      onClick={() => setShowSignaturePad(false)}
+                      className="w-7 h-7 bg-slate-800 rounded-full flex items-center justify-center"
+                    >
+                      <X size={16} className="text-slate-400" />
+                    </button>
+                  </div>
+
+                  {/* 簽名畫布 */}
+                  <div className="bg-white rounded-xl overflow-hidden mb-4">
+                    <canvas
+                      ref={signatureCanvasRef}
+                      width={300}
+                      height={150}
+                      className="w-full touch-none cursor-crosshair"
+                      onMouseDown={startSignatureDrawing}
+                      onMouseMove={drawSignature}
+                      onMouseUp={endSignatureDrawing}
+                      onMouseLeave={endSignatureDrawing}
+                      onTouchStart={startSignatureDrawing}
+                      onTouchMove={drawSignature}
+                      onTouchEnd={endSignatureDrawing}
+                    />
+                  </div>
+
+                  {/* 提示文字 */}
+                  <p className="text-slate-500 text-[10px] text-center mb-4">
+                    在白色區域內簽名，系統會自動去除白色背景
+                  </p>
+
+                  {/* 顏色選擇 */}
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <span className="text-slate-400 text-xs">簽名顏色：</span>
+                    {['#FFFFFF', '#FFD700', '#FF6B6B', '#4ECDC4', '#A855F7'].map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => setSignatureColor(color)}
+                        className={`w-7 h-7 rounded-full border-2 transition-all ${
+                          signatureColor === color
+                            ? 'border-purple-400 scale-110 ring-2 ring-purple-400/50'
+                            : 'border-slate-600 hover:border-slate-400'
+                        }`}
+                        style={{ backgroundColor: color }}
+                        title={color === '#FFFFFF' ? '白色' : color === '#FFD700' ? '金色' : color === '#FF6B6B' ? '紅色' : color === '#4ECDC4' ? '青色' : '紫色'}
+                      />
+                    ))}
+                  </div>
+
+                  {/* 操作按鈕 */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={clearSignature}
+                      className="py-3 rounded-xl text-sm font-bold bg-slate-700 text-slate-300
+                                 hover:bg-slate-600 transition-all flex items-center justify-center gap-2"
+                    >
+                      <RotateCcw size={16} /> 清除重畫
+                    </button>
+                    <button
+                      onClick={saveSignature}
+                      className="py-3 rounded-xl text-sm font-bold bg-purple-600 text-white
+                                 hover:bg-purple-500 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Check size={16} /> 確認簽名
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -4709,6 +5433,7 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
               <div className="flex items-center gap-2 mb-2">
                 <BookOpen size={14} className="text-slate-400" />
                 <span className="text-sm font-medium text-slate-300">知識庫</span>
+                <span className="text-[10px] text-slate-500">({blogArticles.length} 篇)</span>
               </div>
 
               {/* 最新文章 */}
