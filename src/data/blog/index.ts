@@ -66,6 +66,14 @@ import { article as article36 } from './articles/36-client-procrastination-cost-
 import { article as article37 } from './articles/37-income-tax-amt-guide-2026';
 // 文章 38：安聯全球收益成長基金暫停申購
 import { article as article38 } from './articles/38-allianz-global-income-growth-suspended-2026';
+// 文章 39：勞保年金 vs 一次領
+import { article as article39 } from './articles/39-labor-insurance-pension-lump-sum-vs-annuity-2026';
+// 文章 40：新青安貸款
+import { article as article40 } from './articles/40-new-youth-housing-loan-2026';
+// 文章 41：勞退自提 6%
+import { article as article41 } from './articles/41-labor-pension-voluntary-contribution-2026';
+// 文章 42：定期定額 vs 單筆投入
+import { article as article42 } from './articles/42-dca-vs-lump-sum-investment-2026';
 
 // ============ 匯出文章陣列 ============
 export const blogArticles: BlogArticle[] = [
@@ -107,6 +115,10 @@ export const blogArticles: BlogArticle[] = [
   article36,
   article37,
   article38,
+  article39,
+  article40,
+  article41,
+  article42,
 ];
 
 // ============ 匯出輔助函數 ============

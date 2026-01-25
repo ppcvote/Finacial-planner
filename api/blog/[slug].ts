@@ -40,6 +40,10 @@ const articleMetadata: Record<string, { title: string; category: string; descrip
   'client-procrastination-cost-2026': { title: '客戶說「再考慮看看」？拖延的代價超乎想像', category: 'sales', description: '財務決策的拖延，代價是精神、財富、時間的三重損失。如何幫客戶察覺、修正、改善？' },
   'income-tax-amt-guide-2026': { title: '2026 綜所稅＋最低稅負制完整攻略', category: 'tax', description: '2026 年報稅必看！綜所稅級距、免稅額、扣除額，加上最低稅負制（基本稅額）完整說明。' },
   'allianz-global-income-growth-suspended-2026': { title: '安聯收益成長被買爆！暫停申購要緊嗎？', category: 'investment', description: '安聯全球收益成長基金暫停新申購，不是出問題，是太熱門！已持有的人權益完全不受影響。' },
+  'labor-insurance-pension-lump-sum-vs-annuity-2026': { title: '勞保年金 vs 一次領：2026 年怎麼選最划算？', category: 'retirement', description: '勞保老年給付該選年金還是一次領？完整試算比較、損益平衡點分析。' },
+  'new-youth-housing-loan-2026': { title: '2026 新青安貸款懶人包：資格、利率、額度一次看懂', category: 'mortgage', description: '新青安貸款最新資訊：申請資格、利率優惠、貸款額度、寬限期規定。首購族必看。' },
+  'labor-pension-voluntary-contribution-2026': { title: '勞退自提 6% 到底划不划算？2026 完整分析', category: 'retirement', description: '勞退自提 6% 到底要不要做？完整分析節稅效果、報酬率比較、適合族群。' },
+  'dca-vs-lump-sum-investment-2026': { title: '定期定額 vs 單筆投入：哪個賺更多？數據實測', category: 'investment', description: '定期定額和單筆投入哪個報酬率更高？用歷史數據實測比較。' },
 };
 
 // 分類對應的 OG 圖片
