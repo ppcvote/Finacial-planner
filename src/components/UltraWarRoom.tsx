@@ -50,6 +50,9 @@ import ReferralEngineModal from './ReferralEngineModal';
 // 🔔 推播通知
 import { usePushNotifications } from '../hooks/usePushNotifications';
 
+// 📴 離線同步
+import { useOfflineSync } from '../hooks/useOfflineSync';
+
 // 🆕 任務看板
 import MissionCard from './MissionCard';
 import PWAInstallModal from './PWAInstallModal';
@@ -671,16 +674,7 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
     );
   }, []);
 
-  // 初次載入時嘗試取得位置
-  useEffect(() => {
-    // 延遲請求，避免一開始就彈出權限視窗
-    const timer = setTimeout(() => {
-      if (!userLocation && !locationError) {
-        requestLocation();
-      }
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
+  // 不再自動請求定位，讓用戶進入 Alliance 頁面後再請求
 
   // ========== 雜誌風格 - 可拖拉元素位置 ==========
   const [magazineDayBadgePos, setMagazineDayBadgePos] = useState({ x: 270, y: 24 }); // Day 徽章（右上）
@@ -1437,179 +1431,29 @@ const MarketDataCard: React.FC<MarketDataCardProps> = ({ userId, userDisplayName
         </div>
       </div>
 
-      {/* ===== Ultra Alliance 戰術據點 ===== */}
+      {/* ===== Ultra Alliance 戰術據點（簡化版） ===== */}
       <div className="mt-3 pt-3 border-t dark:border-slate-800 border-slate-200">
-        <div className="flex items-center gap-1.5 mb-2">
-          <Handshake size={12} className="text-purple-400" />
-          <h3 className="text-[10px] font-bold dark:text-white text-slate-900 uppercase tracking-wider">Ultra Alliance</h3>
-          <a
-            href="/alliance"
-            className="ml-auto text-[9px] text-purple-400 hover:text-purple-300 font-bold flex items-center gap-0.5"
-          >
-            更多 <Navigation size={8} />
-          </a>
-        </div>
-
-        {/* 定位狀態 */}
-        {isLocating && (
-          <div className="flex items-center justify-center gap-2 py-4 text-slate-400">
-            <Loader2 size={14} className="animate-spin" />
-            <span className="text-[10px]">定位中...</span>
+        <a
+          href="/alliance"
+          className="flex items-center gap-2 p-2 rounded-lg dark:bg-slate-800/30 bg-slate-100
+                   border dark:border-slate-700/50 border-slate-200 hover:border-purple-500/30 transition-all group"
+        >
+          <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+            <Handshake size={16} className="text-purple-400" />
           </div>
-        )}
-
-        {locationError && (
-          <div className="text-center py-3">
-            {locationError === 'permission_denied' ? (
-              <>
-                <p className="text-[10px] text-slate-500 mb-2">定位權限已被拒絕</p>
-                <p className="text-[9px] text-slate-600 mb-3">
-                  請點擊網址列左側的 🔒 圖示<br/>
-                  將「位置」權限改為「允許」
-                </p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 text-[10px] font-bold rounded-lg transition-colors"
-                >
-                  重新整理頁面
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="text-[10px] text-slate-500 mb-2">{locationError}</p>
-                <button
-                  onClick={requestLocation}
-                  className="px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 text-[10px] font-bold rounded-lg transition-colors"
-                >
-                  <MapPin size={10} className="inline mr-1" />
-                  重新定位
-                </button>
-              </>
-            )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-bold dark:text-white text-slate-800">Ultra Alliance</span>
+              <span className="px-1.5 py-0.5 bg-purple-500/20 text-purple-400 text-[8px] font-bold rounded">
+                NEW
+              </span>
+            </div>
+            <p className="text-[9px] text-slate-500 mt-0.5">探索附近合作據點，享專屬優惠</p>
           </div>
-        )}
-
-        {/* 尚未定位（初始狀態） */}
-        {!isLocating && !locationError && !userLocation && (
-          <div className="text-center py-3">
-            <p className="text-[10px] text-slate-500 mb-2">請允許存取您的位置</p>
-            <button
-              onClick={requestLocation}
-              className="px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 text-[10px] font-bold rounded-lg transition-colors"
-            >
-              <MapPin size={10} className="inline mr-1" />
-              開啟定位
-            </button>
-          </div>
-        )}
-
-        {!isLocating && !locationError && nearbyPartners.length === 0 && userLocation && (
-          <div className="text-center py-4 text-slate-500 text-[10px]">
-            附近 3km 內沒有合作據點
-          </div>
-        )}
-
-        {/* 附近據點列表（最多 3 間） */}
-        {!isLocating && nearbyPartners.length > 0 && (
-          <div className="space-y-1.5">
-            {nearbyPartners.map((partner) => (
-              <div
-                key={partner.id}
-                className="flex items-center gap-2 p-2 rounded-lg dark:bg-slate-800/50 bg-slate-100
-                         border dark:border-slate-700/50 border-slate-200 hover:border-purple-500/30 transition-all group"
-              >
-                {/* 店家圖片 */}
-                <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-slate-700">
-                  <img
-                    src={partner.image}
-                    alt={partner.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/80?text=☕';
-                    }}
-                  />
-                </div>
-
-                {/* 店家資訊 */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] font-bold dark:text-white text-slate-800 truncate">
-                      {partner.name}
-                    </span>
-                    {partner.isUltraPartner && (
-                      <span className="px-1 py-0.5 bg-purple-500/20 text-purple-400 text-[7px] font-black rounded">
-                        ULTRA
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    {/* 距離 */}
-                    <span className="text-[9px] text-emerald-400 font-bold">
-                      {formatDistance(partner.distance)}
-                    </span>
-                    {/* 特色標籤 */}
-                    {partner.features.quiet && (
-                      <span className="text-[8px] text-slate-400 flex items-center gap-0.5" title="適合談單">
-                        <Volume2 size={8} />
-                      </span>
-                    )}
-                    {partner.features.parking && (
-                      <span className="text-[8px] text-slate-400 flex items-center gap-0.5" title="好停車">
-                        <ParkingCircle size={8} />
-                      </span>
-                    )}
-                    {partner.features.power && (
-                      <span className="text-[8px] text-slate-400 flex items-center gap-0.5" title="有插座">
-                        <Wifi size={8} />
-                      </span>
-                    )}
-                    {/* 優惠 */}
-                    {partner.isUltraPartner && (
-                      <span className="text-[8px] text-amber-400 font-bold">
-                        {partner.offer.title}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* 導航按鈕 */}
-                <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${partner.location.lat},${partner.location.lng}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg
-                           bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 transition-colors"
-                  title="開啟導航"
-                >
-                  <Navigation size={14} />
-                </a>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* 沒有定位時的預設顯示 */}
-        {!userLocation && !isLocating && !locationError && (
-          <div className="grid grid-cols-3 gap-1.5">
-            {MOCK_PARTNERS.filter(p => p.isUltraPartner).slice(0, 3).map((partner) => (
-              <div
-                key={partner.id}
-                className="p-1.5 rounded-lg dark:bg-slate-800/50 bg-slate-100 border dark:border-slate-700/50 border-slate-200 text-center"
-              >
-                <div className="w-full aspect-video rounded overflow-hidden mb-1 bg-slate-700">
-                  <img
-                    src={partner.image}
-                    alt={partner.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="text-[8px] font-bold dark:text-white text-slate-800 truncate">{partner.name.split(' ')[0]}</div>
-                <div className="text-[7px] text-amber-400 truncate">{partner.offer.title}</div>
-              </div>
-            ))}
-          </div>
-        )}
+          <Navigation size={14} className="text-slate-400 group-hover:text-purple-400 transition-colors" />
+        </a>
       </div>
+
 
       {/* ===== 限時動態預覽彈窗 ===== */}
       {showStoryPreview && (
@@ -2867,12 +2711,57 @@ const QuickCalculator = () => {
     setCalcLastResult(null);
   };
 
+  // 安全的表達式解析器（不使用 eval 或 new Function）
+  const safeParseExpression = (expr: string): number => {
+    let pos = 0;
+    const parseNumber = (): number => {
+      let numStr = '';
+      while (pos < expr.length && /[0-9.]/.test(expr[pos])) {
+        numStr += expr[pos++];
+      }
+      if (!numStr) throw new Error('Expected number');
+      return parseFloat(numStr);
+    };
+    const parseFactor = (): number => {
+      if (expr[pos] === '(') {
+        pos++;
+        const result = parseAddSub();
+        if (expr[pos] === ')') pos++;
+        return result;
+      }
+      if (expr[pos] === '-') {
+        pos++;
+        return -parseFactor();
+      }
+      return parseNumber();
+    };
+    const parseMulDiv = (): number => {
+      let result = parseFactor();
+      while (pos < expr.length && (expr[pos] === '*' || expr[pos] === '/')) {
+        const op = expr[pos++];
+        const right = parseFactor();
+        result = op === '*' ? result * right : result / right;
+      }
+      return result;
+    };
+    const parseAddSub = (): number => {
+      let result = parseMulDiv();
+      while (pos < expr.length && (expr[pos] === '+' || expr[pos] === '-')) {
+        const op = expr[pos++];
+        const right = parseMulDiv();
+        result = op === '+' ? result + right : result - right;
+      }
+      return result;
+    };
+    return parseAddSub();
+  };
+
   const handleCalcEquals = () => {
     try {
       const fullExpr = calcExpression + calcDisplay;
-      // 安全計算
-      const sanitized = fullExpr.replace(/[^0-9+\-*/.() ]/g, '').replace(/\s+/g, '');
-      const result = new Function(`return (${sanitized})`)();
+      // 安全計算（使用遞迴解析器，不用 new Function）
+      const sanitized = fullExpr.replace(/[^0-9+\-*/.()]/g, '');
+      const result = safeParseExpression(sanitized);
       const resultStr = String(Math.round(result * 100) / 100);
       // 加入歷史紀錄（最多保留 10 筆）
       setCalcHistory(prev => {
@@ -5135,6 +5024,9 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
   // 🔔 推播通知
   const pushNotifications = usePushNotifications(user?.uid || null);
 
+  // 📴 離線同步
+  const offlineSync = useOfflineSync();
+
   // 客戶列表狀態
   const [clients, setClients] = useState<any[]>([]);
   const [clientsLoading, setClientsLoading] = useState(true);
@@ -5245,9 +5137,20 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
     loadProfile();
   }, [user]);
 
-  // 監聽客戶列表
+  // 監聽客戶列表（含離線快取）
   useEffect(() => {
     if (!user) return;
+
+    // 離線時先載入快取
+    if (!offlineSync.isOnline && offlineSync.isInitialized) {
+      offlineSync.getCachedClientList(user.uid).then(cached => {
+        if (cached.length > 0) {
+          setClients(cached);
+          setClientsLoading(false);
+          console.log('[Offline] Loaded cached clients:', cached.length);
+        }
+      });
+    }
 
     const q = query(
       collection(db, 'users', user.uid, 'clients'),
@@ -5257,17 +5160,44 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const list: any[] = [];
       snapshot.forEach(doc => {
-        list.push({ id: doc.id, ...doc.data() });
+        list.push({ id: doc.id, odId: doc.id, ...doc.data() });
       });
       setClients(list);
       setClientsLoading(false);
+
+      // 快取到 IndexedDB
+      if (offlineSync.isInitialized && list.length > 0) {
+        offlineSync.cacheClientList(user.uid, list);
+      }
+    }, (error) => {
+      console.error('Load clients failed:', error);
+      // 網路錯誤時嘗試從快取載入
+      if (offlineSync.isInitialized) {
+        offlineSync.getCachedClientList(user.uid).then(cached => {
+          if (cached.length > 0) {
+            setClients(cached);
+            console.log('[Offline] Fallback to cached clients');
+          }
+          setClientsLoading(false);
+        });
+      }
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, offlineSync.isInitialized, offlineSync.isOnline]);
 
-  // 🆕 即時監聽通知
+  // 🆕 即時監聽通知（含離線快取）
   useEffect(() => {
+    // 離線時先載入快取
+    if (!offlineSync.isOnline && offlineSync.isInitialized) {
+      offlineSync.getCachedNotificationList().then(cached => {
+        if (cached.length > 0) {
+          setNotifications(cached);
+          console.log('[Offline] Loaded cached notifications:', cached.length);
+        }
+      });
+    }
+
     const unsubscribe = onSnapshot(
       doc(db, 'siteContent', 'notifications'),
       (docSnap) => {
@@ -5277,10 +5207,24 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
             .filter((n: any) => n.enabled !== false)
             .sort((a: any, b: any) => (b.priority || 0) - (a.priority || 0));
           setNotifications(items);
+
+          // 快取到 IndexedDB
+          if (offlineSync.isInitialized && items.length > 0) {
+            offlineSync.cacheNotificationList(items);
+          }
         }
       },
       (error) => {
         console.error('Load notifications failed:', error);
+        // 網路錯誤時嘗試從快取載入
+        if (offlineSync.isInitialized) {
+          offlineSync.getCachedNotificationList().then(cached => {
+            if (cached.length > 0) {
+              setNotifications(cached);
+              console.log('[Offline] Fallback to cached notifications');
+            }
+          });
+        }
       }
     );
 
@@ -5450,6 +5394,14 @@ const UltraWarRoom: React.FC<UltraWarRoomProps> = ({ user, onSelectClient, onLog
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
+            {/* 📴 離線指示器 */}
+            {!offlineSync.isOnline && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 border border-amber-500/30 rounded-lg">
+                <Wifi size={14} className="text-amber-400" />
+                <span className="text-amber-400 text-xs font-medium hidden md:inline">離線模式</span>
+              </div>
+            )}
+
             {/* 🆕 通知按鈕 */}
             <div className="relative">
               <button
