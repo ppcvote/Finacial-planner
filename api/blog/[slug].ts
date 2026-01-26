@@ -44,6 +44,18 @@ const articleMetadata: Record<string, { title: string; category: string; descrip
   'new-youth-housing-loan-2026': { title: '2026 新青安貸款懶人包：資格、利率、額度一次看懂', category: 'mortgage', description: '新青安貸款最新資訊：申請資格、利率優惠、貸款額度、寬限期規定。首購族必看。' },
   'labor-pension-voluntary-contribution-2026': { title: '勞退自提 6% 到底划不划算？2026 完整分析', category: 'retirement', description: '勞退自提 6% 到底要不要做？完整分析節稅效果、報酬率比較、適合族群。' },
   'dca-vs-lump-sum-investment-2026': { title: '定期定額 vs 單筆投入：哪個賺更多？數據實測', category: 'investment', description: '定期定額和單筆投入哪個報酬率更高？用歷史數據實測比較。' },
+  'excel-mortgage-calculator-download-2026': { title: 'Excel 房貸試算表：自己做一個專業級計算機', category: 'tools', description: '用 Excel 做房貸試算表：PMT、IPMT、PPMT 函數完整教學，本息均攤、本金均攤都能算。' },
+  'free-financial-tools-for-advisors-2026': { title: '2026 年 5 個免費線上財務工具推薦', category: 'tools', description: '精選 5 個免費財務工具：房貸計算機、退休試算、稅務計算。不花錢也能做專業財務規劃。' },
+  '4-percent-rule-retirement-2026': { title: '4% 法則：退休金到底要存多少才夠？', category: 'retirement', description: '4% 法則退休金計算：年支出 × 25 = 需要的退休金。完整解析適用條件、台灣調整建議。' },
+  'retire-at-50-plan-2026': { title: '50 歲提早退休可行嗎？完整財務檢查清單', category: 'retirement', description: '50 歲提早退休完整規劃：需要多少退休金、勞保勞退怎麼領、健保怎麼辦。' },
+  'national-pension-guide-2026': { title: '國民年金是什麼？要不要繳？2026 完整解析', category: 'retirement', description: '國民年金完整解析：誰要繳、保費多少、給付怎麼算、欠繳會怎樣。' },
+  'retirement-living-cost-taiwan-2026': { title: '台灣退休生活費要多少？2026 各縣市完整比較', category: 'retirement', description: '台灣退休每月生活費完整分析：台北 vs 中南部、有房 vs 無房、基本型 vs 舒適型。' },
+  'mortgage-grace-period-trap-2026': { title: '房貸寬限期是糖衣毒藥？完整利弊分析', category: 'mortgage', description: '房貸寬限期到底好不好？完整分析寬限期優缺點、結束後月付金暴增試算。' },
+  'mortgage-prepayment-worth-it-2026': { title: '房貸提前還款划算嗎？完整試算告訴你', category: 'mortgage', description: '房貸提前還款完整分析：省多少利息、縮短多少年、違約金計算。' },
+  'mortgage-self-use-vs-investment-2026': { title: '自住房貸 vs 投資房貸：利率、成數、稅務差在哪？', category: 'mortgage', description: '自住房貸和投資房貸差異完整比較：利率差多少、成數差多少、稅務怎麼算。' },
+  'mortgage-refinance-equity-loan-2026': { title: '房貸增貸、轉增貸是什麼？2026 完整申請指南', category: 'mortgage', description: '房貸增貸和轉增貸完整解析：差異比較、利率條件、申請流程、適合情況。' },
+  'mortgage-joint-application-2026': { title: '夫妻聯名買房：貸款、產權、稅務完整指南', category: 'mortgage', description: '夫妻買房該登記誰的名字？聯名貸款有什麼好處？產權怎麼分？稅務怎麼算？' },
+  'taiwan-gdp-surpass-japan-korea-2026': { title: '台灣人均GDP超越日韓！23年來首次，你的錢包有感嗎？', category: 'investment', description: '台灣人均GDP達37,827美元，超越日本和韓國，亞洲排名第四。但薪水有跟上嗎？' },
 };
 
 // 分類對應的 OG 圖片

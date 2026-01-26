@@ -74,6 +74,30 @@ import { article as article40 } from './articles/40-new-youth-housing-loan-2026'
 import { article as article41 } from './articles/41-labor-pension-voluntary-contribution-2026';
 // 文章 42：定期定額 vs 單筆投入
 import { article as article42 } from './articles/42-dca-vs-lump-sum-investment-2026';
+// 文章 43：Excel 房貸試算表
+import { article as article43 } from './articles/43-excel-mortgage-calculator-download-2026';
+// 文章 44：免費財務工具
+import { article as article44 } from './articles/44-free-financial-tools-for-advisors-2026';
+// 文章 45：4% 法則
+import { article as article45 } from './articles/45-4-percent-rule-retirement-2026';
+// 文章 46：50 歲退休
+import { article as article46 } from './articles/46-retire-at-50-plan-2026';
+// 文章 47：國民年金
+import { article as article47 } from './articles/47-national-pension-guide-2026';
+// 文章 48：退休生活費
+import { article as article48 } from './articles/48-retirement-living-cost-taiwan-2026';
+// 文章 49：寬限期陷阱
+import { article as article49 } from './articles/49-mortgage-grace-period-trap-2026';
+// 文章 50：提前還款
+import { article as article50 } from './articles/50-mortgage-prepayment-worth-it-2026';
+// 文章 51：自住 vs 投資房貸
+import { article as article51 } from './articles/51-mortgage-self-use-vs-investment-2026';
+// 文章 52：增貸轉增貸
+import { article as article52 } from './articles/52-mortgage-refinance-equity-loan-2026';
+// 文章 53：夫妻聯名
+import { article as article53 } from './articles/53-mortgage-joint-application-2026';
+// 文章 54：台灣人均GDP超越日韓
+import { article as article54 } from './articles/54-taiwan-gdp-surpass-japan-korea-2026';
 
 // ============ 匯出文章陣列 ============
 export const blogArticles: BlogArticle[] = [
@@ -119,6 +143,18 @@ export const blogArticles: BlogArticle[] = [
   article40,
   article41,
   article42,
+  article43,
+  article44,
+  article45,
+  article46,
+  article47,
+  article48,
+  article49,
+  article50,
+  article51,
+  article52,
+  article53,
+  article54,
 ];
 
 // ============ 匯出輔助函數 ============
