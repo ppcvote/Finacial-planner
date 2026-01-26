@@ -56,6 +56,7 @@ const articleMetadata: Record<string, { title: string; category: string; descrip
   'mortgage-refinance-equity-loan-2026': { title: '房貸增貸、轉增貸是什麼？2026 完整申請指南', category: 'mortgage', description: '房貸增貸和轉增貸完整解析：差異比較、利率條件、申請流程、適合情況。' },
   'mortgage-joint-application-2026': { title: '夫妻聯名買房：貸款、產權、稅務完整指南', category: 'mortgage', description: '夫妻買房該登記誰的名字？聯名貸款有什麼好處？產權怎麼分？稅務怎麼算？' },
   'taiwan-gdp-surpass-japan-korea-2026': { title: '台灣人均GDP超越日韓！23年來首次，你的錢包有感嗎？', category: 'investment', description: '台灣人均GDP達37,827美元，超越日本和韓國，亞洲排名第四。但薪水有跟上嗎？' },
+  'ultra-alliance-maker-island-ecosystem-2026': { title: '傲創聯盟：打造財務顧問的「創客島嶼生態鏈」', category: 'sales', description: '傲創聯盟串聯線下優質場所，為財務顧問打造專屬商務與生活圈。' },
 };
 
 // 分類對應的 OG 圖片
